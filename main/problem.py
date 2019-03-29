@@ -17,7 +17,8 @@ class System:
     connection: dict
         Dict of drives to each component
     phys_params: dict of dict
-        Component key to a dictionary of its properties
+        Component key to a dictionary of its properties, not values!
+    
 
     Methods
     -------
@@ -65,6 +66,8 @@ class Model:
         self.H = self.construct_Hamiltonian(system_parameters, numerical_parameters)
         self.projector = utils.rect_space(H[0].dims[0], comp_dims) #rect identity for computation
 
+    #TODO Think about the distinction between System and Model classes
+
 class Problem:
     """
     Main Class. CLass to specify the problem that we are trying to solve.
@@ -106,7 +109,9 @@ class Problem:
     optimize_pulse()
         Step I in the C3PO procedure
     calibrate_pulse()
-        Step II in the C3PO prodecure
+        Step IIa in the C3PO prodecure, calibrating single gates
+    calibrate_RB()
+        Step IIb using randomized benchmarking
     optimize_model()
         Step III in the C3PO procedure
     """
@@ -117,6 +122,7 @@ class Problem:
         self.grad_min = scp_min  # scipy optimizer as placeholder
         self.free_min = scp_min
         self.current_model = initial_model
+        #TODO Solve three tasks: IBM, WMI, our simulated problem
 
     def optimize_pulse(gate):
         optim_opts = {''}
