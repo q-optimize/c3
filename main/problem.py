@@ -18,7 +18,7 @@ class System:
         Dict of drives to each component
     phys_params: dict of dict
         Component key to a dictionary of its properties, not values!
-    
+
 
     Methods
     -------
@@ -138,7 +138,7 @@ class Problem:
     def record_calibration(current_x, current_state):
         calib_data.append([current_x, current_state])
 
-    def calibrate_pulses(gates):
+    def calibrate_RB(gates):
         #TODO change to multiple gates
         current_gate_name = gate.get_name()
         optim_opts = {''}
