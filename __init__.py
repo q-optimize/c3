@@ -1,6 +1,2 @@
 import qutip
-from main import *
-from evolution import *
-from fidelity import *
-
-
+from c3po.main.model import *
