@@ -1,6 +1,7 @@
 """C3PO configuration file"""
 
 import c3po
+import qutip as qt
 
 q = components.qubit
 q.set_name('qubit_1')
@@ -41,7 +42,7 @@ H = initial_model.get_hamiltonian()
 
 print(H)
 
-q1_X_gate = Gate(q, qutip.sigmax())
+q1_X_gate = Gate(q, qt.sigmax())
 BSB_X_gate = Gate((q, r),
         qt.tensor(qt.sigmap(), qt.sigmap()) + qt.tensor(qt.sigmam(), qt.sigmam())
         )
