@@ -1,3 +1,6 @@
+import qutip as qt
+
+
 class Model:
     """
     What the theorist thinks about from the system.
@@ -30,8 +33,8 @@ class Model:
         Returns the Hamiltonian in a QuTip compatible way
     get_time_slices()
     """
-    def __init__(self, component_parameters, coupling_strength, hilbert_space, comp_dims):
-        global hbar
+    def __init__(self, component_parameters, coupling, hilbert_space):
+        hbar = 1
 
         self.component_parameters = component_parameters
         self.hilbert_space = hilbert_space
@@ -39,29 +42,41 @@ class Model:
         
         omega_q = component_parameters['qubit_1']['freq']
         omega_r = component_parameters['cavity']['freq']
-        g = coupling_strength[0]['strength']
+        g = coupling['q1_cav']['strength']
 
         dim_q = hilbert_space['qubit_1']
         dim_r  = hilbert_space['cavity']
 
         a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
-        sigmaz = qt.tensor(qt.sigmaz, qt.qeye(dim_r))
-        sigmax = qt.tensor(qt.sigmax, qt.eye(dim_r))
+        sigmaz = qt.tensor(qt.sigmaz(), qt.qeye(dim_r))
+        sigmax = qt.tensor(qt.sigmax(), qt.qeye(dim_r))
         
-        self.H0 = hbar * omega_q / 2 * sigmaz() + hbar * omega_r * a.dag() * a \
-                + hbar * g * (a.dag() + a) * sigmax()
-        H1 = hbar * sigmax()
+        self.H0 = hbar * omega_q / 2 * sigmaz + hbar * omega_r * a.dag() * a \
+                + hbar * g * (a.dag() + a) * sigmax
+        H1 = hbar * sigmax
         self.Hcs.append(H1)
-        
-        self.projector = utils.rect_space(H[0].dims[0], comp_dims) #rect identity for computation
 
     #TODO Think about the distinction between System and Model classes
 
 
-    def get_Hamiltonian(control_fields):
-        H = [H0]
+    def get_Hamiltonian(self, control_fields):
+        H = [self.H0]
         for ii in range(len(control_fields)):
             H.append([self.Hcs[ii], control_fields[ii]])
         return H
         
+    def get_control_shapes(self, drive_parameters):
+        """
+        Returns a function handle to the control shape, constructed from drive parameters. 
+        """
+        control = drive_parameters['control1']
+        carrier = control['carrier1']
+        omega_d  = carrier['freq']
+        pulse = carrier['pulse1']
+        amp = pulse['amp']
+        t0 = pulse['t_up']
+        t1 = pulse['t_down']
+        xy_angle = pulse['xy_angle']
+        
+
 
