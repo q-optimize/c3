@@ -64,19 +64,4 @@ class Model:
         for ii in range(len(control_fields)):
             H.append([self.Hcs[ii], control_fields[ii]])
         return H
-        
-    def get_control_shapes(self, drive_parameters):
-        """
-        Returns a function handle to the control shape, constructed from drive parameters. 
-        """
-        control = drive_parameters['control1']
-        carrier = control['carrier1']
-        omega_d  = carrier['freq']
-        pulse = carrier['pulse1']
-        amp = pulse['amp']
-        t0 = pulse['t_up']
-        t1 = pulse['t_down']
-        xy_angle = pulse['xy_angle']
-        
-
 
