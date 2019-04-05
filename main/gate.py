@@ -1,5 +1,3 @@
-import qutip as qt
-
 class Gate:
     """
     Represents a quantum gate with a fixed parametrization and envelope shape.
@@ -13,83 +11,75 @@ class Gate:
 
     Attributes
     ----------
-    name:
-        Descriptive name, e.g. pi-gate on qubit 2
-    initial_guess:
-        A priori guess for parameters.
-    open_loop:
-        Parameters after open loop OC.
-    calibrated:
-        Parameters after calibration on the experiment.
-
-    Methods
-    -------
-    get_params()
-        Returns the dictionary of parameters in human readable form.
+    keys:
+        Contains the parametrization of this gate. This is created when
+        set_parameters() is used to store a new pulse.
+    parameters:
+        A dictionary of linear vectors containing the parameters of different
+        versions of this gate, e.g. initial guess, calibrated or variants.
+    props:
+        Dictionary of properties of the pulse components, specific to the
+        envelope function. Note: fixed for now. Will later be initialized.
+    envelope:
+        Function handle from our extensive library of shapes, a flattop mostly
     """
 
     def __init__(self, target, goal):
         self.target = target
         self.goal_unitary = goal
         self.props = ['amp', 't_up', 't_down', 'xy_angle']
+        # self.envelope = some_env_func
+        self.keys = {}
+        self.parameters = {}
 
-    def set_initial_guess(self, guess):
+    def set_parameters(self, name, guess):
         """
-        An initial guess that implements this gate. The structure defines the parametrization of
-        this gate.
-        #TODO: this doesn't work right now. The structure needs to be stored hierarchically to
-        accound for different number of pulse components in each control or carrier.
+        An initial guess that implements this gate. The structure defines the
+        parametrization of this gate.
         """
-        self.initial_guess = guess
-        self.control_keys = sorted(guess.keys())
-        for ckey in self.control_keys:
+        control_keys = sorted(guess.keys())
+        for ckey in control_keys:
             control = guess[ckey]
-            self.carrier_keys = sorted(control.keys())
-            for carkey in self.carrier_keys:
-                carrier = control[carkey]
-                self.pulse_keys = sorted(carrier['pulses'].keys())
-        
-    
-    def get_initial_guess(self):
-        return self.initial_guess
+            self.keys[ckey] = {}
+            carrier_keys = sorted(control.keys())
+            for carkey in carrier_keys:
+                carrier = guess[ckey][carkey]
+                self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
+        self.parameters[name] = self.serialize_parameters(guess)
 
-    def get_name(self):
-        return self.name
-
-    def get_params_serialized(self, params):
+    def serialize_parameters(self, p):
+        """
+        Takes a nested dictionary of pulse parameters and returns a linear
+        vector, compatible with the parametrization of this gate.
+        """
         q = []
-        for control_key in self.control_keys:
-            control = params[control_key]
-            for carrier_key in self.carrier_keys:
-                carrier = control[carrier_key]
-                q.append(carrier['freq'])
-                for pulse_key in self.pulse_keys:
-                    pulse = carrier['pulses'][pulse_key]
-                    for par in self.props:
-                        q.append(pulse[par])
+        keys = self.keys
+        for ckey in sorted(keys):
+            for carkey in sorted(keys[ckey]):
+                q.append(p[ckey][carkey]['freq'])
+                for pkey in sorted(keys[ckey][carkey]):
+                    for prop in self.props:
+                        q.append(p[ckey][carkey]['pulses'][pkey][prop])
         return q
 
-    def get_params_deserialized(self, parvec):
+    def deserialize_parameters(self, q):
         """
-        Give a vector of parameters that conform to the parametrization for this gate and get the
-        structured version of it back.
+        Give a vector of parameters that conform to the parametrization for
+        this gate and get the structured version back.
         """
-        p_idx = 0
-        params = {}
-        for ckey in self.control_keys:
-            control = {}
-            for carkey in self.carrier_keys:
-                carrier = {}
-                carrier['freq'] = parvec[p_idx]
-                carrier['pulses'] = {}
-                p_idx += 1
-                for pkey in self.pulse_keys:
-                    pulse = {}
-                    for par in self.props:
-                        pulse[par] = parvec[p_idx]
-                        p_idx += 1
-                    carrier['pulses'][pkey] = pulse
-                control[carkey] = carrier
-            params[ckey] = control
-        return params
-
+        p = {}
+        keys = self.keys
+        idx = 0
+        for ckey in sorted(keys):
+            p[ckey] = {}
+            for carkey in sorted(keys[ckey]):
+                p[ckey][carkey] = {}
+                p[ckey][carkey]['pulses'] = {}
+                p[ckey][carkey]['freq'] = q[idx]
+                idx += 1
+                for pkey in sorted(keys[ckey][carkey]):
+                    p[ckey][carkey]['pulses'][pkey] = {}
+                    for prop in self.props:
+                        p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
+                        idx += 1
+        return p

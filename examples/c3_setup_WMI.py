@@ -67,7 +67,7 @@ handmade_pulse = {'control1' : {
                       }
                 }
 
-q1_X_gate.set_initial_guess(handmade_pulse)
+q1_X_gate.set_parameters('initial', handmade_pulse)
 
 
 crazy_pulse = {'control1' : {
@@ -92,17 +92,16 @@ crazy_pulse = {'control1' : {
                                 'xy_angle' : 0
                                 },
                             'pulse2' : {
-                                'amp' : 15e6*2*pi,
-                                't_up' : 5e-9,
-                                't_down' : 45e-9,
-                                'xy_angle' : 0
+                                'amp' : 20e6*2*pi,
+                                't_up' : 10e-9,
+                                't_down' : 4e-9,
+                                'xy_angle' : pi/2
                                 }
                             }
                           }
                       }
                 }
 
-print(q1_X_gate.get_params_serialized(handmade_pulse))
 
 """
 BSB_X_gate = Gate((q, r),

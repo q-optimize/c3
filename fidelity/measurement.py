@@ -1,32 +1,45 @@
 import utils
+import qutip
+from numpy import cos, sin
 
 # Measurement object that communicates between searcher and sim/exp
 
+
 class Backend:
     """
-    Represents either an experiment or a simulation and contains the methods both need to provide.
+    Represents either an experiment or a simulation and contains the methods
+    both need to provide.
     """
     def get_IQ(self, drive_parameters, envelope):
         """
-        Construct the in-phase (I) and quadrature (Q) components of the control signals. These are
-        universal to either experiment or simulation. In the experiment, these will be routed to AWG
-        and mixer electronics, while in the experiment these provide the shapes of the control
-        fields to be added to the Hamiltonian.
+        Construct the in-phase (I) and quadrature (Q) components of the control
+        signals.
+        These are universal to either experiment or simulation. In the
+        experiment these will be routed to AWG and mixer electronics, while in
+        the simulation they provide the shapes of the controlfields to be added
+        to the Hamiltonian.
         """
         control = drive_parameters['control1']
         carrier = control['carrier1']
+        omega_d = carrier['freq']
         pulse = carrier['pulse1']
         amp = pulse['amp']
         t0 = pulse['t_up']
         t1 = pulse['t_down']
         xy_angle = pulse['xy_angle']
-        I = lambda t: amp * envelope(t0, t1, t) * cos(xy_angle)
-        Q = lambda t: amp * envelope(t0, t1, t) * sin(xy_angle)
-        return I, Q, omega_d
+
+        def Inphase(t):
+            return amp * envelope(t0, t1, t) * cos(xy_angle)
+
+        def Quadrature(t):
+            return amp * envelope(t0, t1, t) * sin(xy_angle)
+
+        return Inphase, Quadrature, omega_d
+
 
 class Experiment(Backend):
     """
-    The driver for an experiment
+    The driver for an experiment.
     """
     def __init__(self, send_pulse, recv_answer):
         self.send_pulse = send_pulse
@@ -45,13 +58,14 @@ class Simulation(Backend):
     def __init__(self, model):
         self.model = model
 
-    def update_model(model):
+    def update_model(self, model):
         self.model = model
 
-    def evolution(gate):
+    def evolution(self, gate):
         """
-        Sets up the time evolution of running a given gate on the model. The gate needs to contain
-        the envelope function handle and drive parameters. 
+        Sets up the time evolution of running a given gate on the model. The
+        gate needs to contain the envelope function handle and drive
+        parameters.
         """
         drv_par = gate.get_params()
         env = gate.get_envelope()
@@ -60,15 +74,15 @@ class Simulation(Backend):
         params = gate.get_params_linear()
         return utils.evolution(h, ts, params)
 
-    def gate_fid(gate):
+    def gate_fid(self, gate):
         U = self.evolution(gate)
         return qutip.trace_dist(U, gate.goal_unitary)
 
     def get_control_fields(self, drive_parameters, envelope):
         """
-        Returns a function handle to the control shape, constructed from drive parameters. For
-        simulation we need the control fields to be added to the model Hamiltonian. 
+        Returns a function handle to the control shape, constructed from drive
+        parameters. For simulation we need the control fields to be added to
+        the model Hamiltonian.
         """
         I, Q, omega_d = self.get_IQ(drive_parameters, envelope)
         return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
-

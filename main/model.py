@@ -39,29 +39,27 @@ class Model:
         self.component_parameters = component_parameters
         self.hilbert_space = hilbert_space
         self.Hcs = []
-        
+
         omega_q = component_parameters['qubit_1']['freq']
         omega_r = component_parameters['cavity']['freq']
         g = coupling['q1_cav']['strength']
 
         dim_q = hilbert_space['qubit_1']
-        dim_r  = hilbert_space['cavity']
+        dim_r = hilbert_space['cavity']
 
         a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
         sigmaz = qt.tensor(qt.sigmaz(), qt.qeye(dim_r))
         sigmax = qt.tensor(qt.sigmax(), qt.qeye(dim_r))
-        
+
         self.H0 = hbar * omega_q / 2 * sigmaz + hbar * omega_r * a.dag() * a \
-                + hbar * g * (a.dag() + a) * sigmax
+            + hbar * g * (a.dag() + a) * sigmax
         H1 = hbar * sigmax
         self.Hcs.append(H1)
 
-    #TODO Think about the distinction between System and Model classes
-
+    # TODO: Think about the distinction between System and Model classes
 
     def get_Hamiltonian(self, control_fields):
         H = [self.H0]
         for ii in range(len(control_fields)):
             H.append([self.Hcs[ii], control_fields[ii]])
         return H
-
