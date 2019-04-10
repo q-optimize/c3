@@ -1,3 +1,6 @@
+import json
+
+
 class Gate:
     """
     Represents a quantum gate with a fixed parametrization and envelope shape.
@@ -24,11 +27,11 @@ class Gate:
         Function handle from our extensive library of shapes, a flattop mostly
     """
 
-    def __init__(self, target, goal):
+    def __init__(self, target, goal, env_func):
         self.target = target
         self.goal_unitary = goal
         self.props = ['amp', 't_up', 't_down', 'xy_angle']
-        # self.envelope = some_env_func
+        self.envelope = env_func
         self.keys = {}
         self.parameters = {}
 
@@ -50,9 +53,12 @@ class Gate:
     def serialize_parameters(self, p):
         """
         Takes a nested dictionary of pulse parameters and returns a linear
-        vector, compatible with the parametrization of this gate.
+        vector, compatible with the parametrization of this gate. Input can
+        also be the name of a stored pulse.
         """
         q = []
+        if isinstance(p, str):
+            p = self.parameters[p]
         keys = self.keys
         for ckey in sorted(keys):
             for carkey in sorted(keys[ckey]):
@@ -65,9 +71,12 @@ class Gate:
     def deserialize_parameters(self, q):
         """
         Give a vector of parameters that conform to the parametrization for
-        this gate and get the structured version back.
+        this gate and get the structured version back. Input can also be the
+        name of a stored pulse.
         """
         p = {}
+        if isinstance(q, str):
+            q = self.parameters[q]
         keys = self.keys
         idx = 0
         for ckey in sorted(keys):
@@ -83,3 +92,9 @@ class Gate:
                         p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
                         idx += 1
         return p
+
+    def print(self, p):
+        print(json.dumps(
+            self.deserialize_parameters(p),
+            indent=4,
+            sort_keys=True))

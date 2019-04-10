@@ -1,4 +1,3 @@
-import utils
 import qutip
 from numpy import cos, sin
 
@@ -10,7 +9,7 @@ class Backend:
     Represents either an experiment or a simulation and contains the methods
     both need to provide.
     """
-    def get_IQ(self, drive_parameters, envelope):
+    def get_IQ(self, gate, name):
         """
         Construct the in-phase (I) and quadrature (Q) components of the control
         signals.
@@ -19,6 +18,8 @@ class Backend:
         the simulation they provide the shapes of the controlfields to be added
         to the Hamiltonian.
         """
+        drive_parameters = gate.parameters[name]
+        envelope = gate.get_envelope()
         control = drive_parameters['control1']
         carrier = control['carrier1']
         omega_d = carrier['freq']
