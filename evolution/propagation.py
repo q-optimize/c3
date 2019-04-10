@@ -16,9 +16,9 @@ from c3po.utils import tf_utils
 import tensorflow as tf
 import numpy as np
 
-def propergate(model, u0, tlist, method, grad = False, history = False):
+def propagate(model, u0, tlist, method, grad = False, history = False):
     """
-    Wrapper function for choosing the type of propergation method.
+    Wrapper function for choosing the type of propagation method.
     :param model:   :class:'c3po.model'
         Meta class for system hamiltonian
     :param u0:
@@ -26,7 +26,7 @@ def propergate(model, u0, tlist, method, grad = False, history = False):
     :param tlist:
         ...
     :param  method:
-        switch for choosing the desired propergator. options are: "pwc",
+        switch for choosing the desired propagator. options are: "pwc",
         "pwc_tf", "qutip_sesolv"
 
     """
