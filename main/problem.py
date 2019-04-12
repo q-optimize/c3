@@ -12,11 +12,9 @@ class Problem:
         If you want to learn the model for this system.
     gates_to_optimize:
         as dict/handles or abstract objects
-    system:
-        If you want to learn the model for this system.
     initial_model:
         (optional) Can be constructed from system or given directly.
-    measurement : Measurement obj
+    backend: Measurement obj
         Provides different figures of merit from either experiment or
         simulation. Can contain gradients
     callback : fun
@@ -47,9 +45,9 @@ class Problem:
     optimize_model()
         Step III in the C3PO procedure
     """
-    def __init__(self, measurement, callback=None):
-        self.sim = measurement.simulation
-        self.exp = measurement.experiment
+    def __init__(self, simulation, experiment, callback=None):
+        self.sim = simulation
+        self.exp = experiment
         self.cbfun = callback
         self.grad_min = scp_min  # scipy optimizer as placeholder
         self.free_min = scp_min
