@@ -28,6 +28,9 @@ class Model:
 
     component_parameters :
 
+    control_fields: list
+        [args, func1_t, func2_t, ,...]
+
     coupling :
 
     hilbert_space :
@@ -102,6 +105,13 @@ class Model:
 
         self.tf_Hcs.append(tf_H1)
 
+
+    def set_control_fields(self, control_fields):
+        self.control_fields = control_fields
+
+    def get_control_fields(self):
+        return self.control_fields
+
     # Is the session needed by model (aka does the session need to be passed 
     # down in the code?)
     # should the session setup be part of model init? if so is this function
@@ -109,14 +119,14 @@ class Model:
     def set_tf_session(self, tf_session):
         self.tf_session = tf_session
 
-    def get_Hamiltonian(self, control_fields):
+    def get_Hamiltonian(self):
         H = [self.H0]
-        for ii in range(len(control_fields)):
-            H.append([self.Hcs[ii], control_fields[ii]])
+        for ii in range(len(self.control_fields)):
+            H.append([self.Hcs[ii], self.control_fields[ii]])
         return H
 
-    def get_tf_Hamiltonian(self, control_fields):
+    def get_tf_Hamiltonian(self):
         tf_H = [self.tf_H0]
-        for ii in range(len(control_fields)):
-            tf_H.append([self.tf_Hcs[ii], control_fields[ii]])
+        for ii in range(len(self.control_fields)):
+            tf_H.append([self.tf_Hcs[ii], self.control_fields[ii]])
         return tf_H
