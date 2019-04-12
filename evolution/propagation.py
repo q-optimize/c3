@@ -16,7 +16,7 @@ from c3po.utils import tf_utils
 import tensorflow as tf
 import numpy as np
 
-def propagate(model, u0, tlist, method, grad = False, history = False):
+def propagate(model, gate, u0, tlist, method, grad = False, history = False):
     """
     Wrapper function for choosing the type of propagation method.
     :param model:   :class:'c3po.model'
@@ -30,10 +30,17 @@ def propagate(model, u0, tlist, method, grad = False, history = False):
         "pwc_tf", "qutip_sesolv"
 
     """
+
+
+
     if method == "pwc":
-        H = model.get_Hamiltonian() # Hamilton as lambda func or list [H0,...]?
+        H = model.get_Hamiltonian()
+
+        params = gate.get_parameters() # retrieve parameters/args for the drive
+                                       # fields
+
         tmp = Qobj      # create temp obj to get access to method evalute
-        H = tmp.evaluate(H) # from qutip: Evaluate a time-dependent quantum 
+        H = tmp.evaluate(H, t, params) # from qutip: Evaluate a time-dependent quantum 
                             # object in list format.
                             # see: http://qutip.org/docs/latest/apidoc/classes.html?highlight=evaluate#qutip.Qobj.evaluate
         U = sesolve_pwc(H, u0, tlist, grad, history)
@@ -52,10 +59,11 @@ def propagate(model, u0, tlist, method, grad = False, history = False):
         # not the right place to do it. 
         # My guess: Session initialization should be done at the 
         # very beginning, when systems/models/problems are specified/configured
-        sess = tf_setup()
 
         H = model.get_Hamiltonian_tf()  # should return Hamilton as lambda func 
                                         # or list [H0, ...]
+
+
         H = tf_evaluate(H)  # needed to convert a list [H0, ...] in useable format
 
 
@@ -138,21 +146,21 @@ def sesolve_pwc_tf(H, params, tlist, session, grad = False, history = False):
     Ts = tf.to_complex64(Ts)
 
 
-    with tf.name_scope('U_actual'):
-        def condition(i, u):
-            return i < N_slices
+    # with tf.name_scope('U_actual'):
+        # def condition(i, u):
+            # return i < N_slices
 
-        def body(i, u):
-            t = Ts[i] + dt/2
-            u_ = tf.linalg.expm(-1j / hbar * (H(t) * dt) * u
-            return i+1, u_
+        # def body(i, u):
+            # t = Ts[i] + dt/2
+            # u_ = tf.linalg.expm(-1j / hbar * (H(t) * dt) * u
+            # return i+1, u_
 
-        max_i, uf = tf.while_loop(condition, body, (0, u_initial), parallel_interactions=10)
+        # max_i, uf = tf.while_loop(condition, body, (0, u_initial), parallel_interactions=10)
 
-    with session.as_default():
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-        session.run(H, feed_dict=params)
+    # with session.as_default():
+        # run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+        # run_metadata = tf.RunMetadata()
+        # session.run(H, feed_dict=params)
 
     U = 0
 

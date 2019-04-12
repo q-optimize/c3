@@ -7,6 +7,9 @@ from numpy import pi
 import qutip as qt
 import c3po
 from c3po.utils.tf_utils import *
+from c3po.evolution.propagation import *
+
+
 """
 This is  disabled for now. The idea is to generalize the setup part later and use the System class
 to construct a model.
@@ -60,9 +63,25 @@ initial_model = c3po.Model(initial_parameters, initial_couplings, initial_hilber
 
 initial_model.set_tf_session(sess)
 
-H = initial_model.get_Hamiltonian([0])
+c_field = lambda t, c: c * t
 
-print(H)
+control_fields = [c_field]
+
+initial_model.set_control_fields(control_fields)
+
+H = initial_model.get_Hamiltonian()
+
+# print(H)
+
+
+u0 = 0
+
+
+tlist = np.linspace(0,10,1e3)
+
+U = propagate(initial_model, u0, tlist, "pwc", "False", "False")
+
+
 
 q1_X_gate = c3po.Gate('qubit_1', qt.sigmax())
 

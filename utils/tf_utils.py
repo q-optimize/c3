@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-
+import types
 
 def tf_log_level_info():
     """
@@ -74,6 +74,74 @@ def tf_setup():
 
 
     return sess
+
+def tf_evaluate(tf_obj_list, t, args):
+    """
+    This function is a 1:1 replication of qutips Qobj.evaluate() function
+    but modified for the usecase with tensorflow objects.
+    For more information see:
+    http://qutip.org/docs/latest/modules/qutip/qobj.html#Qobj.evaluate
+
+    Evaluate a time-dependent tf.Tensor obj in list format. For
+    example,
+
+        tf_obj_list = [H0, [H1, func_t]]
+
+    is evaluated to
+
+        tf.Tensor(t) = H0 + H1 * func_t(t, args)
+
+    and
+
+        tf_obj_list = [H0, [H1, 'sin(w * t)']]
+
+    is evaluated to
+
+        tf.Tensor(t) = H0 + H1 * sin(args['w'] * t)
+
+    Parameters
+    ----------
+    tf_obj_list : list
+        A nested list of tf.Tensor obj instances and corresponding time-dependent
+        coefficients.
+    t : float
+        The time for which to evaluate the time-dependent Qobj instance.
+    args : dictionary
+        A dictionary with parameter values required to evaluate the
+        time-dependent tf.Tensor intance.
+
+    Returns
+    -------
+    output : tf.Tensor
+        A tf.Tensor instance that represents the value of tf_obj_list at time t.
+
+    """
+    tf_obj_sum = 0
+    if isinstance(tf_obj_list, tf.Tensor):
+        tf_obj_sum = tf_obj_list
+    elif isinstnace(tf_obj_list, list):
+        for tf_obj in tf_obj_list:
+            if isinstance(tf_obj, tf.Tensor):
+                tf_obj_sum += tf_obj
+            elif (isinstance(tf_obj, list) and len(tf_obj) == 2 and
+                  isinstance(tf_obj[0], tf.Tensor)):
+                if isinstance(tf_obj[1], types.FunctionType):
+                    tf_obj_sum += tf_obj[0] * tf_obj[1](t, args)
+                elif isinstance(tf_obj[1], str):
+                    args['t'] = t
+                    tf_obj_sum = tf_obj[0] * float(eval(tf_obj[1], globals(), args))
+                else:
+                    raise TypeError('Unrecognized format for ' +
+                                    'specification of time-dependent tf.Tensor')
+            else:
+                raise TypeError('Unrecognized format for specification ' +
+                                'of time-dependent tf.Tensor')
+    else:
+        raise TypeError(
+            'Unrecognized format for specification of time-dependent tf.Tensor')
+
+    return tf_obj_sum
+
 
 
 
