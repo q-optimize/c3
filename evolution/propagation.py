@@ -16,75 +16,62 @@ from c3po.utils import tf_utils
 import tensorflow as tf
 import numpy as np
 
-def propagate(model, gate, u0, tlist, method, grad = False, history = False):
+def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, history = False):
     """
     Wrapper function for choosing the type of propagation method.
     :param model:   :class:'c3po.model'
-        Meta class for system hamiltonian
+       Meta class for system hamiltonian
     :param u0:
-        can be a state, a unitary or ...
+       can be a state, a unitary or ...
     :param tlist:
-        ...
+       ...
     :param  method:
-        switch for choosing the desired propagator. options are: "pwc",
-        "pwc_tf", "qutip_sesolv"
+       switch for choosing the desired propagator. options are: "pwc",
+       "pwc_tf", "qutip_sesolv"
 
     """
+    methods = ["pwc", "pwc_tf", "qutip_sesolv"]
+
+    if method in methods:
+        if "tf" not in method:
+            control_fields = gate.get_control_fields()
+
+            # dictrionary of parameters for crontrol fields
+            params = gate.get_parameters()
+
+            # should return Hamilton as list [H0, ...]
+            hlist = model.get_Hamiltonian(control_fields)
+        else:
+            control_fields = gate.get_tf_control_fields()
+
+            params = gate.get_parameters()  # retrieve parameters/args for the drive
+                                            # fields
+
+            params.update(model.get_params_tf())    # system parameters should be provided 
+                                                    # by model for the tensorflow backend
+                                                    # as input for: 
+                                                    # session.run(..., feed_dict = params)
+
+            # params.update(u0) # u0 should be part of the params passed to 
+                                # tensorflow and also needs to be a initialized/converted
+                                # as tensorflow object
+
+            hlist = model.get_tf_Hamiltonian(control_fields)
 
 
+        if method == "pwc":
+            U = sesolve_pwc(hlist, u0, tlist, params, grad, history)
 
-    if method == "pwc":
-        H = model.get_Hamiltonian()
+        if method == "pwc_tf":
+            U = sesolve_pwc_tf(hlist, params, tlist, tf_sess, grad, history)
 
-        params = gate.get_parameters() # retrieve parameters/args for the drive
-                                       # fields
-
-        tmp = Qobj      # create temp obj to get access to method evalute
-        H = tmp.evaluate(H, t, params) # from qutip: Evaluate a time-dependent quantum 
-                            # object in list format.
-                            # see: http://qutip.org/docs/latest/apidoc/classes.html?highlight=evaluate#qutip.Qobj.evaluate
-        U = sesolve_pwc(H, u0, tlist, grad, history)
-
-    if method == "pwc_tf":
-
-        # !!! CAUTION !!!
-        # this setup (tf_setup) step needs to be moved!
-        # I assume that you cannot create tensorflow objects without any 
-        # previously created session, as I guess that tf-objects are tied 
-        # to the initialized session. This means that everytime the model-class
-        # tries to return an Hamilton as tf-object a tf-session should be 
-        # running
-        # Right now I just put this here to remind, that a session 
-        # has to be created in order to use tensorflow, but this is clearly
-        # not the right place to do it. 
-        # My guess: Session initialization should be done at the 
-        # very beginning, when systems/models/problems are specified/configured
-
-        H = model.get_Hamiltonian_tf()  # should return Hamilton as lambda func 
-                                        # or list [H0, ...]
-
-
-        H = tf_evaluate(H)  # needed to convert a list [H0, ...] in useable format
-
-
-        params = model.get_params_tf()  # system parameters should be provided 
-                                        # by model for the tensorflow backend
-                                        # as input for: 
-                                        # session.run(..., feed_dict = params)
-
-
-        # u0 must also be converted to tensorflow, should u0 be part of params?
-        # this would make sense and streamline code imo.
-        U = sesolve_pwc_tf(H, params, tlist, sess, grad, history)
-
-    if method == "qutip_sesolv":
-        H = model.get_Hamiltonian()
-        U = sesolve(H, u0, tlist)
+        if method == "qutip_sesolv":
+            U = sesolve(hlist, u0, tlist, args=params)
 
     return U
 
 
-def sesolve_pwc(H, u0, tlist, grad = False, history = False):
+def sesolve_pwc(H, u0, tlist, args={}, grad = False, history = False):
     """
     Find the propagator of a system Hamiltonian H(t). The initial basis u0. The
     hamiltonian

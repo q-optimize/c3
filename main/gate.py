@@ -83,3 +83,10 @@ class Gate:
                         p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
                         idx += 1
         return p
+
+    def get_parameters(self):
+        return self.parameters
+
+    def get_keys(self)
+        return self.keys
+

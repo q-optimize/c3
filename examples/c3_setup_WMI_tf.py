@@ -8,6 +8,7 @@ import qutip as qt
 import c3po
 from c3po.utils.tf_utils import *
 from c3po.evolution.propagation import *
+from c3po.utils.hamiltonians import *
 
 
 """
@@ -67,20 +68,9 @@ c_field = lambda t, c: c * t
 
 control_fields = [c_field]
 
-initial_model.set_control_fields(control_fields)
+H = initial_model.get_Hamiltonian(control_fields)
 
-H = initial_model.get_Hamiltonian()
-
-# print(H)
-
-
-u0 = 0
-
-
-tlist = np.linspace(0,10,1e3)
-
-U = propagate(initial_model, u0, tlist, "pwc", "False", "False")
-
+print(H)
 
 
 q1_X_gate = c3po.Gate('qubit_1', qt.sigmax())
@@ -88,7 +78,7 @@ q1_X_gate = c3po.Gate('qubit_1', qt.sigmax())
 handmade_pulse = {'control1' : {
                       'carrier1' : {
                           'freq' : 6e9*2*pi,
-                          'pulses' : { 
+                          'pulses' : {
                             'pulse1' : {
                                 'amp' : 15e6*2*pi,
                                 't_up' : 5e-9,
@@ -106,7 +96,7 @@ q1_X_gate.set_parameters('initial', handmade_pulse)
 crazy_pulse = {'control1' : {
                       'carrier1' : {
                           'freq' : 6e9*2*pi,
-                          'pulses' : { 
+                          'pulses' : {
                             'pulse1' : {
                                 'amp' : 15e6*2*pi,
                                 't_up' : 5e-9,
@@ -117,7 +107,7 @@ crazy_pulse = {'control1' : {
                           },
                       'carrier2' : {
                           'freq' : 6e9*2*pi,
-                          'pulses' : { 
+                          'pulses' : {
                             'pulse1' : {
                                 'amp' : 15e6*2*pi,
                                 't_up' : 5e-9,
@@ -134,6 +124,32 @@ crazy_pulse = {'control1' : {
                           }
                       }
                 }
+
+
+print(" ")
+print(" ")
+print(" ")
+print(q1_X_gate.get_parameters())
+
+print(" ")
+print(" ")
+print(" ")
+print(q1_X_gate.get_keys())
+
+u0 = 0
+
+args = {'c' : 1.0}
+
+h_func = expand_hamiltonian(H, args)
+
+print(h_func(1))
+
+tlist = np.linspace(0,10,int(1e3))
+
+# U = propagate(initial_model, u0, tlist, "pwc", "False", "False")
+
+
+
 
 
 """
