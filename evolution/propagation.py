@@ -90,19 +90,42 @@ def sesolve_pwc(H, u0, tlist, args={}, grad = False, history = False):
 
 # CODE TAKEN FROM FEDERICO'S CODE: new_IBM_USAAR/utils.py
 
+#     if history:
+        # U = [u0]
+
+        # for t in tlist[1::]:
+            # dU = (-1j * dt * H(t+dt/2)).expm()
+            # U.append(dU * U[-1])
+
+    # else:
+        # U = [u0]
+
+        # for t in tlist[1::]:
+            # dU = (-1j * dt * H(t+dt/2)).expm()
+            # U[0] = dU * U[0]
+
     if history:
         U = [u0]
+        # creation of tmp necessary to access member function 'evaluate'
+        # stupid practice?
+        tmp = Qobj()
 
         for t in tlist[1::]:
-            dU = (-1j * dt * H(t+dt/2)).expm()
+            h_dt = tmp.evaluate(H, (t+dt/2), args)
+            dU = (-1j * dt * h_dt).expm()
             U.append(dU * U[-1])
 
     else:
         U = [u0]
+        # creation of tmp necessary to access member function 'evaluate'
+        # stupid practice?
+        tmp = Qobj()
 
         for t in tlist[1::]:
-            dU = (-1j * dt * H(t+dt/2)).expm()
+            h_dt = tmp.evaluate(H, (t+dt/2), args)
+            dU = (-1j * dt * h_dt).expm()
             U[0] = dU * U[0]
+
 
 
     return U

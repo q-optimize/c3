@@ -136,6 +136,6 @@ class Gate:
     def get_parameters(self):
         return self.parameters
 
-    def get_keys(self)
+    def get_keys(self):
         return self.keys
 
