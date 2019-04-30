@@ -133,6 +133,7 @@ class Gate:
             self.deserialize_parameters(p),
             indent=4,
             sort_keys=True))
+
     def get_parameters(self):
         return self.parameters
 
