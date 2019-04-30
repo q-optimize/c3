@@ -1,7 +1,9 @@
 """C3PO configuration file"""
 
 from numpy import pi
+import numpy as np
 import qutip as qt
+import matplotlib.pyplot as plt
 import c3po
 
 """
@@ -74,7 +76,6 @@ handmade_pulse = {
 
 q1_X_gate.set_parameters('initial', handmade_pulse)
 
-
 crazy_pulse = {
         'control1': {
             'carrier1': {
@@ -108,7 +109,20 @@ crazy_pulse = {
             }
         }
 
+""" Plotting control functions """
 
+ts = np.linspace(0, 50e-9, 10000)
+plt.rcParams['figure.dpi'] = 100
+control_func = q1_X_gate.get_control_fields('initial')
+
+fu = list(map(control_func, ts))
+env = list(map(lambda t: q1_X_gate.envelope(t, 5e-9, 45e-9), ts))
+fig, axs = plt.subplots(2, 1)
+
+axs[0].plot(ts/1e-9, env)
+
+axs[1].plot(ts/1e-9, fu)
+plt.show()
 """
 BSB_X_gate = Gate((q, r),
         qt.tensor(qt.sigmap(), qt.sigmap())

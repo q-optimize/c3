@@ -1,4 +1,5 @@
 import json
+from numpy import cos, sin
 
 
 class Gate:
@@ -92,6 +93,40 @@ class Gate:
                         p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
                         idx += 1
         return p
+
+    def get_IQ(self, name):
+        """
+        Construct the in-phase (I) and quadrature (Q) components of the control
+        signals.
+        These are universal to either experiment or simulation. In the
+        experiment these will be routed to AWG and mixer electronics, while in
+        the simulation they provide the shapes of the controlfields to be added
+        to the Hamiltonian.
+        """
+        drive_parameters = self.parameters[name]
+        envelope = self.envelope
+        omega_d = drive_parameters[0]
+        amp = drive_parameters[1]
+        t0 = drive_parameters[2]
+        t1 = drive_parameters[3]
+        xy_angle = drive_parameters[4]
+
+        def Inphase(t):
+            return amp * envelope(t, t0, t1) * cos(xy_angle)
+
+        def Quadrature(t):
+            return amp * envelope(t, t0, t1) * sin(xy_angle)
+
+        return Inphase, Quadrature, omega_d
+
+    def get_control_fields(self, gate):
+        """
+        Returns a function handle to the control shape, constructed from drive
+        parameters. For simulation we need the control fields to be added to
+        the model Hamiltonian.
+        """
+        I, Q, omega_d = self.get_IQ(gate)
+        return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
 
     def print(self, p):
         print(json.dumps(
