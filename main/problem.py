@@ -1,5 +1,6 @@
 import utils
 
+
 class Problem:
     """
     Main Class. CLass to specify the problem that we are trying to solve.
@@ -52,31 +53,34 @@ class Problem:
         self.grad_min = scp_min  # scipy optimizer as placeholder
         self.free_min = scp_min
         self.current_model = initial_model
-        #TODO Solve three tasks: IBM, WMI, our simulated problem
+        # TODO Solve three tasks: IBM, WMI, our simulated problem
 
     def optimize_pulse(gate):
         optim_opts = {''}
         x0 = gate.initial_guess.get_rescaled()
         optim_res = self.grad_min(self.sim.gate_fid(gate, self.current_model),
-                x0,
-                method='L-BFGS-B',
-                jac=self.sim.dgate_fid(gate),
-                callback=self.cbfun, optim_opts)
+                                  x0,
+                                  method='L-BFGS-B',
+                                  jac=self.sim.dgate_fid(gate),
+                                  callback=self.cbfun, optim_opts)
         gate.set_open_loop(optim_res.x)
-        #TODO might have to be current
+        # TODO might have to be current
 
     def record_calibration(current_x, current_state):
         calib_data.append([current_x, current_state])
 
     def calibrate_RB(gates):
-        #TODO change to multiple gates
+        # TODO change to multiple gates
+        calibrate_RB
+
+    def calibrate(gate):
         current_gate_name = gate.get_name()
         optim_opts = {''}
         x0 = gate.open_loop.get_rescaled()
         optim_res = self.free_min(self.exp.rb_fid(gates), x0,
-                method='nelder-mead',
-                callback=record_calibration,
-                optim_opts)
+                                  method='nelder-mead',
+                                  callback=record_calibration,
+                                  optim_opts)
         gate.calibrated.set(optim_res.x)
 
     def optimize_model_parameters():
