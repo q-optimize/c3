@@ -1,5 +1,7 @@
 import json
-from numpy import cos, sin
+from numpy import cos, sin, linspace
+import c3po.utils.envelopes
+import matplotlib.pyplot as plt
 
 
 class Gate:
@@ -28,13 +30,35 @@ class Gate:
         Function handle from our extensive library of shapes, a flattop mostly
     """
 
-    def __init__(self, target, goal, env_func):
+    def __init__(self, target, goal, env_shape='flattop', pulse={}):
         self.target = target
         self.goal_unitary = goal
-        self.props = ['amp', 't_up', 't_down', 'xy_angle']
+
+        self.env_shape = env_shape
+        if env_shape == 'gaussian':
+            env_func = c3po.utils.envelopes.gaussian
+            env_der = c3po.utils.envelopes.gaussian_der
+            self.env_der = env_der
+            props = ['amp', 'T', 'sigma', 'xy_angle']
+        elif env_shape == 'flattop':
+            env_func = c3po.utils.envelopes.flattop
+            props = ['amp', 't_up', 't_down', 'xy_angle', 'T']
+        elif env_shape == 'flattop_risefall':
+            env_func = c3po.utils.envelopes.flattop
+            props = ['amp', 't_up', 't_down', 'xy_angle', 'T', 'risefall']
+        elif env_shape == 'DRAG':
+            env_func = c3po.utils.envelopes.gaussian
+            env_der = c3po.utils.envelopes.gaussian_der
+            self.env_der = env_der
+            props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
+        self.props = props
         self.envelope = env_func
+
         self.keys = {}
-        self.parameters = {}
+        if pulse == {}:
+            self.parameters = {}
+        else:
+            self.set_parameters('default', pulse)
 
     def set_parameters(self, name, guess):
         """
@@ -110,22 +134,26 @@ class Gate:
         t0 = drive_parameters[2]
         t1 = drive_parameters[3]
         xy_angle = drive_parameters[4]
+        # TODO: atm it works for both gaussian and flattop, but only by chance
 
         def Inphase(t):
             return amp * envelope(t, t0, t1) * cos(xy_angle)
 
         def Quadrature(t):
+            if self.env_shape == 'DRAG':
+                drag = drive_parameters[5]
+                envelope = drag * self.env_der
             return amp * envelope(t, t0, t1) * sin(xy_angle)
 
         return Inphase, Quadrature, omega_d
 
-    def get_control_fields(self, gate):
+    def get_control_fields(self, name):
         """
         Returns a function handle to the control shape, constructed from drive
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
         """
-        I, Q, omega_d = self.get_IQ(gate)
+        I, Q, omega_d = self.get_IQ(name)
         return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
 
     def print(self, p):
@@ -133,3 +161,18 @@ class Gate:
             self.deserialize_parameters(p),
             indent=4,
             sort_keys=True))
+
+    def plot_control_fields(self, name):
+        """ Plotting control functions """
+
+        ts = linspace(0, 50e-9, 10000)
+        plt.rcParams['figure.dpi'] = 100
+        control_func = self.get_control_fields(name)
+
+        fu = list(map(control_func, ts))
+        env = list(map(lambda t: self.envelope(t, 5e-9, 45e-9), ts))
+        fig, axs = plt.subplots(2, 1)
+
+        axs[0].plot(ts/1e-9, env)
+        axs[1].plot(ts/1e-9, fu)
+        plt.show()

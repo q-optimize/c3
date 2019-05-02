@@ -1,4 +1,5 @@
 import qutip as qt
+from c3po import utils
 
 
 class Model:
@@ -33,7 +34,8 @@ class Model:
         Returns the Hamiltonian in a QuTip compatible way
     get_time_slices()
     """
-    def __init__(self, component_parameters, coupling, hilbert_space):
+    def __init__(self, component_parameters, coupling, hilbert_space,
+                 model_types):
         hbar = 1
 
         self.component_parameters = component_parameters
@@ -41,26 +43,54 @@ class Model:
         self.Hcs = []
 
         omega_q = component_parameters['qubit_1']['freq']
+        delta = component_parameters['qubit_1']['delta']
         omega_r = component_parameters['cavity']['freq']
         g = coupling['q1_cav']['strength']
 
         dim_q = hilbert_space['qubit_1']
         dim_r = hilbert_space['cavity']
 
-        a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
-        sigmaz = qt.tensor(qt.sigmaz(), qt.qeye(dim_r))
-        sigmax = qt.tensor(qt.sigmax(), qt.qeye(dim_r))
+        res_type = model_types['cavity']
+        qubit_type = model_types['qubit_1']
+        inter_type = model_types['interaction']
+        drive_type = model_types['direct']
 
-        self.H0 = hbar * omega_q / 2 * sigmaz + hbar * omega_r * a.dag() * a \
-            + hbar * g * (a.dag() + a) * sigmax
-        H1 = hbar * sigmax
-        self.Hcs.append(H1)
+        # Construct H0 from resonator, qubit and interaction types
+        a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
+        # Resonator
+        if res_type == 'harmonic':
+            res = utils.hamiltonians.resonator(a, omega_r)
+        # Qubit
+        b = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
+        if qubit_type == 'multi':
+            qubit = utils.hamiltonians.duffing(b, omega_q, delta)
+        elif qubit_type == 'simple':
+            sigmaz = b * b.dag() - b.dag() * b
+            qubit = omega_q / 2 * sigmaz
+        # Interaction
+        if inter_type == 'XX':
+            inter = utils.hamiltonians.int_XX(a, b, g)
+        if inter_type == 'JC':
+            inter = utils.hamiltonians.int_jaynes_cummings(a, b, g)
+        self.H0 = hbar * (qubit + res + inter)
+
+        # Construct drive Hamiltonians
+        if drive_type == 'direct':
+            drive = hbar * (b.dag() + b)
+        elif drive_type == 'indirect':
+            drive = hbar * (a.dag() + a)
+        self.Hcs.append(drive)
 
     # TODO: Think about the distinction between System and Model classes
+    """
+    Federico: I believe the information about the physical system,
+    i.e. components and companent parameters should be in the system class
+    Then the Hamiltonian is constructed in the model class with parsers
+    (as above) or just provided by the user
+    """
 
     def get_Hamiltonian(self, control_fields):
         H = [self.H0]
         for ii in range(len(control_fields)):
             H.append([self.Hcs[ii], control_fields[ii]])
         return H
-
