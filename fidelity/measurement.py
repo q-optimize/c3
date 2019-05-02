@@ -1,7 +1,8 @@
-import qutip
-from numpy import cos, sin
+""" Measurement object that communicates between searcher and sim/exp"""
 
-# Measurement object that communicates between searcher and sim/exp
+import cma
+from numpy import trace, zeros_like, real
+from qutip import tensor, basis, qeye
 
 
 class Backend:
@@ -9,33 +10,6 @@ class Backend:
     Represents either an experiment or a simulation and contains the methods
     both need to provide.
     """
-    def get_IQ(self, gate, name):
-        """
-        Construct the in-phase (I) and quadrature (Q) components of the control
-        signals.
-        These are universal to either experiment or simulation. In the
-        experiment these will be routed to AWG and mixer electronics, while in
-        the simulation they provide the shapes of the controlfields to be added
-        to the Hamiltonian.
-        """
-        drive_parameters = gate.parameters[name]
-        envelope = gate.get_envelope()
-        control = drive_parameters['control1']
-        carrier = control['carrier1']
-        omega_d = carrier['freq']
-        pulse = carrier['pulse1']
-        amp = pulse['amp']
-        t0 = pulse['t_up']
-        t1 = pulse['t_down']
-        xy_angle = pulse['xy_angle']
-
-        def Inphase(t):
-            return amp * envelope(t0, t1, t) * cos(xy_angle)
-
-        def Quadrature(t):
-            return amp * envelope(t0, t1, t) * sin(xy_angle)
-
-        return Inphase, Quadrature, omega_d
 
 
 class Experiment(Backend):
@@ -43,9 +17,18 @@ class Experiment(Backend):
     The driver for an experiment.
     """
     def __init__(self, eval_gate, eval_seq):
+        """
+        Initialize with eval_gate, which takes parameters for a gate and
+        returns an achieved figure of merit that is to be minimized.
+        """
         self.evaluate_gate = eval_gate
         self.evaluate_seq = eval_seq
-        #TODO: Try and Handle empty function handles
+        # TODO: Try and Handle empty function handles
+
+    def calibrate(gate, start_name='initial', calib_name='calibrated'):
+        p0 = gate.parameters[start_name]
+        p_opt, es = cma.fmin2(p0, 0.5)
+        gate.parameters[calib_name] = p_opt
 
 
 class Simulation(Backend):
@@ -57,25 +40,40 @@ class Simulation(Backend):
     gate_fid(gate)
         returns findelity of gate vs gate.goal_unitary
     """
-    def __init__(self, model):
+    def __init__(self, model, solve_func):
         self.model = model
+        self.evolution = solve_func
 
     def update_model(self, model):
         self.model = model
 
     def gate_fid(self, gate):
         U = self.evolution(gate)
-        return qutip.trace_dist(U, gate.goal_unitary)
+        U_goal = gate.goal_unitary
+        g = 1-abs(trace((U_goal.dag() * U).full())) / U_goal.full().ndim
+        return g
 
-    def dgate_fid(gate):
-        # horrible formula from GOAT paper
-        return # gradient
-
-    def get_control_fields(self, gate):
+    def dgate_fid(self, gate):
         """
-        Returns a function handle to the control shape, constructed from drive
-        parameters. For simulation we need the control fields to be added to
-        the model Hamiltonian.
+        Compute the gradient of the fidelity w.r.t. each parameter of the gate.
+        Formally obtained by the derivative of the gate fidelity. See GOAT
+        paper for details.
         """
-        I, Q, omega_d = self.get_IQ(gate)
-        return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
+        U = self.evolution_grad(gate)
+        p = gate.parameters
+        n_params = len(p) + 1
+        U_goal = gate.goal_unitary
+        dim = U_goal.full().ndim
+        uf = tensor(basis(n_params, 0), qeye(dim)).dag() * U
+        g = trace(
+                (U_goal.dag() * uf).full()
+            ) / dim
+        ret = zeros_like(p)
+        for ii in range(1, n_params):
+            duf = tensor(basis(n_params, ii), qeye(dim)).dag() * U
+            ret[ii-1] = -1 * real(
+                g.conj() / abs(g) / dim * trace(
+                    (U_goal.dag() * duf).full()
+                )
+            )
+        return ret

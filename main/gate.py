@@ -129,7 +129,10 @@ class Gate:
         return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
 
     def print(self, p):
-        print(json.dumps(
-            self.deserialize_parameters(p),
-            indent=4,
-            sort_keys=True))
+        print(
+                json.dumps(
+                    self.deserialize_parameters(p),
+                    indent=4,
+                    sort_keys=True
+                    )
+            )

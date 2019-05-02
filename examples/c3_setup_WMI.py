@@ -122,7 +122,7 @@ fig, axs = plt.subplots(2, 1)
 axs[0].plot(ts/1e-9, env)
 
 axs[1].plot(ts/1e-9, fu)
-plt.show()
+plt.show(block=False)
 """
 BSB_X_gate = Gate((q, r),
         qt.tensor(qt.sigmap(), qt.sigmap())
