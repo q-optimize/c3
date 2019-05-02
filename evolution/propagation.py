@@ -30,11 +30,18 @@ def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, hist
        "pwc_tf", "qutip_sesolv"
 
     """
-    methods = ["pwc", "pwc_tf", "qutip_sesolv"]
+    methods = ["pwc", "pwc_tf", "qutip_sesolve"]
 
     if method in methods:
         if "tf" not in method:
-            control_fields = gate.get_control_fields()
+
+
+            # this is garbage and needs to be fixed. either get_control_fields
+            # delivers a list of all control fields or only a function 
+            # that is added here to a list
+            keys = gate.get_parameters().keys()
+            for key in keys:
+                control_fields = gate.get_control_fields(key)
 
             # dictrionary of parameters for crontrol fields
             params = gate.get_parameters()
@@ -60,13 +67,18 @@ def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, hist
 
 
         if method == "pwc":
-            U = sesolve_pwc(hlist, u0, tlist, params, grad, history)
+            U = sesolve_pwc(hlist, u0, tlist, params, grad, history="True")
 
         if method == "pwc_tf":
             U = sesolve_pwc_tf(hlist, params, tlist, tf_sess, grad, history)
 
-        if method == "qutip_sesolv":
-            U = sesolve(hlist, u0, tlist, args=params)
+        if method == "qutip_sesolve":
+#             dim = u0.shape[1]
+            # U = []
+            # for i in range(0, dim):
+                # tmp = Qobj()
+                # U.append(sesolve(hlist, u0[i], tlist))
+            U = sesolve(hlist, u0, tlist)
 
     return U
 
@@ -110,6 +122,8 @@ def sesolve_pwc(H, u0, tlist, args={}, grad = False, history = False):
         # stupid practice?
         tmp = Qobj()
 
+        dt = tlist[1]
+
         for t in tlist[1::]:
             h_dt = tmp.evaluate(H, (t+dt/2), args)
             dU = (-1j * dt * h_dt).expm()
@@ -120,6 +134,8 @@ def sesolve_pwc(H, u0, tlist, args={}, grad = False, history = False):
         # creation of tmp necessary to access member function 'evaluate'
         # stupid practice?
         tmp = Qobj()
+
+        dt = tlist[1]
 
         for t in tlist[1::]:
             h_dt = tmp.evaluate(H, (t+dt/2), args)

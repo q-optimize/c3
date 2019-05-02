@@ -125,8 +125,13 @@ class Gate:
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
         """
+
+        c_fields = []
+
         I, Q, omega_d = self.get_IQ(gate)
-        return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
+        c_func = lambda t, args: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
+        c_fields.append(c_func)
+        return c_fields
 
     def print(self, p):
         print(json.dumps(

@@ -118,10 +118,10 @@ class Model:
             H.append([self.Hcs[ii], control_fields[ii]])
         return H
 
-   def get_tf_Hamiltonian(self, control_fields):
-       tf_H = [self.tf_H0]
-       for ii in range(len(self.control_fields)):
-           tf_H.append([self.tf_Hcs[ii], self.control_fields[ii]])
-       return tf_H
+    def get_tf_Hamiltonian(self, control_fields):
+        tf_H = [self.tf_H0]
+        for ii in range(len(self.control_fields)):
+            tf_H.append([self.tf_Hcs[ii], self.control_fields[ii]])
+        return tf_H
 
 
