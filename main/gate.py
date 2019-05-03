@@ -36,6 +36,7 @@ class Gate:
 
         self.env_shape = env_shape
         if env_shape == 'gaussian':
+            # TODO figure out parallel imports
             env_func = c3po.utils.envelopes.gaussian
             env_der = c3po.utils.envelopes.gaussian_der
             self.env_der = env_der
@@ -154,6 +155,11 @@ class Gate:
         the model Hamiltonian.
         """
         I, Q, omega_d = self.get_IQ(name)
+        """
+        NICO: Federico raised the question if the xy_angle should be added
+        here. After some research, this should be the correct way. The
+        signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
+        """
         return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
 
     def print(self, p):

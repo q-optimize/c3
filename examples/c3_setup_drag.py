@@ -40,16 +40,21 @@ print(H)
 q1_X_gate = c3po.Gate('qubit_1', qt.sigmax(), env_shape='DRAG')
 
 handmade_pulse = {
-        'control1': {
-            'carrier1': {
+        'control': {
+            'carrier': {
                 'freq': 6e9*2*pi,
                 'pulses': {
-                    'pulse1': {
+                    'pulse': {
                         'amp': 15e6*2*pi,
                         'T': 20e-9,
                         'sigma': 2e-9,
                         'xy_angle': 0,
-                        'drag': 1 / (100e6 * 2 * pi)
+                        'env': 'flattop'
+                        },
+                    'drag': {
+                        'detuning': initial_parameters['qubit1']['delta'],
+                        'env': 'drag',
+                        'orig': 'pulse'
                         }
                     }
                 }
