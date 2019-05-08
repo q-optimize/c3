@@ -16,7 +16,7 @@ class Experiment(Backend):
     """
     The driver for an experiment.
     """
-    def __init__(self, eval_gate, eval_seq):
+    def __init__(self, eval_gate, eval_seq=None):
         """
         Initialize with eval_gate, which takes parameters for a gate and
         returns an achieved figure of merit that is to be minimized.
@@ -25,10 +25,17 @@ class Experiment(Backend):
         self.evaluate_seq = eval_seq
         # TODO: Try and Handle empty function handles
 
-    def calibrate(gate, start_name='initial', calib_name='calibrated'):
-        p0 = gate.parameters[start_name]
-        p_opt, es = cma.fmin2(p0, 0.5)
-        gate.parameters[calib_name] = p_opt
+    def calibrate(self, gate, start_name='initial', calib_name='calibrated'):
+        x0 = gate.rescale_and_bind(start_name)
+        x_opt, es = cma.fmin2(
+                lambda x: self.evaluate_gate(
+                    gate,
+                    gate.rescale_and_bind_inv(x)
+                    ),
+                x0,
+                0.5
+                )
+        gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
 
 
 class Simulation(Backend):

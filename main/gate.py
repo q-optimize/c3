@@ -1,6 +1,6 @@
 import json
-from numpy import cos, sin, linspace
-import c3po.utils.envelopes
+import numpy as np
+from c3po.utils.envelopes import flattop, gaussian, gaussian_der
 import matplotlib.pyplot as plt
 
 
@@ -30,26 +30,30 @@ class Gate:
         Function handle from our extensive library of shapes, a flattop mostly
     """
 
-    def __init__(self, target, goal, env_shape='flattop', pulse={}):
+    def __init__(
+            self,
+            target,
+            goal,
+            env_shape='flattop',
+            pulse={}):
         self.target = target
         self.goal_unitary = goal
-
         self.env_shape = env_shape
         if env_shape == 'gaussian':
             # TODO figure out parallel imports
-            env_func = c3po.utils.envelopes.gaussian
-            env_der = c3po.utils.envelopes.gaussian_der
+            env_func = gaussian
+            env_der = gaussian_der
             self.env_der = env_der
             props = ['amp', 'T', 'sigma', 'xy_angle']
         elif env_shape == 'flattop':
-            env_func = c3po.utils.envelopes.flattop
-            props = ['amp', 't_up', 't_down', 'xy_angle', 'T']
+            env_func = flattop
+            props = ['amp', 't_up', 't_down', 'xy_angle']
         elif env_shape == 'flattop_risefall':
-            env_func = c3po.utils.envelopes.flattop
+            env_func = flattop
             props = ['amp', 't_up', 't_down', 'xy_angle', 'T', 'risefall']
         elif env_shape == 'DRAG':
-            env_func = c3po.utils.envelopes.gaussian
-            env_der = c3po.utils.envelopes.gaussian_der
+            env_func = gaussian
+            env_der = gaussian_der
             self.env_der = env_der
             props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
         self.props = props
@@ -60,6 +64,14 @@ class Gate:
             self.parameters = {}
         else:
             self.set_parameters('default', pulse)
+
+        self.bounds = None
+
+    def set_bounds(self, b_in):
+        b = np.array(self.serialize_parameters(b_in))
+        self.bounds = {}
+        self.bounds['scale'] = np.diff(b).T[0]
+        self.bounds['offset'] = b.T[0]
 
     def set_parameters(self, name, guess):
         """
@@ -79,7 +91,7 @@ class Gate:
     def serialize_parameters(self, p):
         """
         Takes a nested dictionary of pulse parameters and returns a linear
-        vector, compatible with the parametrization of this gate. Input can
+        list, compatible with the parametrization of this gate. Input can
         also be the name of a stored pulse.
         """
         q = []
@@ -119,7 +131,23 @@ class Gate:
                         idx += 1
         return p
 
-    def get_IQ(self, name):
+    def rescale_and_bind(self, q):
+        """
+        Returns a vector of scale 1 that plays well with optimizers.
+        """
+        if isinstance(q, str):
+            q = self.parameters[q]
+        x = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
+        return np.arccos(2 * x - 1)
+
+    def rescale_and_bind_inv(self, x):
+        """
+        Transforms an optimizer vector back to physical scale.
+        """
+        y = (np.cos(np.abs(x))+1)/2
+        return self.bounds['scale'] * y + self.bounds['offset']
+
+    def get_IQ(self, guess):
         """
         Construct the in-phase (I) and quadrature (Q) components of the control
         signals.
@@ -128,25 +156,35 @@ class Gate:
         the simulation they provide the shapes of the controlfields to be added
         to the Hamiltonian.
         """
-        drive_parameters = self.parameters[name]
-        envelope = self.envelope
-        omega_d = drive_parameters[0]
-        amp = drive_parameters[1]
-        t0 = drive_parameters[2]
-        t1 = drive_parameters[3]
-        xy_angle = drive_parameters[4]
+        if isinstance(guess, str):
+            guess = self.parameters[guess]
+        """
+        NICO: Paramtrization here is fixed for testing and will have to be
+        extended to more general.
+        """
+        omega_d = guess[0]
+        amp = guess[1]
+        t0 = guess[2]
+        t1 = guess[3]
+        xy_angle = guess[4]
         # TODO: atm it works for both gaussian and flattop, but only by chance
 
         def Inphase(t):
-            return amp * envelope(t, t0, t1) * cos(xy_angle)
+            return self.envelope(t, t0, t1) * np.cos(xy_angle)
 
         def Quadrature(t):
+            envelope = self.envelope
             if self.env_shape == 'DRAG':
-                drag = drive_parameters[5]
+                drag = guess[5]
                 envelope = drag * self.env_der
-            return amp * envelope(t, t0, t1) * sin(xy_angle)
+            return envelope(t, t0, t1) * np.sin(xy_angle)
 
-        return Inphase, Quadrature, omega_d
+        return {
+                'I': Inphase,
+                'Q': Quadrature,
+                'carrier_amp': amp,
+                'omegas': [omega_d]
+                }
 
     def get_control_fields(self, name):
         """
@@ -154,15 +192,21 @@ class Gate:
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
         """
-        I, Q, omega_d = self.get_IQ(name)
+        p_IQ = self.get_IQ(name)
+        mixer_I = p_IQ['I']
+        mixer_Q = p_IQ['Q']
+        omega_d = p_IQ['omegas'][0]
+        amp = p_IQ['carrier_amp']
         """
         NICO: Federico raised the question if the xy_angle should be added
         here. After some research, this should be the correct way. The
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
-        return lambda t: I(t) * cos(omega_d * t) + Q(t) * sin(omega_d * t)
+        return lambda t:\
+            amp * (mixer_I(t) * np.cos(omega_d * t)
+                   + mixer_Q(t) * np.sin(omega_d * t))
 
-    def print(self, p):
+    def print_pulse(self, p):
         print(
                 json.dumps(
                     self.deserialize_parameters(p),
@@ -171,17 +215,12 @@ class Gate:
                     )
             )
 
-    def plot_control_fields(self, name):
+    def plot_control_fields(self, q='initial', axs=None):
         """ Plotting control functions """
-
-        ts = linspace(0, 50e-9, 10000)
+        ts = np.linspace(0, 100e-9, 100)
         plt.rcParams['figure.dpi'] = 100
-        control_func = self.get_control_fields(name)
-
-        fu = list(map(control_func, ts))
-        env = list(map(lambda t: self.envelope(t, 5e-9, 45e-9), ts))
+        IQ = self.get_IQ(q)
         fig, axs = plt.subplots(2, 1)
-
-        axs[0].plot(ts/1e-9, env)
-        axs[1].plot(ts/1e-9, fu)
-        plt.show()
+        axs[0].plot(ts/1e-9, list(map(IQ['I'], ts)))
+        axs[1].plot(ts/1e-9, list(map(IQ['Q'], ts)))
+        plt.show(block=False)

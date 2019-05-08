@@ -30,26 +30,41 @@ WMI_memory = System([q, r, q_drv], couplings, controls)
 """
 
 initial_parameters = {
-        'qubit_1': {'freq': 6e9*2*pi},
+        'qubit_1': {
+            'freq': 6e9*2*pi,
+            'delta': 100e6*2*pi
+            },
         'cavity': {'freq': 9e9*2*pi}
         }
+
 initial_couplings = {
         'q1_cav': {'strength': 150e6*2*pi}
         }
+
 initial_hilbert_space = {
         'qubit_1': 2,
         'cavity': 5
         }
+
 model_init = [
         initial_parameters,
         initial_couplings,
         initial_hilbert_space
         ]
 
+model_types = {
+        'qubit_1': 'multi',  # other options: 'simple'
+        'cavity': 'harmonic',
+        'interaction': 'XX',   # other option 'JC', or 'JC' and 'RWA' resp.
+        'drive': 'direct'  # other option 'indirect'
+        }
+
+
 initial_model = c3po.Model(
         initial_parameters,
         initial_couplings,
-        initial_hilbert_space
+        initial_hilbert_space,
+        model_types
         )
 
 H = initial_model.get_Hamiltonian([0])

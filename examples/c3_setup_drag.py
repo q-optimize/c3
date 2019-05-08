@@ -49,11 +49,11 @@ handmade_pulse = {
                         'T': 20e-9,
                         'sigma': 2e-9,
                         'xy_angle': 0,
-                        'env': 'flattop'
+                        'type': 'flattop'
                         },
                     'drag': {
                         'detuning': initial_parameters['qubit1']['delta'],
-                        'env': 'drag',
+                        'type': 'drag',
                         'orig': 'pulse'
                         }
                     }
