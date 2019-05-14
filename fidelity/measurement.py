@@ -44,10 +44,11 @@ class Experiment(Backend):
         while not es.stop():
             solutions = es.ask()
             es.tell(solutions, 
-                    lambda x: self.evaluate_gate(
+                    [lambda x: self.evaluate_gate(
                         gate,
                         gate.rescale_and_bind_inv(x)
                         )
+                        for x in solutions]
                     )
             es.logger.add()
             es.disp()
