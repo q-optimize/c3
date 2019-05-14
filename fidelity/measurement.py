@@ -39,6 +39,9 @@ class Experiment(Backend):
     
     def calibrate_2(self, gate, start_name='initial', calib_name='calibrated'):
         x0 = gate.rescale_and_bind(start_name)
+        if 'init_ranges' in gate.parameters.keys:
+            init_spread = gate.rescale_and_bind('init_ranges')
+           
         opts = None
         es = cma.CMAEvolutionStrategy(x0, 0.5, opts)
         while not es.stop():
