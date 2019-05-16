@@ -37,6 +37,6 @@ def combine_goal_penalty_smooth(
     p_eff = penalty - p_thresh
 
     gq_sum = c_sum * (g_eff + p_eff)**e_sum
-    gq_diff = c_diff * (g_eff - p_eff)**e_diff
+    gq_diff = c_diff * np.abs(g_eff - p_eff)**e_diff
 
-    return np.log(gq_sum + gq_diff)
+    return np.log10(gq_sum + gq_diff)
