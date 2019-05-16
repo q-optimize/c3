@@ -36,20 +36,22 @@ class Experiment(Backend):
                 0.5
                 )
         gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
-    
+
     def calibrate_2(self, gate, opts=None, start_name='initial', calib_name='calibrated'):
         x0 = gate.rescale_and_bind(start_name)
-        if 'init_ranges' in gate.parameters.keys:
-            opts['CMA_stds'] = gate.rescale_and_bind('init_ranges')
-
-        es = cma.CMAEvolutionStrategy(x0, 1, opts)
+        es = cma.CMAEvolutionStrategy(x0, 0.5, opts)
+        iteration_number = 0
         while not es.stop():
             samples = es.ask()
             samples_rescaled = [gate.rescale_and_bind_inv(x) for x in samples]
-            es.tell(samples, self.evaluate_gate(None, samples_rescaled))
+            es.tell(samples, self.evaluate_gate(None, samples_rescaled, iteration_number))
             es.logger.add()
             es.disp()
+            iteration_number += 1
+        # res = result.result + (result.stop(), result, result.logger)
         # gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
+        cma.plot()
+        return es  
 
 
 class Simulation(Backend):

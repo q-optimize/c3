@@ -146,14 +146,14 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
-        return (y - 0.5)
+        x = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
+        return np.arccos(2 * x - 1)
 
     def rescale_and_bind_inv(self, x):
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = np.arccos((np.cos(np.array(x)+0.5)))
+        y = (np.cos(np.abs(x))+1)/2
         return self.bounds['scale'] * y + self.bounds['offset']
 
     def get_IQ(self, guess):
