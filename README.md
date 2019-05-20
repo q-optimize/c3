@@ -7,7 +7,7 @@ The package is now installable, e.g. with
 
 pip install -e \<source directory\>
 
-Adding the -e specifies the developer option and will only link to the source. This you don't have to reinstall after changes in the code.
+Adding the -e specifies the developer option and will only link to the source. This way you don't have to reinstall after changes in the code.
 
 ## Specs
 ### Notation
