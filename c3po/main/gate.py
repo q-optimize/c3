@@ -57,6 +57,9 @@ class Gate:
             env_der = gaussian_der
             self.env_der = env_der
             props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
+        elif env_shape == 'ETH':
+            props = ['amplitude', 'length', 'alpha']
+            env_func = None
         self.props = props
         self.envelope = env_func
 
@@ -69,7 +72,10 @@ class Gate:
         self.bounds = None
 
     def set_bounds(self, b_in):
-        b = np.array(self.serialize_parameters(b_in))
+        if self.env_shape =='ETH':
+            b = np.array( list(b_in.values()))
+        else:
+            b = np.array(self.serialize_parameters(b_in))
         self.bounds = {}
         self.bounds['scale'] = np.diff(b).T[0]
         self.bounds['offset'] = b.T[0]
@@ -79,15 +85,18 @@ class Gate:
         An initial guess that implements this gate. The structure defines the
         parametrization of this gate.
         """
-        control_keys = sorted(guess.keys())
-        for ckey in control_keys:
-            control = guess[ckey]
-            self.keys[ckey] = {}
-            carrier_keys = sorted(control.keys())
-            for carkey in carrier_keys:
-                carrier = guess[ckey][carkey]
-                self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
-        self.parameters[name] = self.serialize_parameters(guess)
+        if self.env_shape == 'ETH':
+            self.parameters[name] = list(guess.values())
+        else:
+            control_keys = sorted(guess.keys())
+            for ckey in control_keys:
+                control = guess[ckey]
+                self.keys[ckey] = {}
+                carrier_keys = sorted(control.keys())
+                for carkey in carrier_keys:
+                    carrier = guess[ckey][carkey]
+                    self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
+            self.parameters[name] = self.serialize_parameters(guess)
 
     def serialize_parameters(self, p):
         """
