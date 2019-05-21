@@ -13,7 +13,7 @@ class Gate:
     target: Component
         Model component(s) to act upon
     # TODO make sure goal unitary is of the right dimensions
-    goal_unitary: Qobj
+    goal: Qobj
         Unitary representation of the gate on computational subspace.
 
     Attributes
