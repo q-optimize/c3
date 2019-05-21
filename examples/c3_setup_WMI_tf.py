@@ -43,15 +43,16 @@ def plot_dynamics(u_list, ts, states):
     for si in states:
         for ti in range(len(ts)):
             pop.append(abs(u_list[ti][si][0] ** 2))
-        plt.plot(ts, pop)
+#        plt.plot(ts, pop)
+    return pop
 
 
-def plot_dynamics_sesolve(u_list, ts, states):
+def plot_dynamics_sesolve(u_list, ts):
     pop = []
-    for si in states:
-        for ti in range(len(ts)):
-            pop.append(abs(u_list.states[ti][si][0] ** 2))
-        plt.plot(ts, pop)
+    for ti in range(len(ts)):
+        pop.append(abs(u_list.states[ti].full().T[0] ** 2))
+#    plt.plot(ts, pop)
+    return pop
 
 
 
@@ -156,27 +157,54 @@ control_func = q1_X_gate.get_control_fields('initial')
 
 H = initial_model.get_Hamiltonian(control_func)
 
-print(H)
+# print(H)
+
+
+ts = np.linspace(0, 50e-9, int(1e4))
+
+
 
 U0 = tensor(
     qeye(2),
     qeye(5)
 )
 
-print(U0)
-
-ts = np.linspace(0, 50e-9, int(1e4))
-
-
-psi0 = tensor(basis(2,0), basis(5,0))
-
-U = propagate(initial_model, q1_X_gate, psi0, ts, 'qutip_sesolve')
+# print(U0)
 
 u = propagate(initial_model, q1_X_gate, U0, ts, "pwc")
 
-plot_dynamics(u, ts, [0])
 
-# plot_dynamics_sesolve(U, ts, [0])
+
+
+psi = []
+for i in range(0,2):
+    for j in range(0,5):
+        psi.append(tensor(basis(2,i), basis(5,j)))
+
+U = []
+for i in range(0, 10):
+    U_res = propagate(initial_model, q1_X_gate, psi[i], ts, 'qutip_sesolve')
+    U.append(U_res)
+
+
+
+
+
+pop1 = plot_dynamics(u, ts, [0])
+
+pop2 = plot_dynamics_sesolve(U[0], ts)
+
+
+fig = plt.figure(1)
+sp1 = plt.subplot(211)
+sp1.title.set_text("pwc 1e4")
+plt.plot(ts, pop1)
+
+sp2 = plt.subplot(212)
+sp2.title.set_text("sesolve")
+plt.plot(ts, pop2)
+
+plt.show()
 
 # """ Plotting control functions """
 
