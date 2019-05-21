@@ -25,33 +25,45 @@ class Experiment(Backend):
         self.evaluate_seq = eval_seq
         # TODO: Try and Handle empty function handles
 
-    def calibrate(self, gate, start_name='initial', calib_name='calibrated'):
-        x0 = gate.rescale_and_bind(start_name)
-        x_opt, es = cma.fmin2(
-                lambda x: self.evaluate_gate(
-                    gate,
-                    gate.rescale_and_bind_inv(x)
-                    ),
-                x0,
-                0.5
-                )
-        gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
+    def calibrate(
+            self,
+            gate,
+            opts=None,
+            start_name='initial',
+            calib_name='calibrated'
+            ):
+        """
+        Provide a gate to be calibrated with a gradient free search algorithm.
+        At the moment this is CMA-ES and you can give valid opts. See pycma
+        documentation for specifics. Initial sigma is set to 0.5, but you can
+        give scaling for each dimension in the opts dictionary with the
+        'CMA_stds' key. Further 'ftarget' sets the goal infidelity and
+        'popsize' the number of samples per generation.
 
-    def calibrate_2(self, gate, opts=None, start_name='initial', calib_name='calibrated'):
-        x0 = gate.rescale_and_bind(start_name)
+        Example for 3 parameters:
+        ops = {
+            'CMA_stds' : [1, 2, 0.5],
+            'ftarget' = 1e-4,
+            'popsize' = 20,
+            }
+        """
+        x0 = gate.to_scale_one(start_name)
         es = cma.CMAEvolutionStrategy(x0, 0.5, opts)
-        iteration_number = 0
         while not es.stop():
             samples = es.ask()
-            samples_rescaled = [gate.rescale_and_bind_inv(x) for x in samples]
-            es.tell(samples, self.evaluate_gate(None, samples_rescaled, iteration_number))
+            samples_rescaled = [gate.to_bound_phys_scale(x) for x in samples]
+            es.tell(
+                    samples,
+                    self.evaluate_gate(
+                        gate,
+                        samples_rescaled,
+                        )
+                    )
             es.logger.add()
             es.disp()
-            iteration_number += 1
-        # res = result.result + (result.stop(), result, result.logger)
-        # gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
-        cma.plot()
-        return es  
+        res = es.result + (es.stop(), es, es.logger)
+        x_opt = res[0]
+        gate.parameters[calib_name] = gate.to_bound_phys_scale(x_opt)
 
 
 class Simulation(Backend):
