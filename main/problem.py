@@ -69,9 +69,8 @@ class Problem:
     def record_calibration(current_x, current_state):
         calib_data.append([current_x, current_state])
 
-    def calibrate_RB(gates):
-        # TODO change to multiple gates
-        calibrate_RB
+    def calibrate_ORBIT(gates):
+        calibrate_ORBIT
 
     def calibrate(gate):
         current_gate_name = gate.get_name()

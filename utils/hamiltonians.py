@@ -1,6 +1,10 @@
 """This file represents a library of common hamiltonians"""
 
 
+def drive(a):
+    return a.dag() + a
+
+
 def resonator(a, omega):
     return omega * a.dag() * a
 

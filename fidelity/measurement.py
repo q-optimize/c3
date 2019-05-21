@@ -4,7 +4,7 @@ import cma
 from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
 
-
+# TODO this file (measurement.py) should go in the main folder
 class Backend:
     """
     Represents either an experiment or a simulation and contains the methods
@@ -37,6 +37,9 @@ class Experiment(Backend):
                 )
         gate.parameters[calib_name] = gate.rescale_and_bind_inv(x_opt)
 
+    def calibrate_ORBIT(gates):
+        calibrate_ORBIT
+
 
 class Simulation(Backend):
     """
@@ -58,6 +61,7 @@ class Simulation(Backend):
         U = self.evolution(gate)
         U_goal = gate.goal_unitary
         g = 1-abs(trace((U_goal.dag() * U).full())) / U_goal.full().ndim
+        # TODO shouldn't this be squared
         return g
 
     def dgate_fid(self, gate):

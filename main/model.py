@@ -10,16 +10,17 @@ class Model:
 
     Parameters
     ---------
-    physical_parameters : dict
-        Represents the beta in GOAT language. Contains physical parameters as
-        well as Hilbert space dimensions, bounds
+    component_parameters : dict of dict
+    couplings : dict of dict
     hilbert_space : dict
-        Hilbert space dimensions of computational and full spaces
+        Hilbert space dimensions of full space
+    comp_hilbert_space : dict
+        Hilbert space dimensions of computational space
 
     Attributes
     ----------
-    H: :class:'qutip.qobj' System hamiltonian or a list of Drift and Control
-        terms
+    H0: :class:'qutip.qobj' Drift Hamiltonian
+    Hcs: :class:'list of qutip.qobj' Control Hamiltonians
     H_tf : empty, constructed when needed
 
     component_parameters :
@@ -34,18 +35,82 @@ class Model:
         Returns the Hamiltonian in a QuTip compatible way
     get_time_slices()
     """
-    def __init__(self, component_parameters, coupling, hilbert_space,
-                 model_types):
+    def __init__(self,
+                 component_parameters,
+                 couplings,
+                 hilbert_space,
+                 comp_hilbert_space={},
+                 model_types={}):
+
         hbar = 1
+
+        if len(component_parameters) != len(hilbert_space) or \
+                len(hilbert_space) != len(comp_hilbert_space) or \
+                len(comp_hilbert_space) != len(component_parameters):
+            raise ValueError('Dimensions do not match')
 
         self.component_parameters = component_parameters
         self.hilbert_space = hilbert_space
+        self.comp_hilbert_space = comp_hilbert_space
+        self.model_types = model_types
         self.Hcs = []
 
+        # Ensure we mantain correct ordering
+        self.component_keys = [key for key in component_parameters.keys()]
+        # self.coupling_keys = [key for key in couplings.keys()]
+        self.dims = [hilbert_space[x] for x in self.component_keys]
+
+        # Anninhilation_operators
+        ann_opers = []
+        for indx in range(len(self.dims)):
+            a = qt.destroy(self.dims[indx])
+            for indy in self.component_keys:
+                qI = qt.qeye(self.dims[indy])
+                if indy < indx:
+                    a = qt.tensor(qI, a)
+                if indy > indx:
+                    a = qt.tensor(a, qI)
+            ann_opers.append()
+
+        if model_types:  # check if model types have been assinged
+            static_Hs = []
+            component_models = model_types['components']
+            for component in component_models.keys():
+                index = self.component_keys.index(component)
+                ann_oper = ann_opers[index]
+                # TODO improve check if qubit or resonator
+                if component[0] == 'q':
+                    hamiltonia_fun = component_models[component]
+                    omega_q = component_parameters[component]['freq']
+                    delta = component_parameters[component]['delta']
+                    static_Hs.append(hamiltonia_fun(ann_oper, omega_q, delta))
+                if component[0] == 'r':
+                    hamiltonia_fun = component_models[component]
+                    omega_r = component_parameters[component]['freq']
+                    static_Hs.append(hamiltonia_fun(ann_oper, omega_r))
+            coupling_models = model_types['couplings']
+            for coupling in coupling_models.keys():
+                # order is important
+                index1 = self.component_keys.index(coupling[0])
+                index2 = self.component_keys.index(coupling[1])
+                ann_oper1 = ann_opers[index1]
+                ann_oper2 = ann_opers[index2]
+                g = couplings[coupling]['strength']
+                hamiltonia_fun = coupling_models[coupling]
+                static_Hs.append(hamiltonia_fun(ann_oper1, ann_oper2, g))
+            self.H0 = hbar * sum(static_Hs)
+            drive_models = model_types['drives']
+            for drive in drive_models.keys():
+                index = self.component_keys.index(drive)
+                ann_oper = ann_opers[index]
+                hamiltonia_fun = drive_models[drive]
+                self.Hcs.append(hamiltonia_fun(ann_oper))
+
+        # ###Old version###
         omega_q = component_parameters['qubit_1']['freq']
         delta = component_parameters['qubit_1']['delta']
         omega_r = component_parameters['cavity']['freq']
-        g = coupling['q1_cav']['strength']
+        g = couplings['q1_cav']['strength']
 
         dim_q = hilbert_space['qubit_1']
         dim_r = hilbert_space['cavity']

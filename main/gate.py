@@ -12,6 +12,7 @@ class Gate:
     ----------
     target: Component
         Model component(s) to act upon
+    # TODO make sure goal unitary is of the right dimensions
     goal_unitary: Qobj
         Unitary representation of the gate on computational subspace.
 
@@ -101,6 +102,7 @@ class Gate:
         for ckey in sorted(keys):
             for carkey in sorted(keys[ckey]):
                 q.append(p[ckey][carkey]['freq'])
+                # TODO discuss adding target
                 for pkey in sorted(keys[ckey][carkey]):
                     for prop in self.props:
                         q.append(p[ckey][carkey]['pulses'][pkey][prop])
