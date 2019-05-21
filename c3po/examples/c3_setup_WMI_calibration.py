@@ -6,7 +6,8 @@ from numpy import pi
 import numpy as np
 import qutip as qt
 import uuid
-import c3po
+from c3po.main.gate import Gate as gt
+from c3po.fidelity.measurement import Experiment as exp_backend
 
 """
 Device specific setup goes here. We need to provide a function that takes a
@@ -14,7 +15,7 @@ gate, evaluates it in the physical machine and returns a figure of merit.
 """
 
 
-def evaluate_pulse(gate, q=None):
+def evaluate_pulse(gate, samples):
     global search_id
     pulse_id = str(uuid.uuid4())
     if q is None:
@@ -68,6 +69,16 @@ def evaluate_pulse(gate, q=None):
     return 1-current_fidelity
 
 
+def load_pulse(file_name):
+    with open(file_name, 'r') as stream:
+        return yaml.load(stream)
+
+
+def print_pulse(P):
+    print(yaml.dump(P, default_flow_style=False))
+    pass
+
+
 """===Communication setup==="""
 # Replace 'localhost' with the name or IP of the LabView machine
 calibration_daemon_experiment_URI = "tcp://127.0.0.1:5559"
@@ -96,7 +107,27 @@ socketrep.RCVTIMEO = rcvtimeout  # added timeout to kill rcv if nothing comes
 socketreq.RCVTIMEO = rcvtimeout
 print(f"done\n\n", flush=True)
 
-q1_X_gate = c3po.Gate('qubit_1', qt.sigmax())
+
+# Load open loop pulse
+argsin = sys.argv
+if len(argsin) == 2:
+    pulse_file = argsin[1]
+else:
+    print("You have specified no pulse to optimize. Please select from:")
+    pulse_files = []
+    idx = 0
+    for file in sorted(glob.glob("*.yml")):
+        pulse_files.append(file)
+        idx += 1
+        print("%d: %s" % (idx, file))
+    print('Selection: ', end='', flush=True)
+    pulse_file = pulse_files[int(input()) - 1]
+    print("You selected: %s" % str(pulse_file))
+
+pulse0 = load_pulse(pulse_file)
+print(f"Loaded initial guess with parametrization")
+
+X_gate = gt('qubit_1', qt.sigmax())
 
 handmade_pulse = {
         'control1': {
@@ -131,8 +162,8 @@ pulse_bounds = {
             }
         }
 
-q1_X_gate.set_parameters('initial', handmade_pulse)
-q1_X_gate.set_bounds(pulse_bounds)
+X_gate.set_parameters('initial', pulse0)
+X_gate.set_bounds(pulse_bounds)
 
-fridge = c3po.fidelity.measurement.Experiment(evaluate_pulse)
-fridge.calibrate(q1_X_gate)
+fridge = exp_backend(evaluate_pulse)
+fridge.calibrate(X_gate)

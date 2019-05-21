@@ -36,12 +36,12 @@ class Gate:
             target,
             goal,
             env_shape='flattop',
-            pulse={}):
+            pulse={}
+            ):
         self.target = target
         self.goal_unitary = goal
         self.env_shape = env_shape
         if env_shape == 'gaussian':
-            # TODO figure out parallel imports
             env_func = gaussian
             env_der = gaussian_der
             self.env_der = env_der
@@ -72,8 +72,8 @@ class Gate:
         self.bounds = None
 
     def set_bounds(self, b_in):
-        if self.env_shape =='ETH':
-            b = np.array( list(b_in.values()))
+        if self.env_shape == 'ETH':
+            b = np.array(list(b_in.values()))
         else:
             b = np.array(self.serialize_parameters(b_in))
         self.bounds = {}
@@ -142,20 +142,24 @@ class Gate:
                         idx += 1
         return p
 
-    def rescale_and_bind(self, q):
+    def to_scale_one(self, q):
         """
         Returns a vector of scale 1 that plays well with optimizers.
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        x = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
-        return np.arccos(2 * x - 1)
+        y = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
+        return 2*y-1
 
-    def rescale_and_bind_inv(self, x):
+    def to_bound_phys_scale(self, x):
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = (np.cos(np.abs(x))+1)/2
+        y = np.arccos(
+                np.cos(
+                    (np.array(x)+1)*np.pi/2
+                )
+            )/np.pi
         return self.bounds['scale'] * y + self.bounds['offset']
 
     def get_IQ(self, guess):

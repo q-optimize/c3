@@ -1,5 +1,6 @@
 
 from tensorflow.python.client import device_lib
+import tensorflow as tf
 import os
 
 
