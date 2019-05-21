@@ -133,6 +133,7 @@ handmade_pulse = {
         'control1': {
             'carrier1': {
                 'freq': 6e9*2*pi,
+                # 'target': 'q1', # add here?
                 'pulses': {
                     'pulse1': {
                         'amp': 15e6*2*pi,
