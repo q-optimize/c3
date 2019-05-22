@@ -1,6 +1,8 @@
 """This file represents a library of common hamiltonians"""
 
 
+def drive(a):
+    return a.dag() + a
 
 def resonator(a, omega):
     return omega * a.dag() * a
@@ -17,3 +19,4 @@ def int_XX(a, b, g):
 def int_jaynes_cummings(a, b, g):
     return g * (a.dag() * b + a * b.dag())
 
+# TODO: add two level hamiltonian (i.e. with sigmaz and sigmax)

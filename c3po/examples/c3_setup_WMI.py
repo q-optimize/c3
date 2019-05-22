@@ -1,37 +1,69 @@
-"""C3PO Setup for the IBM machine"""
+"""C3PO configuration file"""
 
 from numpy import pi
+
+import numpy as np
 import qutip as qt
+import matplotlib.pyplot as plt
+
+from qutip import *
 import c3po
+from c3po.main.model import Model as mdl
+from c3po.main.gate import Gate as gt
+
+
+
+"""
+This is  disabled for now. The idea is to generalize the setup part later and
+use the System class to construct a model.
+
+
+q = components.qubit
+q.set_name('qubit_1')
+r = components.resonator
+r.set_name('cavity')
+q_drv = components.control
+q_drv.set_name('qubit_drive')
+
+couplings = [
+        (q, r)
+        ]
+controls = [
+        (q, q_drv)
+        ]
+
+WMI_memory = System([q, r, q_drv], couplings, controls)
+
+"""
+
 
 initial_parameters = {
         'qubit_1': {'freq': 6e9*2*pi},
         'cavity': {'freq': 9e9*2*pi}
         }
+
 initial_couplings = {
         'q1_cav': {'strength': 150e6*2*pi}
         }
+
 initial_hilbert_space = {
         'qubit_1': 2,
         'cavity': 5
         }
+
 model_init = [
         initial_parameters,
         initial_couplings,
         initial_hilbert_space
         ]
 
-initial_model = c3po.Model(
+initial_model = mdl(
         initial_parameters,
         initial_couplings,
-        initial_hilbert_space
+        initial_hilbert_space,
         )
 
-H = initial_model.get_Hamiltonian([0])
 
-print(H)
-
-q1_X_gate = c3po.Gate('qubit_1', qt.sigmax(), c3po.utils.envelopes.flattop)
 
 handmade_pulse = {
         'control1': {
@@ -49,8 +81,9 @@ handmade_pulse = {
             }
         }
 
-q1_X_gate.set_parameters('initial', handmade_pulse)
 
+q1_X_gate = gt('qubit_1', qt.sigmax())
+q1_X_gate.set_parameters('initial', handmade_pulse)
 
 crazy_pulse = {
         'control1': {
@@ -85,6 +118,28 @@ crazy_pulse = {
             }
         }
 
+
+
+control_func = [q1_X_gate.get_control_fields('initial')]
+
+
+H = initial_model.get_Hamiltonian(control_func)
+
+print(H)
+
+
+""" plotting control functions """
+
+ts = np.linspace(0, 50e-9, int(1e4))
+
+fu = list(map(control_func[0], ts))
+env = list(map(lambda t: q1_X_gate.envelope(t, 5e-9, 45e-9), ts))
+fig, axs = plt.subplots(2, 1)
+
+axs[0].plot(ts/1e-9, env)
+
+axs[1].plot(ts/1e-9, fu)
+plt.show()
 
 """
 BSB_X_gate = Gate((q, r),

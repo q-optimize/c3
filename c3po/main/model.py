@@ -1,9 +1,7 @@
 import qutip as qt
 import tensorflow as tf
 
-
-
-# TODO: Think about the distinction between System and Model classes
+from c3po import utils
 
 
 class Model:
@@ -14,16 +12,17 @@ class Model:
 
     Parameters
     ---------
-    physical_parameters : dict
-        Represents the beta in GOAT language. Contains physical parameters as
-        well as Hilbert space dimensions, bounds
+    component_parameters : dict of dict
+    couplings : dict of dict
     hilbert_space : dict
-        Hilbert space dimensions of computational and full spaces
+        Hilbert space dimensions of full space
+    comp_hilbert_space : dict
+        Hilbert space dimensions of computational space
 
     Attributes
     ----------
-    H: :class:'qutip.qobj' System hamiltonian or a list of Drift and Control
-        terms
+    H0: :class:'qutip.qobj' Drift Hamiltonian
+    Hcs: :class:'list of qutip.qobj' Control Hamiltonians
     H_tf : empty, constructed when needed
 
     component_parameters :
@@ -44,6 +43,7 @@ class Model:
     get_time_slices()
     """
     def __init__(self, component_parameters, coupling, hilbert_space,tf_flag="False"):
+
         hbar = 1
 
         self.component_parameters = component_parameters
@@ -112,6 +112,14 @@ class Model:
     def set_tf_session(self, tf_session):
         self.tf_session = tf_session
 
+    # TODO: Think about the distinction between System and Model classes
+    """
+    Federico: I believe the information about the physical system,
+    i.e. components and companent parameters should be in the system class
+    Then the Hamiltonian is constructed in the model class with parsers
+    (as above) or just provided by the user
+    """
+
     def get_Hamiltonian(self, control_fields):
         H = [self.H0]
         for ii in range(len(control_fields)):
@@ -123,5 +131,4 @@ class Model:
         for ii in range(len(self.control_fields)):
             tf_H.append([self.tf_Hcs[ii], self.control_fields[ii]])
         return tf_H
-
 
