@@ -18,7 +18,7 @@ class Experiment(Backend):
     """
     The driver for an experiment.
     """
-    def __init__(self, eval_gate, eval_seq=None):
+    def __init__(self, eval_gate=None, eval_seq=None):
         """
         Initialize with eval_gate, which takes parameters for a gate and
         returns an achieved figure of merit that is to be minimized.
@@ -28,11 +28,55 @@ class Experiment(Backend):
         self.wd = '.'
         # TODO: Try and Handle empty function handles
 
-    def calibrate_ORBIT(gates):
-        return  # calibrate_ORBIT
-
     def set_working_directory(self, path):
         self.wd = path
+
+    def calibrate_ORBIT(self, gates, opts=None,
+                        start_name='initial', calib_name='calibrated'):
+        x0 = []
+        ls = []
+        for gate in gates:
+            params = gate.rescale_and_bind(start_name)
+            l_init = len(x0)
+            x0.extend(params)
+            l_final = len(x0)
+            ls.append([l_init, l_final])
+        es = cmaes.CMAEvolutionStrategy(x0,  # initial values
+                                        0.5,  # initial std
+                                        {'popsize': kwargs.get('popsize', 10),
+                                         'tolfun': kwargs.get('tolfun', 1e-8),
+                                         'maxiter': kwargs.get('maxiter', 30)}
+                                        )
+        iteration_number = 0
+        # Main part of algorithm, like doing f_min search.
+        while not es.stop():
+            samples = es.ask()  # list of new solutions
+            value_batch = []
+            for sample in samples:
+                value = []
+                gate_indx = 0
+                for gate in gates:
+                    indeces = ls[gate_indx]
+                    value.append(gate.rescale_and_bind_inv(sample[indeces[0]:indeces[1]]))
+                    gate_ind += 1
+                value_batch.append(value)
+            # determine RB sequences to evaluate
+            sequences = c3po.utils.single_length_RB(
+                    kwargs.get('n_rb_sequences', 10),
+                    kwargs.get('rb_len', 20)
+                    )
+            # query the experiment for the survical probabilities
+            results = self.evaluate_seq(sequences, value_batch)
+            # tell the cmaes object the performance of each solution and update
+            es.tell(solutions, results)
+            # log results
+            es.logger.add()
+            # show current evaluation status
+            es.result_pretty()  # or es.disp
+            # update iteration number
+            iteration_number += 1
+        cma.plot()
+        return es
 
     def calibrate(
             self,
@@ -118,7 +162,7 @@ class Simulation(Backend):
             duf = tensor(basis(n_params, ii), qeye(dim)).dag() * U
             ret[ii-1] = -1 * real(
                 g.conj() / abs(g) / dim * trace(
-                    (U_goal.dag() * duf).full()
+                                              (U_goal.dag() * duf).full()
+                                          )
                 )
-            )
         return ret

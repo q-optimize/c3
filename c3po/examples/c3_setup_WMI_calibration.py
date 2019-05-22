@@ -100,7 +100,7 @@ except zmq.ZMQError:
     print("Done.")
 
 socketreq = context.socket(zmq.REQ)
-socketreq.setsockopt(zmq.LINGER, 0)  #NEW Added by Edwar to flush the queue
+socketreq.setsockopt(zmq.LINGER, 0)  # NEW Added by Edwar to flush the queue
 socketreq.connect(calibration_daemon_experiment_URI)
 
 socketrep.RCVTIMEO = rcvtimeout  # added timeout to kill rcv if nothing comes
