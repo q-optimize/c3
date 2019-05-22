@@ -36,8 +36,10 @@ class Gate:
             target,
             goal,
             env_shape='flattop',
-            pulse={}
+            pulse={},
+            T_final=100e-9
             ):
+        self.T_final = T_final
         self.target = target
         self.goal_unitary = goal
         self.env_shape = env_shape
@@ -232,7 +234,7 @@ class Gate:
 
     def plot_control_fields(self, q='initial', axs=None):
         """ Plotting control functions """
-        ts = np.linspace(0, 100e-9, 100)
+        ts = np.linspace(0, self.T_final, self.T_final*1e9)
         plt.rcParams['figure.dpi'] = 100
         IQ = self.get_IQ(q)
         fig, axs = plt.subplots(2, 1)

@@ -5,6 +5,8 @@ from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
 
 # TODO this file (measurement.py) should go in the main folder
+
+
 class Backend:
     """
     Represents either an experiment or a simulation and contains the methods
@@ -23,10 +25,14 @@ class Experiment(Backend):
         """
         self.evaluate_gate = eval_gate
         self.evaluate_seq = eval_seq
+        self.wd = '.'
         # TODO: Try and Handle empty function handles
 
     def calibrate_ORBIT(gates):
-        return calibrate_ORBIT
+        return  # calibrate_ORBIT
+
+    def set_working_directory(self, path):
+        self.wd = path
 
     def calibrate(
             self,
@@ -67,6 +73,7 @@ class Experiment(Backend):
         res = es.result + (es.stop(), es, es.logger)
         x_opt = res[0]
         gate.parameters[calib_name] = gate.to_bound_phys_scale(x_opt)
+
 
 class Simulation(Backend):
     """
