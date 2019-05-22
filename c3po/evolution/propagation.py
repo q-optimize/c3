@@ -16,6 +16,10 @@ from c3po.utils import tf_utils
 import tensorflow as tf
 import numpy as np
 
+def dirty_wrap(func):
+    return lambda t, args: func(t)
+
+
 def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, history = False):
     """
     Wrapper function for choosing the type of propagation method.
@@ -40,10 +44,13 @@ def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, hist
             # delivers a list of all control fields or only a function 
             # that is added here to a list
             keys = gate.get_parameters().keys()
+            control_fields = []
             for key in keys:
-                control_fields = gate.get_control_fields(key)
+                org_func = gate.get_control_fields(key)
+                control_fields.append(dirty_wrap(org_func))
 
             # dictrionary of parameters for crontrol fields
+            # but this is kind of obsolete as sesolve won't need arguments(?)
             params = gate.get_parameters()
 
             # should return Hamilton as list [H0, ...]

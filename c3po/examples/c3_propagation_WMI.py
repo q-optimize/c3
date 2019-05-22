@@ -14,17 +14,16 @@ from c3po.main.gate import Gate as gt
 
 from c3po.utils.tf_utils import *
 from c3po.evolution.propagation import *
-# from c3po.utils.aux_functions import *
 
 
-
+#####
+# hacked plotting functions
 
 def plot_dynamics(u_list, ts, states):
     pop = []
     for si in states:
         for ti in range(len(ts)):
             pop.append(abs(u_list[ti][si][0] ** 2))
-#        plt.plot(ts, pop)
     return pop
 
 
@@ -32,18 +31,9 @@ def plot_dynamics_sesolve(u_list, ts):
     pop = []
     for ti in range(len(ts)):
         pop.append(abs(u_list.states[ti].full().T[0] ** 2))
-#    plt.plot(ts, pop)
     return pop
 
-
-
-tf_log_level_info()
-
-set_tf_log_level(2)
-
-print("current log level: " + str(get_tf_log_level()))
-
-sess = tf_setup()
+#####
 
 
 
@@ -72,10 +62,10 @@ initial_model = mdl(
         initial_parameters,
         initial_couplings,
         initial_hilbert_space,
-        "True"
+        "False"
         )
 
-initial_model.set_tf_session(sess)
+
 
 
 
@@ -99,38 +89,6 @@ handmade_pulse = {
 q1_X_gate = gt('qubit_1', qt.sigmax())
 q1_X_gate.set_parameters('initial', handmade_pulse)
 
-crazy_pulse = {
-        'control1': {
-            'carrier1': {
-                'freq': 6e9*2*pi,
-                'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
-                        }
-                    }
-                },
-            'carrier2': {
-                'freq': 6e9*2*pi,
-                'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
-                    },
-                    'pulse2': {
-                        'amp': 20e6*2*pi,
-                        't_up': 10e-9,
-                        't_down': 4e-9,
-                        'xy_angle': pi/2
-                        }
-                    }
-                }
-            }
-        }
 
 
 ####### 
@@ -146,18 +104,21 @@ crazy_pulse = {
 ts = np.linspace(0, 50e-9, int(1e4))
 
 
+#####
+# pwc test
 
 U0 = tensor(
     qeye(2),
     qeye(5)
 )
 
-# print(U0)
-
 u = propagate(initial_model, q1_X_gate, U0, ts, "pwc")
 
+#####
 
 
+#####
+# sesolve for reference
 
 psi = []
 for i in range(0,2):
@@ -169,7 +130,7 @@ for i in range(0, 10):
     U_res = propagate(initial_model, q1_X_gate, psi[i], ts, 'qutip_sesolve')
     U.append(U_res)
 
-
+#####
 
 
 
@@ -189,22 +150,3 @@ plt.plot(ts, pop2)
 
 plt.show()
 
-# """ Plotting control functions """
-
-# plt.rcParams['figure.dpi'] = 100
-
-# fu = list(map(control_func[0], ts))
-# env = list(map(lambda t: q1_X_gate.envelope(t, 5e-9, 45e-9), ts))
-# fig, axs = plt.subplots(2, 1)
-
-# axs[0].plot(ts/1e-9, env)
-
-# axs[1].plot(ts/1e-9, fu)
-# plt.show()
-
-"""
-BSB_X_gate = Gate((q, r),
-        qt.tensor(qt.sigmap(), qt.sigmap())
-            + qt.tensor(qt.sigmam(), qt.sigmam())
-        )
-"""
