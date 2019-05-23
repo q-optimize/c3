@@ -205,6 +205,7 @@ class Gate:
 
     def get_control_fields(self, name):
         """
+        Simulation function.
         Returns a function handle to the control shape, constructed from drive
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
