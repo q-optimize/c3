@@ -242,3 +242,15 @@ class Gate:
         axs[0].plot(ts/1e-9, list(map(IQ['I'], ts)))
         axs[1].plot(ts/1e-9, list(map(IQ['Q'], ts)))
         plt.show(block=False)
+
+
+    def get_parameters(self):
+        return self.parameters
+
+    def get_keys(self):
+        return self.keys
+
+
+
+
+
