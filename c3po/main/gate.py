@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import tensorflow as tf
 from c3po.utils.envelopes import flattop, gaussian, gaussian_der
 import matplotlib.pyplot as plt
 
@@ -35,8 +36,9 @@ class Gate:
             self,
             target,
             goal,
+            tf_sess,
             env_shape='flattop',
-            pulse={}
+            pulse={},
             ):
         self.target = target
         self.goal_unitary = goal
@@ -71,14 +73,16 @@ class Gate:
 
         self.bounds = None
 
+        self.tf_sess = tf_sess
+
     def set_bounds(self, b_in):
         if self.env_shape == 'ETH':
-            b = np.array(list(b_in.values()))
+            b = tf.constant(list(b_in.values()))
         else:
-            b = np.array(self.serialize_parameters(b_in))
+            b = tf.constant(self.serialize_parameters(b_in))
         self.bounds = {}
-        self.bounds['scale'] = np.diff(b).T[0]
-        self.bounds['offset'] = b.T[0]
+        self.bounds['scale'] = b[1:]-b[:-1]
+        self.bounds['offset'] = b[:-1]
 
     def set_parameters(self, name, guess):
         """
@@ -96,7 +100,9 @@ class Gate:
                 for carkey in carrier_keys:
                     carrier = guess[ckey][carkey]
                     self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
-            self.parameters[name] = self.serialize_parameters(guess)
+            self.parameters[name] = tf.constant(
+                    self.serialize_parameters(guess)
+                    )
 
     def serialize_parameters(self, p):
         """
@@ -126,6 +132,7 @@ class Gate:
         p = {}
         if isinstance(q, str):
             q = self.parameters[q]
+        q = self.tf_sess.run(q)
         keys = self.keys
         idx = 0
         for ckey in sorted(keys):
@@ -148,16 +155,16 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
+        y = (tf.constant(q) - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = np.arccos(
-                np.cos(
-                    (np.array(x)+1)*np.pi/2
+        y = tf.arccos(
+                tf.cos(
+                    (tf.constant(x)+1)*np.pi/2
                 )
             )/np.pi
         return self.bounds['scale'] * y + self.bounds['offset']
@@ -185,14 +192,14 @@ class Gate:
         # TODO: atm it works for both gaussian and flattop, but only by chance
 
         def Inphase(t):
-            return self.envelope(t, t0, t1) * np.cos(xy_angle)
+            return self.envelope(t, t0, t1) * tf.cos(xy_angle)
 
         def Quadrature(t):
             envelope = self.envelope
             if self.env_shape == 'DRAG':
                 drag = guess[5]
                 envelope = drag * self.env_der
-            return envelope(t, t0, t1) * np.sin(xy_angle)
+            return envelope(t, t0, t1) * tf.sin(xy_angle)
 
         return {
                 'I': Inphase,
@@ -217,9 +224,15 @@ class Gate:
         here. After some research, this should be the correct way. The
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
-        return lambda t:\
-            amp * (mixer_I(t) * np.cos(omega_d * t)
-                   + mixer_Q(t) * np.sin(omega_d * t))
+        cflds = []
+        for ckey in sorted(self.keys):
+            cflds.append(
+                lambda t:
+                    amp * (
+                        mixer_I(t) * tf.cos(omega_d * t)
+                        + mixer_Q(t) * tf.sin(omega_d * t)
+                         )
+                )
 
     def print_pulse(self, p):
         print(
