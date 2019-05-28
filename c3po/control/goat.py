@@ -1,30 +1,24 @@
 """Methods to create the objects needed for GOAT propagation"""
-
-from qutip import basis, tensor
-
+import numpy as np
 
 def get_initial_state(u_init, n_params):
     """
     extend initial unitary by one per parameter
     """
-    return tensor(basis(n_params, 0), u_init)
+    return np.kron(np.eye(1, n_params, 0), u_init)
 
 
-def get_step_matrix(self, h_sys, dham, t, n_params, args):
+def get_step_matrix(h_sys, dham):
     """
     The GOAT Hamiltonian that contains the physical Hamiltonian and its
     gradients.
     """
-    goat_ham = tensor(basis(n_params, 0) * basis(n_params, 0).dag(), h_sys)
-    for p_idx in range(1, n_params):
-        dhc = dham[0]
-        dh = dhc[1](t, args)[p_idx-1] * dhc[0]
-        for dhc in dham[1::]:
-            dh += dhc[1](t, args)[p_idx-1] * dhc[0]
-        goat_ham += tensor(basis(n_params, p_idx)
-                           * basis(n_params, 0).dag(), dh) \
-            + tensor(basis(n_params, p_idx)
-                     * basis(n_params, p_idx).dag(), h_sys)
+    n_params = len(dham) + 1
+    goat_ham = np.kron(
+            np.eye(n_params, n_params, 0) * np.eye(n_params, n_params, 0).T,
+            h_sys
+            )
+    goat_ham += np.kron(dham[0].shape[0], np.eye(1, n_params, 0))
     return goat_ham
 
 
