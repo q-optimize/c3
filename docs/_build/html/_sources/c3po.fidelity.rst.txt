@@ -1,0 +1,22 @@
+c3po.fidelity package
+=====================
+
+Submodules
+----------
+
+c3po.fidelity.measurement module
+--------------------------------
+
+.. automodule:: c3po.fidelity.measurement
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: c3po.fidelity
+    :members:
+    :undoc-members:
+    :show-inheritance:
