@@ -79,10 +79,13 @@ class Gate:
         if self.env_shape == 'ETH':
             b = tf.constant(list(b_in.values()))
         else:
-            b = tf.constant(self.serialize_parameters(b_in))
+            b = tf.constant(
+                    self.serialize_parameters(b_in),
+                    dtype=tf.float64
+                    )
         self.bounds = {}
-        self.bounds['scale'] = b[1:]-b[:-1]
-        self.bounds['offset'] = b[:-1]
+        self.bounds['scale'] = b[:, 1]-b[:, 0]
+        self.bounds['offset'] = b[:, 0]
 
     def set_parameters(self, name, guess):
         """
@@ -101,7 +104,8 @@ class Gate:
                     carrier = guess[ckey][carkey]
                     self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
             self.parameters[name] = tf.constant(
-                    self.serialize_parameters(guess)
+                    self.serialize_parameters(guess),
+                    dtype=tf.float64
                     )
 
     def serialize_parameters(self, p):
@@ -151,25 +155,26 @@ class Gate:
 
     def to_scale_one(self, q):
         """
-        Returns a vector of scale 1 that plays well with optimizers.
+        Returns a vector of scale 1 that plays well with optimizers. Input type
+        is Tensor or a String that identifies a stored Tensor, i.e 'initial'.
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (tf.constant(q) - self.bounds['offset']) / self.bounds['scale']
+        y = (q - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = tf.arccos(
+        y = tf.acos(
                 tf.cos(
-                    (tf.constant(x)+1)*np.pi/2
+                    (x+1)*np.pi/2
                 )
             )/np.pi
         return self.bounds['scale'] * y + self.bounds['offset']
 
-    def get_IQ(self, guess):
+    def get_IQ(self, pulses):
         """
         Construct the in-phase (I) and quadrature (Q) components of the control
         signals.
@@ -178,61 +183,63 @@ class Gate:
         the simulation they provide the shapes of the controlfields to be added
         to the Hamiltonian.
         """
-        if isinstance(guess, str):
-            guess = self.parameters[guess]
         """
         NICO: Paramtrization here is fixed for testing and will have to be
         extended to more general.
         """
-        omega_d = guess[0]
-        amp = guess[1]
-        t0 = guess[2]
-        t1 = guess[3]
-        xy_angle = guess[4]
         # TODO: atm it works for both gaussian and flattop, but only by chance
+        Inphase = []
+        Quadrature = []
 
-        def Inphase(t):
-            return self.envelope(t, t0, t1) * tf.cos(xy_angle)
+        for p_name in pulses:
+            pulse = pulses[p_name]
+            t0 = pulse['t_up']
+            t1 = pulse['t_down']
+            xy_angle = pulse['xy_angle']
+            amp = pulse['amp']
 
-        def Quadrature(t):
-            envelope = self.envelope
-            if self.env_shape == 'DRAG':
-                drag = guess[5]
-                envelope = drag * self.env_der
-            return envelope(t, t0, t1) * tf.sin(xy_angle)
+            Inphase.append(
+                    lambda t: amp * self.envelope(t, t0, t1) * tf.cos(xy_angle)
+                    )
+            Quadrature.append(
+                    lambda t: amp * self.envelope(t, t0, t1) * tf.sin(xy_angle)
+                    )
 
-        return {
-                'I': Inphase,
-                'Q': Quadrature,
-                'carrier_amp': amp,
-                'omegas': [omega_d]
-                }
+        return Inphase, Quadrature
 
-    def get_control_fields(self, name):
+    def get_control_fields(self, guess):
         """
         Returns a function handle to the control shape, constructed from drive
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
         """
-        p_IQ = self.get_IQ(name)
-        mixer_I = p_IQ['I']
-        mixer_Q = p_IQ['Q']
-        omega_d = p_IQ['omegas'][0]
-        amp = p_IQ['carrier_amp']
         """
         NICO: Federico raised the question if the xy_angle should be added
         here. After some research, this should be the correct way. The
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
+        if isinstance(guess, str):
+            guess = self.parameters[guess]
+        p = self.deserialize_parameters(guess)
         cflds = []
         for ckey in sorted(self.keys):
-            cflds.append(
-                lambda t:
-                    amp * (
+            for carkey in sorted(self.keys[ckey]):
+                pulses = p[ckey][carkey]['pulses']
+                mixer_Is, mixer_Qs = self.get_IQ(pulses)
+
+                def mixer_I(t):
+                    return sum(f(t) for f in mixer_Is)
+
+                def mixer_Q(t):
+                    return sum(f(t) for f in mixer_Qs)
+
+                omega_d = p[ckey][carkey]['freq']
+                cflds.append(
+                    lambda t:
                         mixer_I(t) * tf.cos(omega_d * t)
                         + mixer_Q(t) * tf.sin(omega_d * t)
-                         )
-                )
+                    )
+        return cflds
 
     def print_pulse(self, p):
         print(

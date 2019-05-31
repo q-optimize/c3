@@ -55,14 +55,11 @@ pulse_bounds = {
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 
-Inphase = X_gate.get_IQ('initial')['I']
-Inphase(15e-9)
-
 fields = X_gate.get_control_fields('initial')
 
-ts = tf.linspace(0e-9, 50e-9, 10000)
+ts = tf.cast(tf.linspace(0e-9, 50e-9, 1000), tf.float64)
 
-c = fields(ts)
+c = fields[0](ts)
 
 grads = jacobian(c, X_gate.parameters['initial'])
 
