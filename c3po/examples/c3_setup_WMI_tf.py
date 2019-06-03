@@ -16,6 +16,9 @@ from c3po.utils.tf_utils import *
 from c3po.evolution.propagation import *
 
 
+import time
+
+
 
 
 def plot_dynamics(u_list, ts, states):
@@ -142,8 +145,8 @@ cflds = q1_X_gate.get_control_fields('initial')
 
 hlist = initial_model.get_tf_Hamiltonian(cflds)
 
-
-ts = np.linspace(0, 50e-9, int(1e4))
+n = int(1e5)
+ts = np.linspace(0, 50e-9, n)
 
 
 
@@ -156,49 +159,58 @@ tf_u = tf.constant(U0.full(), dtype=tf.complex128, name="u0")
 
 print(U0)
 
+start_time = time.time()
 
 out = sesolve_pwc_tf(hlist, U0, ts, sess, history = True)
+
+half_time = time.time()
+
+out2 = sesolve_pwc(hlist, U0, ts, sess, history=True)
+
+end_time = time.time()
+
+print("time with tensorflow: " + str(half_time - start_time))
+
+print("time without tensorflow: " + str(end_time - half_time))
+
 
 u_list = []
 for i in range(0, len(out)):
     tmp = Qobj(out[i])
     u_list.append(tmp)
 
+u_list2 = []
+for i in range(0, len(out2)):
+    tmp = Qobj(out2[i])
+    u_list2.append(tmp)
+
+
 pop1 = plot_dynamics(u_list, ts,[0])
 
+# plt.plot(ts, pop1)
+# plt.title("pwc_tf_1e4")
+# plt.show()
+
+pop2 = plot_dynamics(u_list2, ts, [0])
+
+# plt.plot(ts, pop2)
+# plt.title("pwc_tf_1e4")
+# plt.show()
+
+
+
+fig = plt.figure(1)
+sp1 = plt.subplot(211)
+name_str = "pwc_tf_%.2g" % n
+sp1.title.set_text(name_str)
 plt.plot(ts, pop1)
 
-# plt.plot(ts/1e-9, out)
+sp2 = plt.subplot(212)
+name_str = "pwc_no_tf_%.2g" % n
+sp2.title.set_text(name_str)
+plt.plot(ts, pop2)
 
+plt.show()
 
-# psi = []
-# for i in range(0,2):
-    # for j in range(0,5):
-        # psi.append(tensor(basis(2,i), basis(5,j)))
-
-# U = []
-# for i in range(0, 10):
-    # U_res = propagate(initial_model, q1_X_gate, psi[i], ts, 'qutip_sesolve')
-    # U.append(U_res)
-
-
-
-
-
-# pop1 = plot_dynamics(u, ts, [0])
-
-# pop2 = plot_dynamics_sesolve(U[0], ts)
-
-
-# fig = plt.figure(1)
-# sp1 = plt.subplot(211)
-# sp1.title.set_text("pwc 1e4")
-# plt.plot(ts, pop1)
-
-# sp2 = plt.subplot(212)
-# sp2.title.set_text("sesolve")
-# plt.plot(ts, pop2)
-
-# plt.show()
 
 
