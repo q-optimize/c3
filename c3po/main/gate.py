@@ -77,9 +77,9 @@ class Gate:
 
     def set_bounds(self, b_in):
         if self.env_shape == 'ETH':
-            b = tf.constant(list(b_in.values()))
+            b = tf.constant(list(b_in.values()), dtype=tf.float64)
         else:
-            b = tf.constant(self.serialize_parameters(b_in))
+            b = tf.constant(self.serialize_parameters(b_in), dtype=tf.float64)
         self.bounds = {}
         self.bounds['scale'] = b[1:]-b[:-1]
         self.bounds['offset'] = b[:-1]
@@ -101,7 +101,8 @@ class Gate:
                     carrier = guess[ckey][carkey]
                     self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
             self.parameters[name] = tf.constant(
-                    self.serialize_parameters(guess)
+                    self.serialize_parameters(guess),
+                    dtype=tf.float64
                     )
 
     def serialize_parameters(self, p):
@@ -155,7 +156,7 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (tf.constant(q) - self.bounds['offset']) / self.bounds['scale']
+        y = (tf.constant(q, dtype=tf.float64) - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
@@ -164,7 +165,7 @@ class Gate:
         """
         y = tf.arccos(
                 tf.cos(
-                    (tf.constant(x)+1)*np.pi/2
+                    (tf.constant(x, dtype=tf.float64)+1)*np.pi/2
                 )
             )/np.pi
         return self.bounds['scale'] * y + self.bounds['offset']
@@ -233,6 +234,7 @@ class Gate:
                         + mixer_Q(t) * tf.sin(omega_d * t)
                          )
                 )
+        return cflds
 
     def print_pulse(self, p):
         print(

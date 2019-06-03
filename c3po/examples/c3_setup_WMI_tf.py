@@ -14,7 +14,6 @@ from c3po.main.gate import Gate as gt
 
 from c3po.utils.tf_utils import *
 from c3po.evolution.propagation import *
-# from c3po.utils.aux_functions import *
 
 
 
@@ -46,6 +45,8 @@ print("current log level: " + str(get_tf_log_level()))
 sess = tf_setup()
 
 
+tf_list_avail_devices()
+
 
 
 initial_parameters = {
@@ -61,12 +62,6 @@ initial_hilbert_space = {
         'qubit_1': 2,
         'cavity': 5
         }
-
-model_init = [
-        initial_parameters,
-        initial_couplings,
-        initial_hilbert_space
-        ]
 
 initial_model = mdl(
         initial_parameters,
@@ -96,7 +91,7 @@ handmade_pulse = {
         }
 
 
-q1_X_gate = gt('qubit_1', qt.sigmax())
+q1_X_gate = gt('qubit_1', qt.sigmax(), sess)
 q1_X_gate.set_parameters('initial', handmade_pulse)
 
 crazy_pulse = {
@@ -143,6 +138,11 @@ crazy_pulse = {
 ######
 
 
+cflds = q1_X_gate.get_control_fields('initial')
+
+hlist = initial_model.get_tf_Hamiltonian(cflds)
+
+
 ts = np.linspace(0, 50e-9, int(1e4))
 
 
@@ -152,59 +152,53 @@ U0 = tensor(
     qeye(5)
 )
 
-# print(U0)
+tf_u = tf.constant(U0.full(), dtype=tf.complex128, name="u0")
 
-u = propagate(initial_model, q1_X_gate, U0, ts, "pwc")
-
-
+print(U0)
 
 
-psi = []
-for i in range(0,2):
-    for j in range(0,5):
-        psi.append(tensor(basis(2,i), basis(5,j)))
+out = sesolve_pwc_tf(hlist, U0, ts, sess, history = True)
 
-U = []
-for i in range(0, 10):
-    U_res = propagate(initial_model, q1_X_gate, psi[i], ts, 'qutip_sesolve')
-    U.append(U_res)
+u_list = []
+for i in range(0, len(out)):
+    tmp = Qobj(out[i])
+    u_list.append(tmp)
 
+pop1 = plot_dynamics(u_list, ts,[0])
 
-
-
-
-pop1 = plot_dynamics(u, ts, [0])
-
-pop2 = plot_dynamics_sesolve(U[0], ts)
-
-
-fig = plt.figure(1)
-sp1 = plt.subplot(211)
-sp1.title.set_text("pwc 1e4")
 plt.plot(ts, pop1)
 
-sp2 = plt.subplot(212)
-sp2.title.set_text("sesolve")
-plt.plot(ts, pop2)
+# plt.plot(ts/1e-9, out)
 
-plt.show()
 
-# """ Plotting control functions """
+# psi = []
+# for i in range(0,2):
+    # for j in range(0,5):
+        # psi.append(tensor(basis(2,i), basis(5,j)))
 
-# plt.rcParams['figure.dpi'] = 100
+# U = []
+# for i in range(0, 10):
+    # U_res = propagate(initial_model, q1_X_gate, psi[i], ts, 'qutip_sesolve')
+    # U.append(U_res)
 
-# fu = list(map(control_func[0], ts))
-# env = list(map(lambda t: q1_X_gate.envelope(t, 5e-9, 45e-9), ts))
-# fig, axs = plt.subplots(2, 1)
 
-# axs[0].plot(ts/1e-9, env)
 
-# axs[1].plot(ts/1e-9, fu)
+
+
+# pop1 = plot_dynamics(u, ts, [0])
+
+# pop2 = plot_dynamics_sesolve(U[0], ts)
+
+
+# fig = plt.figure(1)
+# sp1 = plt.subplot(211)
+# sp1.title.set_text("pwc 1e4")
+# plt.plot(ts, pop1)
+
+# sp2 = plt.subplot(212)
+# sp2.title.set_text("sesolve")
+# plt.plot(ts, pop2)
+
 # plt.show()
 
-"""
-BSB_X_gate = Gate((q, r),
-        qt.tensor(qt.sigmap(), qt.sigmap())
-            + qt.tensor(qt.sigmam(), qt.sigmam())
-        )
-"""
+
