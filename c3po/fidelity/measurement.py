@@ -5,6 +5,8 @@ from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
 
 # TODO this file (measurement.py) should go in the main folder
+
+
 class Backend:
     """
     Represents either an experiment or a simulation and contains the methods
@@ -23,7 +25,11 @@ class Experiment(Backend):
         """
         self.evaluate_gate = eval_gate
         self.evaluate_seq = eval_seq
+        self.wd = '.'
         # TODO: Try and Handle empty function handles
+
+    def set_working_directory(self, path):
+        self.wd = path
 
     def calibrate_ORBIT(self, gates, opts=None,
                         start_name='initial', calib_name='calibrated'):
@@ -156,7 +162,7 @@ class Simulation(Backend):
             duf = tensor(basis(n_params, ii), qeye(dim)).dag() * U
             ret[ii-1] = -1 * real(
                 g.conj() / abs(g) / dim * trace(
-                    (U_goal.dag() * duf).full()
+                                              (U_goal.dag() * duf).full()
+                                          )
                 )
-            )
         return ret

@@ -1,0 +1,22 @@
+c3po.control package
+====================
+
+Submodules
+----------
+
+c3po.control.goat module
+------------------------
+
+.. automodule:: c3po.control.goat
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: c3po.control
+    :members:
+    :undoc-members:
+    :show-inheritance:

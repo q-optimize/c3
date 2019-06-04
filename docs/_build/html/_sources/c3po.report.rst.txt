@@ -1,0 +1,22 @@
+c3po.report package
+===================
+
+Submodules
+----------
+
+c3po.report.generate\_thesis module
+-----------------------------------
+
+.. automodule:: c3po.report.generate_thesis
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: c3po.report
+    :members:
+    :undoc-members:
+    :show-inheritance:
