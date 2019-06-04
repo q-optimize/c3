@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from c3po.utils.envelopes import flattop, gaussian, gaussian_der
+from c3po.utils.helpers import sum_lambdas
 import matplotlib.pyplot as plt
 
 
@@ -18,7 +19,7 @@ class Gate:
 
     Attributes
     ----------
-    keys:
+    idxes:
         Contains the parametrization of this gate. This is created when
         set_parameters() is used to store a new pulse.
     parameters:
@@ -59,13 +60,13 @@ class Gate:
             env_der = gaussian_der
             self.env_der = env_der
             props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
-        elif env_shape == 'ETH':
+        elif env_shape == 'flat':
             props = ['amplitude', 'length', 'alpha']
             env_func = None
         self.props = props
         self.envelope = env_func
 
-        self.keys = {}
+        self.idxes = {}
         if pulse == {}:
             self.parameters = {}
         else:
@@ -74,11 +75,27 @@ class Gate:
         self.bounds = None
 
     def set_bounds(self, b_in):
-        if self.env_shape == 'ETH':
+        if self.env_shape == 'flat':
             b = np.array(list(b_in.values()))
         else:
-            b = np.array(self.serialize_parameters(b_in))
+            opt_idxes = []
+            idxes = self.idxes
+            b = []
+            for ctrl in sorted(b_in.keys()):
+                for carr in sorted(b_in[ctrl].keys()):
+                    for puls in sorted(b_in[ctrl][carr]['pulses'].keys()):
+                        for prop in sorted(
+                                b_in[ctrl][carr]['pulses'][puls]['params'].keys()
+                                ):
+                            opt_idxes.append(
+                                idxes[ctrl][carr]['pulses'][puls]['params'][prop]
+                                )
+                            b.append(
+                                b_in[ctrl][carr]['pulses'][puls]['params'][prop]
+                                )
         self.bounds = {}
+        b = np.array(b)
+        self.opt_idxes = opt_idxes
         self.bounds['scale'] = np.diff(b).T[0]
         self.bounds['offset'] = b.T[0]
 
@@ -87,36 +104,40 @@ class Gate:
         An initial guess that implements this gate. The structure defines the
         parametrization of this gate.
         """
-        if self.env_shape == 'ETH':
+        if self.env_shape == 'flat':
             self.parameters[name] = list(guess.values())
         else:
-            control_keys = sorted(guess.keys())
-            for ckey in control_keys:
-                control = guess[ckey]
-                self.keys[ckey] = {}
-                carrier_keys = sorted(control.keys())
-                for carkey in carrier_keys:
-                    carrier = guess[ckey][carkey]
-                    self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
-            self.parameters[name] = self.serialize_parameters(guess)
+            self.parameters[name] = self.serialize_parameters(guess, True)
 
-    def serialize_parameters(self, p):
+    def serialize_parameters(self, p, redefine=False):
         """
         Takes a nested dictionary of pulse parameters and returns a linear
         list, compatible with the parametrization of this gate. Input can
         also be the name of a stored pulse.
         """
         q = []
-        if isinstance(p, str):
-            p = self.parameters[p]
-        keys = self.keys
-        for ckey in sorted(keys):
-            for carkey in sorted(keys[ckey]):
-                q.append(p[ckey][carkey]['freq'])
+        idx = 0
+        idxes = {}
+        for ctrl in sorted(p.keys()):
+            idxes[ctrl] = {}
+            for carr in sorted(p[ctrl].keys()):
+                idxes[ctrl][carr] = {}
+                idxes[ctrl][carr]['freq'] = p[ctrl][carr]['freq']
+                idxes[ctrl][carr]['pulses'] = {}
                 # TODO discuss adding target
-                for pkey in sorted(keys[ckey][carkey]):
-                    for prop in self.props:
-                        q.append(p[ckey][carkey]['pulses'][pkey][prop])
+                for puls in sorted(p[ctrl][carr]['pulses'].keys()):
+                    idxes[ctrl][carr]['pulses'][puls] = {}
+                    idxes[ctrl][carr]['pulses'][puls]['func']\
+                        = p[ctrl][carr]['pulses'][puls]['func']
+                    idxes[ctrl][carr]['pulses'][puls]['params'] = {}
+                    for prop in sorted(
+                            p[ctrl][carr]['pulses'][puls]['params'].keys()
+                            ):
+                        idxes[ctrl][carr]['pulses'][puls]['params'][prop] = idx
+                        q.append(p[ctrl][carr]['pulses'][puls]['params'][prop])
+                        idx += 1
+        if redefine:
+            self.idxes = idxes
         return q
 
     def deserialize_parameters(self, q):
@@ -128,20 +149,20 @@ class Gate:
         p = {}
         if isinstance(q, str):
             q = self.parameters[q]
-        keys = self.keys
-        idx = 0
-        for ckey in sorted(keys):
-            p[ckey] = {}
-            for carkey in sorted(keys[ckey]):
-                p[ckey][carkey] = {}
-                p[ckey][carkey]['pulses'] = {}
-                p[ckey][carkey]['freq'] = q[idx]
-                idx += 1
-                for pkey in sorted(keys[ckey][carkey]):
-                    p[ckey][carkey]['pulses'][pkey] = {}
-                    for prop in self.props:
-                        p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
-                        idx += 1
+        idxes = self.idxes
+        for ctrl in sorted(idxes):
+            p[ctrl] = {}
+            for carr in sorted(idxes[ctrl]):
+                p[ctrl][carr] = {}
+                p[ctrl][carr]['pulses'] = {}
+                p[ctrl][carr]['freq'] = idxes[ctrl][carr]['freq']
+                for puls in sorted(idxes[ctrl][carr]['pulses']):
+                    p[ctrl][carr]['pulses'][puls] = {
+                            'params': {}
+                            }
+                    for prop in sorted(idxes[ctrl][carr]['pulses'][puls]['params']):
+                        idx = idxes[ctrl][carr]['pulses'][puls]['params'][prop]
+                        p[ctrl][carr]['pulses'][puls]['params'][prop] = q[idx]
         return p
 
     def to_scale_one(self, q):
@@ -150,7 +171,8 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
+        q = np.array(q)[self.opt_idxes]
+        y = (q - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
@@ -162,7 +184,9 @@ class Gate:
                     (np.array(x)+1)*np.pi/2
                 )
             )/np.pi
-        return self.bounds['scale'] * y + self.bounds['offset']
+        q = np.array(self.parameters['initial'])
+        q[self.opt_idxes] = self.bounds['scale'] * y + self.bounds['offset']
+        return list(q)
 
     def get_IQ(self, guess):
         """
@@ -175,33 +199,43 @@ class Gate:
         """
         if isinstance(guess, str):
             guess = self.parameters[guess]
-        """
-        NICO: Paramtrization here is fixed for testing and will have to be
-        extended to more general.
-        """
-        omega_d = guess[0]
-        amp = guess[1]
-        t0 = guess[2]
-        t1 = guess[3]
-        xy_angle = guess[4]
-        # TODO: atm it works for both gaussian and flattop, but only by chance
+        idxes = self.idxes
+        signals = {}
 
-        def Inphase(t):
-            return self.envelope(t, t0, t1) * np.cos(xy_angle)
+        for ctrl in idxes:
+            ck = idxes[ctrl]
+            signals[ctrl] = {}
+            for carr in ck:
+                Inphase = []
+                Quadrature = []
+                omega_d = guess[ck[carr]['freq']]
+                pu = ck[carr]['pulses']
+                comp_amps = []
+                components = []
 
-        def Quadrature(t):
-            envelope = self.envelope
-            if self.env_shape == 'DRAG':
-                drag = guess[5]
-                envelope = drag * self.env_der
-            return envelope(t, t0, t1) * np.sin(xy_angle)
+                for puls in pu:
+                    amp = guess[pu[puls]['amp']]
+                    t0 = guess[pu[puls]['t_up']]
+                    t1 = guess[pu[puls]['t_down']]
+                    xy_angle = guess[pu[puls]['xy_angle']]
+                    comp_amps.append(amp)
+                    components.append(
+                        lambda t:
+                            amp * self.envelope(t, t0, t1)
+                            * np.exp(1j*xy_angle)
+                        )
 
-        return {
-                'I': Inphase,
-                'Q': Quadrature,
-                'carrier_amp': amp,
-                'omegas': [omega_d]
-                }
+                def Inphase(t):
+                    return np.real(sum_lambdas(t, components))/max(comp_amps)
+
+                def Quadrature(t):
+                    return np.imag(sum_lambdas(t, components))/max(comp_amps)
+
+                signals[ctrl][carr]['omega'] = omega_d
+                signals[ctrl][carr]['amp'] = max(comp_amps)
+                signals[ctrl][carr]['I'] = Inphase
+                signals[ctrl][carr]['Q'] = Quadrature
+        return signals
 
     def get_control_fields(self, name):
         """
@@ -243,14 +277,8 @@ class Gate:
         axs[1].plot(ts/1e-9, list(map(IQ['Q'], ts)))
         plt.show(block=False)
 
-
     def get_parameters(self):
         return self.parameters
 
-    def get_keys(self):
-        return self.keys
-
-
-
-
-
+    def get_idxes(self):
+        return self.idxes

@@ -94,10 +94,10 @@ class Experiment(Backend):
         'popsize' the number of samples per generation.
 
         Example for 3 parameters:
-        ops = {
+        opts = {
             'CMA_stds' : [1, 2, 0.5],
             'ftarget' = 1e-4,
-            'popsize' = 20,
+            'popsize' = 21
             }
         """
         x0 = gate.to_scale_one(start_name)
