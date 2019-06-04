@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import tensorflow as tf
 from c3po.utils.envelopes import flattop, gaussian, gaussian_der
 from c3po.utils.helpers import sum_lambdas
 import matplotlib.pyplot as plt
@@ -36,6 +37,7 @@ class Gate:
             self,
             target,
             goal,
+            tf_sess,
             env_shape='flattop',
             pulse={},
             T_final=100e-9
@@ -73,6 +75,8 @@ class Gate:
             self.set_parameters('default', pulse)
 
         self.bounds = None
+
+        self.tf_sess = tf_sess
 
     def set_bounds(self, b_in):
         if self.env_shape == 'flat':
@@ -179,9 +183,9 @@ class Gate:
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = np.arccos(
-                np.cos(
-                    (np.array(x)+1)*np.pi/2
+        y = tf.arccos(
+                tf.cos(
+                    (tf.constant(x, dtype=tf.float64)+1)*np.pi/2
                 )
             )/np.pi
         q = np.array(self.parameters['initial'])
@@ -254,9 +258,16 @@ class Gate:
         here. After some research, this should be the correct way. The
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
-        return lambda t:\
-            amp * (mixer_I(t) * np.cos(omega_d * t)
-                   + mixer_Q(t) * np.sin(omega_d * t))
+        cflds = []
+        for ckey in sorted(self.keys):
+            cflds.append(
+                lambda t:
+                    amp * (
+                        mixer_I(t) * tf.cos(omega_d * t)
+                        + mixer_Q(t) * tf.sin(omega_d * t)
+                         )
+                )
+        return cflds
 
     def print_pulse(self, p):
         print(

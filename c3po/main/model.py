@@ -73,16 +73,24 @@ class Model:
 
 
     def init_tf_model(self):
-        tf_hbar = tf.constant(1, tf.complex64, name='planck')
+        tf_hbar = tf.constant(1, dtype=tf.float64, name='planck')
 
         self.tf_Hcs = []
 
         # should name of placeholder become concat of keys, e.g. 
         # name="qubit_1/freq"? This might be helpfull to retrieve parameter
         # information 
-        tf_omega_q = tf.placeholder(tf.complex64, shape=(), name="Resonator_frequency")
-        tf_omega_r = tf.placeholder(tf.complex64, shape=(), name="Qubit_frequency")
-        tf_g = tf.placeholder(tf.complex64, shape=(), name="Coupling")
+        # tf_omega_q = tf.placeholder(tf.complex64, shape=(), name="Qubit_frequency")
+        # tf_omega_r = tf.placeholder(tf.complex64, shape=(), name="Cavity_frequency")
+        # tf_g = tf.placeholder(tf.complex64, shape=(), name="Coupling")
+
+        omega_q = self.component_parameters['qubit_1']['freq']
+        omega_r = self.component_parameters['cavity']['freq']
+        g = self.coupling['q1_cav']['strength']
+
+        tf_omega_q = tf.constant(omega_q, dtype=tf.float64, name="Qubit_frequency")
+        tf_omega_r = tf.constant(omega_r, dtype=tf.float64, name="Cavity_frequency")
+        tf_g = tf.constant(g, dtype=tf.float64, name="Coupling")
 
         dim_q = self.hilbert_space['qubit_1']
         dim_r = self.hilbert_space['cavity']
@@ -90,18 +98,18 @@ class Model:
         a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
         a_dag = a.dag()
 
-        tf_a = tf.constant(a.full(), tf.complex64, name="a")
-        tf_a_dag = tf.constant(a_dag.full(), tf.complex64, name="a_dag")
-        tf_sigmaz = tf.constant(qt.tensor(qt.sigmaz(), qt.qeye(dim_r)).full(), tf.complex64, name="sigma_z")
-        tf_sigmax = tf.constant(qt.tensor(qt.sigmax(), qt.qeye(dim_r)).full(), tf.complex64, name="sigma_x")
+        tf_a = tf.constant(a.full(), dtype=tf.complex128, name="a")
+        tf_a_dag = tf.constant(a_dag.full(), dtype=tf.complex128, name="a_dag")
+        tf_sigmaz = tf.constant(qt.tensor(qt.sigmaz(), qt.qeye(dim_r)).full(), dtype=tf.complex128, name="sigma_z")
+        tf_sigmax = tf.constant(qt.tensor(qt.sigmax(), qt.qeye(dim_r)).full(), dtype=tf.complex128, name="sigma_x")
 
         with tf.name_scope('drift_hamiltonian'):
-            self.tf_H0 = tf_hbar * tf_omega_q / 2 * tf_sigmaz \
-                        + tf_hbar * tf_omega_r * tf_a_dag * tf_a \
-                        + tf_hbar * tf_g * (tf_a_dag + tf_a) * tf_sigmax
+            self.tf_H0 = tf.cast(tf_hbar, tf.complex128) * tf.cast((tf_omega_q / 2), tf.complex128) * tf_sigmaz \
+                        + tf.cast(tf_hbar, tf.complex128) * tf.cast(tf_omega_r, tf.complex128) * tf_a_dag * tf_a \
+                        + tf.cast((tf_hbar * tf_g), tf.complex128) * (tf_a_dag + tf_a) * tf_sigmax
 
         with tf.name_scope('control_hamiltonian'):
-            tf_H1 = tf_hbar * tf_sigmax
+            tf_H1 = tf.cast(tf_hbar, tf.complex128) * tf_sigmax
 
         self.tf_Hcs.append(tf_H1)
 
@@ -128,7 +136,7 @@ class Model:
 
     def get_tf_Hamiltonian(self, control_fields):
         tf_H = [self.tf_H0]
-        for ii in range(len(self.control_fields)):
-            tf_H.append([self.tf_Hcs[ii], self.control_fields[ii]])
+        for ii in range(len(control_fields)):
+            tf_H.append([self.tf_Hcs[ii], control_fields[ii]])
         return tf_H
 
