@@ -1,8 +1,10 @@
 """ Measurement object that communicates between searcher and sim/exp"""
 
-import cma
+import cma.evolution_strategy as cmaes
 from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
+import c3po
+
 
 # TODO this file (measurement.py) should go in the main folder
 class Backend:
@@ -25,8 +27,8 @@ class Experiment(Backend):
         self.evaluate_seq = eval_seq
         # TODO: Try and Handle empty function handles
 
-    def calibrate_ORBIT(self, gates, opts=None,
-                        start_name='initial', calib_name='calibrated'):
+    def calibrate_ORBIT(self, gates, opts=None, start_name='initial',
+                        calib_name='calibrated', **kwargs):
         x0 = []
         ls = []
         for gate in gates:
@@ -52,7 +54,7 @@ class Experiment(Backend):
                 for gate in gates:
                     indeces = ls[gate_indx]
                     value.append(gate.rescale_and_bind_inv(sample[indeces[0]:indeces[1]]))
-                    gate_ind += 1
+                    gate_indx += 1
                 value_batch.append(value)
             # determine RB sequences to evaluate
             sequences = c3po.utils.single_length_RB(
@@ -62,14 +64,14 @@ class Experiment(Backend):
             # query the experiment for the survical probabilities
             results = self.evaluate_seq(sequences, value_batch)
             # tell the cmaes object the performance of each solution and update
-            es.tell(solutions, results)
+            es.tell(samples, results)
             # log results
             es.logger.add()
             # show current evaluation status
             es.result_pretty()  # or es.disp
             # update iteration number
             iteration_number += 1
-        cma.plot()
+        cmaes.plot()
         return es
 
     def calibrate(
@@ -95,7 +97,7 @@ class Experiment(Backend):
             }
         """
         x0 = gate.to_scale_one(start_name)
-        es = cma.CMAEvolutionStrategy(x0, 0.5, opts)
+        es = cmaes.CMAEvolutionStrategy(x0, 0.5, opts)
         while not es.stop():
             samples = es.ask()
             samples_rescaled = [gate.to_bound_phys_scale(x) for x in samples]

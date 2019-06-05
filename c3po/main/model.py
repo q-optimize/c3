@@ -56,21 +56,21 @@ class Model:
         self.Hcs = []
 
         # Ensure we mantain correct ordering
-        self.component_keys = [key for key in component_parameters.keys()]
-        # self.coupling_keys = [key for key in couplings.keys()]
+        self.component_keys = list(component_parameters.keys())
+        # self.coupling_keys = list(couplings.keys())
         self.dims = [hilbert_space[x] for x in self.component_keys]
 
         # Anninhilation_operators
         ann_opers = []
         for indx in range(len(self.dims)):
             a = qt.destroy(self.dims[indx])
-            for indy in self.component_keys:
+            for indy in range(len(self.dims)):
                 qI = qt.qeye(self.dims[indy])
                 if indy < indx:
                     a = qt.tensor(qI, a)
                 if indy > indx:
                     a = qt.tensor(a, qI)
-            ann_opers.append()
+            ann_opers.append(a)
 
         if model_types:  # check if model types have been assinged
             static_Hs = []
@@ -106,45 +106,47 @@ class Model:
                 hamiltonia_fun = drive_models[drive]
                 self.Hcs.append(hamiltonia_fun(ann_oper))
 
-        # ###Old version###
-        omega_q = component_parameters['qubit_1']['freq']
-        delta = component_parameters['qubit_1']['delta']
-        omega_r = component_parameters['cavity']['freq']
-        g = couplings['q1_cav']['strength']
+        else:
+            # ###Old version###
 
-        dim_q = hilbert_space['qubit_1']
-        dim_r = hilbert_space['cavity']
+            omega_q = component_parameters['qubit_1']['freq']
+            delta = component_parameters['qubit_1']['delta']
+            omega_r = component_parameters['cavity']['freq']
+            g = couplings['q1_cav']['strength']
 
-        res_type = model_types['cavity']
-        qubit_type = model_types['qubit_1']
-        inter_type = model_types['interaction']
-        drive_type = model_types['direct']
+            dim_q = hilbert_space['qubit_1']
+            dim_r = hilbert_space['cavity']
 
-        # Construct H0 from resonator, qubit and interaction types
-        a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
-        # Resonator
-        if res_type == 'harmonic':
-            res = utils.hamiltonians.resonator(a, omega_r)
-        # Qubit
-        b = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
-        if qubit_type == 'multi':
-            qubit = utils.hamiltonians.duffing(b, omega_q, delta)
-        elif qubit_type == 'simple':
-            sigmaz = b * b.dag() - b.dag() * b
-            qubit = omega_q / 2 * sigmaz
-        # Interaction
-        if inter_type == 'XX':
-            inter = utils.hamiltonians.int_XX(a, b, g)
-        if inter_type == 'JC':
-            inter = utils.hamiltonians.int_jaynes_cummings(a, b, g)
-        self.H0 = hbar * (qubit + res + inter)
+            res_type = model_types['cavity']
+            qubit_type = model_types['qubit_1']
+            inter_type = model_types['interaction']
+            drive_type = model_types['direct']
 
-        # Construct drive Hamiltonians
-        if drive_type == 'direct':
-            drive = hbar * (b.dag() + b)
-        elif drive_type == 'indirect':
-            drive = hbar * (a.dag() + a)
-        self.Hcs.append(drive)
+            # Construct H0 from resonator, qubit and interaction types
+            a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
+            # Resonator
+            if res_type == 'harmonic':
+                res = utils.hamiltonians.resonator(a, omega_r)
+            # Qubit
+            b = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
+            if qubit_type == 'multi':
+                qubit = utils.hamiltonians.duffing(b, omega_q, delta)
+            elif qubit_type == 'simple':
+                sigmaz = b * b.dag() - b.dag() * b
+                qubit = omega_q / 2 * sigmaz
+            # Interaction
+            if inter_type == 'XX':
+                inter = utils.hamiltonians.int_XX(a, b, g)
+            if inter_type == 'JC':
+                inter = utils.hamiltonians.int_jaynes_cummings(a, b, g)
+            self.H0 = hbar * (qubit + res + inter)
+
+            # Construct drive Hamiltonians
+            if drive_type == 'direct':
+                drive = hbar * (b.dag() + b)
+            elif drive_type == 'indirect':
+                drive = hbar * (a.dag() + a)
+            self.Hcs.append(drive)
 
     # TODO: Think about the distinction between System and Model classes
     """

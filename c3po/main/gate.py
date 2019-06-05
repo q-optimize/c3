@@ -35,47 +35,29 @@ class Gate:
             self,
             target,
             goal,
-            env_shape='flattop',
+            env_shape='',
             pulse={}
             ):
         self.target = target
         self.goal_unitary = goal
+        # env_shape is obsolete, get rid of and deal with ETH differently
         self.env_shape = env_shape
-        if env_shape == 'gaussian':
-            env_func = gaussian
-            env_der = gaussian_der
-            self.env_der = env_der
-            props = ['amp', 'T', 'sigma', 'xy_angle']
-        elif env_shape == 'flattop':
-            env_func = flattop
-            props = ['amp', 't_up', 't_down', 'xy_angle']
-        elif env_shape == 'flattop_risefall':
-            env_func = flattop
-            props = ['amp', 't_up', 't_down', 'xy_angle', 'T', 'risefall']
-        elif env_shape == 'DRAG':
-            env_func = gaussian
-            env_der = gaussian_der
-            self.env_der = env_der
-            props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
-        elif env_shape == 'ETH':
-            props = ['amplitude', 'length', 'alpha']
-            env_func = None
-        self.props = props
-        self.envelope = env_func
 
+        self.envelopes = {}
+        self.opt_keys = {}
         self.keys = {}
         if pulse == {}:
             self.parameters = {}
         else:
             self.set_parameters('default', pulse)
-
         self.bounds = None
 
     def set_bounds(self, b_in):
         if self.env_shape == 'ETH':
             b = np.array(list(b_in.values()))
         else:
-            b = np.array(self.serialize_parameters(b_in))
+            self.opt_keys = self.get_keys(b_in)
+            b = np.array(self.serialize_parameters(b_in, opt=True))
         self.bounds = {}
         self.bounds['scale'] = np.diff(b).T[0]
         self.bounds['offset'] = b.T[0]
@@ -88,17 +70,28 @@ class Gate:
         if self.env_shape == 'ETH':
             self.parameters[name] = list(guess.values())
         else:
-            control_keys = sorted(guess.keys())
-            for ckey in control_keys:
-                control = guess[ckey]
-                self.keys[ckey] = {}
-                carrier_keys = sorted(control.keys())
-                for carkey in carrier_keys:
-                    carrier = guess[ckey][carkey]
-                    self.keys[ckey][carkey] = sorted(carrier['pulses'].keys())
+            self.keys = self.get_keys(guess)
             self.parameters[name] = self.serialize_parameters(guess)
 
-    def serialize_parameters(self, p):
+    @staticmethod
+    def get_keys(guess):
+        keys = {}
+        control_keys = sorted(guess.keys())
+        for conkey in control_keys:
+            control = guess[conkey]
+            keys[conkey] = {}
+            carrier_keys = sorted(control.keys())
+            for carkey in carrier_keys:
+                carrier = guess[conkey][carkey]
+                keys[conkey][carkey] = {}
+                pulse_keys = sorted(carrier['pulses'].keys())
+                for pulkey in pulse_keys:
+                    pulse = guess[conkey][carkey]['pulses'][pulkey]
+                    keys[conkey][carkey][pulkey] = \
+                        sorted(pulse.keys())
+        return keys
+
+    def serialize_parameters(self, p, opt=False):
         """
         Takes a nested dictionary of pulse parameters and returns a linear
         list, compatible with the parametrization of this gate. Input can
@@ -107,17 +100,20 @@ class Gate:
         q = []
         if isinstance(p, str):
             p = self.parameters[p]
-        keys = self.keys
-        for ckey in sorted(keys):
-            for carkey in sorted(keys[ckey]):
-                q.append(p[ckey][carkey]['freq'])
+        if opt:
+            keys = self.opt_keys
+        else:
+            keys = self.keys
+        for conkey in sorted(keys):
+            for carkey in sorted(keys[conkey]):
+                q.append(p[conkey][carkey]['freq'])
                 # TODO discuss adding target
-                for pkey in sorted(keys[ckey][carkey]):
-                    for prop in self.props:
-                        q.append(p[ckey][carkey]['pulses'][pkey][prop])
+                for pulkey in sorted(keys[conkey][carkey]):
+                    for parkey in sorted(keys[conkey][carkey][pulkey]):
+                        q.append(p[conkey][carkey]['pulses'][pulkey][parkey])
         return q
 
-    def deserialize_parameters(self, q):
+    def deserialize_parameters(self, q, opt=False):
         """
         Give a vector of parameters that conform to the parametrization for
         this gate and get the structured version back. Input can also be the
@@ -126,19 +122,22 @@ class Gate:
         p = {}
         if isinstance(q, str):
             q = self.parameters[q]
-        keys = self.keys
+        if opt:
+            keys = self.opt_keys
+        else:
+            keys = self.keys
         idx = 0
-        for ckey in sorted(keys):
-            p[ckey] = {}
-            for carkey in sorted(keys[ckey]):
-                p[ckey][carkey] = {}
-                p[ckey][carkey]['pulses'] = {}
-                p[ckey][carkey]['freq'] = q[idx]
+        for conkey in sorted(keys):
+            p[conkey] = {}
+            for carkey in sorted(keys[conkey]):
+                p[conkey][carkey] = {}
+                p[conkey][carkey]['pulses'] = {}
+                p[conkey][carkey]['freq'] = q[idx]
                 idx += 1
-                for pkey in sorted(keys[ckey][carkey]):
-                    p[ckey][carkey]['pulses'][pkey] = {}
-                    for prop in self.props:
-                        p[ckey][carkey]['pulses'][pkey][prop] = q[idx]
+                for pulkey in sorted(keys[conkey][carkey]):
+                    p[conkey][carkey]['pulses'][pulkey] = {}
+                    for parkey in sorted(keys[conkey][carkey][pulkey]):
+                        p[conkey][carkey]['pulses'][pulkey][parkey] = q[idx]
                         idx += 1
         return p
 
@@ -151,13 +150,13 @@ class Gate:
         y = (np.array(q) - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
-    def to_bound_phys_scale(self, x):
+    def to_bound_phys_scale(self, q):
         """
         Transforms an optimizer vector back to physical scale.
         """
         y = np.arccos(
                 np.cos(
-                    (np.array(x)+1)*np.pi/2
+                    (np.array(q)+1)*np.pi/2
                 )
             )/np.pi
         return self.bounds['scale'] * y + self.bounds['offset']
@@ -176,16 +175,24 @@ class Gate:
         """
         NICO: Paramtrization here is fixed for testing and will have to be
         extended to more general.
+        FED: I think this does it. However there is a problem:
+        we need to make parameters and inputs of envelope match
         """
-        omega_d = guess[0]
-        amp = guess[1]
-        t0 = guess[2]
-        t1 = guess[3]
-        xy_angle = guess[4]
-        # TODO: atm it works for both gaussian and flattop, but only by chance
+        p = self.deserialize_parameters(guess)
+        keys = self.keys
+        for conkey in sorted(keys):
+            for carkey in sorted(keys[conkey]):
+                for pulkey in sorted(keys[conkey][carkey]):
+                    pars = []
+                    for parkey in sorted(keys[conkey][carkey][pulkey]):
+                        par = p[conkey][carkey]['pulses'][pulkey][parkey]
+                        if parkey == 'type':
+                            envelope = par
+                        else:
+                            pars.append(par)
 
         def Inphase(t):
-            return self.envelope(t, t0, t1) * np.cos(xy_angle)
+            return envelope(pars) * np.cos(xy_angle)
 
         def Quadrature(t):
             envelope = self.envelope

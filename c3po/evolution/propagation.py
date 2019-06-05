@@ -33,7 +33,7 @@ def propagate(model, u0, tlist, method, grad = False, history = False):
     if method == "pwc":
         H = model.get_Hamiltonian() # Hamilton as lambda func or list [H0,...]?
         tmp = Qobj      # create temp obj to get access to method evalute
-        H = tmp.evaluate(H) # from qutip: Evaluate a time-dependent quantum 
+        H = tmp.evaluate(H) # from qutip: Evaluate a time-dependent quantum
                             # object in list format.
                             # see: http://qutip.org/docs/latest/apidoc/classes.html?highlight=evaluate#qutip.Qobj.evaluate
         U = sesolve_pwc(H, u0, tlist, grad, history)
@@ -42,26 +42,26 @@ def propagate(model, u0, tlist, method, grad = False, history = False):
 
         # !!! CAUTION !!!
         # this setup (tf_setup) step needs to be moved!
-        # I assume that you cannot create tensorflow objects without any 
-        # previously created session, as I guess that tf-objects are tied 
+        # I assume that you cannot create tensorflow objects without any
+        # previously created session, as I guess that tf-objects are tied
         # to the initialized session. This means that everytime the model-class
-        # tries to return an Hamilton as tf-object a tf-session should be 
+        # tries to return an Hamilton as tf-object a tf-session should be
         # running
-        # Right now I just put this here to remind, that a session 
+        # Right now I just put this here to remind, that a session
         # has to be created in order to use tensorflow, but this is clearly
-        # not the right place to do it. 
-        # My guess: Session initialization should be done at the 
+        # not the right place to do it.
+        # My guess: Session initialization should be done at the
         # very beginning, when systems/models/problems are specified/configured
         sess = tf_setup()
 
-        H = model.get_Hamiltonian_tf()  # should return Hamilton as lambda func 
+        H = model.get_Hamiltonian_tf()  # should return Hamilton as lambda func
                                         # or list [H0, ...]
         H = tf_evaluate(H)  # needed to convert a list [H0, ...] in useable format
 
 
-        params = model.get_params_tf()  # system parameters should be provided 
+        params = model.get_params_tf()  # system parameters should be provided
                                         # by model for the tensorflow backend
-                                        # as input for: 
+                                        # as input for:
                                         # session.run(..., feed_dict = params)
 
 
@@ -125,14 +125,14 @@ def sesolve_pwc_tf(H, params, tlist, session, grad = False, history = False):
 # CODE TAKEN FROM NICO'S CODE: tf_propagation.py
 #
 # !!! CAUTION/REMARK !!!
-# I do not expect this code to run. I still have to read more about 
+# I do not expect this code to run. I still have to read more about
 # tensorflow. I put this code here as an overview for myself(Kevin) and others
 # Please see this code as placeholder.
 
 
 
     # convert tlist to tensorflor object
-    # this is just a hack for now. and hasn't been tested but should 
+    # this is just a hack for now. and hasn't been tested but should
     # produce some working code. Regard it as placeholder.
     Ts = tf.linspace(tlist[0], tlist[len(tlist - 1)], len(tlist), name="Time")
     Ts = tf.to_complex64(Ts)
