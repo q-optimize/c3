@@ -1,8 +1,11 @@
 """C3PO Setup for the IBM machine"""
 
-from numpy import np
+import numpy as np
 import qutip as qt
-import c3po
+import c3po.utils.hamiltonians
+import c3po.utils.envelopes
+import c3po.main.model
+import c3po.main.gate
 
 initial_parameters = {
         'q1': {'freq': 6e9*2*np.pi, 'delta': 100e6 * 2 * np.pi},
@@ -28,36 +31,39 @@ model_types = {
         'drives': {
             'q1': c3po.utils.hamiltonians.drive},
         }
-initial_model = c3po.Model(
+initial_model = c3po.main.model.Model(
         initial_parameters,
         initial_couplings,
         initial_hilbert_space,
         comp_hilbert_space=comp_hilbert_space,
-        model_types=model_types,
+        model_types=model_types
         )
 
 H = initial_model.get_Hamiltonian([0])
 
 print(H)
 
-q1_X_gate = c3po.Gate('qubit_1', qt.sigmax())
-q1_Y_gate = c3po.Gate('qubit_2', qt.sigmay())
+q1_X_gate = c3po.main.gate.Gate('q1', qt.sigmax())
+# q1_Y_gate = c3po.main.gate.Gate('q2', qt.sigmay())
 
 handmade_pulse = {
         'control1': {
             'carrier1': {
                 'freq': 6e9*2*np.pi,
-                'target': 'q1',  # add here?
+                # Federico: add target here to distinguish
+                # target of gate from target of drive
+                # I seem to understand that the taget is the
+                # main point of the control keys
                 'pulses': {
                     'pulse1': {
                         'amp': 15e6*2*np.pi,
                         't_up': 5e-9,
                         't_down': 45e-9,
                         'xy_angle': 0,
-                        'type': 'gaussian'
+                        'type': c3po.utils.envelopes.gaussian
                         },
                     'drag': {
-                        'detuning': initial_parameters['qubit1']['delta'],
+                        'detuning': initial_parameters['q1']['delta'],
                         'type': 'drag',
                         'orig': 'pulse1'
                         }
@@ -75,7 +81,7 @@ pulse_bounds = {
                         'amp':  [1e3*2*np.pi, 10e9*2*np.pi],
                         't_up': [2e-9, 98e-9],
                         't_down': [2e-9, 98e-9],
-                        'xy_angle': [-np.pi, np.pi]
+                        # 'xy_angle': [-np.pi, np.pi]
                         }
                     }
                 }
@@ -84,7 +90,7 @@ pulse_bounds = {
 
 q1_X_gate.set_parameters('initial', handmade_pulse)
 q1_X_gate.set_bounds(pulse_bounds)
-q1_Y_gate.set_parameters('initial', map_to=q1_X_gate, xy_angle=np.pi)
+# q1_Y_gate.set_parameters('initial', map_to=q1_X_gate, xy_angle=np.pi)
 
 
 # Create simulation class
@@ -92,14 +98,14 @@ def evolution():
     return 0
 
 
-simulation_chip = c3po.fidelity.measurement.Simulation(initial_model, evolution)
+sim_chip = c3po.fidelity.measurement.Simulation(initial_model, evolution)
 
 
 # Create experiment class
 def get_gates(solution, gates):
     unitaries = []
     for indx in range(len(solution)):
-        unitaries.append(simulation_chip.evolution(solution[indx], gates[indx]))
+        unitaries.append(sim_chip.evolution(solution[indx], gates[indx]))
     return unitaries
 
 
@@ -126,4 +132,4 @@ def evaluate_sequences(sequences, value_batch, gates):
 
 
 fridge = c3po.fidelity.measurement.Experiment(eval_seq=evaluate_sequences)
-fridge.calibrate_ORBIT([q1_X_gate,q1_Y_gate])
+# fridge.calibrate_ORBIT([q1_X_gate, q1_Y_gate])

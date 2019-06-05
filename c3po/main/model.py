@@ -77,9 +77,9 @@ class Model:
 
         self.tf_Hcs = []
 
-        # should name of placeholder become concat of keys, e.g. 
+        # should name of placeholder become concat of keys, e.g.
         # name="qubit_1/freq"? This might be helpfull to retrieve parameter
-        # information 
+        # information
         # tf_omega_q = tf.placeholder(tf.complex64, shape=(), name="Qubit_frequency")
         # tf_omega_r = tf.placeholder(tf.complex64, shape=(), name="Cavity_frequency")
         # tf_g = tf.placeholder(tf.complex64, shape=(), name="Coupling")
@@ -113,7 +113,7 @@ class Model:
 
         self.tf_Hcs.append(tf_H1)
 
-    # Is the session needed by model (aka does the session need to be passed 
+    # Is the session needed by model (aka does the session need to be passed
     # down in the code?)
     # should the session setup be part of model init? if so is this function
     # obsolete ?
@@ -139,4 +139,3 @@ class Model:
         for ii in range(len(control_fields)):
             tf_H.append([self.tf_Hcs[ii], control_fields[ii]])
         return tf_H
-

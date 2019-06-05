@@ -19,8 +19,10 @@ import tensorflow as tf
 import numpy as np
 import scipy as sp
 
+
 def conv_func(tf_sess, func):
     return func
+
 
 def dirty_wrap(tf_sess, func):
     f = conv_func(tf_sess, func)
@@ -48,7 +50,7 @@ def dirty_wrap(tf_sess, func):
 
 
     # # this is garbage and needs to be fixed. either get_control_fields
-    # # delivers a list of all control fields or only a function 
+    # # delivers a list of all control fields or only a function
     # # that is added here to a list
     # keys = gate.get_parameters().keys()
 
@@ -64,16 +66,16 @@ def dirty_wrap(tf_sess, func):
     # params = gate.get_parameters()  # retrieve parameters/args for the drive
                                     # # fields
 
-    # params.update(model.get_params_tf())    # system parameters should be provided 
+    # params.update(model.get_params_tf())    # system parameters should be provided
                                             # # by model for the tensorflow backend
-                                            # # as input for: 
+                                            # # as input for:
                                             # # session.run(..., feed_dict = params)
 
     # u0_real = tf.convert_to_tensor(u0.full().real, dtype=tf.float32)
     # u0_imag = tf.convert_to_tensor(u0.full().imag, dtype=tf.float32)
     # u0_tf = tf.complex(u0_real, u0_imag)
 
-    # params.update(u0_tf) # u0 should be part of the params passed to 
+    # params.update(u0_tf) # u0 should be part of the params passed to
                           # # tensorflow and also needs to be a initialized/converted
                         # # as tensorflow object
 
@@ -187,6 +189,7 @@ def sesolve_pwc_tf(hlist, u0, tlist, tf_sess, history = False):
         H_t_eval.append(tf_sess.run(hdt, feed_dict={t_placeholder: tlist[i]}))
 
 
+
     dt_placeholder = tf.constant(tlist[1], tf.complex128)
     u_old = tf.placeholder(tf.complex128)
     hbar = tf.constant(1, dtype=tf.complex128, name='planck')
@@ -208,6 +211,4 @@ def sesolve_pwc_tf(hlist, u0, tlist, tf_sess, history = False):
         ulist.append(u_new_eval)
 
     return ulist
-
-
 

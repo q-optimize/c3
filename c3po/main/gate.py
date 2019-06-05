@@ -1,7 +1,5 @@
 import json
 import numpy as np
-from c3po.utils.envelopes import flattop, gaussian, gaussian_der
-from c3po.utils.helpers import sum_lambdas
 import matplotlib.pyplot as plt
 
 
@@ -36,42 +34,19 @@ class Gate:
             self,
             target,
             goal,
-            env_shape='flattop',
             pulse={},
             T_final=100e-9
             ):
         self.T_final = T_final
         self.target = target
         self.goal_unitary = goal
-        self.env_shape = env_shape
-        if env_shape == 'gaussian':
-            env_func = gaussian
-            env_der = gaussian_der
-            self.env_der = env_der
-            props = ['amp', 'T', 'sigma', 'xy_angle']
-        elif env_shape == 'flattop':
-            env_func = flattop
-            props = ['amp', 't_up', 't_down', 'xy_angle']
-        elif env_shape == 'flattop_risefall':
-            env_func = flattop
-            props = ['amp', 't_up', 't_down', 'xy_angle', 'T', 'risefall']
-        elif env_shape == 'DRAG':
-            env_func = gaussian
-            env_der = gaussian_der
-            self.env_der = env_der
-            props = ['amp', 'T', 'sigma', 'xy_angle', 'drag']
-        elif env_shape == 'flat':
-            props = ['amplitude', 'length', 'alpha']
-            env_func = None
-        self.props = props
-        self.envelope = env_func
-
         self.idxes = {}
+        self.env_shape = None
+
         if pulse == {}:
             self.parameters = {}
         else:
             self.set_parameters('default', pulse)
-
         self.bounds = None
 
     def set_bounds(self, b_in):
@@ -84,15 +59,11 @@ class Gate:
             for ctrl in sorted(b_in.keys()):
                 for carr in sorted(b_in[ctrl].keys()):
                     for puls in sorted(b_in[ctrl][carr]['pulses'].keys()):
-                        for prop in sorted(
-                                b_in[ctrl][carr]['pulses'][puls]['params'].keys()
-                                ):
-                            opt_idxes.append(
-                                idxes[ctrl][carr]['pulses'][puls]['params'][prop]
-                                )
-                            b.append(
-                                b_in[ctrl][carr]['pulses'][puls]['params'][prop]
-                                )
+                        params = b_in[ctrl][carr]['pulses'][puls]['params']
+                        p_idx = idxes[ctrl][carr]['pulses'][puls]['params']
+                        for prop in sorted(params.keys()):
+                            opt_idxes.append(p_idx[prop])
+                            b.append(params[prop])
         self.bounds = {}
         b = np.array(b)
         self.opt_idxes = opt_idxes
@@ -140,7 +111,7 @@ class Gate:
             self.idxes = idxes
         return q
 
-    def deserialize_parameters(self, q):
+    def deserialize_parameters(self, q, opt=False):
         """
         Give a vector of parameters that conform to the parametrization for
         this gate and get the structured version back. Input can also be the
@@ -160,8 +131,9 @@ class Gate:
                     p[ctrl][carr]['pulses'][puls] = {
                             'params': {}
                             }
-                    for prop in sorted(idxes[ctrl][carr]['pulses'][puls]['params']):
-                        idx = idxes[ctrl][carr]['pulses'][puls]['params'][prop]
+                    params = idxes[ctrl][carr]['pulses'][puls]['params']
+                    for prop in sorted(params):
+                        idx = params[prop]
                         p[ctrl][carr]['pulses'][puls]['params'][prop] = q[idx]
         return p
 
@@ -179,12 +151,12 @@ class Gate:
         """
         Transforms an optimizer vector back to physical scale.
         """
-        y = np.arccos(np.cos(x+1)*np.pi/2)/np.pi
+        y = np.arccos(np.cos((x+1)*np.pi/2))/np.pi
         q = np.array(self.parameters['initial'])
         q[self.opt_idxes] = self.bounds['scale'] * y + self.bounds['offset']
         return list(q)
 
-    def get_IQ(self, guess):
+    def get_IQ(self, guess, res=1e9):
         """
         Construct the in-phase (I) and quadrature (Q) components of the control
         signals.
@@ -195,8 +167,13 @@ class Gate:
         """
         if isinstance(guess, str):
             guess = self.parameters[guess]
+        else:
+            init = self.parameters['initial']
+            init[self.opt_idxes] = guess
+            guess = init
         idxes = self.idxes
         signals = {}
+        ts = np.linspace(0, self.T_final, self.T_final*res)
 
         for ctrl in idxes:
             ck = idxes[ctrl]
@@ -204,61 +181,59 @@ class Gate:
             for carr in ck:
                 Inphase = []
                 Quadrature = []
-                omega_d = guess[ck[carr]['freq']]
+                omega_d = ck[carr]['freq']
                 pu = ck[carr]['pulses']
-                comp_amps = []
+                signals[ctrl][carr] = {}
+                amp_tot_sq = 0
                 components = []
-
                 for puls in pu:
-                    amp = guess[pu[puls]['amp']]
-                    t0 = guess[pu[puls]['t_up']]
-                    t1 = guess[pu[puls]['t_down']]
-                    xy_angle = guess[pu[puls]['xy_angle']]
-                    comp_amps.append(amp)
+                    p_idx = pu[puls]['params']
+                    envelope = pu[puls]['func']
+                    amp = guess[p_idx['amp']]
+                    amp_tot_sq += amp**2
+                    xy_angle = guess[p_idx['xy_angle']]
+                    freq_offset = guess[p_idx['freq_offset']]
                     components.append(
-                        lambda t:
-                            amp * self.envelope(t, t0, t1)
-                            * np.exp(1j*xy_angle)
-                        )
-
-                def Inphase(t):
-                    return np.real(sum_lambdas(t, components))/max(comp_amps)
-
-                def Quadrature(t):
-                    return np.imag(sum_lambdas(t, components))/max(comp_amps)
+                            amp * envelope(ts, p_idx, guess)
+                            * np.exp(1j*(xy_angle+freq_offset*ts))
+                            )
+                norm = np.sqrt(amp_tot_sq)
+                Inphase = np.real(np.sum(components, axis=0))/norm
+                Quadrature = np.imag(np.sum(components, axis=0))/norm
 
                 signals[ctrl][carr]['omega'] = omega_d
-                signals[ctrl][carr]['amp'] = max(comp_amps)
+                signals[ctrl][carr]['amp'] = amp
                 signals[ctrl][carr]['I'] = Inphase
                 signals[ctrl][carr]['Q'] = Quadrature
         return signals
 
-    def get_control_fields(self, name):
+    def get_control_fields(self, name, res=1e9):
         """
         Simulation function.
         Returns a function handle to the control shape, constructed from drive
         parameters. For simulation we need the control fields to be added to
         the model Hamiltonian.
         """
-        p_IQ = self.get_IQ(name)
-        mixer_I = p_IQ['I']
-        mixer_Q = p_IQ['Q']
-        omega_d = p_IQ['omegas'][0]
-        amp = p_IQ['carrier_amp']
+        IQ = self.get_IQ(name, res)
         """
         NICO: Federico raised the question if the xy_angle should be added
         here. After some research, this should be the correct way. The
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
         cflds = []
-        for ckey in sorted(self.keys):
-            cflds.append(
-                lambda t:
-                    amp * (
-                        mixer_I(t) * tf.cos(omega_d * t)
-                        + mixer_Q(t) * tf.sin(omega_d * t)
+        ts = np.linspace(0, self.T_final, self.T_final*res)
+        for ctrl in sorted(self.idxes):
+            sig = np.zeros_like(ts)
+            for carr in sorted(self.idxes[ctrl]):
+                AWG_I = IQ[ctrl][carr]['I']
+                AWG_Q = IQ[ctrl][carr]['Q']
+                amp = IQ[ctrl][carr]['amp']
+                omega_d = IQ[ctrl][carr]['omega']
+                sig += amp * (
+                        AWG_I * np.cos(omega_d * ts)
+                        + AWG_Q * np.sin(omega_d * ts)
                          )
-                )
+            cflds.append(sig)
         return cflds
 
     def print_pulse(self, p):
@@ -274,10 +249,10 @@ class Gate:
         """ Plotting control functions """
         ts = np.linspace(0, self.T_final, self.T_final*1e9)
         plt.rcParams['figure.dpi'] = 100
-        IQ = self.get_IQ(q)
+        IQ = self.get_IQ(q)['control1']['carrier1']
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(ts/1e-9, list(map(IQ['I'], ts)))
-        axs[1].plot(ts/1e-9, list(map(IQ['Q'], ts)))
+        axs[0].plot(ts/1e-9, IQ['I'])
+        axs[1].plot(ts/1e-9, IQ['Q'])
         plt.show(block=False)
 
     def get_parameters(self):

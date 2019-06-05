@@ -1,8 +1,8 @@
 """Library of envelope functions"""
 
 import numpy as np
-import tensorflow as tf
-from tensorflow.math import exp, erf, sqrt
+from numpy import exp, sqrt
+from scipy.special import erf
 
 
 def flattop_risefall(t, T_up, T_down, risefall):
@@ -19,8 +19,8 @@ def flattop(t, T_up, T_down):
     """
     Flattop gaussian with fixed width of 1ns, made from erf functions.
     """
-    T2 = tf.maximum(T_up, T_down)
-    T1 = tf.minimum(T_up, T_down)
+    T2 = max(T_up, T_down)
+    T1 = min(T_up, T_down)
     return (1 + erf((t - T1) / 1e-9)) / 2 * \
            (1 + erf((-t + T2) / 1e-9)) / 2
 
