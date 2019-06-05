@@ -1,6 +1,7 @@
 """C3PO configuration file"""
 
 import sys
+import glob
 import zmq
 from numpy import pi
 import numpy as np
@@ -108,26 +109,8 @@ socketreq.RCVTIMEO = rcvtimeout
 print(f"done\n\n", flush=True)
 
 
-# Load open loop pulse
-argsin = sys.argv
-if len(argsin) == 2:
-    pulse_file = argsin[1]
-else:
-    print("You have specified no pulse to optimize. Please select from:")
-    pulse_files = []
-    idx = 0
-    for file in sorted(glob.glob("*.yml")):
-        pulse_files.append(file)
-        idx += 1
-        print("%d: %s" % (idx, file))
-    print('Selection: ', end='', flush=True)
-    pulse_file = pulse_files[int(input()) - 1]
-    print("You selected: %s" % str(pulse_file))
-
-pulse0 = load_pulse(pulse_file)
-print(f"Loaded initial guess with parametrization")
-
 X_gate = gt('qubit_1', qt.sigmax())
+
 
 handmade_pulse = {
         'control1': {

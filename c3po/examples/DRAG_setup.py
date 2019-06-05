@@ -1,5 +1,3 @@
-"""C3PO Setup for the IBM machine"""
-
 from numpy import pi
 import qutip as qt
 import c3po

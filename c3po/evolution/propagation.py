@@ -7,6 +7,8 @@
 # !!! CAUTION !!!
 # None of this code has been tested yet!
 
+import matplotlib.pyplot as plt
+
 
 from qutip import Qobj
 from qutip import sesolve
@@ -15,68 +17,79 @@ from c3po.utils import tf_utils
 
 import tensorflow as tf
 import numpy as np
-
-def propagate(model, u0, tlist, method, grad = False, history = False):
-    """
-    Wrapper function for choosing the type of propagation method.
-    :param model:   :class:'c3po.model'
-        Meta class for system hamiltonian
-    :param u0:
-        can be a state, a unitary or ...
-    :param tlist:
-        ...
-    :param  method:
-        switch for choosing the desired propagator. options are: "pwc",
-        "pwc_tf", "qutip_sesolv"
-
-    """
-    if method == "pwc":
-        H = model.get_Hamiltonian() # Hamilton as lambda func or list [H0,...]?
-        tmp = Qobj      # create temp obj to get access to method evalute
-        H = tmp.evaluate(H) # from qutip: Evaluate a time-dependent quantum
-                            # object in list format.
-                            # see: http://qutip.org/docs/latest/apidoc/classes.html?highlight=evaluate#qutip.Qobj.evaluate
-        U = sesolve_pwc(H, u0, tlist, grad, history)
-
-    if method == "pwc_tf":
-
-        # !!! CAUTION !!!
-        # this setup (tf_setup) step needs to be moved!
-        # I assume that you cannot create tensorflow objects without any
-        # previously created session, as I guess that tf-objects are tied
-        # to the initialized session. This means that everytime the model-class
-        # tries to return an Hamilton as tf-object a tf-session should be
-        # running
-        # Right now I just put this here to remind, that a session
-        # has to be created in order to use tensorflow, but this is clearly
-        # not the right place to do it.
-        # My guess: Session initialization should be done at the
-        # very beginning, when systems/models/problems are specified/configured
-        sess = tf_setup()
-
-        H = model.get_Hamiltonian_tf()  # should return Hamilton as lambda func
-                                        # or list [H0, ...]
-        H = tf_evaluate(H)  # needed to convert a list [H0, ...] in useable format
+import scipy as sp
 
 
-        params = model.get_params_tf()  # system parameters should be provided
-                                        # by model for the tensorflow backend
-                                        # as input for:
-                                        # session.run(..., feed_dict = params)
+def conv_func(tf_sess, func):
+    return func
 
 
-        # u0 must also be converted to tensorflow, should u0 be part of params?
-        # this would make sense and streamline code imo.
-        U = sesolve_pwc_tf(H, params, tlist, sess, grad, history)
-
-    if method == "qutip_sesolv":
-        H = model.get_Hamiltonian()
-        U = sesolve(H, u0, tlist)
-
-    return U
+def dirty_wrap(tf_sess, func):
+    f = conv_func(tf_sess, func)
+    return lambda t, args: f(t)
 
 
-def sesolve_pwc(H, u0, tlist, grad = False, history = False):
+# def propagate(model, gate, u0, tlist, method, tf_sess = None, grad = False, history = False):
+    # """
+    # Wrapper function for choosing the type of propagation method.
+    # :param model:   :class:'c3po.model'
+       # Meta class for system hamiltonian
+    # :param u0:
+       # can be a state, a unitary or ...
+    # :param tlist:
+       # ...
+    # :param  method:
+       # switch for choosing the desired propagator. options are: "pwc",
+       # "pwc_tf", "qutip_sesolv"
+
+    # """
+    # methods = ["pwc", "qutip_sesolve"]
+
+    # if method not in methods:
+        # raise Exception('Method is not supported!')
+
+
+    # # this is garbage and needs to be fixed. either get_control_fields
+    # # delivers a list of all control fields or only a function
+    # # that is added here to a list
+    # keys = gate.get_parameters().keys()
+
+    # control_fields = []
+    # for key in keys:
+        # cflds = gate.get_control_fields(key)
+        # for cf in cflds:
+            # control_fields.append(cf)
+
+
+    # # dictrionary of parameters for control fields
+    # # but this is kind of obsolete as sesolve won't need arguments(?)
+    # params = gate.get_parameters()  # retrieve parameters/args for the drive
+                                    # # fields
+
+    # params.update(model.get_params_tf())    # system parameters should be provided
+                                            # # by model for the tensorflow backend
+                                            # # as input for:
+                                            # # session.run(..., feed_dict = params)
+
+    # u0_real = tf.convert_to_tensor(u0.full().real, dtype=tf.float32)
+    # u0_imag = tf.convert_to_tensor(u0.full().imag, dtype=tf.float32)
+    # u0_tf = tf.complex(u0_real, u0_imag)
+
+    # params.update(u0_tf) # u0 should be part of the params passed to
+                          # # tensorflow and also needs to be a initialized/converted
+                        # # as tensorflow object
+
+    # # should return Hamilton as list [H0, ...]
+    # hlist = model.get_tf_Hamiltonian(control_fields)
+
+
+    # if method == "pwc":
+        # U = sesolve_pwc(hlist, u0, tlist, params, tf_sess, grad, history="True")
+
+    # return U
+
+
+def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
     """
     Find the propagator of a system Hamiltonian H(t). The initial basis u0. The
     hamiltonian
@@ -93,27 +106,67 @@ def sesolve_pwc(H, u0, tlist, grad = False, history = False):
     """
 
 
-# CODE TAKEN FROM FEDERICO'S CODE: new_IBM_USAAR/utils.py
+    H = []
+    for i in range(0, len(hlist)):
+        if i == 0:
+            h0 = tf_sess.run(hlist[i])
+            tmp = Qobj(h0)
+            H.append(tmp)
+        else:
+            hd = tf_sess.run(hlist[i][0])
+            tmp = Qobj(hd)
+            H.append(hd)
 
+
+    t_start = tlist[0]
+    t_final = tlist[len(tlist) - 1]
+    N_slices = len(tlist)
+
+    Ts = tf.linspace(t_start, t_final, N_slices, name="Time")
+    Ts = tf.cast(Ts, tf.float64)
+    dt_tf = Ts[1]
+
+    clist = []
+    for h in hlist:
+        if isinstance(h, list):
+            c = h[1](tf.math.add(Ts, dt_tf/2))
+    clist.append(tf_sess.run(c))
+
+    H_eval_t = []
+    for i in range(0, len(tlist)):
+        hdt = 0
+        for j in range(0, len(H)):
+            if j == 0:
+                hdt = H[0]
+            else:
+                hdt += clist[j - 1][i] * H[j]
+        H_eval_t.append(hdt)
+
+    dt = tlist[1]
     if history:
         U = [u0]
+        # creation of tmp necessary to access member function 'evaluate'
+        # stupid practice?
 
-        for t in tlist[1::]:
-            dU = (-1j * dt * H(t+dt/2)).expm()
+
+        for i in range(0, len(tlist)):
+            dU = (-1j * dt * H_eval_t[i]).expm()
+            dU.dims = U[-1].dims
             U.append(dU * U[-1])
 
     else:
         U = [u0]
+        # creation of tmp necessary to access member function 'evaluate'
+        # stupid practice?
 
-        for t in tlist[1::]:
-            dU = (-1j * dt * H(t+dt/2)).expm()
+        for i in range(0, len(tlist)):
+            dU = (-1j * dt * H_eval_t[i]).expm()
             U[0] = dU * U[0]
-
 
     return U
 
 
-def sesolve_pwc_tf(H, params, tlist, session, grad = False, history = False):
+def sesolve_pwc_tf(hlist, u0, tlist, tf_sess, history = False):
     """
     Find the propagator of a system Hamiltonian H(t). The initial basis u0. The
     hamiltonian
@@ -121,42 +174,41 @@ def sesolve_pwc_tf(H, params, tlist, session, grad = False, history = False):
         System hamiltonian or a list of Drift and Control terms
     """
 
-
-# CODE TAKEN FROM NICO'S CODE: tf_propagation.py
-#
-# !!! CAUTION/REMARK !!!
-# I do not expect this code to run. I still have to read more about
-# tensorflow. I put this code here as an overview for myself(Kevin) and others
-# Please see this code as placeholder.
+    H_t_eval = []
 
 
+    t_placeholder = tf.placeholder(tf.float64)
 
-    # convert tlist to tensorflor object
-    # this is just a hack for now. and hasn't been tested but should
-    # produce some working code. Regard it as placeholder.
-    Ts = tf.linspace(tlist[0], tlist[len(tlist - 1)], len(tlist), name="Time")
-    Ts = tf.to_complex64(Ts)
+    hdt = hlist[0]
+    for i in range(1, len(hlist)):
+        hdrive = hlist[i][0]
+        cf = hlist[i][1]
+        hdt += tf.cast(cf(t_placeholder), tf.complex128) * hdrive
 
-
-    with tf.name_scope('U_actual'):
-        def condition(i, u):
-            return i < N_slices
-
-        def body(i, u):
-            t = Ts[i] + dt/2
-            u_ = tf.linalg.expm(-1j / hbar * (H(t) * dt) * u
-            return i+1, u_
-
-        max_i, uf = tf.while_loop(condition, body, (0, u_initial), parallel_interactions=10)
-
-    with session.as_default():
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
-        run_metadata = tf.RunMetadata()
-        session.run(H, feed_dict=params)
-
-    U = 0
-
-    return U
+    for i in range(0, len(tlist)):
+        H_t_eval.append(tf_sess.run(hdt, feed_dict={t_placeholder: tlist[i]}))
 
 
+
+    dt_placeholder = tf.constant(tlist[1], tf.complex128)
+    u_old = tf.placeholder(tf.complex128)
+    hbar = tf.constant(1, dtype=tf.complex128, name='planck')
+    unit_img = tf.constant(-1j, dtype=tf.complex128)
+    expm_h = tf.linalg.expm(unit_img * hdt * dt_placeholder /hbar)
+    u_new =  tf.linalg.matmul(expm_h, u_old)
+
+
+    dt = tlist[1]
+    ulist = []
+    u_initial = u0.full()
+    ulist.append(u_initial)
+    for i in range(0, len(tlist)):
+        if i == 0:
+            u_old_input = u_initial
+        else:
+            u_old_input = u_new_eval
+        u_new_eval = tf_sess.run(u_new, feed_dict={t_placeholder: (tlist[i] + dt/2.0), u_old: u_old_input})
+        ulist.append(u_new_eval)
+
+    return ulist
 
