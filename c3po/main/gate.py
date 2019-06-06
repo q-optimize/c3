@@ -167,10 +167,6 @@ class Gate:
         """
         if isinstance(guess, str):
             guess = self.parameters[guess]
-        else:
-            init = self.parameters['initial']
-            init[self.opt_idxes] = guess
-            guess = init
         idxes = self.idxes
         signals = {}
         ts = np.linspace(0, self.T_final, self.T_final*res)
