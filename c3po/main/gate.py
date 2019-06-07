@@ -67,7 +67,7 @@ class Gate:
         self.bounds = {}
         b = np.array(b)
         self.opt_idxes = opt_idxes
-        self.bounds['scale'] = np.diff(b).T[0]
+        self.bounds['scale'] = np.diff(b).T[
         self.bounds['offset'] = b.T[0]
 
     def set_parameters(self, name, guess):
