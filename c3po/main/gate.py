@@ -49,25 +49,28 @@ class Gate:
             self.set_parameters('default', pulse)
         self.bounds = None
 
+    def serialize_bounds(self, b_in):
+        opt_idxes = []
+        b = []
+        for ctrl in sorted(b_in.keys()):
+            for carr in sorted(b_in[ctrl].keys()):
+                for puls in sorted(b_in[ctrl][carr]['pulses'].keys()):
+                    params = b_in[ctrl][carr]['pulses'][puls]['params']
+                    p_idx = self.idxes[ctrl][carr]['pulses'][puls]['params']
+                    for prop in sorted(params.keys()):
+                        opt_idxes.append(p_idx[prop])
+                        b.append(params[prop])
+        return b, opt_idxes
+
+
     def set_bounds(self, b_in):
         if self.env_shape == 'flat':
             b = np.array(list(b_in.values()))
         else:
-            opt_idxes = []
-            idxes = self.idxes
-            b = []
-            for ctrl in sorted(b_in.keys()):
-                for carr in sorted(b_in[ctrl].keys()):
-                    for puls in sorted(b_in[ctrl][carr]['pulses'].keys()):
-                        params = b_in[ctrl][carr]['pulses'][puls]['params']
-                        p_idx = idxes[ctrl][carr]['pulses'][puls]['params']
-                        for prop in sorted(params.keys()):
-                            opt_idxes.append(p_idx[prop])
-                            b.append(params[prop])
+            b, self.opt_idxes = self.serialize_bounds(b_in)
         self.bounds = {}
         b = np.array(b)
-        self.opt_idxes = opt_idxes
-        self.bounds['scale'] = np.diff(b).T[
+        self.bounds['scale'] = np.diff(b).T[0]
         self.bounds['offset'] = b.T[0]
 
     def set_parameters(self, name, guess):

@@ -1,6 +1,7 @@
 """ Measurement object that communicates between searcher and sim/exp"""
 
 import cma.evolution_strategy as cmaes
+import numpy as np
 from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
 
@@ -101,7 +102,12 @@ class Experiment(Backend):
             }
         """
         x0 = gate.to_scale_one(start_name)
-        es = cmaes.CMAEvolutionStrategy(x0, 0.5, opts)
+        if opts:
+            if 'CMA_stds' in opts.keys():
+                stds, idxes = gate.serialize_bounds(opts['CMA_stds'])
+                opts['CMA_stds'] = np.array(stds)/gate.bounds['scale']
+
+        es = cmaes.CMAEvolutionStrategy(x0, 1, opts)
         while not es.stop():
             samples = es.ask()
             samples_rescaled = [gate.to_bound_phys_scale(x) for x in samples]
