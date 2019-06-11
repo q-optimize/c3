@@ -39,7 +39,7 @@
 <span id="c3po-main-gate-module"></span><h2>c3po.main.gate module<a class="headerlink" href="#module-c3po.main.gate" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="c3po.main.gate.Gate">
-<em class="property">class </em><code class="descclassname">c3po.main.gate.</code><code class="descname">Gate</code><span class="sig-paren">(</span><em>target</em>, <em>goal</em>, <em>env_shape='flattop'</em>, <em>pulse={}</em>, <em>T_final=1e-07</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">c3po.main.gate.</code><code class="descname">Gate</code><span class="sig-paren">(</span><em>target</em>, <em>goal</em>, <em>pulse={}</em>, <em>T_final=1e-07</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Represents a quantum gate with a fixed parametrization and envelope shape.</p>
 <dl class="simple">
@@ -52,7 +52,7 @@ goal: Qobj</p>
 <div><p>Unitary representation of the gate on computational subspace.</p>
 </div></blockquote>
 <dl class="simple">
-<dt>keys:</dt><dd><p>Contains the parametrization of this gate. This is created when
+<dt>idxes:</dt><dd><p>Contains the parametrization of this gate. This is created when
 set_parameters() is used to store a new pulse.</p>
 </dd>
 <dt>parameters:</dt><dd><p>A dictionary of linear vectors containing the parameters of different
@@ -66,7 +66,7 @@ envelope function. Note: fixed for now. Will later be initialized.</p>
 </dl>
 <dl class="method">
 <dt id="c3po.main.gate.Gate.deserialize_parameters">
-<code class="descname">deserialize_parameters</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.deserialize_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">deserialize_parameters</code><span class="sig-paren">(</span><em>q</em>, <em>opt=False</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.deserialize_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Give a vector of parameters that conform to the parametrization for
 this gate and get the structured version back. Input can also be the
 name of a stored pulse.</p>
@@ -74,7 +74,7 @@ name of a stored pulse.</p>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.get_IQ">
-<code class="descname">get_IQ</code><span class="sig-paren">(</span><em>guess</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_IQ" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_IQ</code><span class="sig-paren">(</span><em>guess</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_IQ" title="Permalink to this definition">¶</a></dt>
 <dd><p>Construct the in-phase (I) and quadrature (Q) components of the control
 signals.
 These are universal to either experiment or simulation. In the
@@ -85,7 +85,7 @@ to the Hamiltonian.</p>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.get_control_fields">
-<code class="descname">get_control_fields</code><span class="sig-paren">(</span><em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_control_fields" title="Permalink to this definition">¶</a></dt>
+<code class="descname">get_control_fields</code><span class="sig-paren">(</span><em>name</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_control_fields" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simulation function.
 Returns a function handle to the control shape, constructed from drive
 parameters. For simulation we need the control fields to be added to
@@ -93,8 +93,8 @@ the model Hamiltonian.</p>
 </dd></dl>
 
 <dl class="method">
-<dt id="c3po.main.gate.Gate.get_keys">
-<code class="descname">get_keys</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_keys" title="Permalink to this definition">¶</a></dt>
+<dt id="c3po.main.gate.Gate.get_idxes">
+<code class="descname">get_idxes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_idxes" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -114,8 +114,13 @@ the model Hamiltonian.</p>
 <dd></dd></dl>
 
 <dl class="method">
+<dt id="c3po.main.gate.Gate.serialize_bounds">
+<code class="descname">serialize_bounds</code><span class="sig-paren">(</span><em>b_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
 <dt id="c3po.main.gate.Gate.serialize_parameters">
-<code class="descname">serialize_parameters</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_parameters" title="Permalink to this definition">¶</a></dt>
+<code class="descname">serialize_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>redefine=False</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_parameters" title="Permalink to this definition">¶</a></dt>
 <dd><p>Takes a nested dictionary of pulse parameters and returns a linear
 list, compatible with the parametrization of this gate. Input can
 also be the name of a stored pulse.</p>
