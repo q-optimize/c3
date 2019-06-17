@@ -22,7 +22,7 @@ change in future releases.
 [Requirements](#requirements)  
 [Misc](#misc)  
 
-<a name="installation"/>
+<a name="installation"><a/>
 ## Installation
 In the current state of the project the easiest way to use the c3po package is
 through the installation with [pip](https://pypi.org/project/pip/).
@@ -47,7 +47,7 @@ following command within our terminal:
 ```
 pip install -e c3po
 ```
-<a name="usage"/>
+<a name="usage"><a/>
 ## Usage
 Examples for the usage of the c3po package can be found in:
 ```
@@ -65,12 +65,12 @@ setup using LabVIEW. It is shown how to specifying a pulse and later on how to
 theoretically use LabVIEW to communicate with the experiment.
 
 
-<a name="requirements"/>
+<a name="requirements"><a/>
 ## Requirements
 - [qutip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
 
-<a name="misc"/>
+<a name="misc"><a/>
 ## Misc
 ### Notation
 - [Hamiltonian notation](http://qutip.org/docs/latest/guide/dynamics/dynamics-time.html)
