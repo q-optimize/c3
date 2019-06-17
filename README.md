@@ -22,7 +22,7 @@ change in future releases.
 [Requirements](#requirements)  
 [Misc](#misc)  
 
-<a name="installation"/>
+<a name="installation"><a/>
 ## Installation
 In the current state of the project the easiest way to use the c3po package is
 through the installation with [pip](https://pypi.org/project/pip/).
@@ -38,7 +38,6 @@ This way you don't have to reinstall after changes in the code.
 **Attention:** As explained above, this does only link the c3po folder to your
 local python packages. Deleting the c3po folder does therefore also result in
 the deletion of the c3po package.
-
 #### Example
 ##### Linux
 After the download copy the c3po.zip file to the location you want the package
@@ -48,7 +47,7 @@ following command within our terminal:
 ```
 pip install -e c3po
 ```
-<a name="usage"/>
+<a name="usage"><a/>
 ## Usage
 Examples for the usage of the c3po package can be found in:
 ```
@@ -65,12 +64,12 @@ There, an exemplary code can be seen for calibrating a X-gate in an experimental
 setup using LabVIEW. It is shown how to specifying a pulse and later on how to
 theoretically use LabVIEW to communicate with the experiment.
 
-<a name="requirements"/>
+<a name="requirements"><a/>
 ## Requirements
 - [qutip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
 
-<a name="misc"/>
+<a name="misc"><a/>
 ## Misc
 ### Notation
 - [Hamiltonian notation](http://qutip.org/docs/latest/guide/dynamics/dynamics-time.html)
