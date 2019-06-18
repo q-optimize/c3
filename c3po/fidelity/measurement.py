@@ -96,10 +96,12 @@ class Experiment(Backend):
 
         Example for 3 parameters:
         opts = {
-            'CMA_stds' : [1, 2, 0.5],
+            'CMA_stds' : stds,
             'ftarget' = 1e-4,
             'popsize' = 21
             }
+        where stds contains the spread of the initial cloud in each dimension
+        in physical units.
         """
         x0 = gate.to_scale_one(start_name)
         if opts:

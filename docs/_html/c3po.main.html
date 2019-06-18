@@ -1,0 +1,460 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>c3po.main package &mdash; C3plus 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> C3plus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">c3po.main package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-c3po.main.gate">c3po.main.gate module</a></li>
+<li><a class="reference internal" href="#module-c3po.main.model">c3po.main.model module</a></li>
+<li><a class="reference internal" href="#c3po-main-problem-module">c3po.main.problem module</a></li>
+<li><a class="reference internal" href="#c3po-main-system-module">c3po.main.system module</a></li>
+<li><a class="reference internal" href="#module-c3po.main">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">C3plus</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>c3po.main package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/c3po.main.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="c3po-main-package">
+<h1>c3po.main package<a class="headerlink" href="#c3po-main-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-c3po.main.gate">
+<span id="c3po-main-gate-module"></span><h2>c3po.main.gate module<a class="headerlink" href="#module-c3po.main.gate" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="c3po.main.gate.Gate">
+<em class="property">class </em><code class="descclassname">c3po.main.gate.</code><code class="descname">Gate</code><span class="sig-paren">(</span><em>target</em>, <em>goal</em>, <em>pulse={}</em>, <em>T_final=1e-07</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents a quantum gate with a fixed parametrization and envelope shape.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target</strong> – Component
+Model component(s) to act upon</p></li>
+<li><p><strong>goal</strong> – Qobj
+Unitary representation of the gate on computational subspace.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="c3po.main.gate.Gate.idxes">
+<code class="descname">idxes</code><a class="headerlink" href="#c3po.main.gate.Gate.idxes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains the parametrization of this gate. This is created when
+set_parameters() is used to store a new pulse.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.gate.Gate.parameters">
+<code class="descname">parameters</code><a class="headerlink" href="#c3po.main.gate.Gate.parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dictionary of linear vectors containing the parameters of
+different versions of this gate, e.g. initial guess, calibrated or
+variants.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.deserialize_parameters">
+<code class="descname">deserialize_parameters</code><span class="sig-paren">(</span><em>q</em>, <em>opt=False</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.deserialize_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Give a vector of parameters that conform to the parametrization for
+this gate and get the structured version back. Input can also be the
+name of a stored pulse.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.get_IQ">
+<code class="descname">get_IQ</code><span class="sig-paren">(</span><em>guess</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_IQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the in-phase (I) and quadrature (Q) components of the control
+signals.
+These are universal to either experiment or simulation. In the
+experiment these will be routed to AWG and mixer electronics, while in
+the simulation they provide the shapes of the controlfields to be added
+to the Hamiltonian.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.get_control_fields">
+<code class="descname">get_control_fields</code><span class="sig-paren">(</span><em>name</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_control_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulation function.
+Returns a function handle to the control shape, constructed from drive
+parameters. For simulation we need the control fields to be added to
+the model Hamiltonian.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.get_idxes">
+<code class="descname">get_idxes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_idxes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.get_parameters">
+<code class="descname">get_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.plot_control_fields">
+<code class="descname">plot_control_fields</code><span class="sig-paren">(</span><em>q='initial'</em>, <em>axs=None</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.plot_control_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plotting control functions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.print_pulse">
+<code class="descname">print_pulse</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.print_pulse" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.serialize_bounds">
+<code class="descname">serialize_bounds</code><span class="sig-paren">(</span><em>bounds_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialization function for the upper and lower bound of the search space.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bounds_in</strong> (<em>dict</em>) – A dictionary with the same structure as the pulse parametrization. Every dimension specified in the bounds will be optimized. Parameters present in the initial guess but not in the bounds are considered to be frozen.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Linearized representation of the bounds and Indices in the linearized parameters that will be optimized.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list, list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.serialize_parameters">
+<code class="descname">serialize_parameters</code><span class="sig-paren">(</span><em>p</em>, <em>redefine=False</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes a nested dictionary of pulse parameters and returns a linear
+list, compatible with the parametrization of this gate. Input can
+also be the name of a stored pulse.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.set_bounds">
+<code class="descname">set_bounds</code><span class="sig-paren">(</span><em>bounds_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.set_bounds" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.set_parameters">
+<code class="descname">set_parameters</code><span class="sig-paren">(</span><em>name</em>, <em>guess</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.set_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>An initial guess that implements this gate. The structure defines the
+parametrization of this gate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.to_bound_phys_scale">
+<code class="descname">to_bound_phys_scale</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.to_bound_phys_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transforms an optimizer vector back to physical scale.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.gate.Gate.to_scale_one">
+<code class="descname">to_scale_one</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.to_scale_one" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a vector of scale 1 that plays well with optimizers.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-c3po.main.model">
+<span id="c3po-main-model-module"></span><h2>c3po.main.model module<a class="headerlink" href="#module-c3po.main.model" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="c3po.main.model.Model">
+<em class="property">class </em><code class="descclassname">c3po.main.model.</code><code class="descname">Model</code><span class="sig-paren">(</span><em>component_parameters</em>, <em>coupling</em>, <em>hilbert_space</em>, <em>tf_flag='False'</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>What the theorist thinks about from the system.
+Class to store information about our system/problem/device. Different
+models can represent the same system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>component_parameters</strong> (<em>dict of dict</em>) – </p></li>
+<li><p><strong>couplings</strong> (<em>dict of dict</em>) – </p></li>
+<li><p><strong>hilbert_space</strong> (<em>dict</em>) – Hilbert space dimensions of full space</p></li>
+<li><p><strong>comp_hilbert_space</strong> (<em>dict</em>) – Hilbert space dimensions of computational space</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="c3po.main.model.Model.H0">
+<code class="descname">H0</code><a class="headerlink" href="#c3po.main.model.Model.H0" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>:class:’qutip.qobj’ Drift Hamiltonian</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.Hcs">
+<code class="descname">Hcs</code><a class="headerlink" href="#c3po.main.model.Model.Hcs" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>:class:’list of qutip.qobj’ Control Hamiltonians</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.H_tf">
+<code class="descname">H_tf</code><a class="headerlink" href="#c3po.main.model.Model.H_tf" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>empty, constructed when needed</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.component_parameters">
+<code class="descname">component_parameters</code><a class="headerlink" href="#c3po.main.model.Model.component_parameters" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.control_fields">
+<code class="descname">control_fields</code><a class="headerlink" href="#c3po.main.model.Model.control_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>[args, func1_t, func2_t, ,…]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.coupling">
+<code class="descname">coupling</code><a class="headerlink" href="#c3po.main.model.Model.coupling" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.model.Model.hilbert_space">
+<code class="descname">hilbert_space</code><a class="headerlink" href="#c3po.main.model.Model.hilbert_space" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.construct_Hamiltonian">
+<code class="descname">construct_Hamiltonian</code><span class="sig-paren">(</span><em>component_parameters</em>, <em>hilbert_space</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.construct_Hamiltonian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a model for this system, to be used in numerics.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.get_Hamiltonian">
+<code class="descname">get_Hamiltonian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.get_Hamiltonian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the Hamiltonian in a QuTip compatible way</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.get_time_slices">
+<code class="descname">get_time_slices</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.get_time_slices" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">get_Hamiltonian</code><span class="sig-paren">(</span><em>control_fields</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.get_tf_Hamiltonian">
+<code class="descname">get_tf_Hamiltonian</code><span class="sig-paren">(</span><em>control_fields</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.get_tf_Hamiltonian" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.init_tf_model">
+<code class="descname">init_tf_model</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.init_tf_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.main.model.Model.set_tf_session">
+<code class="descname">set_tf_session</code><span class="sig-paren">(</span><em>tf_session</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.model.Model.set_tf_session" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="c3po-main-problem-module">
+<h2>c3po.main.problem module<a class="headerlink" href="#c3po-main-problem-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="c3po-main-system-module">
+<h2>c3po.main.system module<a class="headerlink" href="#c3po-main-system-module" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-c3po.main">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-c3po.main" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, F. Roy, K. Pack, M. Werninghaus, N. Wittler, S. Machnes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

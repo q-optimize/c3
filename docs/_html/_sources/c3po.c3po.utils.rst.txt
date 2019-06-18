@@ -1,0 +1,46 @@
+c3po.c3po.utils package
+=======================
+
+Submodules
+----------
+
+c3po.c3po.utils.envelopes module
+--------------------------------
+
+.. automodule:: c3po.c3po.utils.envelopes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+c3po.c3po.utils.fidelities module
+---------------------------------
+
+.. automodule:: c3po.c3po.utils.fidelities
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+c3po.c3po.utils.hamiltonians module
+-----------------------------------
+
+.. automodule:: c3po.c3po.utils.hamiltonians
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+c3po.c3po.utils.tf\_utils module
+--------------------------------
+
+.. automodule:: c3po.c3po.utils.tf_utils
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: c3po.c3po.utils
+    :members:
+    :undoc-members:
+    :show-inheritance:

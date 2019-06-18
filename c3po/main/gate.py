@@ -7,27 +7,23 @@ class Gate:
     """
     Represents a quantum gate with a fixed parametrization and envelope shape.
 
-    Parameters
-    ----------
-    target: Component
-        Model component(s) to act upon
-    # TODO make sure goal unitary is of the right dimensions
-    goal: Qobj
-        Unitary representation of the gate on computational subspace.
+    Parameters:
+        target: Component
+            Model component(s) to act upon
+        goal: Qobj
+            Unitary representation of the gate on computational subspace.
 
-    Attributes
-    ----------
-    idxes:
-        Contains the parametrization of this gate. This is created when
-        set_parameters() is used to store a new pulse.
-    parameters:
-        A dictionary of linear vectors containing the parameters of different
-        versions of this gate, e.g. initial guess, calibrated or variants.
-    props:
-        Dictionary of properties of the pulse components, specific to the
-        envelope function. Note: fixed for now. Will later be initialized.
-    envelope:
-        Function handle from our extensive library of shapes, a flattop mostly
+    TODO:
+        make sure goal unitary is of the right dimensions
+
+    Attributes:
+        idxes:
+            Contains the parametrization of this gate. This is created when
+            set_parameters() is used to store a new pulse.
+        parameters:
+            A dictionary of linear vectors containing the parameters of
+            different versions of this gate, e.g. initial guess, calibrated or
+            variants.
     """
 
     def __init__(
@@ -49,25 +45,44 @@ class Gate:
             self.set_parameters('default', pulse)
         self.bounds = None
 
-    def serialize_bounds(self, b_in):
+    def serialize_bounds(self, bounds_in):
+        """
+        Serialization function for the upper and lower bound of the search space.
+
+        Parameters:
+            bounds_in(dict): A dictionary with the same structure as the pulse parametrization. Every dimension specified in the bounds will be optimized. Parameters present in the initial guess but not in the bounds are considered to be frozen.
+
+        Returns:
+            list, list: Linearized representation of the bounds and Indices in the linearized parameters that will be optimized.
+
+        """
         opt_idxes = []
-        b = []
-        for ctrl in sorted(b_in.keys()):
-            for carr in sorted(b_in[ctrl].keys()):
-                for puls in sorted(b_in[ctrl][carr]['pulses'].keys()):
-                    params = b_in[ctrl][carr]['pulses'][puls]['params']
-                    p_idx = self.idxes[ctrl][carr]['pulses'][puls]['params']
+        bounds = []
+        for ctrl in sorted(bounds_in.keys()):
+            for carr in sorted(bounds_in[ctrl].keys()):
+                for puls in sorted(
+                    bounds_in[ctrl][carr]['pulses'].keys()
+                    ):
+                    params = (
+                        bounds_in[ctrl][carr]['pulses'][puls]['params']
+                    )
+                    p_idx = (
+                        self.idxes[ctrl][carr]['pulses'][puls]['params']
+                        )
                     for prop in sorted(params.keys()):
                         opt_idxes.append(p_idx[prop])
-                        b.append(params[prop])
-        return b, opt_idxes
+                        bounds.append(params[prop])
+        return bounds, opt_idxes
 
 
-    def set_bounds(self, b_in):
+    def set_bounds(self, bounds_in):
+        """
+        Read in a new set of bounds for this gate.
+        """
         if self.env_shape == 'flat':
-            b = np.array(list(b_in.values()))
+            b = np.array(list(bounds_in.values()))
         else:
-            b, self.opt_idxes = self.serialize_bounds(b_in)
+            b, self.opt_idxes = self.serialize_bounds(bounds_in)
         self.bounds = {}
         b = np.array(b)
         self.bounds['scale'] = np.diff(b).T[0]
@@ -236,6 +251,9 @@ class Gate:
         return cflds
 
     def print_pulse(self, p):
+        """
+        Print out the pulse parameters in JSON format.
+        """
         print(
                 json.dumps(
                     self.deserialize_parameters(p),
@@ -255,7 +273,13 @@ class Gate:
         plt.show(block=False)
 
     def get_parameters(self):
+        """
+        Return parameters dictionary.
+        """
         return self.parameters
 
     def get_idxes(self):
+        """
+        Returns index map of parameters in the serialized vector.
+        """
         return self.idxes

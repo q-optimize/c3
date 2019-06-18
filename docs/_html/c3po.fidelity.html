@@ -1,0 +1,287 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>c3po.fidelity package &mdash; C3plus 0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> C3plus
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">c3po.fidelity package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-c3po.fidelity.measurement">c3po.fidelity.measurement module</a></li>
+<li><a class="reference internal" href="#module-c3po.fidelity">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">C3plus</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>c3po.fidelity package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/c3po.fidelity.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="c3po-fidelity-package">
+<h1>c3po.fidelity package<a class="headerlink" href="#c3po-fidelity-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-c3po.fidelity.measurement">
+<span id="c3po-fidelity-measurement-module"></span><h2>c3po.fidelity.measurement module<a class="headerlink" href="#module-c3po.fidelity.measurement" title="Permalink to this headline">¶</a></h2>
+<p>Measurement object that communicates between searcher and sim/exp</p>
+<dl class="class">
+<dt id="c3po.fidelity.measurement.Backend">
+<em class="property">class </em><code class="descclassname">c3po.fidelity.measurement.</code><code class="descname">Backend</code><a class="headerlink" href="#c3po.fidelity.measurement.Backend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Represents either an experiment or a simulation and contains the methods
+both need to provide.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="c3po.fidelity.measurement.Experiment">
+<em class="property">class </em><code class="descclassname">c3po.fidelity.measurement.</code><code class="descname">Experiment</code><span class="sig-paren">(</span><em>eval_gate=None</em>, <em>eval_seq=None</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#c3po.fidelity.measurement.Backend" title="c3po.fidelity.measurement.Backend"><code class="xref py py-class docutils literal notranslate"><span class="pre">c3po.fidelity.measurement.Backend</span></code></a></p>
+<p>The driver for an experiment.</p>
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Experiment.calibrate">
+<code class="descname">calibrate</code><span class="sig-paren">(</span><em>gate</em>, <em>opts=None</em>, <em>start_name='initial'</em>, <em>calib_name='calibrated'</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment.calibrate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a gate to be calibrated with a gradient free search algorithm.
+At the moment this is CMA-ES and you can give valid opts. See pycma
+documentation for specifics. Initial sigma is set to 0.5, but you can
+give scaling for each dimension in the opts dictionary with the
+‘CMA_stds’ key. Further ‘ftarget’ sets the goal infidelity and
+‘popsize’ the number of samples per generation.</p>
+<p>Example for 3 parameters:
+opts = {</p>
+<blockquote>
+<div><p>‘CMA_stds’ : [1, 2, 0.5],
+‘ftarget’ = 1e-4,
+‘popsize’ = 21
+}</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Experiment.calibrate_ORBIT">
+<code class="descname">calibrate_ORBIT</code><span class="sig-paren">(</span><em>gates</em>, <em>opts=None</em>, <em>start_name='initial'</em>, <em>calib_name='calibrated'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment.calibrate_ORBIT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Experiment.set_working_directory">
+<code class="descname">set_working_directory</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment.set_working_directory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="c3po.fidelity.measurement.Simulation">
+<em class="property">class </em><code class="descclassname">c3po.fidelity.measurement.</code><code class="descname">Simulation</code><span class="sig-paren">(</span><em>model</em>, <em>solve_func</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Simulation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#c3po.fidelity.measurement.Backend" title="c3po.fidelity.measurement.Backend"><code class="xref py py-class docutils literal notranslate"><span class="pre">c3po.fidelity.measurement.Backend</span></code></a></p>
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Simulation.evolution">
+<code class="descname">evolution</code><span class="sig-paren">(</span><em>gate</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Simulation.evolution" title="Permalink to this definition">¶</a></dt>
+<dd><p>constructs gate from parameters by solving equations of motion</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Simulation.gate_fid">
+<code class="descname">gate_fid</code><span class="sig-paren">(</span><em>gate</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Simulation.gate_fid" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns findelity of gate vs gate.goal_unitary</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Simulation.dgate_fid">
+<code class="descname">dgate_fid</code><span class="sig-paren">(</span><em>gate</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Simulation.dgate_fid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the gradient of the fidelity w.r.t. each parameter of the gate.
+Formally obtained by the derivative of the gate fidelity. See GOAT
+paper for details.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">gate_fid</code><span class="sig-paren">(</span><em>gate</em><span class="sig-paren">)</span></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="c3po.fidelity.measurement.Simulation.update_model">
+<code class="descname">update_model</code><span class="sig-paren">(</span><em>model</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Simulation.update_model" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-c3po.fidelity">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-c3po.fidelity" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2019, F. Roy, K. Pack, M. Werninghaus, N. Wittler, S. Machnes
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
