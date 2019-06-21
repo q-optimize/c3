@@ -30,18 +30,16 @@ class Gate:
             self,
             target,
             goal,
-            pulse={},
+            pulse=None,
             T_final=100e-9
             ):
+
         self.T_final = T_final
         self.target = target
         self.goal_unitary = goal
-        self.idxes = {}
         self.env_shape = None
-
-        if pulse == {}:
-            self.parameters = {}
-        else:
+        self.parameters = {}
+        if not pulse is None:
             self.set_parameters('default', pulse)
         self.bounds = None
 
@@ -50,28 +48,38 @@ class Gate:
         Serialization function for the upper and lower bound of the search space.
 
         Parameters:
-            bounds_in(dict): A dictionary with the same structure as the pulse parametrization. Every dimension specified in the bounds will be optimized. Parameters present in the initial guess but not in the bounds are considered to be frozen.
+            bounds_in(dict): A dictionary with the same structure as the pulse
+            parametrization. Every dimension specified in the bounds will be
+            optimized. Parameters present in the initial guess but not in the
+            bounds are considered to be frozen.
 
         Returns:
-            list, list: Linearized representation of the bounds and Indices in the linearized parameters that will be optimized.
+            list, list: Linearized representation of the bounds and Indices in
+            the linearized parameters that will be optimized.
 
         """
         opt_idxes = []
         bounds = []
-        for ctrl in sorted(bounds_in.keys()):
-            for carr in sorted(bounds_in[ctrl].keys()):
-                for puls in sorted(
-                    bounds_in[ctrl][carr]['pulses'].keys()
-                    ):
-                    params = (
-                        bounds_in[ctrl][carr]['pulses'][puls]['params']
-                    )
-                    p_idx = (
-                        self.idxes[ctrl][carr]['pulses'][puls]['params']
+        if self.env_shape == 'flat':
+            for k in bounds_in:
+                bounds.append(bounds_in[k])
+                opt_idxes.append(self.idxes[k])
+            bounds = np.array(bounds)
+        else:
+            for ctrl in sorted(bounds_in.keys()):
+                for carr in sorted(bounds_in[ctrl].keys()):
+                    for puls in sorted(
+                        bounds_in[ctrl][carr]['pulses'].keys()
+                        ):
+                        params = (
+                            bounds_in[ctrl][carr]['pulses'][puls]['params']
                         )
-                    for prop in sorted(params.keys()):
-                        opt_idxes.append(p_idx[prop])
-                        bounds.append(params[prop])
+                        p_idx = (
+                            self.idxes[ctrl][carr]['pulses'][puls]['params']
+                            )
+                        for prop in sorted(params.keys()):
+                            opt_idxes.append(p_idx[prop])
+                            bounds.append(params[prop])
         return bounds, opt_idxes
 
 
@@ -79,10 +87,7 @@ class Gate:
         """
         Read in a new set of bounds for this gate.
         """
-        if self.env_shape == 'flat':
-            b = np.array(list(bounds_in.values()))
-        else:
-            b, self.opt_idxes = self.serialize_bounds(bounds_in)
+        b, self.opt_idxes = self.serialize_bounds(bounds_in)
         self.bounds = {}
         b = np.array(b)
         self.bounds['scale'] = np.diff(b).T[0]
@@ -94,9 +99,18 @@ class Gate:
         parametrization of this gate.
         """
         if self.env_shape == 'flat':
-            self.parameters[name] = list(guess.values())
+            params = []
+            idxes = {}
+            idx = 0
+            for k in guess:
+                params.append(guess[k])
+                idxes[k] = idx
+                idx += 1
+            self.parameters[name] = params
+            self.idxes = idxes
         else:
             self.parameters[name] = self.serialize_parameters(guess, True)
+
 
     def serialize_parameters(self, p, redefine=False):
         """

@@ -1,4 +1,4 @@
-"""C3PO configuration file"""
+"""C3PO test file"""
 
 import qutip as qt
 import numpy as np
