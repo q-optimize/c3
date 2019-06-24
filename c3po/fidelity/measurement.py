@@ -179,22 +179,21 @@ class Simulation(Backend):
         n_params = len(ctl_hs) + 1
         u_init = goat.get_initial_state(u_init, n_params)
 
-    def gate_fid(self, gate):
-        U = self.propagation(gate)
+    def gate_fid(self, gate, params):
+        U = self.propagation(gate, params)
         U_goal = gate.goal_unitary
         g = 1-abs(np.trace((U_goal.dag() * U).full())) / U_goal.full().ndim
         # TODO shouldn't this be squared
         return g
 
-    def dgate_fid(self, gate):
+    def dgate_fid(self, gate, params):
         """
-        Compute the gradient of the fidelity w.r.t. each parameter of the gate.
-        Formally obtained by the derivative of the gate fidelity. See GOAT
-        paper for details.
+        Compute the gradient of the fidelity w.r.t. each parameter of the
+        gate. Formally obtained by the derivative of the gate fidelity. See 
+        GOAT paper for details.
         """
-        U = self.propagation_grad(gate)
-        p = gate.parameters
-        n_params = len(self.model.control_hams) + 1
+        U = self.propagation_grad(gate, params)
+        n_params = params.shape[0]
         U_goal = gate.goal_unitary
         dim = U_goal.full().ndim
         uf = goat.select_derivative(U, n_params, 0)

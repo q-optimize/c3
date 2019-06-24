@@ -36,9 +36,9 @@ def get_step_matrix(h_sys, grad_list):
 
 def select_derivative(u, n_params, pos):
     """
-    Unwrap derivatives from the propagated GOAT-vector. Position 0 returns the
-    regular time evolution, the k-th position return gradient to the k-th
+    Unwrap derivatives from the propagated GOAT-vector. Position 0 returns
+    the regular time evolution, the k-th position return gradient to the k-th
     parameter.
     """
-    P = np.kron(np.eye(1, n_params, pos), np.eye(u.shapei[1], u.shape[1], 0))
+    P = np.kron(np.eye(1, n_params, pos), np.eye(u.shape[1], u.shape[1], 0))
     return np.matmul(P, u)

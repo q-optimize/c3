@@ -165,7 +165,6 @@ print(tf_sess.run(X_gate.to_scale_one('initial')))
 print(X_gate.get_IQ('initial'))
 print(tf_sess.run(X_gate.get_control_fields('initial')))
 
-
 tf_sess = tf_setup()
 
 print(tf_sess.run(X_gate.to_scale_one('initial')))
