@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
@@ -74,7 +75,6 @@ class Gate:
             for k in bounds_in:
                 bounds.append(bounds_in[k])
                 opt_idxes.append(self.idxes[k])
-            bounds = np.array(bounds)
         else:
             for ctrl in sorted(bounds_in.keys()):
                 for carr in sorted(bounds_in[ctrl].keys()):
@@ -90,6 +90,7 @@ class Gate:
                         for prop in sorted(params.keys()):
                             opt_idxes.append(p_idx[prop])
                             bounds.append(params[prop])
+            bounds = tf.constant(bounds, dtype=tf.float64)
         return bounds, opt_idxes
 
 
@@ -108,9 +109,8 @@ class Gate:
          """
         b, self.opt_idxes = self.serialize_bounds(bounds_in)
         self.bounds = {}
-        b = np.array(b)
-        self.bounds['scale'] = np.diff(b).T[0]
-        self.bounds['offset'] = b.T[0]
+        self.bounds['scale'] = b[:, 1]-b[:, 0]
+        self.bounds['offset'] = b[:, 0]
 
     def set_parameters(self, name, params_in):
         """
@@ -176,7 +176,7 @@ class Gate:
                         idx += 1
         if redefine:
             self.idxes = idxes
-        return np.array(q)
+        return tf.constant(q, dtype=tf.float64)
 
     def deserialize_parameters(self, q, opt=False):
         """ Give a vector of parameters that conform to the parametrization for
@@ -232,8 +232,7 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        q = np.array(q)[self.opt_idxes]
-        y = (q - self.bounds['offset']) / self.bounds['scale']
+        y = (q[self.opt_idxes] - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
@@ -250,8 +249,12 @@ class Gate:
             Pulse parameters that are compatible with bounds in physical units
 
         """
-        y = np.arccos(np.cos((x+1)*np.pi/2))/np.pi
-        q = np.array(self.parameters['initial'])
+        y = tf.acos(
+                tf.cos(
+                    (x+1)*np.pi/2
+                )
+            )/np.pi
+        q = self.parameters['initial']
         q[self.opt_idxes] = self.bounds['scale'] * y + self.bounds['offset']
         return q
 
@@ -339,23 +342,18 @@ class Gate:
 
         """
         IQ = self.get_IQ(name, res)
-        """
-        NICO: Federico raised the question if the xy_angle should be added
-        here. After some research, this should be the correct way. The
-        signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
-        """
         cflds = []
-        ts = np.linspace(0, self.T_final, self.T_final*res)
+        ts = tf.linspace(0, self.T_final, self.T_final*res)
         for ctrl in sorted(self.idxes):
-            sig = np.zeros_like(ts)
+            sig = tf.zeros_like(ts)
             for carr in sorted(self.idxes[ctrl]):
                 AWG_I = IQ[ctrl][carr]['I']
                 AWG_Q = IQ[ctrl][carr]['Q']
                 amp = IQ[ctrl][carr]['amp']
                 omega_d = IQ[ctrl][carr]['omega']
                 sig += amp * (
-                        AWG_I * np.cos(omega_d * ts)
-                        + AWG_Q * np.sin(omega_d * ts)
+                        AWG_I * tf.cos(omega_d * ts)
+                        + AWG_Q * tf.sin(omega_d * ts)
                          )
             cflds.append(sig)
         return cflds

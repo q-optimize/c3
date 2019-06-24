@@ -2,8 +2,9 @@
 
 import cma.evolution_strategy as cmaes
 import numpy as np
-from numpy import trace, zeros_like, real
-from qutip import tensor, basis, qeye
+from qutip import basis, qeye
+from c3po.utils import single_length_RB as sl_RB
+import c3po.control.goat as goat
 
 # TODO this file (measurement.py) should go in the main folder
 
@@ -70,11 +71,15 @@ class Experiment(Backend):
                 gate_indx = 0
                 for gate in gates:
                     indeces = ls[gate_indx]
-                    value.append(gate.rescale_and_bind_inv(sample[indeces[0]:indeces[1]]))
-                    gate_indx += 1
+                    value.append(
+                            gate.rescale_and_bind_inv(
+                                sample[indeces[0]:indeces[1]]
+                                )
+                            )
+                    gate_ind += 1
                 value_batch.append(value)
             # determine RB sequences to evaluate
-            sequences = c3po.utils.single_length_RB(
+            sequences = sl_RB(
                     kwargs.get('n_rb_sequences', 10),
                     kwargs.get('rb_len', 20)
                     )
@@ -144,8 +149,10 @@ class Experiment(Backend):
                         samples_rescaled,
                         )
                     )
+
             es.logger.add()
             es.disp()
+
         res = es.result + (es.stop(), es, es.logger)
         x_opt = res[0]
         gate.parameters[calib_name] = gate.to_bound_phys_scale(x_opt)
@@ -155,22 +162,27 @@ class Simulation(Backend):
     """
     Methods
     -------
-    evolution(gate)
+    propagation(gate)
         constructs gate from parameters by solving equations of motion
     gate_fid(gate)
         returns findelity of gate vs gate.goal_unitary
     """
     def __init__(self, model, solve_func):
         self.model = model
-        self.evolution = solve_func
+        self.propagation = solve_func
 
     def update_model(self, model):
         self.model = model
 
+    def propagation_grad(self, gate, u_init):
+        ctl_hs = self.model.control_hams
+        n_params = len(ctl_hs) + 1
+        u_init = goat.get_initial_state(u_init, n_params)
+
     def gate_fid(self, gate):
-        U = self.evolution(gate)
+        U = self.propagation(gate)
         U_goal = gate.goal_unitary
-        g = 1-abs(trace((U_goal.dag() * U).full())) / U_goal.full().ndim
+        g = 1-abs(np.trace((U_goal.dag() * U).full())) / U_goal.full().ndim
         # TODO shouldn't this be squared
         return g
 
@@ -180,21 +192,23 @@ class Simulation(Backend):
         Formally obtained by the derivative of the gate fidelity. See GOAT
         paper for details.
         """
-        U = self.evolution_grad(gate)
+        U = self.propagation_grad(gate)
         p = gate.parameters
-        n_params = len(p) + 1
+        n_params = len(self.model.control_hams) + 1
         U_goal = gate.goal_unitary
         dim = U_goal.full().ndim
-        uf = tensor(basis(n_params, 0), qeye(dim)).dag() * U
-        g = trace(
+        uf = goat.select_derivative(U, n_params, 0)
+        g = np.trace(
                 (U_goal.dag() * uf).full()
             ) / dim
-        ret = zeros_like(p)
+
+        ret = np.zeros_like(p)
         for ii in range(1, n_params):
-            duf = tensor(basis(n_params, ii), qeye(dim)).dag() * U
-            ret[ii-1] = -1 * real(
-                g.conj() / abs(g) / dim * trace(
-                                              (U_goal.dag() * duf).full()
-                                          )
+            duf = goat.select_derivative(U, n_params, ii)
+            ret[ii-1] = -1 * np.real(
+                g.conj() / abs(g) / dim * np.trace(
+                    (U_goal.dag() * duf).full()
                 )
+            )
+
         return ret
