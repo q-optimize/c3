@@ -14,8 +14,6 @@ gate, evaluates it in the physical machine and returns a figure of merit.
 X_gate = gt('qubit_1', qt.sigmax())
 
 
-# TODO: deal with freezed parameters
-
 def my_flattop(t, idx, guess):
     t_up = guess[idx['t_up']]
     t_down = guess[idx['t_down']]
