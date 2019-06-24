@@ -162,16 +162,16 @@
 <span id="c3po-main-gate-module"></span><h2>c3po.main.gate module<a class="headerlink" href="#module-c3po.main.gate" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="c3po.main.gate.Gate">
-<em class="property">class </em><code class="descclassname">c3po.main.gate.</code><code class="descname">Gate</code><span class="sig-paren">(</span><em>target</em>, <em>goal</em>, <em>pulse={}</em>, <em>T_final=1e-07</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">c3po.main.gate.</code><code class="descname">Gate</code><span class="sig-paren">(</span><em>target</em>, <em>goal</em>, <em>pulse=None</em>, <em>T_final=1e-07</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Represents a quantum gate with a fixed parametrization and envelope shape.</p>
+<p>Represents a quantum gate.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>target</strong> – Component
-Model component(s) to act upon</p></li>
-<li><p><strong>goal</strong> – Qobj
-Unitary representation of the gate on computational subspace.</p></li>
+<li><p><strong>target</strong> (<em>type</em>) – Description of parameter <cite>target</cite>.</p></li>
+<li><p><strong>goal</strong> (<em>array</em>) – Unitary representation of the gate on computational subspace.</p></li>
+<li><p><strong>pulse</strong> (<em>dict</em>) – Initial pulse parameters</p></li>
+<li><p><strong>T_final</strong> (<em>real</em>) – Maximum time of this gate.</p></li>
 </ul>
 </dd>
 </dl>
@@ -180,6 +180,24 @@ Unitary representation of the gate on computational subspace.</p></li>
 <code class="descname">idxes</code><a class="headerlink" href="#c3po.main.gate.Gate.idxes" title="Permalink to this definition">¶</a></dt>
 <dd><p>Contains the parametrization of this gate. This is created when
 set_parameters() is used to store a new pulse.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="c3po.main.gate.Gate.opt_idxes">
+<code class="descname">opt_idxes</code><a class="headerlink" href="#c3po.main.gate.Gate.opt_idxes" title="Permalink to this definition">¶</a></dt>
+<dd><p>A subset of idxes, containing the indices of parameters that are
+varied during optimization. Parameters present in the intial name
+but not in opt_idxes are frozen.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="attribute">
@@ -188,6 +206,11 @@ set_parameters() is used to store a new pulse.</p>
 <dd><p>A dictionary of linear vectors containing the parameters of
 different versions of this gate, e.g. initial guess, calibrated or
 variants.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
@@ -196,17 +219,48 @@ variants.</p>
 <dd><p>Give a vector of parameters that conform to the parametrization for
 this gate and get the structured version back. Input can also be the
 name of a stored pulse.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q</strong> (<em>array</em>) – Numpy array containing the serialized parameters</p></li>
+<li><p><strong>opt</strong> (<em>bool</em>) – Use only the optimized parameters. Note: Probably we’ll lose this
+option and determine by the shape of q which version should be used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Description of returned object.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>type</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.get_IQ">
-<code class="descname">get_IQ</code><span class="sig-paren">(</span><em>guess</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_IQ" title="Permalink to this definition">¶</a></dt>
-<dd><p>Construct the in-phase (I) and quadrature (Q) components of the control
-signals.
-These are universal to either experiment or simulation. In the
-experiment these will be routed to AWG and mixer electronics, while in
-the simulation they provide the shapes of the controlfields to be added
-to the Hamiltonian.</p>
+<code class="descname">get_IQ</code><span class="sig-paren">(</span><em>name</em>, <em>res=1000000000.0</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_IQ" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct the in-phase (I) and quadrature (Q) components of the
+control signals. These are universal to either experiment or
+simulation. In the experiment these will be routed to AWG and mixer
+electronics, while in the simulation they provide the shapes of the
+controlfields to be added to the Hamiltonian.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>array</em>) – Array of parameter in physical units. Can also be the name of an
+array already stored in this Gate instance.</p></li>
+<li><p><strong>res</strong> (<em>real</em>) – Resolution of the control electronics. Will determine the number of
+time slices used to calculate waveforms.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary with arrays of I and Q signals for each control and
+carrier.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
@@ -216,17 +270,35 @@ to the Hamiltonian.</p>
 Returns a function handle to the control shape, constructed from drive
 parameters. For simulation we need the control fields to be added to
 the model Hamiltonian.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>array</em>) – Array of parameter in physical units. Can also be the name of an
+array already stored in this Gate instanc</p></li>
+<li><p><strong>res</strong> (<em>real</em>) – Resolution of the control electronics. Will determine the number of
+time slices used to calculate waveforms.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>List of handles for control functions.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.get_idxes">
 <code class="descname">get_idxes</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_idxes" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns index map of parameters in the serialized vector.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.get_parameters">
 <code class="descname">get_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.get_parameters" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Return parameters dictionary.</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.plot_control_fields">
@@ -237,18 +309,28 @@ the model Hamiltonian.</p>
 <dl class="method">
 <dt id="c3po.main.gate.Gate.print_pulse">
 <code class="descname">print_pulse</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.print_pulse" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Print out the pulse parameters in JSON format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>p</strong> (<em>array</em>) – Array of parameters in physical units.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.serialize_bounds">
 <code class="descname">serialize_bounds</code><span class="sig-paren">(</span><em>bounds_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.serialize_bounds" title="Permalink to this definition">¶</a></dt>
-<dd><p>Serialization function for the upper and lower bound of the search space.</p>
+<dd><p>Read in the bounds from a dictionary and store for rescaling.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>bounds_in</strong> (<em>dict</em>) – A dictionary with the same structure as the pulse parametrization. Every dimension specified in the bounds will be optimized. Parameters present in the initial guess but not in the bounds are considered to be frozen.</p>
+<dd class="field-odd"><p><strong>bounds_in</strong> (<em>dict</em>) – A dictionary with the same structure as the pulse
+parametrization. Every dimension specified in the bounds will be
+optimized. Parameters present in the initial guess but not in the
+bounds are considered to be frozen.</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Linearized representation of the bounds and Indices in the linearized parameters that will be optimized.</p>
+<dd class="field-even"><p>Linearized representation of the bounds and Indices in
+the linearized parameters that will be optimized.</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>list, list</p>
@@ -262,30 +344,80 @@ the model Hamiltonian.</p>
 <dd><p>Takes a nested dictionary of pulse parameters and returns a linear
 list, compatible with the parametrization of this gate. Input can
 also be the name of a stored pulse.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>p</strong> (<em>dict</em>) – Parameters in (nested) dictionary format</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Linearized parameters</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>numpy array</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.set_bounds">
 <code class="descname">set_bounds</code><span class="sig-paren">(</span><em>bounds_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.set_bounds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Read in a new set of bounds for this gate. Format is the same as the
+pulse specifications but with a [min, max] at each entry.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>bounds_in</strong> (<em>dict</em>) – The same type of dictionary as the parameter sets but with a
+[min, max] pair in each entry. The keys can be a subset of keys
+from the parameter set. Every parameter key not present here will
+be fixed during optimization.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.set_parameters">
-<code class="descname">set_parameters</code><span class="sig-paren">(</span><em>name</em>, <em>guess</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.set_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>An initial guess that implements this gate. The structure defines the
-parametrization of this gate.</p>
+<code class="descname">set_parameters</code><span class="sig-paren">(</span><em>name</em>, <em>params_in</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.set_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Give an name that will define the parametrization of this gate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>str</em>) – Descriptive identifier of the specified set of parameters</p></li>
+<li><p><strong>params_in</strong> (<em>dict</em>) – Parameters in (nested) dictionary format</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.to_bound_phys_scale">
 <code class="descname">to_bound_phys_scale</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.to_bound_phys_scale" title="Permalink to this definition">¶</a></dt>
-<dd><p>Transforms an optimizer vector back to physical scale.</p>
+<dd><p>Transforms an optimizer vector back to physical scale</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>x</strong> (<em>array</em>) – Numpy array of pulse parameters in scale 1</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Pulse parameters that are compatible with bounds in physical units</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
 <dt id="c3po.main.gate.Gate.to_scale_one">
 <code class="descname">to_scale_one</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.main.gate.Gate.to_scale_one" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns a vector of scale 1 that plays well with optimizers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>q</strong> (<em>array/str</em>) – Array of parameter in physical units. Can also be the name of an array already stored in this Gate instance.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Numpy array of pulse parameters, rescaled to values within [-1, 1]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>

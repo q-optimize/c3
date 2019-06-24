@@ -171,6 +171,26 @@ both need to provide.</p>
 <em class="property">class </em><code class="descclassname">c3po.fidelity.measurement.</code><code class="descname">Experiment</code><span class="sig-paren">(</span><em>eval_gate=None</em>, <em>eval_seq=None</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#c3po.fidelity.measurement.Backend" title="c3po.fidelity.measurement.Backend"><code class="xref py py-class docutils literal notranslate"><span class="pre">c3po.fidelity.measurement.Backend</span></code></a></p>
 <p>The driver for an experiment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>eval_gate</strong> (<em>func</em>) – Handle for a function that takes a set of parameters and returns its
+fidelity, measured in the experiment.</p></li>
+<li><p><strong>eval_seq</strong> (<em>func</em>) – Same as eval_gate but for a sequence of gates.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="attribute">
+<dt id="c3po.fidelity.measurement.Experiment.wd">
+<code class="descname">wd</code><a class="headerlink" href="#c3po.fidelity.measurement.Experiment.wd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Working directory to store logs, plots, etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="method">
 <dt id="c3po.fidelity.measurement.Experiment.calibrate">
 <code class="descname">calibrate</code><span class="sig-paren">(</span><em>gate</em>, <em>opts=None</em>, <em>start_name='initial'</em>, <em>calib_name='calibrated'</em><span class="sig-paren">)</span><a class="headerlink" href="#c3po.fidelity.measurement.Experiment.calibrate" title="Permalink to this definition">¶</a></dt>
@@ -180,14 +200,28 @@ documentation for specifics. Initial sigma is set to 0.5, but you can
 give scaling for each dimension in the opts dictionary with the
 ‘CMA_stds’ key. Further ‘ftarget’ sets the goal infidelity and
 ‘popsize’ the number of samples per generation.</p>
-<p>Example for 3 parameters:
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gate</strong> (<em>type</em>) – Description of parameter <cite>gate</cite>.</p></li>
+<li><p><strong>opts</strong> (<em>dict</em>) – <p>Options compatible with CMA, except for CMA_stds, which can be given in physical units.
+Example for 3 parameters:
 opts = {</p>
 <blockquote>
-<div><p>‘CMA_stds’ : [1, 2, 0.5],
+<div><p>’CMA_stds’ : stds,
 ‘ftarget’ = 1e-4,
 ‘popsize’ = 21
 }</p>
 </div></blockquote>
+<p>where stds contains the spread of the initial cloud in each
+dimension in physical units.</p>
+</p></li>
+<li><p><strong>start_name</strong> (<em>str</em>) – Name of the set of parameters to be used as initial point for the
+optimizer.</p></li>
+<li><p><strong>calib_name</strong> (<em>str</em>) – Name for the set of parameters that the optimizer converged to.</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">
