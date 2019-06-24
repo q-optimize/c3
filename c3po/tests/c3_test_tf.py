@@ -16,21 +16,33 @@ gate, evaluates it in the physical machine and returns a figure of merit.
 tf_sess = tf_setup()
 
 
-X_gate = gt('qubit_1', qt.sigmax(), tf_sess)
+X_gate = gt('qubit_1', qt.sigmax())
+
+
+def my_flattop(t, idx, guess):
+    t_up = guess[idx['t_up']]
+    t_down = guess[idx['t_down']]
+    T2 = tf.maximum(t_up, t_down)
+    T1 = tf.minimum(t_up, t_down)
+    return (1 + tf.erf((t - T1) / 1e-9)) / 2 * \
+           (1 + tf.erf((-t + T2) / 1e-9)) / 2
 
 
 handmade_pulse = {
         'control1': {
             'carrier1': {
                 'freq': 6e9*2*pi,
-                # 'target': 'q1', # add here?
                 'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
-                        }
+                    'pulse': {
+                        'params': {
+                            'amp': 15e6*2*pi,
+                            't_up': 5e-9,
+                            't_down': 45e-9,
+                            'xy_angle': 0,
+                            'freq_offset': 0e6*2*pi
+                            },
+                        'func': my_flattop
+                        },
                     }
                 }
             }
@@ -39,13 +51,13 @@ handmade_pulse = {
 pulse_bounds = {
         'control1': {
             'carrier1': {
-                'freq': [1e9*2*pi, 15e9*2*pi],
                 'pulses': {
-                    'pulse1': {
-                        'amp':  [1e3*2*pi, 10e9*2*pi],
-                        't_up': [2e-9, 98e-9],
-                        't_down': [2e-9, 98e-9],
-                        'xy_angle': [-pi, pi]
+                    'pulse': {
+                        'params': {
+                            't_up': [2e-9, 98e-9],
+                            't_down': [2e-9, 98e-9],
+                            'freq_offset': [-1e9*2*pi, 1e9*2*pi]
+                            }
                         }
                     }
                 }
@@ -55,13 +67,13 @@ pulse_bounds = {
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 
-fields = X_gate.get_control_fields('initial')
+fields, ts = X_gate.get_control_fields('initial', 10e9)
 
-ts = tf.cast(tf.linspace(0e-9, 50e-9, 1000), tf.float64)
-
-c = fields[0](ts)
+c = fields[0]
 
 grads = jacobian(c, X_gate.parameters['initial'])
+
+X_gate.idxes
 
 f = tf_sess.run(c)
 g = tf_sess.run(grads)
@@ -72,8 +84,7 @@ n_params = p.shape[0]
 fig, axs = plt.subplots(n_params+1, 1)
 axs[0].plot(tf_sess.run(ts)/1e-9, f)
 axs[0].set_ylabel('Signal')
-labels = ['freq']
-[labels.append(s) for s in X_gate.props]
+labels = ['amp', 'freq_offset', 't_down', 't_up', 'xy_angle']
 for ii in range(n_params):
     axs[ii+1].plot(tf_sess.run(ts)/1e-9, g[:, ii])
     axs[ii+1].set_ylabel(labels[ii])

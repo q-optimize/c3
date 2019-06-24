@@ -90,7 +90,7 @@ class Gate:
                         for prop in sorted(params.keys()):
                             opt_idxes.append(p_idx[prop])
                             bounds.append(params[prop])
-            bounds = tf.constant(bounds, dtype=tf.float64)
+        bounds = tf.constant(bounds, dtype=tf.float32)
         return bounds, opt_idxes
 
 
@@ -123,18 +123,8 @@ class Gate:
         params_in : dict
             Parameters in (nested) dictionary format
         """
-        if self.env_shape == 'flat':
-            params = []
-            idxes = {}
-            idx = 0
-            for k in params_in:
-                params.append(params_in[k])
-                idxes[k] = idx
-                idx += 1
-            self.parameters[name] = params
-            self.idxes = idxes
-        else:
-            self.parameters[name] = self.serialize_parameters(params_in, True)
+
+        self.parameters[name] = self.serialize_parameters(params_in, True)
 
 
     def serialize_parameters(self, p, redefine=False):
@@ -156,27 +146,35 @@ class Gate:
         q = []
         idx = 0
         idxes = {}
-        for ctrl in sorted(p.keys()):
-            idxes[ctrl] = {}
-            for carr in sorted(p[ctrl].keys()):
-                idxes[ctrl][carr] = {}
-                idxes[ctrl][carr]['freq'] = p[ctrl][carr]['freq']
-                idxes[ctrl][carr]['pulses'] = {}
-                # TODO discuss adding target
-                for puls in sorted(p[ctrl][carr]['pulses'].keys()):
-                    idxes[ctrl][carr]['pulses'][puls] = {}
-                    idxes[ctrl][carr]['pulses'][puls]['func']\
-                        = p[ctrl][carr]['pulses'][puls]['func']
-                    idxes[ctrl][carr]['pulses'][puls]['params'] = {}
-                    for prop in sorted(
-                            p[ctrl][carr]['pulses'][puls]['params'].keys()
-                            ):
-                        idxes[ctrl][carr]['pulses'][puls]['params'][prop] = idx
-                        q.append(p[ctrl][carr]['pulses'][puls]['params'][prop])
-                        idx += 1
+        if self.env_shape == 'flat':
+            for k in p:
+                q.append(p[k])
+                idxes[k] = idx
+                idx += 1
+        else:
+            for ctrl in sorted(p.keys()):
+                idxes[ctrl] = {}
+                for carr in sorted(p[ctrl].keys()):
+                    idxes[ctrl][carr] = {}
+                    idxes[ctrl][carr]['freq'] = p[ctrl][carr]['freq']
+                    idxes[ctrl][carr]['pulses'] = {}
+                    # TODO discuss adding target
+                    for puls in sorted(p[ctrl][carr]['pulses'].keys()):
+                        idxes[ctrl][carr]['pulses'][puls] = {}
+                        idxes[ctrl][carr]['pulses'][puls]['func']\
+                            = p[ctrl][carr]['pulses'][puls]['func']
+                        idxes[ctrl][carr]['pulses'][puls]['params'] = {}
+                        for prop in sorted(
+                                p[ctrl][carr]['pulses'][puls]['params'].keys()
+                                ):
+                            idxes[ctrl][carr]['pulses'][puls]['params'][prop] = idx
+                            q.append(
+                            p[ctrl][carr]['pulses'][puls]['params'][prop]
+                            )
+                            idx += 1
         if redefine:
             self.idxes = idxes
-        return tf.constant(q, dtype=tf.float64)
+        return tf.constant(q, dtype=tf.float32)
 
     def deserialize_parameters(self, q, opt=False):
         """ Give a vector of parameters that conform to the parametrization for
@@ -222,7 +220,8 @@ class Gate:
         Parameters
         ----------
         q : array/str
-            Array of parameter in physical units. Can also be the name of an array already stored in this Gate instance.
+            Array of parameter in physical units. Can also be the name of an
+            array already stored in this Gate instance.
 
         Returns
         -------
@@ -232,7 +231,8 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        y = (q[self.opt_idxes] - self.bounds['offset']) / self.bounds['scale']
+        q = tf.gather(q, self.opt_idxes)
+        y = (q - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
     def to_bound_phys_scale(self, x):
@@ -285,7 +285,7 @@ class Gate:
             name = self.parameters[name]
         idxes = self.idxes
         signals = {}
-        ts = np.linspace(0, self.T_final, self.T_final*res)
+        ts = tf.linspace(0.0, self.T_final, int(self.T_final*res))
 
         for ctrl in idxes:
             ck = idxes[ctrl]
@@ -297,7 +297,8 @@ class Gate:
                 pu = ck[carr]['pulses']
                 signals[ctrl][carr] = {}
                 amp_tot_sq = 0
-                components = []
+                I_components = []
+                Q_components = []
                 for puls in pu:
                     p_idx = pu[puls]['params']
                     envelope = pu[puls]['func']
@@ -305,19 +306,23 @@ class Gate:
                     amp_tot_sq += amp**2
                     xy_angle = name[p_idx['xy_angle']]
                     freq_offset = name[p_idx['freq_offset']]
-                    components.append(
+                    I_components.append(
                             amp * envelope(ts, p_idx, name)
-                            * np.exp(1j*(xy_angle+freq_offset*ts))
+                            * tf.cos(xy_angle+freq_offset*ts)
                             )
-                norm = np.sqrt(amp_tot_sq)
-                Inphase = np.real(np.sum(components, axis=0))/norm
-                Quadrature = np.imag(np.sum(components, axis=0))/norm
+                    Q_components.append(
+                            amp * envelope(ts, p_idx, name)
+                            * tf.sin(xy_angle+freq_offset*ts)
+                            )
+                norm = tf.sqrt(amp_tot_sq)
+                Inphase = tf.add_n(I_components)/norm
+                Quadrature = tf.add_n(Q_components)/norm
 
                 signals[ctrl][carr]['omega'] = omega_d
                 signals[ctrl][carr]['amp'] = amp
                 signals[ctrl][carr]['I'] = Inphase
                 signals[ctrl][carr]['Q'] = Quadrature
-        return signals
+        return signals, ts
 
     def get_control_fields(self, name, res=1e9):
         """
@@ -341,9 +346,8 @@ class Gate:
             List of handles for control functions.
 
         """
-        IQ = self.get_IQ(name, res)
+        IQ, ts = self.get_IQ(name, res)
         cflds = []
-        ts = tf.linspace(0, self.T_final, self.T_final*res)
         for ctrl in sorted(self.idxes):
             sig = tf.zeros_like(ts)
             for carr in sorted(self.idxes[ctrl]):
@@ -356,7 +360,7 @@ class Gate:
                         + AWG_Q * tf.sin(omega_d * ts)
                          )
             cflds.append(sig)
-        return cflds
+        return cflds, ts
 
     def print_pulse(self, p):
         """Print out the pulse parameters in JSON format.
