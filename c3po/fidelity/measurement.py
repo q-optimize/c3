@@ -1,6 +1,7 @@
 """ Measurement object that communicates between searcher and sim/exp"""
 
 import cma.evolution_strategy as cmaes
+import numpy as np
 from numpy import trace, zeros_like, real
 from qutip import tensor, basis, qeye
 
@@ -8,15 +9,27 @@ from qutip import tensor, basis, qeye
 
 
 class Backend:
-    """
-    Represents either an experiment or a simulation and contains the methods
+    """Represents either an experiment or a simulation and contains the methods
     both need to provide.
-    """
 
+    """
 
 class Experiment(Backend):
-    """
-    The driver for an experiment.
+    """The driver for an experiment.
+
+    Parameters
+    ----------
+    eval_gate : func
+        Handle for a function that takes a set of parameters and returns its
+        fidelity, measured in the experiment.
+    eval_seq : func
+        Same as eval_gate but for a sequence of gates.
+
+    Attributes
+    ----------
+    wd : str
+        Working directory to store logs, plots, etc.
+
     """
     def __init__(self, eval_gate=None, eval_seq=None):
         """
@@ -93,15 +106,34 @@ class Experiment(Backend):
         'CMA_stds' key. Further 'ftarget' sets the goal infidelity and
         'popsize' the number of samples per generation.
 
-        Example for 3 parameters:
-        opts = {
-            'CMA_stds' : [1, 2, 0.5],
-            'ftarget' = 1e-4,
-            'popsize' = 21
-            }
+        Parameters
+        ----------
+        gate : type
+            Description of parameter `gate`.
+        opts : dict
+            Options compatible with CMA, except for CMA_stds, which can be given in physical units.
+            Example for 3 parameters:
+            opts = {
+                'CMA_stds' : stds,
+                'ftarget' = 1e-4,
+                'popsize' = 21
+                }
+            where stds contains the spread of the initial cloud in each
+            dimension in physical units.
+        start_name : str
+            Name of the set of parameters to be used as initial point for the
+            optimizer.
+        calib_name : str
+            Name for the set of parameters that the optimizer converged to.
+
         """
         x0 = gate.to_scale_one(start_name)
-        es = cmaes.CMAEvolutionStrategy(x0, 0.5, opts)
+        if opts:
+            if 'CMA_stds' in opts.keys():
+                stds, idxes = gate.serialize_bounds(opts['CMA_stds'])
+                opts['CMA_stds'] = np.array(stds)/gate.bounds['scale']
+
+        es = cmaes.CMAEvolutionStrategy(x0, 1, opts)
         while not es.stop():
             samples = es.ask()
             samples_rescaled = [gate.to_bound_phys_scale(x) for x in samples]

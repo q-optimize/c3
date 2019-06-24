@@ -1,0 +1,10 @@
+c3po.c3po.examples package
+==========================
+
+Module contents
+---------------
+
+.. automodule:: c3po.c3po.examples
+    :members:
+    :undoc-members:
+    :show-inheritance:

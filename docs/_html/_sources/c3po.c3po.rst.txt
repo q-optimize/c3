@@ -1,0 +1,20 @@
+c3po.c3po package
+=================
+
+Subpackages
+-----------
+
+.. toctree::
+
+    c3po.c3po.examples
+    c3po.c3po.fidelity
+    c3po.c3po.main
+    c3po.c3po.utils
+
+Module contents
+---------------
+
+.. automodule:: c3po.c3po
+    :members:
+    :undoc-members:
+    :show-inheritance:
