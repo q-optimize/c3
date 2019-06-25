@@ -286,7 +286,7 @@ class Gate:
         idxes = self.idxes
         signals = {}
         ts = tf.linspace(0.0, self.T_final, int(self.T_final*res))
-
+        dt = ts[1]
         for ctrl in idxes:
             ck = idxes[ctrl]
             signals[ctrl] = {}
@@ -308,11 +308,11 @@ class Gate:
                     freq_offset = name[p_idx['freq_offset']]
                     I_components.append(
                             amp * envelope(ts, p_idx, name)
-                            * tf.cos(xy_angle+freq_offset*ts)
+                            * tf.cos(xy_angle+freq_offset*(ts+dt/2))
                             )
                     Q_components.append(
                             amp * envelope(ts, p_idx, name)
-                            * tf.sin(xy_angle+freq_offset*ts)
+                            * tf.sin(xy_angle+freq_offset*(ts+dt/2))
                             )
                 norm = tf.sqrt(amp_tot_sq)
                 Inphase = tf.add_n(I_components)/norm
@@ -347,6 +347,7 @@ class Gate:
 
         """
         IQ, ts = self.get_IQ(name, res)
+        dt = ts[1]
         cflds = []
         for ctrl in sorted(self.idxes):
             sig = tf.zeros_like(ts)
@@ -356,8 +357,8 @@ class Gate:
                 amp = IQ[ctrl][carr]['amp']
                 omega_d = IQ[ctrl][carr]['omega']
                 sig += amp * (
-                        AWG_I * tf.cos(omega_d * ts)
-                        + AWG_Q * tf.sin(omega_d * ts)
+                        AWG_I * tf.cos(omega_d * (ts+dt/2))
+                        + AWG_Q * tf.sin(omega_d * (ts+dt/2))
                          )
             cflds.append(sig)
         return cflds, ts
@@ -379,14 +380,21 @@ class Gate:
                     )
             )
 
-    def plot_control_fields(self, q='initial', axs=None):
+    def plot_control_fields(self, sess=None, res=1e9, q='initial', axs=None):
         """ Plotting control functions """
-        ts = np.linspace(0, self.T_final, self.T_final*1e9)
         plt.rcParams['figure.dpi'] = 100
-        IQ = self.get_IQ(q)['control1']['carrier1']
+        sig, ts = self.get_IQ(q, res)
+        IQ = sig['control1']['carrier1']
+        I = IQ['I']
+        Q = IQ['Q']
+        if not sess is None:
+            ts = sess.run(ts)
+            I = sess.run(I)
+            Q = sess.run(Q)
+
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(ts/1e-9, IQ['I'])
-        axs[1].plot(ts/1e-9, IQ['Q'])
+        axs[0].plot(ts/1e-9, I)
+        axs[1].plot(ts/1e-9, Q)
         plt.show(block=False)
 
     # NICO: Do we need these? Are we strict about setting and getting? Python

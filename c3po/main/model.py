@@ -88,8 +88,16 @@ class Model:
         omega_r = self.component_parameters['cavity']['freq']
         g = self.coupling['q1_cav']['strength']
 
-        tf_omega_q = tf.constant(omega_q, dtype=tf.float64, name="Qubit_frequency")
-        tf_omega_r = tf.constant(omega_r, dtype=tf.float64, name="Cavity_frequency")
+        tf_omega_q = tf.constant(
+            omega_q,
+            dtype=tf.float64,
+            name="Qubit_frequency"
+            )
+        tf_omega_r = tf.constant(
+            omega_r,
+            dtype=tf.float64,
+            name="Cavity_frequency"
+            )
         tf_g = tf.constant(g, dtype=tf.float64, name="Coupling")
 
         dim_q = self.hilbert_space['qubit_1']
@@ -100,8 +108,15 @@ class Model:
 
         tf_a = tf.constant(a.full(), dtype=tf.complex128, name="a")
         tf_a_dag = tf.constant(a_dag.full(), dtype=tf.complex128, name="a_dag")
-        tf_sigmaz = tf.constant(qt.tensor(qt.sigmaz(), qt.qeye(dim_r)).full(), dtype=tf.complex128, name="sigma_z")
-        tf_sigmax = tf.constant(qt.tensor(qt.sigmax(), qt.qeye(dim_r)).full(), dtype=tf.complex128, name="sigma_x")
+        tf_sigmaz = tf.constant(
+            qt.tensor(qt.sigmaz(), qt.qeye(dim_r)).full(), dtype=tf.complex128,
+             name="sigma_z"
+             )
+        tf_sigmax = tf.constant(
+            qt.tensor(qt.sigmax(), qt.qeye(dim_r)).full(),
+            dtype=tf.complex128,
+            name="sigma_x"
+            )
 
         with tf.name_scope('drift_hamiltonian'):
             self.tf_H0 = tf.cast(tf_hbar, tf.complex128) * tf.cast((tf_omega_q / 2), tf.complex128) * tf_sigmaz \

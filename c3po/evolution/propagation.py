@@ -129,20 +129,17 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
     clist = []
     for h in hlist:
         if isinstance(h, list):
-            c = h[1](tf.math.add(Ts, dt_tf/2))
-    clist.append(tf_sess.run(c))
+            clist.append(tf_sess.run(h[1]))
 
     H_eval_t = []
     for i in range(0, len(tlist)):
-        hdt = 0
-        for j in range(0, len(H)):
-            if j == 0:
-                hdt = H[0]
-            else:
-                hdt += clist[j - 1][i] * H[j]
+        hdt = H[0]
+        for j in range(1, len(H)):
+            hdt += clist[j - 1][i] * H[j]
         H_eval_t.append(hdt)
 
     dt = tlist[1]
+    print(H_eval_t)
     if history:
         U = [u0]
         # creation of tmp necessary to access member function 'evaluate'
