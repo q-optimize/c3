@@ -13,9 +13,9 @@ def get_step_matrix(h_sys, grad_list):
     """
     The GOAT Hamiltonian that contains the physical Hamiltonian and its
     gradients. It has the form:
-    [ H    , 0, 0 ... 0]
-    [dH_dp1, H, 0 ... 0]
-    [dH_dp2, 0, H ... 0]
+    [ H    , 0, 0 ... 0]\n
+    [dH_dp1, H, 0 ... 0]\n
+    [dH_dp2, 0, H ... 0]\n
     [ ...             H]
     """
     n_params = len(grad_list) + 1

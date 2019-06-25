@@ -3,7 +3,6 @@
 import cma.evolution_strategy as cmaes
 import numpy as np
 from qutip import basis, qeye
-from c3po.utils import single_length_RB as sl_RB
 import c3po.control.goat as goat
 
 # TODO this file (measurement.py) should go in the main folder
@@ -174,8 +173,18 @@ class Simulation(Backend):
     def update_model(self, model):
         self.model = model
 
-    def propagation_grad(self, gate, u_init):
+    def H_of_t(self, t):
+        h = self.model.system_hamiltonian
         ctl_hs = self.model.control_hams
+        cflds = gate.get_control_fields(params)
+        idx = 0
+        for ctl_h in ctl_hs:
+            h += cflds[idx]*ctl_h
+        return h
+
+    def propagation_grad(self, gate, params):
+        u_init = self.model.U_init
+
         n_params = len(ctl_hs) + 1
         u_init = goat.get_initial_state(u_init, n_params)
 
@@ -189,7 +198,7 @@ class Simulation(Backend):
     def dgate_fid(self, gate, params):
         """
         Compute the gradient of the fidelity w.r.t. each parameter of the
-        gate. Formally obtained by the derivative of the gate fidelity. See 
+        gate. Formally obtained by the derivative of the gate fidelity. See
         GOAT paper for details.
         """
         U = self.propagation_grad(gate, params)
