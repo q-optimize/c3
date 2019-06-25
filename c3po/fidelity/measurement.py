@@ -168,7 +168,7 @@ class Simulation(Backend):
     """
     def __init__(self, model, solve_func):
         self.model = model
-        self.propagation = solve_func
+        self.solver = solve_func
 
     def update_model(self, model):
         self.model = model
@@ -181,6 +181,9 @@ class Simulation(Backend):
         for ctl_h in ctl_hs:
             h += cflds[idx]*ctl_h
         return h
+
+    def propagation(self, gate, params=None):
+        
 
     def propagation_grad(self, gate, params):
         u_init = self.model.U_init
