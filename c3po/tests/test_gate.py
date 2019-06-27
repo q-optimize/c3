@@ -150,6 +150,7 @@ pulse_bounds = {
             }
         }
 
+
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 

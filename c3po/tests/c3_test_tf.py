@@ -67,11 +67,13 @@ pulse_bounds = {
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 
-fields, ts = X_gate.get_control_fields('initial', 10e9)
+
+x0 = tf.constant(X_gate.parameters['initial'])
+fields, ts = X_gate.get_control_fields(x0, 10e9)
 
 c = fields[0]
 
-grads = jacobian(c, X_gate.parameters['initial'])
+grads = jacobian(c, x0)
 
 X_gate.idxes
 

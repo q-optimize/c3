@@ -4,6 +4,9 @@ import cma.evolution_strategy as cmaes
 import numpy as np
 from qutip import basis, qeye
 import c3po.control.goat as goat
+import tensorflow as tf
+from tensorflow.python.ops.parallel_for.gradients import jacobian
+from scipy.optimize import minimize as minimize
 
 # TODO this file (measurement.py) should go in the main folder
 
@@ -158,68 +161,126 @@ class Experiment(Backend):
 
 
 class Simulation(Backend):
+    """Short summary.
+
+    Parameters
+    ----------
+    model : type
+        Description of parameter `model`.
+    solve_func : type
+        Description of parameter `solve_func`.
+
+    Attributes
+    ----------
+    solver : func
+        Function that integrates the Schrödinger/Lindblad/Whatever EOM
+    resolution : float
+        Determined by numerical accuracy. We'll compute this from something
+        like highest eigenfrequency, etc.
+    model : Model
+        Class that symbolically describes the model.
     """
-    Methods
-    -------
-    propagation(gate)
-        constructs gate from parameters by solving equations of motion
-    gate_fid(gate)
-        returns findelity of gate vs gate.goal_unitary
-    """
-    def __init__(self, model, solve_func):
+
+    def __init__(self, model, solve_func, sess):
         self.model = model
         self.solver = solve_func
+        self.tf_session = sess
+        self.resolution = 10e9
 
     def update_model(self, model):
         self.model = model
 
-    def H_of_t(self, t):
-        h = self.model.system_hamiltonian
-        ctl_hs = self.model.control_hams
-        cflds = gate.get_control_fields(params)
-        idx = 0
-        for ctl_h in ctl_hs:
-            h += cflds[idx]*ctl_h
-        return h
+    def propagation(self, U0, gate, params, history=False):
+        if isinstance(params, str):
+            params = gate.parameters[params]
+        cflds, ts = gate.get_control_fields(params, self.resolution)
+        hlist = self.model.get_tf_Hamiltonian(cflds)
+        ts = self.tf_session.run(ts)
+        return self.solver(hlist, U0, ts, self.tf_session, history)
 
-    def propagation(self, gate, params=None):
-        
+    def propagation_grad(self, U0, gate, params, history=False):
+        if isinstance(params, str):
+            params = gate.parameters[params]
+        params = tf.constant(params)
+        cflds, ts = gate.get_control_fields(params, self.resolution)
+        cgrads = []
+        for fld in cflds:
+            jac = jacobian(fld, params)
+            jac = tf.transpose(
+                tf.gather(
+                    tf.transpose(jac),
+                    gate.opt_idxes
+                    )
+                )
+            cgrads.append(jac)
 
-    def propagation_grad(self, gate, params):
-        u_init = self.model.U_init
+        hlist = self.model.get_tf_Hamiltonian(
+            list(zip(cflds, cgrads))
+            )
+        ts = self.tf_session.run(ts)
+        return self.solver(
+            hlist,
+            U0,
+            ts,
+            self.tf_session,
+            grad=True,
+            history=history
+            )
 
-        n_params = len(ctl_hs) + 1
-        u_init = goat.get_initial_state(u_init, n_params)
-
-    def gate_fid(self, gate, params):
-        U = self.propagation(gate, params)
+    def gate_err(self, U0, gate, params):
+        U = self.propagation(U0, gate, params)[0]
         U_goal = gate.goal_unitary
-        g = 1-abs(np.trace((U_goal.dag() * U).full())) / U_goal.full().ndim
+        g = 1-abs(np.trace(np.matmul(U_goal.T, U)) / U_goal.shape[1])
         # TODO shouldn't this be squared
         return g
 
-    def dgate_fid(self, gate, params):
+    def dgate_err(self, U0, gate, params):
         """
         Compute the gradient of the fidelity w.r.t. each parameter of the
         gate. Formally obtained by the derivative of the gate fidelity. See
         GOAT paper for details.
         """
-        U = self.propagation_grad(gate, params)
-        n_params = params.shape[0]
+        if isinstance(params, str):
+            params = gate.parameters[params]
+        U = self.propagation_grad(U0, gate, params)[0]
+        n_params = len(gate.opt_idxes)
         U_goal = gate.goal_unitary
-        dim = U_goal.full().ndim
+        dim = U_goal.shape[1]
         uf = goat.select_derivative(U, n_params, 0)
         g = np.trace(
-                (U_goal.dag() * uf).full()
+                np.matmul(U_goal.T, uf)
             ) / dim
-
-        ret = np.zeros_like(p)
+        ret = np.zeros(n_params)
         for ii in range(1, n_params):
             duf = goat.select_derivative(U, n_params, ii)
             ret[ii-1] = -1 * np.real(
                 g.conj() / abs(g) / dim * np.trace(
-                    (U_goal.dag() * duf).full()
+                    np.matmul(U_goal.T, duf)
                 )
-            )
+            ) * gate.bounds['scale'][ii - 1]
 
         return ret
+
+    def optimize_gate(self,
+            U0,
+            gate,
+            start_name='initial',
+            ol_name='open_loop'
+        ):
+        x0 = gate.to_scale_one(start_name)
+        res = minimize(
+                lambda x: self.gate_err(
+                    U0,
+                    gate,
+                    gate.to_bound_phys_scale(x)
+                ),
+                x0,
+                method='L-BFGS-B',
+                jac=lambda x: self.dgate_err(
+                    U0,
+                    gate,
+                    gate.to_bound_phys_scale(x)
+                ),
+                options={'disp': True}
+                )
+        gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)

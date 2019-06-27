@@ -14,10 +14,12 @@ from qutip import Qobj
 from qutip import sesolve
 
 from c3po.utils import tf_utils
+import c3po.control.goat as goat
 
 import tensorflow as tf
 import numpy as np
 import scipy as sp
+import copy
 
 
 def conv_func(tf_sess, func):
@@ -88,7 +90,6 @@ def dirty_wrap(tf_sess, func):
 
     # return U
 
-
 def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
     """
     Find the propagator of a system Hamiltonian H(t). The initial basis u0. The
@@ -104,52 +105,62 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
         for all times in tlist or just the initial and final time (depending
         on history setting)
     """
-
-
-    H = []
-    for i in range(0, len(hlist)):
-        if i == 0:
-            h0 = tf_sess.run(hlist[i])
-            tmp = Qobj(h0)
-            H.append(tmp)
-        else:
-            hd = tf_sess.run(hlist[i][0])
-            tmp = Qobj(hd)
-            H.append(hd)
-
-
-    t_start = tlist[0]
-    t_final = tlist[len(tlist) - 1]
-    N_slices = len(tlist)
-
-    Ts = tf.linspace(t_start, t_final, N_slices, name="Time")
-    Ts = tf.cast(Ts, tf.float64)
-    dt_tf = Ts[1]
+    tmp = tf_sess.run(hlist[0])
+    H = [tmp]
+    print('Evaluating Hamiltonians ...')
 
     clist = []
     for h in hlist:
         if isinstance(h, list):
+            H.append(tf_sess.run(h[0]))
             clist.append(tf_sess.run(h[1]))
+    if not grad:
+        H_eval_t = []
+        for i in range(0, len(tlist)):
+            hdt = copy.deepcopy(H[0])
+            for j in range(1, len(H)):
+                hdt += clist[j - 1][i] * H[j]
+            H_eval_t.append(hdt)
+    else: # Do gradients
+        n_params = int(hlist[1][1][1].shape[1]) # NICO: I know ...
+        u0 = goat.get_initial_state(u0, n_params)
+        H_eval_t = []
+        for ti in range(0, len(tlist)):
+            hdt = copy.deepcopy(H[0])
+            for j in range(1, len(H)):
+                hdt += clist[j - 1][0][ti] * H[j]
 
-    H_eval_t = []
-    for i in range(0, len(tlist)):
-        hdt = H[0]
-        for j in range(1, len(H)):
-            hdt += clist[j - 1][i] * H[j]
-        H_eval_t.append(hdt)
+            dh_dp = []
+            for k in range(n_params):
+                gdt = 0
+                for j in range(1, len(H)):
+                    gdt += clist[j - 1][1][ti][k] * H[j]
+
+                dh_dp.append(gdt)
+            H_eval_t.append(goat.get_step_matrix(hdt, dh_dp))
+
+        print("""
+            #########################
+            # Propagating with GOAT #
+            #########################
+            #    (_(                #
+            #    /_/'_____/)        #
+            #   \"  |      |         #
+            #      |\"\"\"\"\"\"|         #
+            #########################
+            #  Please stand by  ... #
+            #########################
+            """)
 
     dt = tlist[1]
-    print(H_eval_t)
     if history:
+        print('Recording history...')
         U = [u0]
         # creation of tmp necessary to access member function 'evaluate'
         # stupid practice?
-
-
         for i in range(0, len(tlist)):
-            dU = (-1j * dt * H_eval_t[i]).expm()
-            dU.dims = U[-1].dims
-            U.append(dU * U[-1])
+            dU = sp.linalg.expm(-1j * dt * H_eval_t[i])
+            U.append(np.matmul(dU, U[-1]))
 
     else:
         U = [u0]
@@ -157,8 +168,8 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
         # stupid practice?
 
         for i in range(0, len(tlist)):
-            dU = (-1j * dt * H_eval_t[i]).expm()
-            U[0] = dU * U[0]
+            dU = sp.linalg.expm(-1j * dt * H_eval_t[i])
+            U[0] = np.matmul(dU, U[0])
 
     return U
 

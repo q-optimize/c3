@@ -90,7 +90,6 @@ class Gate:
                         for prop in sorted(params.keys()):
                             opt_idxes.append(p_idx[prop])
                             bounds.append(params[prop])
-        bounds = tf.constant(bounds, dtype=tf.float32)
         return bounds, opt_idxes
 
 
@@ -109,8 +108,9 @@ class Gate:
          """
         b, self.opt_idxes = self.serialize_bounds(bounds_in)
         self.bounds = {}
-        self.bounds['scale'] = b[:, 1]-b[:, 0]
-        self.bounds['offset'] = b[:, 0]
+        b = np.array(b)
+        self.bounds['scale'] = np.diff(b).T[0]
+        self.bounds['offset'] = b.T[0]
 
     def set_parameters(self, name, params_in):
         """
@@ -174,7 +174,7 @@ class Gate:
                             idx += 1
         if redefine:
             self.idxes = idxes
-        return tf.constant(q, dtype=tf.float32)
+        return np.array(q)
 
     def deserialize_parameters(self, q, opt=False):
         """ Give a vector of parameters that conform to the parametrization for
@@ -231,7 +231,7 @@ class Gate:
         """
         if isinstance(q, str):
             q = self.parameters[q]
-        q = tf.gather(q, self.opt_idxes)
+        q = np.array(q)[self.opt_idxes]
         y = (q - self.bounds['offset']) / self.bounds['scale']
         return 2*y-1
 
@@ -249,12 +249,9 @@ class Gate:
             Pulse parameters that are compatible with bounds in physical units
 
         """
-        y = tf.acos(
-                tf.cos(
-                    (x+1)*np.pi/2
-                )
-            )/np.pi
-        q = self.parameters['initial']
+        x = np.array(x)
+        y = np.arccos(np.cos((x+1)*np.pi/2))/np.pi
+        q = np.array(self.parameters['initial'])
         q[self.opt_idxes] = self.bounds['scale'] * y + self.bounds['offset']
         return q
 
@@ -285,7 +282,11 @@ class Gate:
             name = self.parameters[name]
         idxes = self.idxes
         signals = {}
-        ts = tf.linspace(0.0, self.T_final, int(self.T_final*res))
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            self.T_final,
+            int(self.T_final*res)
+            )
         dt = ts[1]
         for ctrl in idxes:
             ck = idxes[ctrl]

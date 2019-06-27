@@ -77,17 +77,28 @@ initial_model = mdl(
 initial_model.set_tf_session(sess)
 
 
+def my_flattop(t, idx, guess):
+    t_up = guess[idx['t_up']]
+    t_down = guess[idx['t_down']]
+    T2 = tf.maximum(t_up, t_down)
+    T1 = tf.minimum(t_up, t_down)
+    return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
+           (1 + tf.erf((-t + T2) / 2e-9)) / 2
 
 handmade_pulse = {
         'control1': {
             'carrier1': {
                 'freq': 6e9*2*pi,
                 'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
+                    'pulse': {
+                        'params': {
+                            'amp': 15e6*2*pi,
+                            't_up': 5e-9,
+                            't_down': 45e-9,
+                            'xy_angle': 0,
+                            'freq_offset': 0e6*2*pi
+                            },
+                        'func': my_flattop
                         }
                     }
                 }
@@ -95,66 +106,52 @@ handmade_pulse = {
         }
 
 
-q1_X_gate = gt('qubit_1', qt.sigmax(), sess)
-q1_X_gate.set_parameters('initial', handmade_pulse)
+U_goal = tensor(
+    basis(2,1),
+    basis(5,0)
+).full()
 
-crazy_pulse = {
+U0 = tensor(
+    basis(2,0),
+    basis(5,0)
+).full()
+
+X_gate = gt('qubit_1', U_goal)
+pulse_bounds = {
         'control1': {
             'carrier1': {
-                'freq': 6e9*2*pi,
                 'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
-                        }
-                    }
-                },
-            'carrier2': {
-                'freq': 6e9*2*pi,
-                'pulses': {
-                    'pulse1': {
-                        'amp': 15e6*2*pi,
-                        't_up': 5e-9,
-                        't_down': 45e-9,
-                        'xy_angle': 0
-                    },
-                    'pulse2': {
-                        'amp': 20e6*2*pi,
-                        't_up': 10e-9,
-                        't_down': 4e-9,
-                        'xy_angle': pi/2
+                    'pulse': {
+                        'params': {
+                            'amp': [10e6*2*pi, 50e6*2*pi],
+                            'freq_offset': [-1e9*2*pi, 1e9*2*pi]
+                            }
                         }
                     }
                 }
             }
         }
+
+X_gate.set_parameters('initial', handmade_pulse)
+X_gate.set_bounds(pulse_bounds)
 
 
 #######
 # actually not needed just to be able to show the hamilton before propagation
 
-# control_func = [q1_X_gate.get_control_fields('initial')]
+# control_func = [X_gate.get_control_fields('initial')]
 # H = initial_model.get_Hamiltonian(control_func)
 # print(H)
 
 ######
 
 
-cflds = q1_X_gate.get_control_fields('initial')
+cflds, ts = X_gate.get_control_fields('initial')
 
 hlist = initial_model.get_tf_Hamiltonian(cflds)
 
-n = int(1e4)
-ts = np.linspace(0, 50e-9, n)
 
-U0 = tensor(
-    qeye(2),
-    qeye(5)
-)
-
-tf_u = tf.constant(U0.full(), dtype=tf.complex128, name="u0")
+tf_u = tf.constant(U0, dtype=tf.complex128, name="u0")
 
 # print(U0)
 
