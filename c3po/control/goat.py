@@ -1,4 +1,7 @@
-"""Methods to create the objects needed for GOAT propagation"""
+"""
+Methods to create the objects needed for GOAT propagation
+TODO: Investigate using sparse matrices in the creation.
+"""
 import numpy as np
 
 def get_initial_state(u_init, n_params):

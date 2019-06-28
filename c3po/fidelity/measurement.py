@@ -196,7 +196,7 @@ class Simulation(Backend):
         cflds, ts = gate.get_control_fields(params, self.resolution)
         hlist = self.model.get_tf_Hamiltonian(cflds)
         ts = self.tf_session.run(ts)
-        return self.solver(hlist, U0, ts, self.tf_session, history)
+        return self.solver(hlist, U0, ts, self.tf_session, False, history)
 
     def propagation_grad(self, U0, gate, params, history=False):
         if isinstance(params, str):
@@ -228,6 +228,30 @@ class Simulation(Backend):
             )
 
     def gate_err(self, U0, gate, params):
+        """
+        Compute the goal function that compares the intended final state with
+        actually achieved one.
+        NOTE: gate_err and dgate_err should be the same function with a switch
+        for gradient information. They should also not directly run the
+        propagation command. Rather the propagation should be run on demand and
+        the result stored, to be accessed by both fidelity functions. This
+        avoids unneeded computation of dynamics.
+
+        Parameters
+        ----------
+        U0 : array
+            Initial state represented as unitary matrix.
+        gate : c3po.Gate
+            Instance of the Gate class, containing control signal generation.
+        params : array
+            Set of control parameters
+
+        Returns
+        -------
+        array
+            The final unitary.
+
+        """
         U = self.propagation(U0, gate, params)[0]
         U_goal = gate.goal_unitary
         g = 1-abs(np.trace(np.matmul(U_goal.T, U)) / U_goal.shape[1])
@@ -239,6 +263,21 @@ class Simulation(Backend):
         Compute the gradient of the fidelity w.r.t. each parameter of the
         gate. Formally obtained by the derivative of the gate fidelity. See
         GOAT paper for details.
+
+        Parameters
+        ----------
+        U0 : array
+            Initial state represented as unitary matrix.
+        gate : c3po.Gate
+            Instance of the Gate class, containing control signal generation.
+        params : array
+            Set of control parameters
+
+        Returns
+        -------
+        array
+            The final unitary and its gradients.
+
         """
         if isinstance(params, str):
             params = gate.parameters[params]
@@ -256,8 +295,8 @@ class Simulation(Backend):
             ret[ii-1] = -1 * np.real(
                 g.conj() / abs(g) / dim * np.trace(
                     np.matmul(U_goal.T, duf)
-                )
-            ) * gate.bounds['scale'][ii - 1]
+                ) * gate.bounds['offset'][ii-1]
+            )
 
         return ret
 
@@ -267,6 +306,20 @@ class Simulation(Backend):
             start_name='initial',
             ol_name='open_loop'
         ):
+        """Use GOAT to optimize parameters of a given gate.
+
+        Parameters
+        ----------
+        U0 : array
+            Initial state represented as unitary matrix.
+        gate : c3po.Gate
+            Instance of the Gate class, containing control signal generation.
+        start_name : str
+            Name of the set of parameters to start the optimization from.
+        ol_name : str
+            Name of the set of parameters obtained by optimization.
+
+        """
         x0 = gate.to_scale_one(start_name)
         res = minimize(
                 lambda x: self.gate_err(

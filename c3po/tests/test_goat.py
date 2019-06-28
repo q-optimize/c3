@@ -93,8 +93,8 @@ handmade_pulse = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            'amp': 15e6*2*pi,
-                            't_up': 5e-9,
+                            'amp': 22e6*2*pi,
+                            't_up': 15e-9,
                             't_down': 45e-9,
                             'xy_angle': 0,
                             'freq_offset': 0e6*2*pi
@@ -124,8 +124,10 @@ pulse_bounds = {
                 'pulses': {
                     'pulse': {
                         'params': {
+    #                        't_up': [2e-9, 98e-9],
+                            't_down': [2e-9, 98e-9],
                             'amp': [10e6*2*pi, 50e6*2*pi],
-                            'freq_offset': [-1e9*2*pi, 1e9*2*pi]
+    #                        'freq_offset': [-250e6*2*pi, 250e6*2*pi]
                             }
                         }
                     }

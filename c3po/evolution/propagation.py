@@ -14,8 +14,9 @@ from qutip import Qobj
 from qutip import sesolve
 
 from c3po.utils import tf_utils
-import c3po.control.goat as goat
+from multiprocessing import Pool
 
+import c3po.control.goat as goat
 import tensorflow as tf
 import numpy as np
 import scipy as sp
@@ -105,10 +106,10 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
         for all times in tlist or just the initial and final time (depending
         on history setting)
     """
+    dt = tlist[1]
     tmp = tf_sess.run(hlist[0])
     H = [tmp]
     print('Evaluating Hamiltonians ...')
-
     clist = []
     for h in hlist:
         if isinstance(h, list):
@@ -120,7 +121,10 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
             hdt = copy.deepcopy(H[0])
             for j in range(1, len(H)):
                 hdt += clist[j - 1][i] * H[j]
-            H_eval_t.append(hdt)
+            H_eval_t.append(-1j * dt *
+                            sp.sparse.csc_matrix(hdt)
+                            )
+        print('Propagating ...')
     else: # Do gradients
         n_params = int(hlist[1][1][1].shape[1]) # NICO: I know ...
         u0 = goat.get_initial_state(u0, n_params)
@@ -137,7 +141,11 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
                     gdt += clist[j - 1][1][ti][k] * H[j]
 
                 dh_dp.append(gdt)
-            H_eval_t.append(goat.get_step_matrix(hdt, dh_dp))
+            H_eval_t.append(-1j * dt *
+                            sp.sparse.csc_matrix(
+                                goat.get_step_matrix(hdt, dh_dp)
+                                )
+                            )
 
         print("""
             #########################
@@ -152,24 +160,26 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
             #########################
             """)
 
-    dt = tlist[1]
+    agents = 4
+    chunksize = 1
+
+    with Pool(processes=agents) as pool:
+        dUs = pool.map(
+                sp.sparse.linalg.expm,
+                H_eval_t,
+                chunksize
+                )
+
     if history:
         print('Recording history...')
         U = [u0]
-        # creation of tmp necessary to access member function 'evaluate'
-        # stupid practice?
-        for i in range(0, len(tlist)):
-            dU = sp.linalg.expm(-1j * dt * H_eval_t[i])
-            U.append(np.matmul(dU, U[-1]))
+        for du in dUs:
+            U.append(np.matmul(du.toarray(), U[-1]))
 
     else:
         U = [u0]
-        # creation of tmp necessary to access member function 'evaluate'
-        # stupid practice?
-
-        for i in range(0, len(tlist)):
-            dU = sp.linalg.expm(-1j * dt * H_eval_t[i])
-            U[0] = np.matmul(dU, U[0])
+        for du in dUs:
+            U[0] = np.matmul(du.toarray(), U[0])
 
     return U
 
