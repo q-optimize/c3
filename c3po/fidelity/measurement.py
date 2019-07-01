@@ -294,8 +294,8 @@ class Simulation(Backend):
             duf = goat.select_derivative(U, n_params, ii)
             ret[ii-1] = -1 * np.real(
                 g.conj() / abs(g) / dim * np.trace(
-                    np.matmul(U_goal.T, duf)
-                ) * gate.bounds['offset'][ii-1]
+                    np.matmul(U_goal.T, duf) * gate.bounds['scale'][ii-1]
+                )
             )
 
         return ret
