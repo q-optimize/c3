@@ -14,14 +14,14 @@ from qutip import Qobj
 from qutip import sesolve
 
 from c3po.utils import tf_utils
-from multiprocessing import Pool
+
 
 import c3po.control.goat as goat
 import tensorflow as tf
 import numpy as np
 import scipy as sp
 import copy
-
+import multiprocessing
 
 def conv_func(tf_sess, func):
     return func
@@ -109,7 +109,6 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
     dt = tlist[1]
     tmp = tf_sess.run(hlist[0])
     H = [tmp]
-    print('Evaluating Hamiltonians ...')
     clist = []
     for h in hlist:
         if isinstance(h, list):
@@ -124,7 +123,6 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
             H_eval_t.append(-1j * dt *
                             sp.sparse.csc_matrix(hdt)
                             )
-        print('Propagating ...')
     else: # Do gradients
         n_params = int(hlist[1][1][1].shape[1]) # NICO: I know ...
         u0 = goat.get_initial_state(u0, n_params)
@@ -147,23 +145,10 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
                                 )
                             )
 
-        print("""
-            #########################
-            # Propagating with GOAT #
-            #########################
-            #    (_(                #
-            #    /_/'_____/)        #
-            #   \"  |      |         #
-            #      |\"\"\"\"\"\"|         #
-            #########################
-            #  Please stand by  ... #
-            #########################
-            """)
-
-    agents = 4
+    agents = multiprocessing.cpu_count()
     chunksize = 1
 
-    with Pool(processes=agents) as pool:
+    with multiprocessing.Pool(processes=agents) as pool:
         dUs = pool.map(
                 sp.sparse.linalg.expm,
                 H_eval_t,
@@ -171,7 +156,6 @@ def sesolve_pwc(hlist, u0, tlist, tf_sess, grad = False, history = False):
                 )
 
     if history:
-        print('Recording history...')
         U = [u0]
         for du in dUs:
             U.append(np.matmul(du.toarray(), U[-1]))

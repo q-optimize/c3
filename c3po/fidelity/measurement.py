@@ -7,6 +7,8 @@ import c3po.control.goat as goat
 import tensorflow as tf
 from tensorflow.python.ops.parallel_for.gradients import jacobian
 from scipy.optimize import minimize as minimize
+from progressbar import ProgressBar, ETA, Percentage, FileTransferSpeed, Bar
+
 
 # TODO this file (measurement.py) should go in the main folder
 
@@ -299,6 +301,30 @@ class Simulation(Backend):
             )
 
         return ret
+
+    def sweep_bounds(self, U0, gate, n_points=101):
+        spectrum = []
+        range = np.linspace(0, gate.bounds['scale'], n_points)
+        range += gate.bounds['offset']
+        params = gate.parameters['initial']
+        widgets = [
+            'Sweep: ',
+           Percentage(),
+           ' ',
+           Bar(marker='=', left='[',right=']'),
+           ' ',
+           ETA()
+           ]
+        pbar = ProgressBar(widgets=widgets, maxval=n_points)
+        pbar.start()
+        i=0
+        for val in pbar(range):
+            params[gate.opt_idxes] = val
+            spectrum.append(1-self.gate_err(U0, gate, params))
+            pbar.update(i)
+            i+=1
+        pbar.finish()
+        return spectrum, range
 
     def optimize_gate(self,
             U0,

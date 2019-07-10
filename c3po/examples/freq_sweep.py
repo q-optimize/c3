@@ -123,22 +123,19 @@ pulse_bounds = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            't_up': [2e-9, 98e-9],
-                            't_down': [2e-9, 98e-9],
-                            'amp': [10e6*2*pi, 50e6*2*pi],
-                            'xy_angle': [-pi, pi],
-                            'freq_offset': [-250e6*2*pi, 250e6*2*pi]
+                            'freq_offset': [-500e6*2*pi, 500e6*2*pi]
                             }
                         }
                     }
                 }
             }
         }
-
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 
-
 rechenknecht = sim(initial_model, sesolve_pwc, sess)
 
-out2 = rechenknecht.optimize_gate(U0, X_gate, 'initial')
+spectrum, range = rechenknecht.sweep_bounds(U0, X_gate, n_points=1001)
+
+plt.plot(range/2/np.pi, spectrum)
+plt.show()
