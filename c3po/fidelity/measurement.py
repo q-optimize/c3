@@ -192,13 +192,22 @@ class Simulation(Backend):
     def update_model(self, model):
         self.model = model
 
-    def propagation(self, U0, gate, params, history=False):
+    def propagation(self, U0, gate, params):
         if isinstance(params, str):
             params = gate.parameters[params]
         cflds, ts = gate.get_control_fields(params, self.resolution)
-        hlist = self.model.get_tf_Hamiltonian(cflds)
-        ts = self.tf_session.run(ts)
-        return self.solver(hlist, U0, ts, self.tf_session, False, history)
+        h0 = self.model.tf_H0
+        hks = self.model.tf_Hcs
+        dt = tf.cast(ts[1],tf.complex128)
+        def dU_of_t(cflds_t):
+            h = h0
+            for ii in range(len(hks)):
+                    h += cflds_t[ii]*hks[ii]
+            return tf.linalg.expm(-1j*h*dt)
+        cf = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
+        dUs = tf.map_fn(dU_of_t,cf)
+
+        return tf.reduce_prod(dUs, axis=0)
 
     def propagation_grad(self, U0, gate, params, history=False):
         if isinstance(params, str):

@@ -62,10 +62,11 @@ class Model:
         sigmaz = qt.tensor(qt.sigmaz(), qt.qeye(dim_r))
         sigmax = qt.tensor(qt.sigmax(), qt.qeye(dim_r))
 
-        self.H0 = hbar * omega_q / 2 * sigmaz + hbar * omega_r * a.dag() * a \
+        H0 = hbar * omega_q / 2 * sigmaz + hbar * omega_r * a.dag() * a \
             + hbar * g * (a.dag() + a) * sigmax
+        self.H0 = H0.full()
         H1 = hbar * sigmax
-        self.Hcs.append(H1)
+        self.Hcs.append(H1.full())
 
         if tf_flag == "True":
             print("initialize tensorflow parts of model")

@@ -11,13 +11,33 @@ import c3po
 
 from c3po.main.model import Model as mdl
 from c3po.main.gate import Gate as gt
-from c3po.fidelity.measurement import Simulation as sim
 
 from c3po.utils.tf_utils import *
 from c3po.evolution.propagation import *
 
 
 import time
+
+
+
+
+def plot_dynamics(u_list, ts, states):
+    pop = []
+    for si in states:
+        for ti in range(len(ts)):
+            pop.append(abs(u_list[ti][si][0] ** 2))
+#        plt.plot(ts, pop)
+    return pop
+
+
+def plot_dynamics_sesolve(u_list, ts):
+    pop = []
+    for ti in range(len(ts)):
+        pop.append(abs(u_list.states[ti].full().T[0] ** 2))
+#    plt.plot(ts, pop)
+    return pop
+
+
 
 tf_log_level_info()
 
@@ -115,6 +135,75 @@ pulse_bounds = {
 X_gate.set_parameters('initial', handmade_pulse)
 X_gate.set_bounds(pulse_bounds)
 
-rechenknecht = sim(initial_model, sesolve_pwc, sess)
 
-U_final = rechenknecht.propagation(U0, X_gate, 'initial')
+#######
+# actually not needed just to be able to show the hamilton before propagation
+
+# control_func = [X_gate.get_control_fields('initial')]
+# H = initial_model.get_Hamiltonian(control_func)
+# print(H)
+
+######
+
+
+cflds, ts = X_gate.get_control_fields('initial')
+
+hlist = initial_model.get_tf_Hamiltonian(cflds)
+
+
+tf_u = tf.constant(U0, dtype=tf.complex128, name="u0")
+
+# print(U0)
+
+start_time = time.time()
+
+out = sesolve_pwc_tf(hlist, U0, ts, sess, history = True)
+
+half_time = time.time()
+
+out2 = sesolve_pwc(hlist, U0, ts, sess, history=True)
+
+end_time = time.time()
+
+print("time with tensorflow: " + str(half_time - start_time))
+
+print("time without tensorflow: " + str(end_time - half_time))
+
+
+u_list = []
+for i in range(0, len(out)):
+    tmp = Qobj(out[i])
+    u_list.append(tmp)
+
+u_list2 = []
+for i in range(0, len(out2)):
+    tmp = Qobj(out2[i])
+    u_list2.append(tmp)
+
+
+pop1 = plot_dynamics(u_list, ts,[0])
+
+# plt.plot(ts, pop1)
+# plt.title("pwc_tf_1e4")
+# plt.show()
+
+pop2 = plot_dynamics(u_list2, ts, [0])
+
+# plt.plot(ts, pop2)
+# plt.title("pwc_tf_1e4")
+# plt.show()
+
+
+
+fig = plt.figure(1)
+sp1 = plt.subplot(211)
+name_str = "pwc_tf_%.2g" % n
+sp1.title.set_text(name_str)
+plt.plot(ts, pop1)
+
+sp2 = plt.subplot(212)
+name_str = "pwc_no_tf_%.2g" % n
+sp2.title.set_text(name_str)
+plt.plot(ts, pop2)
+
+plt.show()
