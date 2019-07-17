@@ -48,12 +48,18 @@ Examples for the usage of the c<sup>3</sup>po package can be found in:
 
 
 ### c<sup>3</sup>po for Calibration
-An introduction to calibration using c<sup>3</sup>po can be seen in the jupyter notebook:
+An introduction to calibration using c<sup>3</sup>po to send a list of
+ parameters to an existing experimental framework (Pycqed, Labber) can be seen
+  in the jupyter notebook:
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration.ipynb](./c3po/examples/Single_gate_calibration.ipynb)
+
+An example for a more low level implementation with the generation of AWG
+ signals and communication to a experimental setup is found in:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration_labview_setup.ipynb](./c3po/examples/Single_gate_calibration_labview_setup.ipynb)
 
-
-There, an exemplary code can be seen for calibrating a X-gate in an experimental
+There, an exemplary code can be seen for calibrating a single qubit X-gate in an experimental
 setup using LabVIEW. It is shown how to specifying a pulse and later on how to
 theoretically use LabVIEW to communicate with the experiment.
 
@@ -61,10 +67,5 @@ theoretically use LabVIEW to communicate with the experiment.
 ## Dependencies
 - [QuTip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
-
-<a name="misc"><a/>
-## Misc
-### Specifying Hamiltonians for the calibration simulation
-- [Hamiltonian notation](http://qutip.org/docs/latest/guide/dynamics/dynamics-time.html)
 
 ![C3PO Logo](./C3PO_small.jpg)
