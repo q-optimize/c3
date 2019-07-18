@@ -285,7 +285,7 @@ class Gate:
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
             self.T_final,
-            int(self.T_final*res)
+            int(self.T_final*res)+1
             )
         dt = ts[1]
         for ctrl in idxes:
@@ -308,11 +308,11 @@ class Gate:
                     xy_angle = name[p_idx['xy_angle']]
                     freq_offset = name[p_idx['freq_offset']]
                     I_components.append(
-                            amp * envelope(ts, p_idx, name)
+                            amp * envelope(ts+dt/2, p_idx, name)
                             * tf.cos(xy_angle+freq_offset*(ts+dt/2))
                             )
                     Q_components.append(
-                            amp * envelope(ts, p_idx, name)
+                            amp * envelope(ts+dt/2, p_idx, name)
                             * tf.sin(xy_angle+freq_offset*(ts+dt/2))
                             )
                 norm = tf.sqrt(amp_tot_sq)

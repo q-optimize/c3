@@ -72,9 +72,9 @@ handmade_pulse = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            'amp': 15e6*2*pi,
+                            'amp': 25e6*2*pi,
                             't_up': 5e-9,
-                            't_down': 45e-9,
+                            't_down': 25e-9,
                             'xy_angle': 0,
                             'freq_offset': 0e6*2*pi
                             },
@@ -96,7 +96,7 @@ U0 = tensor(
     basis(5,0)
 ).full()
 
-X_gate = gt('qubit_1', U_goal)
+X_gate = gt('qubit_1', U_goal, T_final=30e-9)
 pulse_bounds = {
         'control1': {
             'carrier1': {
@@ -117,4 +117,24 @@ X_gate.set_bounds(pulse_bounds)
 
 rechenknecht = sim(initial_model, sesolve_pwc, sess)
 
-U_final = rechenknecht.propagation(U0, X_gate, 'initial')
+res = 50e9
+
+rechenknecht.resolution=res
+
+uf_tf, ts = rechenknecht.propagation(U0, X_gate, 'initial', do_hist=True)
+
+history = sess.run(uf_tf)
+ts = sess.run(ts)
+
+def population(u_list, ts, states):
+    pop = []
+    for si in states:
+        for ti in range(len(ts)):
+            pop.append(abs(u_list[ti][si][0] ** 2))
+    return pop
+
+pop = population(history, ts, [0])
+plt.figure()
+plt.plot(ts, pop)
+plt.title(str(len(ts)))
+plt.show(block=False)

@@ -192,9 +192,10 @@ class Simulation(Backend):
     def update_model(self, model):
         self.model = model
 
-    def propagation(self, U0, gate, params):
+    def propagation(self, U0, gate, params, do_hist=False):
         if isinstance(params, str):
             params = gate.parameters[params]
+        params = tf.constant(params, name='Control_parameters')
         cflds, ts = gate.get_control_fields(params, self.resolution)
         h0 = self.model.tf_H0
         hks = self.model.tf_Hcs
@@ -205,40 +206,28 @@ class Simulation(Backend):
                     h += cflds_t[ii]*hks[ii]
             return tf.linalg.expm(-1j*h*dt)
         cf = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
+
+        def matmul_n(tensor_list):
+            l = int(tensor_list.shape[0])
+            if (l==1):
+                return tensor_list[0]
+            else:
+                even_half = tf.gather(tensor_list, list(range(0,l,2)))
+                odd_half = tf.gather(tensor_list, list(range(1,l,2)))
+                return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
         dUs = tf.map_fn(dU_of_t,cf)
+        if do_hist:
+            u_t = tf.gather(dUs,0)
+            history = [u_t]
+            for ii in range(dUs.shape[0]-1):
+                du = tf.gather(dUs, ii+1)
+                u_t = tf.matmul(du,u_t)
+                history.append(u_t)
+            return history, ts
+        else:
+            return matmul_n(dUs), params
 
-        return tf.reduce_prod(dUs, axis=0)
-
-    def propagation_grad(self, U0, gate, params, history=False):
-        if isinstance(params, str):
-            params = gate.parameters[params]
-        params = tf.constant(params)
-        cflds, ts = gate.get_control_fields(params, self.resolution)
-        cgrads = []
-        for fld in cflds:
-            jac = jacobian(fld, params)
-            jac = tf.transpose(
-                tf.gather(
-                    tf.transpose(jac),
-                    gate.opt_idxes
-                    )
-                )
-            cgrads.append(jac)
-
-        hlist = self.model.get_tf_Hamiltonian(
-            list(zip(cflds, cgrads))
-            )
-        ts = self.tf_session.run(ts)
-        return self.solver(
-            hlist,
-            U0,
-            ts,
-            self.tf_session,
-            grad=True,
-            history=history
-            )
-
-    def gate_err(self, U0, gate, params):
+    def gate_err(self, U0, gate, params, sess=None, do_grad=False):
         """
         Compute the goal function that compares the intended final state with
         actually achieved one.
@@ -263,53 +252,23 @@ class Simulation(Backend):
             The final unitary.
 
         """
-        U = self.propagation(U0, gate, params)[0]
+        U, p = self.propagation(U0, gate, params)
         U_goal = gate.goal_unitary
-        g = 1-abs(np.trace(np.matmul(U_goal.T, U)) / U_goal.shape[1])
-        # TODO shouldn't this be squared
-        return g
+        g = 1-tf.abs(tf.linalg.trace(tf.matmul(U_goal.T, U)) / U_goal.shape[1])
+        if do_grad:
+            return g, p
+        elif sess is not None:
+            return sess.run(g)
+        else:
+            return g
 
-    def dgate_err(self, U0, gate, params):
-        """
-        Compute the gradient of the fidelity w.r.t. each parameter of the
-        gate. Formally obtained by the derivative of the gate fidelity. See
-        GOAT paper for details.
-
-        Parameters
-        ----------
-        U0 : array
-            Initial state represented as unitary matrix.
-        gate : c3po.Gate
-            Instance of the Gate class, containing control signal generation.
-        params : array
-            Set of control parameters
-
-        Returns
-        -------
-        array
-            The final unitary and its gradients.
-
-        """
-        if isinstance(params, str):
-            params = gate.parameters[params]
-        U = self.propagation_grad(U0, gate, params)[0]
-        n_params = len(gate.opt_idxes)
-        U_goal = gate.goal_unitary
-        dim = U_goal.shape[1]
-        uf = goat.select_derivative(U, n_params, 0)
-        g = np.trace(
-                np.matmul(U_goal.T, uf)
-            ) / dim
-        ret = np.zeros(n_params)
-        for ii in range(1, n_params):
-            duf = goat.select_derivative(U, n_params, ii)
-            ret[ii-1] = -1 * np.real(
-                g.conj() / abs(g) / dim * np.trace(
-                    np.matmul(U_goal.T, duf) * gate.bounds['scale'][ii-1]
-                )
-            )
-
-        return ret
+    def dgate_err(self, U0, gate, params, sess=None):
+        g, params = self.gate_err(U0, gate, params, sess=sess, do_grad=True)
+        grad = tf.gradients(g, params)
+        if sess is not None:
+            return sess.run(grad)[0] * gate.bounds['scale']
+        else:
+            return grad
 
     def sweep_bounds(self, U0, gate, n_points=101):
         spectrum = []
@@ -338,6 +297,7 @@ class Simulation(Backend):
     def optimize_gate(self,
             U0,
             gate,
+            sess,
             start_name='initial',
             ol_name='open_loop'
         ):
@@ -358,16 +318,18 @@ class Simulation(Backend):
         x0 = gate.to_scale_one(start_name)
         res = minimize(
                 lambda x: self.gate_err(
-                    U0,
-                    gate,
-                    gate.to_bound_phys_scale(x)
+                        U0,
+                        gate,
+                        gate.to_bound_phys_scale(x),
+                        sess=sess
                 ),
                 x0,
                 method='L-BFGS-B',
                 jac=lambda x: self.dgate_err(
-                    U0,
-                    gate,
-                    gate.to_bound_phys_scale(x)
+                        U0,
+                        gate,
+                        gate.to_bound_phys_scale(x),
+                        sess=sess
                 ),
                 options={'disp': True}
                 )

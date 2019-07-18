@@ -1,6 +1,5 @@
 import qutip as qt
 import tensorflow as tf
-
 from c3po import utils
 
 
@@ -106,7 +105,6 @@ class Model:
 
         a = qt.tensor(qt.qeye(dim_q), qt.destroy(dim_r))
         a_dag = a.dag()
-
         tf_a = tf.constant(a.full(), dtype=tf.complex128, name="a")
         tf_a_dag = tf.constant(a_dag.full(), dtype=tf.complex128, name="a_dag")
         tf_sigmaz = tf.constant(
@@ -120,9 +118,16 @@ class Model:
             )
 
         with tf.name_scope('drift_hamiltonian'):
-            self.tf_H0 = tf.cast(tf_hbar, tf.complex128) * tf.cast((tf_omega_q / 2), tf.complex128) * tf_sigmaz \
-                        + tf.cast(tf_hbar, tf.complex128) * tf.cast(tf_omega_r, tf.complex128) * tf_a_dag * tf_a \
-                        + tf.cast((tf_hbar * tf_g), tf.complex128) * (tf_a_dag + tf_a) * tf_sigmax
+            self.tf_H0 = (
+                tf.cast(tf_hbar, tf.complex128)
+                * tf.cast((tf_omega_q / 2), tf.complex128)
+                * tf_sigmaz
+                + tf.cast(tf_hbar, tf.complex128)
+                * tf.cast(tf_omega_r, tf.complex128)
+                * tf.matmul(tf_a_dag, tf_a)
+                + tf.cast((tf_hbar * tf_g), tf.complex128)
+                * tf.matmul((tf_a_dag + tf_a), tf_sigmax)
+                )
 
         with tf.name_scope('control_hamiltonian'):
             tf_H1 = tf.cast(tf_hbar, tf.complex128) * tf_sigmax

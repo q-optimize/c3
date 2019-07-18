@@ -144,6 +144,11 @@ def tf_evaluate(tf_obj_list, t, args):
     return tf_obj_sum
 
 
-
-
-
+    def matmul_n(tensor_list):
+        l = int(tensor_list.shape[0])
+        if (l==1):
+            return tensor_list[0]
+        else:
+            even_half = tf.gather(tensor_list, list(range(0,l,2)))
+            odd_half = tf.gather(tensor_list, list(range(1,l,2)))
+            return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
