@@ -1,7 +1,7 @@
-import json
 import numpy as np
 from scipy.special import erf
-import matplotlib.pyplot as plt
+
+
 
 """Library of envelope functions"""
 
@@ -74,21 +74,4 @@ def flattop_WMI(t, T_up, T_down, ramp=20*10**(-9)):
         else:
             value[i] = 0
     return value
-
-class Pulse:
-    def __init__(
-            self,
-            env_shape=None,
-            parameters={},
-            bounds={}
-            ):
-
-        self.env_shape = env_shape
-        self.parameters = parameters
-        self.bounds = bounds
-
-
-
-
-
 
