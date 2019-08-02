@@ -346,9 +346,7 @@ class Gate:
         signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
         cflds = []
-#        ts = np.linspace(0, self.T_final, int(self.T_final*res)+1) # why +1 ??? caused error in func
-        ts = np.linspace(0, self.T_final, int(self.T_final*res))
-
+        ts = np.linspace(0, self.T_final, int(self.T_final*res)+1)
         for ctrl in sorted(self.idxes):
             sig = np.zeros_like(ts)
             for carr in sorted(self.idxes[ctrl]):

@@ -1,8 +1,6 @@
-import matplotlib.pyplot as plt
 
-
-
-class Pulse:
+# this is originally the class "Pulse"
+class Component:
     """Represents a pulse.
 
     Parameters
@@ -26,23 +24,23 @@ class Pulse:
 
     def __init__(
             self,
+            desc = None,
             shape = None,
-            parameters = {},
+            params = {},
             bounds = {}
             ):
 
-        self.__id = Pulse.__id + 1
-        Pulse.__id = self.__id
+        self.__id = Component.__id + 1
+        Component.__id = self.__id
+
+        self.desc = desc
         self.shape = shape
-        self.parameters = parameters
+        self.params = params
         self.bounds = bounds
 
     def get_id(self):
         return self.__id
 
 
-    def get_shape_values(self, tlist):
-        return shape(tlist, self.parameters)
-
-
-
+    def get_shape_values(self, ts):
+        return self.shape(ts, self.params)
