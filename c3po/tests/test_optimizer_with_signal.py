@@ -2,8 +2,13 @@ from c3po.signals.envelopes import *
 from c3po.signals.component import Component as Comp
 from c3po.signals.signal import IQ as IQ
 
+from c3po.optimizer.optimizer import Optimizer as Optimizer
 
 import matplotlib.pyplot as plt
+
+
+
+
 
 flattop_params1 = {
     'amp' : 15e6 * 2 * np.pi,
@@ -27,6 +32,9 @@ params_bounds = {
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
+
+
+
 p1 = Comp(desc = "pulse1", shape = flattop, params = flattop_params1, bounds = params_bounds)
 print("p1 id: " + str(p1.get_id()))
 
@@ -47,7 +55,11 @@ carrier_parameters = {
     'freq' : 6e9 * 2 * np.pi
 }
 
-carr = Comp(desc = "carrier", params = carrier_parameters)
+carrier_bounds = {
+    'freq' : [2e9 * 2 * np.pi, 10e9 * 2 * np.pi]
+}
+
+carr = Comp(desc = "carrier", params = carrier_parameters, bounds = carrier_bounds)
 print("carr id: " + str(carr.get_id()))
 
 
@@ -55,7 +67,6 @@ comps = []
 comps.append(carr)
 comps.append(p1)
 comps.append(p2)
-
 
 
 sig = IQ()
@@ -69,36 +80,96 @@ sig.create_ts()
 sig.comps = comps
 
 
-sig.plot_IQ_components()
+opt_map = {
+    'T_up' : [1,2],
+    'T_down' : [1,2],
+    'freq' : [3]
+}
 
-sig.plot_fft_IQ_components()
+####
+#
+# Maybe rather simplify the structure of opt_params to the below version
+#
+####
 
-sig.plot_signal()
+# opt_params = {
+    # 'T_up' : {
+        # 1 : None,
+        # 2 : None
+        # },
+    # 'T_down' : {
+        # 1 : None,
+        # 2 : None
+        # },
+    # 'freq' : {
+        # 3 : None
+    # }
+# }
 
-sig.plot_fft_signal()
 
 
+optim = Optimizer()
+
+
+# print("Signal Parameter Values")
+# print(sig.get_parameters())
+# print(" ")
+# print(" ")
+# print(" ")
+
+
+opt_params = optim.get_corresponding_signal_parameters(sig, opt_map)
+
+print(opt_params)
+print(" ")
+print(" ")
+print(" ")
+
+
+opt_params['values'] = [0, 0, 0, 0, 0]
+opt_params['bounds'] = [[0,0], [0,0], [0,0], [0,0], [0.0]]
+print(opt_params)
+print(" ")
+print(" ")
+print(" ")
+
+
+optim.set_corresponding_signal_parameters(sig, opt_params)
+
+opt_params = optim.get_corresponding_signal_parameters(sig, opt_map)
+
+print(opt_params)
+print(" ")
+print(" ")
+print(" ")
+
+
+
+print("Signal Parameter Values")
 print(sig.get_parameters())
-print(" ")
-print(" ")
-print(" ")
-
-print(sig.get_history())
-print(" ")
-print(" ")
-print(" ")
 
 
-sig.save_params_to_history("initial")
+opt_settings = {
 
-print(sig.get_history())
-print(" ")
-print(" ")
-print(" ")
+}
+
+def evaluate_signal(signal, samples_rescaled):
+    print(" ")
 
 
-sig.save_params_to_history("test2")
+# optim.optimize_signal(
+    # signal= sig,
+    # opt_params = opt_params,
+    # opt = 'cmaes',
+    # settings = opt_settings,
+    # calib_name = 'test',
+    # eval_func = evaluate_signal
+    # )
 
-print(sig.get_history())
+
+
+
+
+
 
 

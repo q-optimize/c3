@@ -17,8 +17,12 @@ class Component:
     """
 
 
-    # define an internal id for the created instance of the pulse object
-    # as private attributes are not per se available in python use 'hack'
+    # define an internal id for the created instance of the component object
+    # as private attributes are not a thing in python use this 'hack' by 
+    # naming the variable with two underscores. this will prompt the compiler
+    # to internally rename the variable (so it's not accessible anymore under
+    # the original name). this is the most dumb thing I have ever seen but 
+    # apparently it's the 'pythonian way'. #internalscreaming
     # see: https://stackoverflow.com/questions/1641219/does-python-have-private-variables-in-classes
     __id = 0
 

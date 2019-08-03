@@ -2,8 +2,6 @@ from c3po.signals.envelopes import *
 from c3po.signals.component import Component as Comp
 from c3po.signals.signal import Signal as Signal
 
-from c3po.optimizer.optimizer import Optimizer as Optimizer
-
 import matplotlib.pyplot as plt
 
 flattop_params1 = {
@@ -48,11 +46,7 @@ carrier_parameters = {
     'freq' : 6e9 * 2 * np.pi
 }
 
-carrier_bounds = {
-    'freq' : [2e9 * 2 * np.pi, 10e9 * 2 * np.pi]
-}
-
-carr = Comp(desc = "carrier", params = carrier_parameters, bounds = carrier_bounds)
+carr = Comp(desc = "carrier", params = carrier_parameters)
 print("carr id: " + str(carr.get_id()))
 
 
@@ -90,8 +84,7 @@ class IQ(Signal):
                 carrier = comp
 
 
-        carrier_params = comp.params
-        omega_d = carrier_parameters['freq']
+        omega_d = carrier.params['freq']
 
         amp_tot_sq = 0
         components = []
@@ -197,88 +190,36 @@ sig.create_ts()
 sig.comps = comps
 
 
-opt_params = {
-    'T_up' : [1,2],
-    'T_down' : [1,2],
-    'freq' : [3]
-}
+sig.plot_IQ_components()
 
-####
-#
-# Maybe rather simplify the structure of opt_params to the below version
-#
-####
+sig.plot_fft_IQ_components()
 
-# opt_params = {
-    # 'T_up' : {
-        # 1 : None,
-        # 2 : None
-        # },
-    # 'T_down' : {
-        # 1 : None,
-        # 2 : None
-        # },
-    # 'freq' : {
-        # 3 : None
-    # }
-# }
+sig.plot_signal()
+
+sig.plot_fft_signal()
 
 
+print(sig.get_parameters())
+print(" ")
+print(" ")
+print(" ")
 
-optim = Optimizer()
-
-
-# print("Signal Parameter Values")
-# print(sig.get_parameters())
-# print(" ")
-# print(" ")
-# print(" ")
-
-
-# optim.get_corresponding_signal_parameters(sig, opt_params)
-
-# print(opt_params)
-# print(" ")
-# print(" ")
-# print(" ")
-
-# opt_params['values'] = [0, 0, 0, 0, 0]
-# opt_params['bounds'] = [[0,0], [0,0], [0,0], [0,0], [0.0]]
-# print(opt_params)
-# print(" ")
-# print(" ")
-# print(" ")
+print(sig.get_history())
+print(" ")
+print(" ")
+print(" ")
 
 
-# optim.set_corresponding_signal_parameters(sig, opt_params)
+sig.save_params_to_history("initial")
 
-# optim.get_corresponding_signal_parameters(sig, opt_params)
-
-# print(opt_params)
-# print(" ")
-# print(" ")
-# print(" ")
+print(sig.get_history())
+print(" ")
+print(" ")
+print(" ")
 
 
+sig.save_params_to_history("test2")
 
-# print("Signal Parameter Values")
-# print(sig.get_parameters())
-
-
-opt_settings = {
-
-}
-
-optim.optimize_signal(
-    signal= sig,
-    opt_params = opt_params,
-    opt = 'cmaes',
-    settings = opt_settings)
-
-
-
-
-
-
+print(sig.get_history())
 
 

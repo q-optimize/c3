@@ -11,30 +11,75 @@ class Optimizer:
     #
     #####
 
-    def get_corresponding_signal_parameters(self, signal, opt_params):
+    def get_corresponding_signal_parameters(self, signal, opt_map):
+        """
+        Takes a dictionary of paramaters that are supposed to be optimized
+        and returns the corresponding values and bounds. Writes them together
+        with a tuple (key, id) to a dict and returns them
+
+        Parameters
+        ----------
+
+        opt_map : dict
+            Dictionary of parameters that are supposed to be optimized, and
+            corresponding component identifier used to map
+            opt_params = {
+                    'T_up' : [1,2],
+                    'T_down' : [1,2],
+                    'freq' : [3]
+                }
+
+
+        Returns
+        -------
+
+        opt_params : dict
+            Dictionary with values, bounds lists, plus a list with pairs of
+            shape (key, id) at the corresponding pos in the list as the
+            values and bounds to be able to identify the origin of the values,
+            bounds in the other lists.
+
+            Example:
+
+            opt_params = {
+                'values': [0,           0,           0,             0,             0],
+                'bounds': [[0, 0],      [0, 0],      [0, 0],        [0, 0],        [0.0]],
+                'origin': [('T_up', 1), ('T_up', 2), ('T_down', 1), ('T_down', 2), ('freq', 3)]
+                }
+
+        """
+        opt_params = {}
         opt_params['values'] = []
         opt_params['bounds'] = []
-        opt_params['resolv'] = []
+        opt_params['origin'] = [] # array that holds tuple of (key, id) to be 
+                                  # identify each entry in the above lists
+                                  # with it's corresponding entry
 
-        for key in opt_params:
-            for comp_id in opt_params[key]:
-                for comp in signal.comps:
-                    if comp_id == comp.get_id():
-                        opt_params['values'].append(comp.params[key])
-                        opt_params['bounds'].append(comp.bounds[key])
-                        opt_params['resolv'].append((key, comp_id))
+        for key in opt_map:
+            for comp_id in opt_map[key]:
+                val = signal.get_parameter_value(key, comp_id)
+                bounds = signal.get_parameter_bounds(key, comp_id)
+
+                opt_params['values'].append(val)
+                opt_params['bounds'].append(bounds)
+                opt_params['origin'].append((key, comp_id))
+
+        return opt_params
 
 
     def set_corresponding_signal_parameters(self, signal, opt_params):
+        """
+            sets the values in opt_params in the original signal class
+        """
+        for i in range(len(opt_params['origin'])):
+            key = opt_params['origin'][i][0]
+            comp_id = opt_params['origin'][i][1]
 
-        for i in range(len(opt_params['resolv']) - 1):
-            key = opt_params['resolv'][i][0]
-            comp_id = opt_params['resolv'][i][1]
+            val = opt_params['values'][i]
+            bounds = opt_params['bounds'][i]
 
-            for comp in signal.comps:
-                if comp_id == comp.get_id():
-                    comp.params[key] = opt_params['values'][i]
-                    comp.bounds[key] = opt_params['bounds'][i]
+            signal.set_parameter_value(key, comp_id, val)
+            signal.set_parameter_bounds(key, comp_id, bounds)
 
 
     def to_scale_one(self, values, bounds):
@@ -84,7 +129,7 @@ class Optimizer:
 
         values = []
 
-        for i in range(len(one)):
+        for i in range(len(x0)):
             scale = np.abs(bounds[i][0] - bounds[i][1])
             offset = bounds[i][0]
 
@@ -95,13 +140,15 @@ class Optimizer:
         return values
 
 
-    def cmaes_opt(self, signal, x0, bounds, settings, eval_func):
+    def cmaes(self, values, bounds, settings, eval_func, signal = None):
 
         ####
         #
-        # YET TO BE TESTED
+        # NOT YET TESTED
         #
         ####
+
+        x0 = self.to_scale_one(values, bounds)
 
         if settings:
             if 'CMA_stds' in settings.keys():
@@ -122,8 +169,8 @@ class Optimizer:
             es.tell(
                     samples,
                     eval_func(
-                        signal,
                         samples_rescaled,
+                        signal
                         )
                     )
             es.logger.add()
@@ -132,16 +179,18 @@ class Optimizer:
         res = es.result + (es.stop(), es, es.logger)
         x_opt = res[0]
 
-        return x_opt
+        values_opt = self.to_bound_phys_scale(x_opt, bounds)
+
+        return values_opt
 
 
 
 
-    def optimize_signal(self, signal, opt_params, opt, settings, calib_name, eval_func):
+    def optimize_signal(self, signal, opt_map, opt, settings, calib_name, eval_func):
 
         ####
         #
-        # YET TO BE TESTED
+        # NOT YET TESTED
         #
         ####
 
@@ -152,7 +201,7 @@ class Optimizer:
         signal : class Signal
             Signal Class carrying all relevant information
 
-        opt_params : dict
+        opt_map : dict
             Dictionary of parameters that are supposed to be optimized, and
             corresponding component identifier used to map
             opt_params = {
@@ -168,18 +217,15 @@ class Optimizer:
             Special settings for the desired optimizer
         """
 
-        self.get_corresponding_signal_parameters(signal, opt_params)
+        opt_params = self.get_corresponding_signal_parameters(signal, opt_map)
 
         values = opt_params['values']
         bounds = opt_params['bounds']
 
 
-        x0 = self.to_scale_one(values, bounds)
-
         if opt == 'cmaes':
-            x_opt = self.cmaes_opt(x0, bounds, settings, eval_func)
+            values_opt = self.cmaes(values, bounds, settings, eval_func, signal)
 
-        values_opt = self.to_bound_phys_scale(x_opt, bounds)
 
         opt_params['values'] = values_opt
 
