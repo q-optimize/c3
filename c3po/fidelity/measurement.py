@@ -193,29 +193,27 @@ class Simulation(Backend):
         self.model = model
 
     def propagation(self, U0, gate, params, do_hist=False):
-        if isinstance(params, str):
-            params = gate.parameters[params]
-        params = tf.constant(params, name='Control_parameters')
         cflds, ts = gate.get_control_fields(params, self.resolution)
         h0 = self.model.tf_H0
         hks = self.model.tf_Hcs
-        dt = tf.cast(ts[1],tf.complex128)
+        dt = tf.cast(ts[1], tf.complex128)
         def dU_of_t(cflds_t):
             h = h0
             for ii in range(len(hks)):
                     h += cflds_t[ii]*hks[ii]
             return tf.linalg.expm(-1j*h*dt)
-        cf = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
 
-        def matmul_n(tensor_list):
-            l = int(tensor_list.shape[0])
-            if (l==1):
-                return tensor_list[0]
-            else:
-                even_half = tf.gather(tensor_list, list(range(0,l,2)))
-                odd_half = tf.gather(tensor_list, list(range(1,l,2)))
-                return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
-        dUs = tf.map_fn(dU_of_t,cf)
+        cf = tf.cast(
+            tf.transpose(tf.stack(cflds)),
+            tf.complex128,
+            name='Control_fields'
+            )
+
+        dUs = tf.map_fn(
+            dU_of_t,cf,
+            name='dU_of_t'
+            )
+
         if do_hist:
             u_t = tf.gather(dUs,0)
             history = [u_t]
@@ -225,9 +223,12 @@ class Simulation(Backend):
                 history.append(u_t)
             return history, ts
         else:
-            return matmul_n(dUs), params
+            U = tf.gather(dUs, 0)
+            for ii in range(1, dUs.shape[0]):
+                tf.matmul(tf.gather(dUs, ii), U)
+            return U
 
-    def gate_err(self, U0, gate, params, sess=None, do_grad=False):
+    def gate_err(self, U0, gate, params):
         """
         Compute the goal function that compares the intended final state with
         actually achieved one.
@@ -252,23 +253,11 @@ class Simulation(Backend):
             The final unitary.
 
         """
-        U, p = self.propagation(U0, gate, params)
+        U = self.propagation(U0, gate, params)
         U_goal = gate.goal_unitary
-        g = 1-tf.abs(tf.linalg.trace(tf.matmul(U_goal.T, U)) / U_goal.shape[1])
-        if do_grad:
-            return g, p
-        elif sess is not None:
-            return sess.run(g)
-        else:
-            return g
-
-    def dgate_err(self, U0, gate, params, sess=None):
-        g, params = self.gate_err(U0, gate, params, sess=sess, do_grad=True)
-        grad = tf.gradients(g, params)
-        if sess is not None:
-            return sess.run(grad)[0] * gate.bounds['scale']
-        else:
-            return grad
+        return 1-tf.abs(
+            tf.linalg.trace(tf.matmul(U_goal.T, U)) / U_goal.shape[1]
+            )
 
     def sweep_bounds(self, U0, gate, n_points=101):
         spectrum = []
@@ -316,21 +305,27 @@ class Simulation(Backend):
 
         """
         x0 = gate.to_scale_one(start_name)
+        params = tf.placeholder(
+            tf.float64,
+            shape=gate.parameters['initial'].shape
+            )
+        g = self.gate_err(U0, gate, params)
+        jac = tf.gradients(g, params)
         res = minimize(
-                lambda x: self.gate_err(
-                        U0,
-                        gate,
-                        gate.to_bound_phys_scale(x),
-                        sess=sess
-                ),
+                lambda x: sess.run(g,
+                                   feed_dict={
+                                       params: x
+                                       }
+                                   )
+                ,
                 x0,
                 method='L-BFGS-B',
-                jac=lambda x: self.dgate_err(
-                        U0,
-                        gate,
-                        gate.to_bound_phys_scale(x),
-                        sess=sess
-                ),
+                jac=lambda x: sess.run(jac,
+                                   feed_dict={
+                                       params: x
+                                       }
+                                   )*gate.bounds['scale']
+                ,
                 options={'disp': True}
                 )
         gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)

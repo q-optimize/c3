@@ -73,7 +73,7 @@ handmade_pulse = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            'amp': 20e6*2*pi,
+                            'amp': 40e6*2*pi,
                             't_up': 5e-9,
                             't_down': 25e-9,
                             'xy_angle': 0,
@@ -97,7 +97,7 @@ U0 = tensor(
     basis(5,0)
 ).full()
 
-X_gate = gt('qubit_1', U_goal, T_final=30e-9)
+X_gate = gt('qubit_1', U_goal, T_final=50e-9)
 pulse_bounds = {
         'control1': {
             'carrier1': {
@@ -105,8 +105,8 @@ pulse_bounds = {
                     'pulse': {
                         'params': {
                             'amp': [15e6*2*pi, 65e6*2*pi],
-                            't_up': [2e-9, 28e-9],
-                            't_down': [2e-9, 28e-9],
+                            't_up': [2e-9, 48e-9],
+                            't_down': [2e-9, 48e-9],
                             'xy_angle': [-pi, pi],
                             'freq_offset': [-20e6*2*pi, 20e6*2*pi]
                             }
@@ -125,4 +125,4 @@ res = 50e9
 rechenknecht.resolution=res
 
 #sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
-error_gradient = rechenknecht.dgate_err(U0, X_gate, 'initial', sess)
+rechenknecht.optimize_gate(U0, X_gate, sess)
