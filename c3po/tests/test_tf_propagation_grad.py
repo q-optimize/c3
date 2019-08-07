@@ -73,9 +73,9 @@ handmade_pulse = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            'amp': 20e6*2*pi,
+                            'amp': 22e6*2*pi,
                             't_up': 5e-9,
-                            't_down': 25e-9,
+                            't_down': 45e-9,
                             'xy_angle': 0,
                             'freq_offset': 0e6*2*pi
                             },
@@ -105,8 +105,8 @@ pulse_bounds = {
                     'pulse': {
                         'params': {
                             'amp': [15e6*2*pi, 65e6*2*pi],
-                            't_up': [2e-9, 28e-9],
-                            't_down': [2e-9, 28e-9],
+                            't_up': [2e-9, 48e-9],
+                            't_down': [2e-9, 48e-9],
                             'xy_angle': [-pi, pi],
                             'freq_offset': [-20e6*2*pi, 20e6*2*pi]
                             }
@@ -125,4 +125,10 @@ res = 50e9
 rechenknecht.resolution=res
 
 #sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
-error_gradient = rechenknecht.dgate_err(U0, X_gate, 'initial', sess)
+params = tf.placeholder(
+    tf.float64,
+    shape=X_gate.parameters['initial'].shape
+    )
+U_final = rechenknecht.propagation(U0, X_gate, params)
+gate_error = rechenknecht.gate_err(U0, X_gate, params)
+gate_error_grad = tf.gradients(gate_error, params)

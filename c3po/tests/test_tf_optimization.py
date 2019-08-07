@@ -73,7 +73,7 @@ handmade_pulse = {
                 'pulses': {
                     'pulse': {
                         'params': {
-                            'amp': 40e6*2*pi,
+                            'amp': 20e6*2*pi,
                             't_up': 5e-9,
                             't_down': 25e-9,
                             'xy_angle': 0,

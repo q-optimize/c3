@@ -225,7 +225,7 @@ class Simulation(Backend):
         else:
             U = tf.gather(dUs, 0)
             for ii in range(1, dUs.shape[0]):
-                tf.matmul(tf.gather(dUs, ii), U)
+                U = tf.matmul(tf.gather(dUs, ii), U)
             return U
 
     def gate_err(self, U0, gate, params):
@@ -304,7 +304,6 @@ class Simulation(Backend):
             Name of the set of parameters obtained by optimization.
 
         """
-        x0 = gate.to_scale_one(start_name)
         params = tf.placeholder(
             tf.float64,
             shape=gate.parameters['initial'].shape
@@ -314,18 +313,20 @@ class Simulation(Backend):
         res = minimize(
                 lambda x: sess.run(g,
                                    feed_dict={
-                                       params: x
+                                       params: gate.to_bound_phys_scale(x)
                                        }
                                    )
                 ,
-                x0,
+                gate.to_scale_one(start_name),
                 method='L-BFGS-B',
                 jac=lambda x: sess.run(jac,
                                    feed_dict={
-                                       params: x
+                                       params: gate.to_bound_phys_scale(x)
                                        }
                                    )*gate.bounds['scale']
                 ,
                 options={'disp': True}
                 )
         gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)
+        print('Optimal values:')
+        gate.print_pulse(ol_name)
