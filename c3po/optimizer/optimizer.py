@@ -1,17 +1,12 @@
+import copy
 import numpy as np
+
 import cma.evolution_strategy as cmaes
 
 
 class Optimizer:
 
-    #####
-    #
-    # TODO: split up this function into a pair of get and set functions
-    #       for accessing single parameter values/bounds of a Signal obj
-    #
-    #####
-
-    def get_corresponding_signal_parameters(self, signal, opt_map):
+    def get_corresponding_signal_parameters(self, signals, opt_map):
         """
         Takes a dictionary of paramaters that are supposed to be optimized
         and returns the corresponding values and bounds. Writes them together
@@ -51,35 +46,42 @@ class Optimizer:
         opt_params = {}
         opt_params['values'] = []
         opt_params['bounds'] = []
-        opt_params['origin'] = [] # array that holds tuple of (key, id) to be 
+        opt_params['origin'] = [] # array that holds tuple of (key, id) to be
                                   # identify each entry in the above lists
                                   # with it's corresponding entry
 
         for key in opt_map:
-            for comp_id in opt_map[key]:
-                val = signal.get_parameter_value(key, comp_id)
-                bounds = signal.get_parameter_bounds(key, comp_id)
+            for id_pair in opt_map[key]:
+                signal_uuid = id_pair[0]
+                for signal in signals:
+                    if signal_uuid == signal.get_uuid():
+                        comp_uuid = id_pair[1]
+                        val = signal.get_parameter_value(key, comp_uuid)
+                        bounds = signal.get_parameter_bounds(key, comp_uuid)
 
-                opt_params['values'].append(val)
-                opt_params['bounds'].append(bounds)
-                opt_params['origin'].append((key, comp_id))
-
+                        opt_params['values'].append(val)
+                        opt_params['bounds'].append(bounds)
+                        opt_params['origin'].append((key, id_pair))
         return opt_params
 
 
-    def set_corresponding_signal_parameters(self, signal, opt_params):
+    def set_corresponding_signal_parameters(self, signals, opt_params):
         """
             sets the values in opt_params in the original signal class
         """
         for i in range(len(opt_params['origin'])):
             key = opt_params['origin'][i][0]
-            comp_id = opt_params['origin'][i][1]
+            id_pair = opt_params['origin'][i][1]
 
-            val = opt_params['values'][i]
-            bounds = opt_params['bounds'][i]
+            signal_uuid = id_pair[0]
+            comp_uuid = id_pair[1]
 
-            signal.set_parameter_value(key, comp_id, val)
-            signal.set_parameter_bounds(key, comp_id, bounds)
+            for signal in signals:
+                val = opt_params['values'][i]
+                bounds = opt_params['bounds'][i]
+
+                signal.set_parameter_value(key, comp_uuid, val)
+                signal.set_parameter_bounds(key, comp_uuid, bounds)
 
 
     def to_scale_one(self, values, bounds):
@@ -140,7 +142,7 @@ class Optimizer:
         return values
 
 
-    def cmaes(self, values, bounds, settings, eval_func, signal = None):
+    def cmaes(self, opt_params, settings, eval_func, signals = None):
 
         ####
         #
@@ -148,8 +150,14 @@ class Optimizer:
         #
         ####
 
-        x0 = self.to_scale_one(values, bounds)
+        values = opt_params['values']
+        bounds = opt_params['bounds']
+        if 'origin' in opt_params.keys():
+            origin = opt_params['origin']
 
+
+
+        # TODO: rewrite from dict to list input
         if settings:
             if 'CMA_stds' in settings.keys():
                 scale_bounds = []
@@ -161,17 +169,34 @@ class Optimizer:
                 settings['CMA_stds'] = scale_bounds
 
 
+
+        x0 = self.to_scale_one(values, bounds)
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
 
         while not es.stop():
             samples = es.ask()
             samples_rescaled = [self.to_bound_phys_scale(x, bounds) for x in samples]
+
+            if signals is not None:
+                opt_params_clone = copy.deepcopy(opt_params)
+                test_signals = []
+
+                for sample in samples_rescaled:
+                    sig_clones = copy.deepcopy(signals)
+                    opt_params_clone['values'] = sample
+                    self.set_corresponding_signal_parameters(sig_clones, opt_params_clone)
+                    test_signals.append(sig_clones)
+
+
+            if signals == None:
+                eval_input = samples_rescaled
+            else:
+                eval_input = test_signals
+
+
             es.tell(
                     samples,
-                    eval_func(
-                        samples_rescaled,
-                        signal
-                        )
+                    eval_func(eval_input)
                     )
             es.logger.add()
             es.disp()
@@ -186,7 +211,7 @@ class Optimizer:
 
 
 
-    def optimize_signal(self, signal, opt_map, opt, settings, calib_name, eval_func):
+    def optimize_signal(self, signals, opt_map, opt, settings, calib_name, eval_func):
 
         ####
         #
@@ -217,25 +242,17 @@ class Optimizer:
             Special settings for the desired optimizer
         """
 
-        opt_params = self.get_corresponding_signal_parameters(signal, opt_map)
-
-        values = opt_params['values']
-        bounds = opt_params['bounds']
+        opt_params = self.get_corresponding_signal_parameters(signals, opt_map)
 
 
         if opt == 'cmaes':
-            values_opt = self.cmaes(values, bounds, settings, eval_func, signal)
+            values_opt = self.cmaes(opt_params, settings, eval_func, signals)
 
 
         opt_params['values'] = values_opt
 
-        self.set_corresponding_signal_parameters(signal, opt_params)
 
-        signal.save_params_to_history(calib_name)
+        self.set_corresponding_signal_parameters(signals, opt_params)
 
-
-
-
-
-
-
+        for signal in signals:
+            signal.save_params_to_history(calib_name)

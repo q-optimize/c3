@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 
 
 test = Comp()
-print("test id: " + str(test.get_id()))
+print("test uuid: " + str(test.get_uuid()))
 
 test2 = Comp()
-print("test2 id: " + str(test2.get_id()))
+print("test2 uuid: " + str(test2.get_uuid()))
 
 
 
@@ -31,6 +31,11 @@ def gaussian(t, params):
     return gauss / norm
 
 
+def my_flattop(t, params):
+    t_up = params['T_up']
+    t_down = params['T_down']
+    return flattop(t, t_up, t_down)
+
 
 gauss_params = {
     'T_final' : 10e-9,
@@ -47,16 +52,24 @@ flattop_params = {
 t = np.linspace(-10e-9, 10e-9, 100)
 
 p1 = Comp(desc = "pulse1", shape = gaussian, params = gauss_params)
-print("p1 id: " + str(p1.get_id()))
+print("p1 uuid: " + str(p1.get_uuid()))
 
 
-p2 = Comp(desc = "pulse2", shape = flattop, params = flattop_params)
-print("p2 id: " + str(p2.get_id()))
-
-plt.plot(t, p1.get_shape_values(t))
-plt.show()
 
 
-plt.plot(t, p2.get_shape_values(t))
-plt.show()
+
+p2 = Comp(desc = "pulse2", shape = my_flattop, params = flattop_params)
+print("p2 uuid: " + str(p2.get_uuid()))
+
+print("set new uuid in p2")
+p2.set_uuid(p1.get_uuid())
+print("p2 uuid: " + str(p2.get_uuid()))
+
+
+# plt.plot(t, p1.get_shape_values(t))
+# plt.show()
+
+
+# plt.plot(t, p2.get_shape_values(t))
+# plt.show()
 

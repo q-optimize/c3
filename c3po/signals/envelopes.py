@@ -17,22 +17,10 @@ def flattop_risefall(t, T_up, T_down, risefall):
            (1 + erf((-t + T2) / risefall)) / 2
 
 
-# def flattop(t, T_up, T_down):
-    # """
-    # Flattop gaussian with fixed width of 1ns, made from erf functions.
-    # """
-    # T2 = max(T_up, T_down)
-    # T1 = min(T_up, T_down)
-    # return (1 + erf((t - T1) / 1e-9)) / 2 * \
-           # (1 + erf((-t + T2) / 1e-9)) / 2
-
-
-def flattop(t, params):
+def flattop(t, T_up, T_down):
     """
     Flattop gaussian with fixed width of 1ns, made from erf functions.
     """
-    T_up = params['T_up']
-    T_down = params['T_down']
     T2 = max(T_up, T_down)
     T1 = min(T_up, T_down)
     return (1 + erf((t - T1) / 1e-9)) / 2 * \
@@ -86,4 +74,3 @@ def flattop_WMI(t, T_up, T_down, ramp=20*10**(-9)):
         else:
             value[i] = 0
     return value
-

@@ -1,3 +1,5 @@
+import uuid
+
 
 # this is originally the class "Pulse"
 class Component:
@@ -15,17 +17,6 @@ class Component:
         setup or physical boundaries. needed for optimizer
 
     """
-
-
-    # define an internal id for the created instance of the component object
-    # as private attributes are not a thing in python use this 'hack' by 
-    # naming the variable with two underscores. this will prompt the compiler
-    # to internally rename the variable (so it's not accessible anymore under
-    # the original name). this is the most dumb thing I have ever seen but 
-    # apparently it's the 'pythonian way'. #internalscreaming
-    # see: https://stackoverflow.com/questions/1641219/does-python-have-private-variables-in-classes
-    __id = 0
-
     def __init__(
             self,
             desc = None,
@@ -34,16 +25,23 @@ class Component:
             bounds = {}
             ):
 
-        self.__id = Component.__id + 1
-        Component.__id = self.__id
+        # make a random UUID which uniquely identifies/represents the component
+        # https://docs.python.org/2/library/uuid.html#uuid.uuid4
+        self.__uuid = uuid.uuid4()
 
         self.desc = desc
         self.shape = shape
         self.params = params
         self.bounds = bounds
+#        self.SIunit = 
 
-    def get_id(self):
-        return self.__id
+
+    def get_uuid(self):
+        return self.__uuid
+
+
+    def set_uuid(self, uuid):
+        self.__uuid = uuid
 
 
     def get_shape_values(self, ts):

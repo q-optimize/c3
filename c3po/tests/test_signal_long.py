@@ -26,11 +26,28 @@ params_bounds = {
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
-p1 = Comp(desc = "pulse1", shape = flattop, params = flattop_params1, bounds = params_bounds)
-print("p1 id: " + str(p1.get_id()))
 
-p2 = Comp(desc = "pulse2", shape = flattop, params = flattop_params2, bounds = params_bounds)
-print("p2 id: " + str(p2.get_id()))
+def my_flattop(t, params):
+    t_up = params['T_up']
+    t_down = params['T_down']
+    return flattop(t, t_up, t_down)
+
+
+p1 = Comp(
+    desc = "pulse1",
+    shape = my_flattop,
+    params = flattop_params1,
+    bounds = params_bounds
+)
+print("p1 uuid: " + str(p1.get_uuid()))
+
+p2 = Comp(
+    desc = "pulse2",
+    shape = my_flattop,
+    params = flattop_params2,
+    bounds = params_bounds
+)
+print("p2 uuid: " + str(p2.get_uuid()))
 
 ####
 # Below code: For checking the single signal components 
@@ -46,8 +63,11 @@ carrier_parameters = {
     'freq' : 6e9 * 2 * np.pi
 }
 
-carr = Comp(desc = "carrier", params = carrier_parameters)
-print("carr id: " + str(carr.get_id()))
+carr = Comp(
+    desc = "carrier",
+    params = carrier_parameters
+)
+print("carr uuid: " + str(carr.get_uuid()))
 
 
 comps = []
@@ -58,8 +78,13 @@ comps.append(p2)
 
 
 
+####
+#
+# CHILD CLASS OF class Signal
+#
+####
 class IQ(Signal):
-    def get_IQ(self):
+    def get_IQ(self, carrier_uuid = None):
         """
         Construct the in-phase (I) and quadrature (Q) components of the
 
@@ -80,7 +105,7 @@ class IQ(Signal):
                 carrier = comp
 
             # Identification via id
-            if comp.get_id() == 3:
+            if carrier_uuid is not None and comp.get_uuid() == carrier_uuid:
                 carrier = comp
 
 
@@ -89,7 +114,7 @@ class IQ(Signal):
         amp_tot_sq = 0
         components = []
         for comp in self.comps:
-            if "pulse" not in comp.desc:
+            if "carrier" in comp.desc:
                 continue
 
             amp = comp.params['amp']
@@ -144,8 +169,8 @@ class IQ(Signal):
         axs[0].plot(self.ts * self.res, IQ['I'])
         axs[1].plot(self.ts * self.res, IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages 
-        # on my system at home. Adding a second plt.show() resolves that 
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
         # issue???
         # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
         plt.show(block=False)
@@ -170,12 +195,15 @@ class IQ(Signal):
         axs[0].plot(self.ts * self.res, fft_IQ['I'])
         axs[1].plot(self.ts * self.res, fft_IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages 
-        # on my system at home. Adding a second plt.show() resolves that 
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
         # issue???
         # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
         plt.show(block=False)
         plt.show()
+
+
+
 
 
 

@@ -1,18 +1,12 @@
+import uuid
 import numpy as np
 import matplotlib.pyplot as plt
 
 
 class Signal:
-    # define an internal id for the created instance of the signal object
-    # as private attributes are not a thing in python use this 'hack' by 
-    # naming the variable with two underscores. this will prompt the compiler
-    # to internally rename the variable (so it's not accessible anymore under
-    # the original name). this is the most dumb thing I have ever seen but 
-    # apparently it's the 'pythonian way'. #internalscreaming
-    # see: https://stackoverflow.com/questions/1641219/does-python-have-private-variables-in-classes
+    """
 
-    __id = 0
-
+    """
     def __init__(
             self,
             t_start = None,
@@ -21,8 +15,10 @@ class Signal:
             comps = []
             ):
 
-        self.__id = Signal.__id + 1
-        Signal.__id = self.__id
+
+        # make a random UUID which uniquely identifies/represents the component
+        # https://docs.python.org/2/library/uuid.html#uuid.uuid4
+        self.__uuid = uuid.uuid4()
 
         self.t_start = t_start
         self.t_end = t_end
@@ -41,9 +37,17 @@ class Signal:
 
 
 
+    def get_uuid(self):
+        return self.__uuid
+
+
+    def set_uuid(self, uuid):
+        self.__uuid = uuid
+
+
     def calc_slice_num(self):
         if self.t_start != None and self.t_end != None and self.res != None:
-            self.slice_num = int(np.abs(self.t_start - self.t_end) * self.res)
+            self.slice_num = int(np.abs(self.t_start - self.t_end) * self.res)# + 1
 
 
     def create_ts(self):
@@ -51,27 +55,27 @@ class Signal:
             self.ts = np.linspace(self.t_start, self.t_end, self.slice_num)
 
 
-    def get_parameter_value(self, key, comp_id):
+    def get_parameter_value(self, key, uuid):
         for comp in self.comps:
-            if comp_id == comp.get_id():
+            if uuid == comp.get_uuid():
                 return comp.params[key]
 
 
-    def set_parameter_value(self, key, comp_id, val):
+    def set_parameter_value(self, key, uuid, val):
         for comp in self.comps:
-            if comp_id == comp.get_id():
+            if uuid == comp.get_uuid():
                 comp.params[key] = val
 
 
-    def get_parameter_bounds(self, key, comp_id):
+    def get_parameter_bounds(self, key, uuid):
         for comp in self.comps:
-            if comp_id == comp.get_id():
+            if uuid == comp.get_uuid():
                 return comp.bounds[key]
 
 
-    def set_parameter_bounds(self, key, comp_id, bounds):
+    def set_parameter_bounds(self, key, uuid, bounds):
         for comp in self.comps:
-            if comp_id == comp.get_id():
+            if uuid == comp.get_uuid():
                 comp.bounds[key] = bounds
 
 
@@ -83,12 +87,12 @@ class Signal:
                 if key not in params:
                     params[key] = {}
 
-                comp_id = comp.get_id()
-                params[key][comp_id] = {}
+                uuid = comp.get_uuid()
+                params[key][uuid] = {}
 
-                params[key][comp_id]['value'] = comp.params[key]
+                params[key][uuid]['value'] = comp.params[key]
                 if key in comp.bounds:
-                    params[key][comp_id]['bounds'] = comp.bounds[key]
+                    params[key][uuid]['bounds'] = comp.bounds[key]
 
         return params
 
@@ -99,10 +103,6 @@ class Signal:
 
     def get_history(self):
         return self.history
-
-
-    def get_id(self):
-        return self.__id
 
 
     def generate_signal(self):
@@ -150,7 +150,7 @@ class Signal:
 #
 ####
 class IQ(Signal):
-    def get_IQ(self):
+    def get_IQ(self, carrier_uuid = None):
         """
         Construct the in-phase (I) and quadrature (Q) components of the
 
@@ -171,7 +171,7 @@ class IQ(Signal):
                 carrier = comp
 
             # Identification via id
-            if comp.get_id() == 3:
+            if carrier_uuid is not None and comp.get_uuid() == carrier_uuid:
                 carrier = comp
 
 
@@ -180,7 +180,7 @@ class IQ(Signal):
         amp_tot_sq = 0
         components = []
         for comp in self.comps:
-            if "pulse" not in comp.desc:
+            if "carrier" in comp.desc:
                 continue
 
             amp = comp.params['amp']
@@ -235,8 +235,8 @@ class IQ(Signal):
         axs[0].plot(self.ts * self.res, IQ['I'])
         axs[1].plot(self.ts * self.res, IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages 
-        # on my system at home. Adding a second plt.show() resolves that 
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
         # issue???
         # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
         plt.show(block=False)
@@ -261,16 +261,9 @@ class IQ(Signal):
         axs[0].plot(self.ts * self.res, fft_IQ['I'])
         axs[1].plot(self.ts * self.res, fft_IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages 
-        # on my system at home. Adding a second plt.show() resolves that 
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
         # issue???
         # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
         plt.show(block=False)
         plt.show()
-
-
-
-
-
-
-

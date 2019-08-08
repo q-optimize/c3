@@ -27,14 +27,31 @@ params_bounds = {
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
-p1 = Comp(desc = "pulse1", shape = flattop, params = flattop_params1, bounds = params_bounds)
-print("p1 id: " + str(p1.get_id()))
 
-p2 = Comp(desc = "pulse2", shape = flattop, params = flattop_params2, bounds = params_bounds)
-print("p2 id: " + str(p2.get_id()))
+def my_flattop(t, params):
+    t_up = params['T_up']
+    t_down = params['T_down']
+    return flattop(t, t_up, t_down)
+
+
+p1 = Comp(
+    desc = "pulse1",
+    shape = my_flattop,
+    params = flattop_params1,
+    bounds = params_bounds
+)
+print("p1 uuid: " + str(p1.get_uuid()))
+
+p2 = Comp(
+    desc = "pulse2",
+    shape = my_flattop,
+    params = flattop_params2,
+    bounds = params_bounds
+)
+print("p2 uuid: " + str(p2.get_uuid()))
 
 ####
-# Below code: For checking the single signal components 
+# Below code: For checking the single signal components
 ####
 
 # t = np.linspace(0, 150e-9, int(150e-9*1e9))
@@ -47,8 +64,11 @@ carrier_parameters = {
     'freq' : 6e9 * 2 * np.pi
 }
 
-carr = Comp(desc = "carrier", params = carrier_parameters)
-print("carr id: " + str(carr.get_id()))
+carr = Comp(
+    desc = "carrier",
+    params = carrier_parameters
+)
+print("carr uuid: " + str(carr.get_uuid()))
 
 
 comps = []
@@ -100,5 +120,3 @@ print(" ")
 sig.save_params_to_history("test2")
 
 print(sig.get_history())
-
-
