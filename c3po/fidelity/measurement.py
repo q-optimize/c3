@@ -318,14 +318,15 @@ class Simulation(Backend):
                                    )
                 ,
                 gate.to_scale_one(start_name),
-                method='L-BFGS-B',
                 jac=lambda x: sess.run(jac,
                                    feed_dict={
                                        params: gate.to_bound_phys_scale(x)
                                        }
                                    )*gate.bounds['scale']
                 ,
-                options={'disp': True}
+                method='L-BFGS-B',
+                options={'disp': True},
+                callback=gate.print_pulse
                 )
         gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)
         print('Optimal values:')

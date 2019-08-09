@@ -2,7 +2,7 @@ import json
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-
+import pprint
 
 class Gate:
     """Represents a quantum gate.
@@ -373,12 +373,8 @@ class Gate:
             Array of parameters in physical units.
 
         """
-        print(
-                json.dumps(
-                    self.deserialize_parameters(p),
-                    indent=4,
-                    sort_keys=True
-                    )
+        pprint.pprint(
+            self.deserialize_parameters(p)
             )
 
     def plot_control_fields(self, sess=None, res=1e9, q='initial', axs=None):
