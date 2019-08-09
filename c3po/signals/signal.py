@@ -12,6 +12,7 @@ class Signal:
             t_start = None,
             t_end = None,
             res = 1e9,
+            sim_res=1e12,
             comps = []
             ):
 
@@ -23,13 +24,13 @@ class Signal:
         self.t_start = t_start
         self.t_end = t_end
         self.res = res
+        self.sim_res = sim_res
 
         self.slice_num = 0
         self.calc_slice_num()
 
         self.ts = None
         self.create_ts()
-
 
         self.comps = comps
 
@@ -47,7 +48,9 @@ class Signal:
 
     def calc_slice_num(self):
         if self.t_start != None and self.t_end != None and self.res != None:
-            self.slice_num = int(np.abs(self.t_start - self.t_end) * self.res)# + 1
+            self.slice_num = int(
+                np.abs(self.t_start - self.t_end) * self.res
+                ) + 1
 
 
     def create_ts(self):
@@ -105,6 +108,18 @@ class Signal:
         return self.history
 
 
+    def generate_opt_map(self, opt_map={}):
+        sig_id = self.get_uuid()
+        for cmp in self.comps:
+            for key in cmp.params.keys():
+                entry = (cmp.desc, sig_id, cmp.get_uuid())
+                if key in opt_map.keys():
+                    opt_map[key].append(entry)
+                else:
+                    opt_map[key] = [(entry)]
+
+        return opt_map
+
     def generate_signal(self):
         ####
         #
@@ -119,11 +134,11 @@ class Signal:
         """ Plotting control functions """
         plt.rcParams['figure.dpi'] = 100
         signal = self.generate_signal()
-
-        plt.plot(self.ts * self.res, signal)
-
-        plt.show(block=False)
-        plt.show()
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(self.sim_ts/1e-9, signal)
+        ax.set_xlabel('Time [ns]')
+    #    plt.show(block=False)
 
 
     def plot_fft_signal(self):
@@ -210,27 +225,31 @@ class IQ(Signal):
     def generate_signal(self):
         IQ = self.get_IQ()
         """
-        NICO: Federico raised the question if the xy_angle should be added
-        here. After some research, this should be the correct way. The
-        signal is E = I cos() + Q sin(), such that E^2 = I^2+Q^2.
         """
-        sig = np.zeros_like(self.ts)
+        self.sim_ts = np.linspace(
+            0,
+            self.ts[-1],
+            int(self.ts[-1]*self.sim_res)+1
+            )
 
-        AWG_I = IQ['I']
-        AWG_Q = IQ['Q']
+        AWG_I = np.interp(self.sim_ts, self.ts, IQ['I'])
+        AWG_Q = np.interp(self.sim_ts, self.ts, IQ['Q'])
         amp = IQ['amp']
         omega_d = IQ['omega']
 
-        sig += amp * (AWG_I * np.cos(omega_d * self.ts) +
-                      AWG_Q * np.sin(omega_d * self.ts))
+        sig = np.zeros_like(self.sim_ts)
+
+        sig += amp * (AWG_I * np.cos(omega_d * self.sim_ts) +
+                      AWG_Q * np.sin(omega_d * self.sim_ts))
 
         return sig
 
 
-    def plot_IQ_components(self, axs=None):
+    def plot_IQ_components(self):
         """ Plotting control functions """
-        plt.rcParams['figure.dpi'] = 100
+
         IQ = self.get_IQ()
+        plt.rcParams['figure.dpi'] = 100
         fig, axs = plt.subplots(2, 1)
         axs[0].plot(self.ts * self.res, IQ['I'])
         axs[1].plot(self.ts * self.res, IQ['Q'])
@@ -241,6 +260,19 @@ class IQ(Signal):
         # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
         plt.show(block=False)
         plt.show()
+
+    def plot_IQ(self, ts, Is, Qs):
+        """
+        Plot (hopefully) into an existing figure.
+        """
+        plt.cla()
+        plt.plot(ts / 1e-9, Is)
+        plt.plot(ts / 1e-9, Qs)
+        plt.legend(("I", "Q"))
+        plt.ylabel('I/Q')
+        plt.xlabel('Time[ns]')
+        plt.tick_params('both',direction='in')
+        plt.tick_params('both', direction='in')
 
 
     def plot_fft_IQ_components(self, axs=None):
