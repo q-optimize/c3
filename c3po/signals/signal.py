@@ -151,7 +151,7 @@ class Signal:
         fft_signal = np.fft.fft(signal)
         fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
 
-        plt.plot(self.ts[0] * self.res[0], fft_signal)
+        plt.plot(self.ts[1] * self.res[0], fft_signal)
 
         plt.show(block=False)
         plt.show()
@@ -284,8 +284,8 @@ class IQ(Signal):
         fft_IQ['Q'] = np.fft.fftshift(fft_Q.real / max(fft_Q.real))
 
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(self.ts[1] * self.res[0], fft_IQ['I'])
-        axs[1].plot(self.ts[1] * self.res[0], fft_IQ['Q'])
+        axs[0].plot(self.ts[0] * self.res[0], fft_IQ['I'])
+        axs[1].plot(self.ts[0] * self.res[0], fft_IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
         # here. If I only put plt.show(block=False), I get error messages
         # on my system at home. Adding a second plt.show() resolves that
