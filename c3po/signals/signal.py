@@ -11,8 +11,7 @@ class Signal:
             self,
             t_start = None,
             t_end = None,
-            res = 1e9,
-            sim_res=1e12,
+            res = [],
             comps = []
             ):
 
@@ -24,12 +23,11 @@ class Signal:
         self.t_start = t_start
         self.t_end = t_end
         self.res = res
-        self.sim_res = sim_res
 
-        self.slice_num = 0
+        self.slice_num = []
         self.calc_slice_num()
 
-        self.ts = None
+        self.ts = []
         self.create_ts()
 
         self.comps = comps
@@ -47,15 +45,16 @@ class Signal:
 
 
     def calc_slice_num(self):
-        if self.t_start != None and self.t_end != None and self.res != None:
-            self.slice_num = int(
-                np.abs(self.t_start - self.t_end) * self.res
-                ) + 1
+        if self.t_start != None and self.t_end != None and self.res != []:
+            for r in self.res:
+                self.slice_num.append(int(
+                    np.abs(self.t_start - self.t_end) * r) + 1)
 
 
     def create_ts(self):
-        if self.t_start != None and self.t_end != None and self.slice_num != None:
-            self.ts = np.linspace(self.t_start, self.t_end, self.slice_num)
+        if self.t_start != None and self.t_end != None and self.slice_num != []:
+            for num in self.slice_num:
+                self.ts.append(np.linspace(self.t_start, self.t_end, num))
 
 
     def get_parameter_value(self, key, uuid):
@@ -136,7 +135,7 @@ class Signal:
         signal = self.generate_signal()
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ax.plot(self.sim_ts/1e-9, signal)
+        ax.plot(self.ts[1] * self.res[0], signal)
         ax.set_xlabel('Time [ns]')
     #    plt.show(block=False)
 
@@ -152,7 +151,7 @@ class Signal:
         fft_signal = np.fft.fft(signal)
         fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
 
-        plt.plot(self.ts * self.res, fft_signal)
+        plt.plot(self.ts[0] * self.res[0], fft_signal)
 
         plt.show(block=False)
         plt.show()
@@ -205,8 +204,8 @@ class IQ(Signal):
             xy_angle = comp.params['xy_angle']
             freq_offset = comp.params['freq_offset']
             components.append(
-                amp * comp.get_shape_values(self.ts) *
-                np.exp(1j * (xy_angle + freq_offset * self.ts))
+                amp * comp.get_shape_values(self.ts[0]) *
+                np.exp(1j * (xy_angle + freq_offset * self.ts[0]))
                 )
 
         norm = np.sqrt(amp_tot_sq)
@@ -226,21 +225,16 @@ class IQ(Signal):
         IQ = self.get_IQ()
         """
         """
-        self.sim_ts = np.linspace(
-            0,
-            self.ts[-1],
-            int(self.ts[-1]*self.sim_res)+1
-            )
 
-        AWG_I = np.interp(self.sim_ts, self.ts, IQ['I'])
-        AWG_Q = np.interp(self.sim_ts, self.ts, IQ['Q'])
+        AWG_I = np.interp(self.ts[1], self.ts[0], IQ['I'])
+        AWG_Q = np.interp(self.ts[1], self.ts[0], IQ['Q'])
         amp = IQ['amp']
         omega_d = IQ['omega']
 
-        sig = np.zeros_like(self.sim_ts)
+        sig = np.zeros_like(self.ts[1])
 
-        sig += amp * (AWG_I * np.cos(omega_d * self.sim_ts) +
-                      AWG_Q * np.sin(omega_d * self.sim_ts))
+        sig += amp * (AWG_I * np.cos(omega_d * self.ts[1]) +
+                      AWG_Q * np.sin(omega_d * self.ts[1]))
 
         return sig
 
@@ -251,8 +245,8 @@ class IQ(Signal):
         IQ = self.get_IQ()
         plt.rcParams['figure.dpi'] = 100
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(self.ts * self.res, IQ['I'])
-        axs[1].plot(self.ts * self.res, IQ['Q'])
+        axs[0].plot(self.ts[0] * self.res[0], IQ['I'])
+        axs[1].plot(self.ts[0] * self.res[0], IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
         # here. If I only put plt.show(block=False), I get error messages
         # on my system at home. Adding a second plt.show() resolves that
@@ -290,8 +284,8 @@ class IQ(Signal):
         fft_IQ['Q'] = np.fft.fftshift(fft_Q.real / max(fft_Q.real))
 
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(self.ts * self.res, fft_IQ['I'])
-        axs[1].plot(self.ts * self.res, fft_IQ['Q'])
+        axs[0].plot(self.ts[1] * self.res[0], fft_IQ['I'])
+        axs[1].plot(self.ts[1] * self.res[0], fft_IQ['Q'])
         # I (Kevin) don't really understand the behaviour of plt.show()
         # here. If I only put plt.show(block=False), I get error messages
         # on my system at home. Adding a second plt.show() resolves that
