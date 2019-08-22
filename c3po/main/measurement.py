@@ -192,7 +192,7 @@ class Simulation(Backend):
     def update_model(self, model):
         self.model = model
 
-    def propagation(self, U0, gate, params, do_hist=False):
+    def propagation(self, U0, gate, params, history=False):
         cflds, ts = gate.get_control_fields(params, self.resolution)
         h0 = self.model.tf_H0
         hks = self.model.tf_Hcs
@@ -214,7 +214,7 @@ class Simulation(Backend):
             name='dU_of_t'
             )
 
-        if do_hist:
+        if history:
             u_t = tf.gather(dUs,0)
             history = [u_t]
             for ii in range(dUs.shape[0]-1):

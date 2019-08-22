@@ -24,4 +24,3 @@ class System:
     get_parameters()
         Produces a dict of physical system parameters
     """
-

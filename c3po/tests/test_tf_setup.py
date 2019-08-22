@@ -32,27 +32,36 @@ print(" ")
 print("Available tensorflow devices: ")
 tf_list_avail_devices()
 
-
-
 initial_parameters = {
-        'qubit_1': {'freq': 6e9*2*pi},
-        'cavity': {'freq': 9e9*2*pi}
+        'q1': {'freq': 6e9*2*np.pi, 'delta': 100e6 * 2 * np.pi},
+        'r1': {'freq': 9e9*2*np.pi}
         }
-
 initial_couplings = {
-        'q1_cav': {'strength': 150e6*2*pi}
+        ('q1', 'r1'): {'strength': 150e6*2*np.pi}
         }
-
 initial_hilbert_space = {
-        'qubit_1': 2,
-        'cavity': 5
+        'q1': 2,
+        'r1': 5
+        }
+comp_hilbert_space = {
+        'q1': 2,
+        'r1': 5
+        }
+model_types = {
+        'components': {
+            'q1': c3po.utils.hamiltonians.duffing,
+            'r1': c3po.utils.hamiltonians.resonator},
+        'couplings': {
+            ('q1', 'r1'): c3po.utils.hamiltonians.int_XX},
+        'drives': {
+            'q1': c3po.utils.hamiltonians.drive},
         }
 
 initial_model = mdl(
         initial_parameters,
         initial_couplings,
         initial_hilbert_space,
-        "True"
+        model_types
         )
 
 initial_model.set_tf_session(sess)
