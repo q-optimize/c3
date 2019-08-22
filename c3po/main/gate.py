@@ -37,7 +37,7 @@ class Gate:
     def __init__(
             self,
             target,
-            goal,
+            goal=None,
             pulse=None,
             T_final=100e-9
             ):
@@ -123,8 +123,18 @@ class Gate:
         params_in : dict
             Parameters in (nested) dictionary format
         """
-
-        self.parameters[name] = self.serialize_parameters(params_in, True)
+        if self.env_shape == 'flat':
+            params = []
+            idxes = {}
+            idx = 0
+            for k in params_in:
+                params.append(params_in[k])
+                idxes[k] = idx
+                idx += 1
+            self.parameters[name] = np.array(params)
+            self.idxes = idxes
+        else:
+            self.parameters[name] = self.serialize_parameters(params_in, True)
 
 
     def serialize_parameters(self, p, redefine=False):
@@ -176,7 +186,7 @@ class Gate:
             self.idxes = idxes
         return np.array(q)
 
-    def deserialize_parameters(self, q, opt=False):
+    def deserialize_parameters(self, q_in):
         """ Give a vector of parameters that conform to the parametrization for
         this gate and get the structured version back. Input can also be the
         name of a stored pulse.
@@ -185,9 +195,6 @@ class Gate:
         ----------
         q : array
             Numpy array containing the serialized parameters
-        opt : bool
-            Use only the optimized parameters. Note: Probably we'll lose this
-            option and determine by the shape of q which version should be used.
 
         Returns
         -------
@@ -195,23 +202,27 @@ class Gate:
             Description of returned object.
         """
         p = {}
-        if isinstance(q, str):
-            q = self.parameters[q]
+        if isinstance(q_in, str):
+            q_in = self.parameters[q_in]
         idxes = self.idxes
-        for ctrl in sorted(idxes):
-            p[ctrl] = {}
-            for carr in sorted(idxes[ctrl]):
-                p[ctrl][carr] = {}
-                p[ctrl][carr]['pulses'] = {}
-                p[ctrl][carr]['freq'] = idxes[ctrl][carr]['freq']
-                for puls in sorted(idxes[ctrl][carr]['pulses']):
-                    p[ctrl][carr]['pulses'][puls] = {
-                            'params': {}
-                            }
-                    params = idxes[ctrl][carr]['pulses'][puls]['params']
-                    for prop in sorted(params):
-                        idx = params[prop]
-                        p[ctrl][carr]['pulses'][puls]['params'][prop] = q[idx]
+        if self.env_shape == 'flat':
+            for key in idxes:
+                p[key] = q_in[idxes[key]]
+        else:
+            for ctrl in sorted(idxes):
+                p[ctrl] = {}
+                for carr in sorted(idxes[ctrl]):
+                    p[ctrl][carr] = {}
+                    p[ctrl][carr]['pulses'] = {}
+                    p[ctrl][carr]['freq'] = idxes[ctrl][carr]['freq']
+                    for puls in sorted(idxes[ctrl][carr]['pulses']):
+                        p[ctrl][carr]['pulses'][puls] = {
+                                'params': {}
+                                }
+                        params = idxes[ctrl][carr]['pulses'][puls]['params']
+                        for prop in sorted(params):
+                            idx = params[prop]
+                            p[ctrl][carr]['pulses'][puls]['params'][prop] = q[idx]
         return p
 
     def to_scale_one(self, q):
@@ -350,6 +361,7 @@ class Gate:
         IQ, ts = self.get_IQ(name, res)
         dt = ts[1]
         cflds = []
+        ts = np.linspace(0, self.T_final, int(self.T_final*res)+1)
         for ctrl in sorted(self.idxes):
             sig = tf.zeros_like(ts)
             for carr in sorted(self.idxes[ctrl]):
