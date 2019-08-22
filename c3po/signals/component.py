@@ -19,21 +19,25 @@ class Component:
     """
     def __init__(
             self,
-            desc = None,
+            name = " ",
+            desc = " ",
+            comment = " ",
             shape = None,
             params = {},
-            bounds = {}
+            bounds = {},
+            groups = []
             ):
 
         # make a random UUID which uniquely identifies/represents the component
         # https://docs.python.org/2/library/uuid.html#uuid.uuid4
         self.__uuid = uuid.uuid4()
 
+        self.name = name
         self.desc = desc
         self.shape = shape
         self.params = params
         self.bounds = bounds
-#        self.SIunit = 
+        self.groups = groups
 
 
     def get_uuid(self):
