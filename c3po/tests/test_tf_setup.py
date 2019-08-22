@@ -64,37 +64,6 @@ initial_model = mdl(
         model_types
         )
 
-initial_model.set_tf_session(sess)
-
-
-def my_flattop(t, idx, guess):
-    t_up = guess[idx['t_up']]
-    t_down = guess[idx['t_down']]
-    T2 = tf.maximum(t_up, t_down)
-    T1 = tf.minimum(t_up, t_down)
-    return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
-           (1 + tf.erf((-t + T2) / 2e-9)) / 2
-
-handmade_pulse = {
-        'control1': {
-            'carrier1': {
-                'freq': 6e9*2*pi,
-                'pulses': {
-                    'pulse': {
-                        'params': {
-                            'amp': 22e6*2*pi,
-                            't_up': 5e-9,
-                            't_down': 45e-9,
-                            'xy_angle': 0,
-                            'freq_offset': 0e6*2*pi
-                            },
-                        'func': my_flattop
-                        }
-                    }
-                }
-            }
-        }
-
 
 U_goal = tensor(
     basis(2,1),
