@@ -1,34 +1,38 @@
-from c3po.signals.component import Component as Comp
-from c3po.signals.envelopes import *
+from c3po.control.envelopes import *
+from c3po.cobj.component import ControlComponent as CtrlComp
 
-import numpy as np
-from scipy.special import erf
+
+import uuid
 import matplotlib.pyplot as plt
 
 
 
-test = Comp()
-print("test uuid: " + str(test.get_uuid()))
 
-test2 = Comp()
-print("test2 uuid: " + str(test2.get_uuid()))
+comp_group = uuid.uuid4()
+carrier_group = uuid.uuid4()
 
 
+flattop_params1 = {
+    'amp' : 15e6 * 2 * np.pi,
+    'T_up' : 5e-9,
+    'T_down' : 45e-9,
+    'xy_angle' : 0,
+    'freq_offset' : 0e6 * 2 * np.pi
+}
 
+flattop_params2 = {
+    'amp' : 3e6 * 2 * np.pi,
+    'T_up' : 25e-9,
+    'T_down' : 30e-9,
+    'xy_angle' : np.pi / 2.0,
+    'freq_offset' : 0e6 * 2 * np.pi
+}
 
-def gaussian(t, params):
-    """
-    Normalized gaussian
-    """
-    sigma = params['sigma']
-    T_final = params['T_final']
-    gauss = np.exp(-(t - T_final / 2) ** 2 / (2 * sigma ** 2)) - \
-        np.exp(-T_final ** 2 / (8 * sigma ** 2))
-    norm = np.sqrt(2 * np.pi * sigma ** 2) \
-        * erf(T_final / (np.sqrt(8) * sigma)) \
-        - T_final * np.exp(-T_final ** 2 / (8 * sigma ** 2))
-    # the erf factor takes care of cutoffs at the tails of the gaussian
-    return gauss / norm
+params_bounds = {
+    'T_up' : [2e-9, 98e-9],
+    'T_down' : [2e-9, 98e-9],
+    'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
+}
 
 
 def my_flattop(t, params):
@@ -37,39 +41,58 @@ def my_flattop(t, params):
     return flattop(t, t_up, t_down)
 
 
-gauss_params = {
-    'T_final' : 10e-9,
-    'sigma' : 2.0e-9
-}
-
-
-flattop_params = {
-    'T_up' : 2.5e-9,
-    'T_down' : 7.5e-9
-}
-
-
-t = np.linspace(-10e-9, 10e-9, 100)
-
-p1 = Comp(desc = "pulse1", shape = gaussian, params = gauss_params)
+p1 = CtrlComp(
+    name = "pulse1",
+    desc = "flattop comp 1 of signal 1",
+    shape = my_flattop,
+    params = flattop_params1,
+    bounds = params_bounds,
+    groups = [comp_group]
+)
 print("p1 uuid: " + str(p1.get_uuid()))
 
-
-
-
-
-p2 = Comp(desc = "pulse2", shape = my_flattop, params = flattop_params)
+p2 = CtrlComp(
+    name = "pulse2",
+    desc = "flattop comp 2 of signal 1",
+    shape = my_flattop,
+    params = flattop_params2,
+    bounds = params_bounds,
+    groups = [comp_group]
+)
 print("p2 uuid: " + str(p2.get_uuid()))
 
-print("set new uuid in p2")
-p2.set_uuid(p1.get_uuid())
-print("p2 uuid: " + str(p2.get_uuid()))
+####
+# Below code: For checking the single signal components
+####
 
-
+# t = np.linspace(0, 150e-9, int(150e-9*1e9))
 # plt.plot(t, p1.get_shape_values(t))
-# plt.show()
-
-
 # plt.plot(t, p2.get_shape_values(t))
 # plt.show()
+
+
+carrier_parameters = {
+    'freq' : 6e9 * 2 * np.pi
+}
+
+carr = CtrlComp(
+    name = "carrier",
+    desc = "Frequency of the local oscillator",
+    params = carrier_parameters,
+    groups = [carrier_group]
+)
+print("carr uuid: " + str(carr.get_uuid()))
+
+
+
+
+
+
+
+
+
+
+
+
+
 

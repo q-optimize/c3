@@ -3,18 +3,7 @@ import uuid
 
 # this is originally the class "Pulse"
 class Component:
-    """Represents a pulse.
-
-    Parameters
-    ----------
-    shape : func
-        Function handle to function specifying the exact shape of the pulse
-    parameters : dict
-        dictionary of the parameters needed for the shape-function to
-        create the desired pulse
-    bounds : dict
-        boundaries of the parameters, i.e. technical limits of experimental
-        setup or physical boundaries. needed for optimizer
+    """
 
     """
     def __init__(
@@ -22,7 +11,6 @@ class Component:
             name = " ",
             desc = " ",
             comment = " ",
-            shape = None,
             params = {},
             bounds = {},
             groups = []
@@ -34,7 +22,6 @@ class Component:
 
         self.name = name
         self.desc = desc
-        self.shape = shape
         self.params = params
         self.bounds = bounds
         self.groups = groups
@@ -46,6 +33,28 @@ class Component:
 
     def set_uuid(self, uuid):
         self.__uuid = uuid
+
+
+
+
+
+class ControlComponent(Component):
+    """
+
+    """
+    def __init__(
+            self,
+            name = " ",
+            desc = " ",
+            comment = " ",
+            params = {},
+            bounds = {},
+            groups = [],
+            shape = None
+            ):
+
+        super().__init__(name, desc, comment, params, bounds, groups)
+        self.shape = shape
 
 
     def get_shape_values(self, ts):

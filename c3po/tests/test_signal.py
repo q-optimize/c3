@@ -1,11 +1,11 @@
-from c3po.signals.envelopes import *
-from c3po.signals.component import Component as Comp
-from c3po.signals.signal import Signal as Signal
+from c3po.control.envelopes import *
+from c3po.cobj.component import ControlComponent as CtrlComp
+from c3po.control.control import Control as Control
 
-from c3po.signals.generator import Device as Device
-from c3po.signals.generator import AWG as AWG
-from c3po.signals.generator import Mixer as Mixer
-from c3po.signals.generator import Generator as Generator
+from c3po.control.generator import Device as Device
+from c3po.control.generator import AWG as AWG
+from c3po.control.generator import Mixer as Mixer
+from c3po.control.generator import Generator as Generator
 
 import uuid
 import matplotlib.pyplot as plt
@@ -44,7 +44,7 @@ def my_flattop(t, params):
     return flattop(t, t_up, t_down)
 
 
-p1 = Comp(
+p1 = CtrlComp(
     name = "pulse1",
     desc = "flattop comp 1 of signal 1",
     shape = my_flattop,
@@ -54,7 +54,7 @@ p1 = Comp(
 )
 print("p1 uuid: " + str(p1.get_uuid()))
 
-p2 = Comp(
+p2 = CtrlComp(
     name = "pulse2",
     desc = "flattop comp 2 of signal 1",
     shape = my_flattop,
@@ -78,7 +78,7 @@ carrier_parameters = {
     'freq' : 6e9 * 2 * np.pi
 }
 
-carr = Comp(
+carr = CtrlComp(
     name = "carrier",
     desc = "Frequency of the local oscillator",
     params = carrier_parameters,
@@ -94,35 +94,35 @@ comps.append(p2)
 
 
 
-sig = Signal()
-sig.name = "signal1"
-sig.t_start = 0
-sig.t_end = 150e-9
-sig.comps = comps
+ctrl = Control()
+ctrl.name = "signal1"
+ctrl.t_start = 0
+ctrl.t_end = 150e-9
+ctrl.comps = comps
 
 
-# print(sig.get_parameters())
+# print(ctrl.get_parameters())
 # print(" ")
 # print(" ")
 # print(" ")
 
-# print(sig.get_history())
-# print(" ")
-# print(" ")
-# print(" ")
-
-
-# sig.save_params_to_history("initial")
-
-# print(sig.get_history())
+# print(ctrl.get_history())
 # print(" ")
 # print(" ")
 # print(" ")
 
 
-# sig.save_params_to_history("test2")
+# ctrl.save_params_to_history("initial")
 
-# print(sig.get_history())
+# print(ctrl.get_history())
+# print(" ")
+# print(" ")
+# print(" ")
+
+
+# ctrl.save_params_to_history("test2")
+
+# print(ctrl.get_history())
 
 
 
@@ -131,15 +131,13 @@ class SignalSetup(Generator):
 
     def __init__(
             self,
+            devices = {},
             resolutions = {},
-            groups = {}
-            ):
+            ressources = [],
+            ressource_groups = {}
+           ):
 
-        self.resolutions = resolutions
-        self.groups = groups
-
-        self.output = None
-
+        super().__init__(devices, resolutions, ressources, ressource_groups)
 
     def generate_signal(self, ressources):
 
@@ -148,23 +146,22 @@ class SignalSetup(Generator):
         awg = self.devices["awg"]
         mixer = self.devices["mixer"]
 
-        for sig in ressources:
+        for ctrl in ressources:
 
-            awg.t_start = sig.t_start
-            awg.t_end = sig.t_end
+            awg.t_start = ctrl.t_start
+            awg.t_end = ctrl.t_end
             awg.resolutions = self.resolutions
-            awg.ressources = [sig]
-            awg.ressource_groups = self.groups
+            awg.ressources = [ctrl]
+            awg.ressource_groups = self.ressource_groups
             awg.create_IQ("awg")
 
 #            awg.plot_IQ_components("awg")
 
-
-            mixer.t_start = sig.t_start
-            mixer.t_end = sig.t_end
+            mixer.t_start = ctrl.t_start
+            mixer.t_end = ctrl.t_end
             mixer.resolutions = self.resolutions
-            mixer.ressources = [sig]
-            mixer.ressource_groups = self.groups
+            mixer.ressources = [ctrl]
+            mixer.ressource_groups = self.ressource_groups
             mixer.calc_slice_num("sim")
             mixer.create_ts("sim")
 
@@ -175,8 +172,8 @@ class SignalSetup(Generator):
             mixer.Quadrature = Q
             mixer.combine("sim")
 
-            output[(sig.name,sig.get_uuid())] = {"ts" : mixer.ts}
-            output[(sig.name,sig.get_uuid())].update({"signal" : mixer.output})
+            output[(ctrl.name,ctrl.get_uuid())] = {"ts" : mixer.ts}
+            output[(ctrl.name,ctrl.get_uuid())].update({"signal" : mixer.output})
 
             self.output = output
 
@@ -184,62 +181,11 @@ class SignalSetup(Generator):
 
 
 
-    def plot_signals(self):
-
-        for entry in self.output:
-            signal_name = entry[0]
-            signal = self.output[entry]
-
-            """ Plotting control functions """
-            plt.rcParams['figure.dpi'] = 100
-
-
-            ts = signal["ts"]
-            values = signal["signal"]
-
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts, values)
-            ax.set_xlabel('Time [ns]')
-            plt.title(signal_name)
-
-            plt.show(block=True)
-
-
-#     def plot_fft_signal(self):
-
-        # print("WARNING: still have to adjust the x-axis")
-
-        # """ Plotting control functions """
-        # plt.rcParams['figure.dpi'] = 100
-        # signal = self.generate_signal()
-
-        # fft_signal = np.fft.fft(signal)
-        # fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
-
-        # plt.plot(self.ts[1] * self.res[0], fft_signal)
-
-        # plt.show(block=False)
-        # plt.show()
-
 
 
 awg = AWG()
 mixer = Mixer()
 
-# print(len(awg.ts))
-# print(len(awg.get_I()))
-
-
-# plt.plot(awg.ts, awg.get_I())
-# plt.plot(awg.ts, awg.get_Q())
-# plt.show()
-
-
-resolutions = {
-    "awg" : 1e9,
-    "sim" : 1e12
-}
 
 devices = {
     "awg" : awg,
@@ -247,7 +193,16 @@ devices = {
 }
 
 
-groups = {
+resolutions = {
+    "awg" : 1e9,
+    "sim" : 1e12
+}
+
+
+ressources = [ctrl]
+
+
+ressource_groups = {
     "comp" : comp_group,
     "carrier" : carrier_group
 }
@@ -256,18 +211,19 @@ groups = {
 gen = SignalSetup()
 gen.devices = devices
 gen.resolutions = resolutions
-gen.groups = groups
+gen.ressources = ressources
+gen.ressource_groups = ressource_groups
 
 
-output = gen.generate_signal([sig])
+output = gen.generate_signal([ctrl])
 
 gen.plot_signals()
 
 # print(output)
 
 
-# ts = output[(sig.name, sig.get_uuid())]["ts"]
-# values = output[(sig.name, sig.get_uuid())]["signal"]
+# ts = output[(ctrl.name, ctrl.get_uuid())]["ts"]
+# values = output[(ctrl.name, ctrl.get_uuid())]["signal"]
 
 
 # plt.plot(ts, values)

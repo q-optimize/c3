@@ -80,8 +80,8 @@ class Mixer(Device):
         carrier_group = self.ressource_groups["carrier"]
 
 
-        signal = self.ressources[0]
-        for comp in signal.comps:
+        control = self.ressources[0]
+        for comp in control.comps:
             if carrier_group in comp.groups:
                 omega_lo = comp.params["freq"]
 
@@ -138,8 +138,8 @@ class AWG(Device):
         amp_tot_sq = 0
         components = []
 
-        signal = self.ressources[0]
-        for comp in signal.comps:
+        control = self.ressources[0]
+        for comp in control.comps:
             if comp_group in comp.groups:
 
                 amp = comp.params['amp']
@@ -242,20 +242,66 @@ class Generator:
     """
     def __init__(
             self,
-            devices = {}
+            devices = {},
+            resolutions = {},
+            ressources = [],
+            ressource_groups = {}
             ):
 
         self.devices = devices
+        self.resolutions = resolutions
+        self.ressources = ressources
+        self.ressource_groups = ressource_groups
+
+        self.output = None
 
 
-    def generate_signal(self):
+    def generate_signal(self, ressources = []):
         ####
         #
         # PLACEHOLDER
-        # HAS TO BE CODED BY THE USER. BUT HAS TO RETURN np.array OF SIGNAL
         #
         ####
         raise NotImplementedError()
 
+
+
+    def plot_signals(self, ressources = []):
+
+        for entry in self.output:
+            ctrl_name = entry[0]
+            control = self.output[entry]
+
+            """ Plotting control functions """
+            plt.rcParams['figure.dpi'] = 100
+
+
+            ts = control["ts"]
+            values = control["signal"]
+
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            ax.plot(ts, values)
+            ax.set_xlabel('Time [ns]')
+            plt.title(ctrl_name)
+
+            plt.show(block=True)
+
+
+#     def plot_fft_signal(self):
+
+        # print("WARNING: still have to adjust the x-axis")
+
+        # """ Plotting control functions """
+        # plt.rcParams['figure.dpi'] = 100
+        # signal = self.generate_signal()
+
+        # fft_signal = np.fft.fft(signal)
+        # fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
+
+        # plt.plot(self.ts[1] * self.res[0], fft_signal)
+
+        # plt.show(block=False)
+        # plt.show()
 
 

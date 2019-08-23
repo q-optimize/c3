@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Signal:
+class Control:
     """
 
     """
@@ -106,4 +106,3 @@ class Signal:
                     opt_map[key] = [(entry)]
 
         return opt_map
-
