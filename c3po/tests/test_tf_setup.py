@@ -9,12 +9,11 @@ import matplotlib.pyplot as plt
 from qutip import *
 import c3po
 
+from c3po.signals.component import *
 from c3po.main.model import Model as mdl
-from c3po.main.gate import Gate as gt
 from c3po.main.measurement import Simulation as sim
 
 from c3po.utils.tf_utils import *
-from c3po.evolution.propagation import *
 
 import time
 
@@ -32,72 +31,88 @@ print(" ")
 print("Available tensorflow devices: ")
 tf_list_avail_devices()
 
-initial_parameters = {
-        'q1': {'freq': 6e9*2*np.pi, 'delta': 100e6 * 2 * np.pi},
-        'r1': {'freq': 9e9*2*np.pi}
-        }
-initial_couplings = {
-        ('q1', 'r1'): {'strength': 150e6*2*np.pi}
-        }
-initial_hilbert_space = {
-        'q1': 2,
-        'r1': 5
-        }
-comp_hilbert_space = {
-        'q1': 2,
-        'r1': 5
-        }
-model_types = {
-        'components': {
-            'q1': c3po.utils.hamiltonians.duffing,
-            'r1': c3po.utils.hamiltonians.resonator},
-        'couplings': {
-            ('q1', 'r1'): c3po.utils.hamiltonians.int_XX},
-        'drives': {
-            'q1': c3po.utils.hamiltonians.drive},
-        }
+# to change to this once we want to do model learning
+# def duffing(a, values):
+#     c1 = lambda freq: freq
+#     c2 = lambda delta: delta/2
+#     cs = [c1(values['freq']),c2(values['delta'])]
+#     H1 = a.dag() * a
+#     H2 = (a.dag() * a - 1) * a.dag() * a
+#     Hs = [H1,H2]
+#     return Hs, cs
 
-initial_model = mdl(
-        initial_parameters,
-        initial_couplings,
-        initial_hilbert_space,
-        model_types
-        )
+def duffing(a, values):
+    return values['freq'] * a.dag() * a + values['delta']/2 * (a.dag() * a - 1) * a.dag() * a
 
+def resonator(a, values):
+    return values['freq'] * a.dag() * a
 
-U_goal = tensor(
-    basis(2,1),
-    basis(5,0)
-).full()
+def int_XX(anhs, values):
+    return values['strength'] * (anhs[0].dag() + anhs[0]) * (anhs[1].dag() + anhs[1])
 
-U0 = tensor(
-    basis(2,0),
-    basis(5,0)
-).full()
+def drive(anhs, values):
+    return anhs[0].dag() + anhs[0]
 
-X_gate = gt('qubit_1', U_goal, T_final=30e-9)
-pulse_bounds = {
-        'control1': {
-            'carrier1': {
-                'pulses': {
-                    'pulse': {
-                        'params': {
-                            'amp': [15e6*2*pi, 65e6*2*pi],
-                            't_up': [2e-9, 48e-9],
-                            't_down': [2e-9, 48e-9],
-                            'xy_angle': [-pi, pi],
-                            'freq_offset': [-20e6*2*pi, 20e6*2*pi]
-                            }
-                        }
-                    }
-                }
-            }
-        }
+q1 = Qubit(
+    name = "Q1",
+    desc = "Qubit 1",
+    comment = "The one and only qubit in this chip",
+    freq = 6e9*2*np.pi,
+    delta = 100e6 * 2 * np.pi,
+    hilbert_dim = 2,
+    hamiltonian = duffing,
+    )
 
-X_gate.set_parameters('initial', handmade_pulse)
-X_gate.set_bounds(pulse_bounds)
+q2 = Qubit(
+    name = "Q2",
+    desc = "Qubit 2",
+    comment = "Maybe not the one and only qubit in this chip",
+    freq = 5e9*2*np.pi,
+    delta = 100e6 * 2 * np.pi,
+    hilbert_dim = 2,
+    hamiltonian = duffing,
+    )
 
-rechenknecht = sim(initial_model, sesolve_pwc, sess)
+r1 = Resonator(
+    name = "R1",
+    desc = "Resonator 1",
+    comment = "The resonator driving Qubit 1",
+    freq = 9e9*2*np.pi,
+    hilbert_dim = 5,
+    hamiltonian = resonator,
+    )
+
+q1r1 = Coupling(
+    name = "Q1-R1",
+    desc = "Coupling between Resonator 1 and Qubit 1",
+    comment = " ",
+    connected = [q1.name, r1.name],
+    strength = 150e6*2*np.pi,
+    hamiltonian = int_XX,
+    )
+
+q2r1 = Coupling(
+    name = "Q2-R1",
+    desc = "Coupling between Resonator 1 and Qubit 2",
+    comment = " ",
+    connected = [q2.name, r1.name],
+    strength = 150e6*2*np.pi,
+    hamiltonian = int_XX,
+    )
+
+drive = Drive(
+    name = "D1",
+    desc = "Drive 1",
+    comment = "Drive line 1 on qubit 1 through resonator 1 ",
+    connected = [r1.name],
+    hamiltonian = drive,
+    )
+
+chip_elements = [q1,q2,r1,q1r1,drive]
+
+initial_model = mdl(chip_elements)
+
+rechenknecht = sim(initial_model)
 
 res = 50e9
 rechenknecht.resolution=res

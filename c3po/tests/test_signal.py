@@ -1,5 +1,5 @@
 from c3po.signals.envelopes import *
-from c3po.signals.component import Component as Comp
+from c3po.signals.component import Signal_component as Comp
 from c3po.signals.signal import Signal as Signal
 
 from c3po.signals.generator import Device as Device
@@ -148,6 +148,7 @@ class SignalSetup(Generator):
         awg = self.devices["awg"]
         mixer = self.devices["mixer"]
 
+
         for sig in ressources:
 
             awg.t_start = sig.t_start
@@ -203,7 +204,7 @@ class SignalSetup(Generator):
             ax.set_xlabel('Time [ns]')
             plt.title(signal_name)
 
-            plt.show(block=True)
+            plt.show(block=False)
 
 
 #     def plot_fft_signal(self):
@@ -272,5 +273,3 @@ gen.plot_signals()
 
 # plt.plot(ts, values)
 # plt.show()
-
-

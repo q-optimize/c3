@@ -2,10 +2,7 @@
 
 import cma.evolution_strategy as cmaes
 import numpy as np
-from qutip import basis, qeye
-import c3po.control.goat as goat
 import tensorflow as tf
-from tensorflow.python.ops.parallel_for.gradients import jacobian
 from scipy.optimize import minimize as minimize
 from progressbar import ProgressBar, ETA, Percentage, FileTransferSpeed, Bar
 
@@ -183,10 +180,8 @@ class Simulation(Backend):
         Class that symbolically describes the model.
     """
 
-    def __init__(self, model, solve_func, sess):
+    def __init__(self, model):
         self.model = model
-        self.solver = solve_func
-        self.tf_session = sess
         self.resolution = 10e9
 
     def update_model(self, model):
