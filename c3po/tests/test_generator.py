@@ -52,7 +52,6 @@ p1 = CtrlComp(
     bounds = params_bounds,
     groups = [comp_group]
 )
-print("p1 uuid: " + str(p1.get_uuid()))
 
 p2 = CtrlComp(
     name = "pulse2",
@@ -62,7 +61,6 @@ p2 = CtrlComp(
     bounds = params_bounds,
     groups = [comp_group]
 )
-print("p2 uuid: " + str(p2.get_uuid()))
 
 ####
 # Below code: For checking the single signal components
@@ -84,7 +82,6 @@ carr = CtrlComp(
     params = carrier_parameters,
     groups = [carrier_group]
 )
-print("carr uuid: " + str(carr.get_uuid()))
 
 
 comps = []
@@ -95,39 +92,14 @@ comps.append(p2)
 
 
 ctrl = Control()
-ctrl.name = "signal1"
+ctrl.name = "control1"
 ctrl.t_start = 0
 ctrl.t_end = 150e-9
 ctrl.comps = comps
 
 
-# print(ctrl.get_parameters())
-# print(" ")
-# print(" ")
-# print(" ")
 
-# print(ctrl.get_history())
-# print(" ")
-# print(" ")
-# print(" ")
-
-
-# ctrl.save_params_to_history("initial")
-
-# print(ctrl.get_history())
-# print(" ")
-# print(" ")
-# print(" ")
-
-
-# ctrl.save_params_to_history("test2")
-
-# print(ctrl.get_history())
-
-
-
-
-class SignalSetup(Generator):
+class ControlSetup(Generator):
 
     def __init__(
             self,
@@ -139,7 +111,11 @@ class SignalSetup(Generator):
 
         super().__init__(devices, resolutions, ressources, ressource_groups)
 
-    def generate_signal(self, ressources):
+
+    def generate_signals(self, ressources = []):
+
+        if ressources == []:
+            ressources = self.ressources
 
         output = {}
 
@@ -156,6 +132,7 @@ class SignalSetup(Generator):
             awg.create_IQ("awg")
 
 #            awg.plot_IQ_components("awg")
+#            awg.plot_fft_IQ_components("awg")
 
             mixer.t_start = ctrl.t_start
             mixer.t_end = ctrl.t_end
@@ -208,16 +185,22 @@ ressource_groups = {
 }
 
 
-gen = SignalSetup()
+gen = ControlSetup()
 gen.devices = devices
 gen.resolutions = resolutions
 gen.ressources = ressources
 gen.ressource_groups = ressource_groups
 
 
-output = gen.generate_signal([ctrl])
+output = gen.generate_signals()
+
 
 gen.plot_signals()
+gen.plot_fft_signals()
+
+# gen.plot_signals(ressources)
+# gen.plot_fft_signals(ressources)
+
 
 # print(output)
 
