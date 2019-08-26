@@ -85,12 +85,13 @@ class Mixer(Device):
 
         ts = self.ts
 
-        carrier_group = self.ressource_groups["carrier"]
+        carr_group = self.ressource_groups["carr"]
+        carr_group_id = carr_group.get_uuid()
 
 
         control = self.ressources[0]
         for comp in control.comps:
-            if carrier_group in comp.groups:
+            if carr_group_id in comp.groups:
                 omega_lo = comp.params["freq"]
 
 
@@ -148,15 +149,15 @@ class AWG(Device):
         Inphase = []
         Quadrature = []
 
-        comp_group = self.ressource_groups["comp"]
-
+        env_group = self.ressource_groups["env"]
+        env_group_id = env_group.get_uuid()
 
         amp_tot_sq = 0
         components = []
 
         control = self.ressources[0]
         for comp in control.comps:
-            if comp_group in comp.groups:
+            if env_group_id in comp.groups:
 
                 amp = comp.params['amp']
 
