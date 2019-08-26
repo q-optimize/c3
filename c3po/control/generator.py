@@ -52,9 +52,19 @@ class Mixer(Device):
     """
     def __init__(
             self,
+            name = " ",
+            desc = " ",
+            comment = " ",
+            resolutions = {},
+            ressources = [],
+            ressource_groups = {},
             t_start = None,
-            t_end = None
+            t_end = None,
+            Inphase = [],
+            Quadrature = []
             ):
+
+        super().__init__(name, desc, comment, resolutions, ressources, ressource_groups)
 
         self.t_start = t_start
         self.t_end = t_end
@@ -62,10 +72,8 @@ class Mixer(Device):
         self.slice_num = None
         self.ts = []
 
-
-        self.Inphase = []
-        self.Quadrature = []
-
+        self.Inphase = Inphase
+        self.Quadrature = Quadrature
 
         self.output = []
 
@@ -81,8 +89,8 @@ class Mixer(Device):
         carrier_group = self.ressource_groups["carrier"]
 
 
-        signal = self.ressources[0]
-        for comp in signal.comps:
+        control = self.ressources[0]
+        for comp in control.comps:
             if carrier_group in comp.groups:
                 omega_lo = comp.params["freq"]
 
@@ -98,9 +106,17 @@ class AWG(Device):
     """
     def __init__(
             self,
+            name = " ",
+            desc = " ",
+            comment = " ",
+            resolutions = {},
+            ressources = [],
+            ressource_groups = {},
             t_start = None,
-            t_end = None,
+            t_end = None
             ):
+
+        super().__init__(name, desc, comment, resolutions, ressources, ressource_groups)
 
         self.t_start = t_start
         self.t_end = t_end
@@ -140,8 +156,8 @@ class AWG(Device):
         I_components = []
         Q_components = []
 
-        signal = self.ressources[0]
-        for comp in signal.comps:
+        control = self.ressources[0]
+        for comp in control.comps:
             if comp_group in comp.groups:
 
                 amp = comp.params['amp']
@@ -216,49 +232,122 @@ class AWG(Device):
 
 
 
-#     def plot_fft_IQ_components(self, axs=None):
+    def plot_fft_IQ_components(self, res_key, axs=None):
 
 
-        # print("WARNING: still have to adjust the x-axis")
+        print("WARNING: still have to adjust the x-axis")
 
-        # """ Plotting control functions """
-        # plt.rcParams['figure.dpi'] = 100
-        # IQ = self.get_IQ()
-        # fft_IQ = {}
-        # fft_I = np.fft.fft(IQ['I'])
-        # fft_Q = np.fft.fft(IQ['Q'])
-        # fft_IQ['I'] = np.fft.fftshift(fft_I.real / max(fft_I.real))
-        # fft_IQ['Q'] = np.fft.fftshift(fft_Q.real / max(fft_Q.real))
 
-        # fig, axs = plt.subplots(2, 1)
-        # axs[0].plot(self.ts[0] * self.res[0], fft_IQ['I'])
-        # axs[1].plot(self.ts[0] * self.res[0], fft_IQ['Q'])
-        # # I (Kevin) don't really understand the behaviour of plt.show()
-        # # here. If I only put plt.show(block=False), I get error messages
-        # # on my system at home. Adding a second plt.show() resolves that
-        # # issue???
-        # # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
-        # plt.show(block=False)
-        # plt.show()
+        ts = self.ts
+        res = self.resolutions[res_key]
+        I = self.Inphase
+        Q = self.Quadrature
+
+
+        """ Plotting control functions """
+        plt.rcParams['figure.dpi'] = 100
+
+        fft_I = np.fft.fft(I)
+        fft_Q = np.fft.fft(Q)
+        fft_I = np.fft.fftshift(fft_I.real / max(fft_I.real))
+        fft_Q = np.fft.fftshift(fft_Q.real / max(fft_Q.real))
+
+        fig, axs = plt.subplots(2, 1)
+        axs[0].plot(ts * res, fft_I)
+        axs[1].plot(ts * res, fft_Q)
+        # I (Kevin) don't really understand the behaviour of plt.show()
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
+        # issue???
+        # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
+        plt.show(block=False)
+        plt.show()
 
 
 
 class Generator:
     """
+
     """
     def __init__(
             self,
-            devices = {}
+            devices = {},
+            resolutions = {},
+            ressources = [],
+            ressource_groups = {}
             ):
 
         self.devices = devices
+        self.resolutions = resolutions
+        self.ressources = ressources
+        self.ressource_groups = ressource_groups
+
+        self.output = None
 
 
-    def generate_signal(self):
+    def generate_signals(self, ressources = []):
         ####
         #
         # PLACEHOLDER
-        # HAS TO BE CODED BY THE USER. BUT HAS TO RETURN np.array OF SIGNAL
         #
         ####
         raise NotImplementedError()
+<<<<<<< HEAD:c3po/signals/generator.py
+=======
+
+
+
+    def plot_signals(self, ressources = []):
+
+        if ressources != []:
+            self.generate_signals(ressources)
+
+        for entry in self.output:
+            ctrl_name = entry[0]
+            control = self.output[entry]
+
+            """ Plotting control functions """
+            plt.rcParams['figure.dpi'] = 100
+
+
+            ts = control["ts"]
+            signal = control["signal"]
+
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            ax.plot(ts, signal)
+            ax.set_xlabel('Time [ns]')
+            plt.title(ctrl_name)
+
+            plt.show(block=True)
+
+
+    def plot_fft_signals(self, ressources = []):
+
+        if ressources != []:
+            self.generate_signals(ressources)
+
+        print("WARNING: still have to adjust the x-axis")
+
+        for entry in self.output:
+            ctrl_name = entry[0]
+            control = self.output[entry]
+
+
+            """ Plotting control functions """
+            plt.rcParams['figure.dpi'] = 100
+
+            ts = control["ts"]
+            signal = control["signal"]
+
+
+            fft_signal = np.fft.fft(signal)
+            fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
+
+            plt.plot(ts, fft_signal)
+            plt.title(ctrl_name + " (fft)")
+
+            plt.show(block=True)
+
+
+>>>>>>> calibration:c3po/control/generator.py

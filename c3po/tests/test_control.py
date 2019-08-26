@@ -1,11 +1,14 @@
 from c3po.control.envelopes import *
 from c3po.cobj.component import ControlComponent as CtrlComp
+from c3po.control.control import Control as Control
 
+from c3po.control.generator import Device as Device
+from c3po.control.generator import AWG as AWG
+from c3po.control.generator import Mixer as Mixer
+from c3po.control.generator import Generator as Generator
 
 import uuid
 import matplotlib.pyplot as plt
-
-
 
 
 comp_group = uuid.uuid4()
@@ -84,13 +87,42 @@ carr = CtrlComp(
 print("carr uuid: " + str(carr.get_uuid()))
 
 
+comps = []
+comps.append(carr)
+comps.append(p1)
+comps.append(p2)
 
 
 
+ctrl = Control()
+ctrl.name = "signal1"
+ctrl.t_start = 0
+ctrl.t_end = 150e-9
+ctrl.comps = comps
 
 
+print(ctrl.get_parameters())
+print(" ")
+print(" ")
+print(" ")
+
+print(ctrl.get_history())
+print(" ")
+print(" ")
+print(" ")
 
 
+ctrl.save_params_to_history("initial")
+
+print(ctrl.get_history())
+print(" ")
+print(" ")
+print(" ")
+
+
+ctrl.save_params_to_history("test2")
+
+print(ctrl.get_history())
 
 
 
