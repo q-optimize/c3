@@ -1,5 +1,6 @@
 import uuid
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
@@ -38,7 +39,7 @@ class Device:
 
     def create_ts(self, res_key):
         if self.t_start != None and self.t_end != None and self.slice_num != None:
-            self.ts = np.linspace(self.t_start, self.t_end, self.slice_num)
+            self.ts = tf.linspace(self.t_start, self.t_end, self.slice_num)
         else:
             self.ts = None
 
@@ -86,10 +87,10 @@ class Mixer(Device):
                 omega_lo = comp.params["freq"]
 
 
-        self.output = np.zeros_like(ts)
+        self.output = tf.zeros_like(ts)
 
-        self.output += (self.Inphase * np.cos(omega_lo * ts) +
-                        self.Quadrature * np.sin(omega_lo * ts))
+        self.output += (self.Inphase * tf.cos(omega_lo * ts) +
+                        self.Quadrature * tf.sin(omega_lo * ts))
 
 
 class AWG(Device):
@@ -136,7 +137,8 @@ class AWG(Device):
 
 
         amp_tot_sq = 0
-        components = []
+        I_components = []
+        Q_components = []
 
         signal = self.ressources[0]
         for comp in signal.comps:
@@ -148,14 +150,18 @@ class AWG(Device):
 
                 xy_angle = comp.params['xy_angle']
                 freq_offset = comp.params['freq_offset']
-                components.append(
+                I_components.append(
                     amp * comp.get_shape_values(ts) *
-                    np.exp(1j * (xy_angle + freq_offset * ts))
+                    tf.cos(xy_angle + freq_offset * ts)
+                    )
+                Q_components.append(
+                    amp * comp.get_shape_values(ts) *
+                    tf.sin(xy_angle + freq_offset * ts)
                     )
 
-        norm = np.sqrt(amp_tot_sq)
-        Inphase = np.real(np.sum(components, axis = 0)) / norm
-        Quadrature = np.imag(np.sum(components, axis = 0)) / norm
+        norm = tf.sqrt(amp_tot_sq)
+        Inphase = tf.add_n(I_components)/norm
+        Quadrature = tf.add_n(Q_components)/norm
 
         self.amp_tot_sq = amp_tot_sq
         self.Inphase = Inphase
@@ -256,6 +262,3 @@ class Generator:
         #
         ####
         raise NotImplementedError()
-
-
-

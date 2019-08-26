@@ -8,6 +8,8 @@ from c3po.signals.generator import Mixer as Mixer
 from c3po.signals.generator import Generator as Generator
 
 import uuid
+import tensorflow as tf
+import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
 
@@ -32,17 +34,24 @@ flattop_params2 = {
 }
 
 params_bounds = {
-    'T_up' : [2e-9, 98e-9],
-    'T_down' : [2e-9, 98e-9],
+    'T_up' : [2e-9, 48e-9],
+    'T_down' : [2e-9, 48e-9],
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
 
+# def my_flattop_old(t, params):
+#     t_up = params['T_up']
+#     t_down = params['T_down']
+#     return flattop_tf(t, t_up, t_down)
+
 def my_flattop(t, params):
     t_up = params['T_up']
     t_down = params['T_down']
-    return flattop(t, t_up, t_down)
-
+    T2 = tf.maximum(t_up, t_down)
+    T1 = tf.minimum(t_up, t_down)
+    return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
+(1 + tf.erf((-t + T2) / 2e-9)) / 2
 
 p1 = Comp(
     name = "pulse1",
@@ -96,8 +105,8 @@ comps.append(p2)
 
 sig = Signal()
 sig.name = "signal1"
-sig.t_start = 0
-sig.t_end = 150e-9
+sig.t_start = 0.0
+sig.t_end = 50e-9
 sig.comps = comps
 
 
@@ -169,8 +178,18 @@ class SignalSetup(Generator):
             mixer.calc_slice_num("sim")
             mixer.create_ts("sim")
 
-            I = np.interp(mixer.ts, awg.ts, awg.get_I())
-            Q = np.interp(mixer.ts, awg.ts, awg.get_Q())
+            I = tfp.math.interp_regular_1d_grid(
+                mixer.ts,
+                x_ref_min = awg.ts[0],
+                x_ref_max = awg.ts[-1],
+                y_ref = awg.get_I()
+                )
+            Q =  tfp.math.interp_regular_1d_grid(
+                mixer.ts,
+                x_ref_min = awg.ts[0],
+                x_ref_max = awg.ts[-1],
+                y_ref = awg.get_Q()
+                )
 
             mixer.Inphase = I
             mixer.Quadrature = Q
@@ -239,7 +258,7 @@ mixer = Mixer()
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e12
+    "sim" : 1e11
 }
 
 devices = {
