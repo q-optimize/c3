@@ -85,7 +85,8 @@ class Optimizer:
 
 
     def to_scale_one(self, values, bounds):
-        """Returns a vector of scale 1 that plays well with optimizers.
+        """
+        Returns a vector of scale 1 that plays well with optimizers.
 
         Parameters
         ----------
@@ -112,7 +113,8 @@ class Optimizer:
 
 
     def to_bound_phys_scale(self, x0, bounds):
-        """Transforms an optimizer vector back to physical scale
+        """
+        Transforms an optimizer vector back to physical scale
 
         Parameters
         ----------
@@ -209,8 +211,6 @@ class Optimizer:
         return values_opt
 
 
-
-
     def optimize_signal(self, signals, opt_map, opt, settings, calib_name, eval_func):
 
         ####
@@ -258,8 +258,6 @@ class Optimizer:
             signal.save_params_to_history(calib_name)
 
 
-
-
     def optimize_gate(self,
             U0,
             gate,
@@ -267,7 +265,8 @@ class Optimizer:
             start_name='initial',
             ol_name='open_loop'
         ):
-        """Use GOAT to optimize parameters of a given gate.
+        """
+        Use minimize to optimize parameters of a given gate.
 
         Parameters
         ----------
@@ -308,3 +307,27 @@ class Optimizer:
         gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)
         print('Optimal values:')
         gate.print_pulse(ol_name)
+
+    def sweep_bounds(self, U0, gate, n_points=101):
+        spectrum = []
+        range = np.linspace(0, gate.bounds['scale'], n_points)
+        range += gate.bounds['offset']
+        params = gate.parameters['initial']
+        widgets = [
+            'Sweep: ',
+           Percentage(),
+           ' ',
+           Bar(marker='=', left='[',right=']'),
+           ' ',
+           ETA()
+           ]
+        pbar = ProgressBar(widgets=widgets, maxval=n_points)
+        pbar.start()
+        i=0
+        for val in pbar(range):
+            params[gate.opt_idxes] = val
+            spectrum.append(1-self.gate_err(U0, gate, params))
+            pbar.update(i)
+            i+=1
+        pbar.finish()
+        return spectrum, range

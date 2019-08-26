@@ -1,5 +1,7 @@
+
 from c3po.control.envelopes import *
 from c3po.cobj.component import ControlComponent as CtrlComp
+from c3po.cobj.group import ComponentGroup as CompGroup
 from c3po.control.control import Control as Control
 
 from c3po.control.generator import Device as Device
@@ -7,12 +9,21 @@ from c3po.control.generator import AWG as AWG
 from c3po.control.generator import Mixer as Mixer
 from c3po.control.generator import Generator as Generator
 
+
 import uuid
 import matplotlib.pyplot as plt
 
 
-comp_group = uuid.uuid4()
-carrier_group = uuid.uuid4()
+
+env_group = CompGroup()
+env_group.name = "env_group"
+env_group.desc = "group containing all components of type envelop"
+
+
+carr_group = CompGroup()
+carr_group.name = "carr_group"
+carr_group.desc = "group containing all components of type carrier"
+
 
 
 flattop_params1 = {
@@ -53,8 +64,10 @@ p1 = CtrlComp(
     shape = my_flattop,
     params = flattop_params1,
     bounds = params_bounds,
-    groups = [comp_group]
+    groups = [env_group.get_uuid()]
 )
+env_group.add_element(p1)
+
 
 p2 = CtrlComp(
     name = "pulse2",
@@ -62,8 +75,10 @@ p2 = CtrlComp(
     shape = my_flattop,
     params = flattop_params2,
     bounds = params_bounds,
-    groups = [comp_group]
+    groups = [env_group.get_uuid()]
 )
+env_group.add_element(p2)
+
 
 ####
 # Below code: For checking the single signal components
@@ -83,9 +98,9 @@ carr = CtrlComp(
     name = "carrier",
     desc = "Frequency of the local oscillator",
     params = carrier_parameters,
-    groups = [carrier_group]
+    groups = [carr_group.get_uuid()]
 )
-
+carr_group.add_element(carr)
 
 comps = []
 comps.append(carr)
@@ -161,8 +176,6 @@ class ControlSetup(Generator):
 
 
 
-
-
 awg = AWG()
 mixer = Mixer()
 
@@ -183,8 +196,8 @@ resources = [ctrl]
 
 
 resource_groups = {
-    "comp" : comp_group,
-    "carrier" : carrier_group
+    "env" : env_group,
+    "carr" : carr_group
 }
 
 
