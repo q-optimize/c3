@@ -1,6 +1,6 @@
-from test_tf_setup import *
+from test_generator import *
+from test_model import *
 
-#sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
 params = tf.placeholder(
     tf.float64,
     shape=X_gate.parameters['initial'].shape

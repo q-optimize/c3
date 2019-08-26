@@ -101,3 +101,40 @@ def tf_unitary_overlap(A, B):
         Description of returned object.
     """
     return tf.abs(tf.linalg.trace(tf.matmul(A.T, B)) / B.shape[1])
+
+
+def tf_dU_of_t(h0, hks, cflds_t, dt):
+    h = h0
+    for ii in range(len(hks)):
+            h += cflds_t[ii]*hks[ii]
+
+    return tf.linalg.expm(-1j*h*dt)
+
+
+def tf_propagation(h0, hks, cflds, history=False):
+    control_fields = tf.cast(
+        tf.transpose(tf.stack(cflds)),
+        tf.complex128,
+        name='Control_fields'
+        )
+
+    dUs = tf.map_fn(
+        lambda fields: dU_of_t(h0, hks, fields, dt)
+        control_fields,
+        name='dU_of_t'
+        )
+
+    if history:
+        u_t = tf.gather(dUs,0)
+        history = [u_t]
+        for ii in range(dUs.shape[0]-1):
+            du = tf.gather(dUs, ii+1)
+            u_t = tf.matmul(du,u_t)
+            history.append(u_t)
+        return history, ts
+    else:
+        U = tf.gather(dUs, 0)
+        for ii in range(1, dUs.shape[0]):
+            U = tf.matmul(tf.gather(dUs, ii), U)
+
+        return U

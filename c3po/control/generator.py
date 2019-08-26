@@ -16,16 +16,16 @@ class Device:
             desc = " ",
             comment = " ",
             resolutions = {},
-            ressources = [],
-            ressource_groups = {}
+            resources = [],
+            resource_groups = {}
             ):
 
         self.name = name
         self.desc = desc
         self.comment = comment
         self.resolutions = resolutions
-        self.ressources = ressources
-        self.ressource_groups = ressource_groups
+        self.resources = resources
+        self.resource_groups = resource_groups
 
 
     def calc_slice_num(self, res_key):
@@ -56,15 +56,15 @@ class Mixer(Device):
             desc = " ",
             comment = " ",
             resolutions = {},
-            ressources = [],
-            ressource_groups = {},
+            resources = [],
+            resource_groups = {},
             t_start = None,
             t_end = None,
             Inphase = [],
             Quadrature = []
             ):
 
-        super().__init__(name, desc, comment, resolutions, ressources, ressource_groups)
+        super().__init__(name, desc, comment, resolutions, resources, resource_groups)
 
         self.t_start = t_start
         self.t_end = t_end
@@ -86,11 +86,11 @@ class Mixer(Device):
 
         ts = self.ts
 
-        carr_group = self.ressource_groups["carr"]
+        carr_group = self.resource_groups["carr"]
         carr_group_id = carr_group.get_uuid()
 
 
-        control = self.ressources[0]
+        control = self.resources[0]
         for comp in control.comps:
             if carr_group_id in comp.groups:
                 omega_lo = comp.params["freq"]
@@ -111,13 +111,13 @@ class AWG(Device):
             desc = " ",
             comment = " ",
             resolutions = {},
-            ressources = [],
-            ressource_groups = {},
+            resources = [],
+            resource_groups = {},
             t_start = None,
             t_end = None
             ):
 
-        super().__init__(name, desc, comment, resolutions, ressources, ressource_groups)
+        super().__init__(name, desc, comment, resolutions, resources, resource_groups)
 
         self.t_start = t_start
         self.t_end = t_end
@@ -150,14 +150,14 @@ class AWG(Device):
         Inphase = []
         Quadrature = []
 
-        env_group = self.ressource_groups["env"]
+        env_group = self.resource_groups["env"]
         env_group_id = env_group.get_uuid()
 
         amp_tot_sq = 0
         I_components = []
         Q_components = []
 
-        control = self.ressources[0]
+        control = self.resources[0]
         for comp in control.comps:
             if env_group_id in comp.groups:
 
@@ -277,19 +277,19 @@ class Generator:
             self,
             devices = {},
             resolutions = {},
-            ressources = [],
-            ressource_groups = {}
+            resources = [],
+            resource_groups = {}
             ):
 
         self.devices = devices
         self.resolutions = resolutions
-        self.ressources = ressources
-        self.ressource_groups = ressource_groups
+        self.resources = resources
+        self.resource_groups = resource_groups
 
         self.output = None
 
 
-    def generate_signals(self, ressources = []):
+    def generate_signals(self, resources = []):
         ####
         #
         # PLACEHOLDER
@@ -299,10 +299,10 @@ class Generator:
 
 
 
-    def plot_signals(self, ressources = []):
+    def plot_signals(self, resources = []):
 
-        if ressources != []:
-            self.generate_signals(ressources)
+        if resources != []:
+            self.generate_signals(resources)
 
         for entry in self.output:
             ctrl_name = entry[0]
@@ -324,10 +324,10 @@ class Generator:
             plt.show(block=True)
 
 
-    def plot_fft_signals(self, ressources = []):
+    def plot_fft_signals(self, resources = []):
 
-        if ressources != []:
-            self.generate_signals(ressources)
+        if resources != []:
+            self.generate_signals(resources)
 
         print("WARNING: still have to adjust the x-axis")
 

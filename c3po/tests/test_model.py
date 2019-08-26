@@ -11,7 +11,6 @@ import c3po
 
 from c3po.cobj.component import *
 from c3po.main.model import Model as mdl
-from c3po.main.measurement import Simulation as sim
 
 from c3po.utils.tf_utils import *
 

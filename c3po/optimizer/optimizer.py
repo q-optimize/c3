@@ -211,6 +211,56 @@ class Optimizer:
         return values_opt
 
 
+    def open_loop(self, opt_params, settings, fidelity_func, signals = None):
+
+        ####
+        #
+        # NOT YET TESTED
+        #
+        ####
+
+        values = opt_params['values']
+        bounds = np.array(opt_params['bounds'])
+        scale = np.diff(bounds)
+        if 'origin' in opt_params.keys():
+            origin = opt_params['origin']
+
+        params = tf.placeholder(tf.float64, shape=(len(values)))
+
+        g = fidelty_func(params)
+        jac = tf.gradients(g, params)
+
+        x0 = self.to_scale_one(values, bounds)
+
+        res = minimize(
+                lambda x: sess.run(g,
+                                   feed_dict={
+                                       params: self.to_bound_phys_scale(
+                                           x,
+                                           bounds
+                                           )
+                                       }
+                                   )
+                ,
+                x0,
+                jac=lambda x: sess.run(jac,
+                                   feed_dict={
+                                       params: self.to_bound_phys_scale(
+                                           x,
+                                           bounds
+                                           )
+                                       }
+                                   )*scale
+                ,
+                method='L-BFGS-B',
+                options={'disp': True}
+                )
+
+        values_opt = self.to_bound_phys_scale(res.x, bounds)
+
+        return values_opt
+
+
     def optimize_signal(self, signals, opt_map, opt, settings, calib_name, eval_func):
 
         ####
@@ -247,6 +297,13 @@ class Optimizer:
 
         if opt == 'cmaes':
             values_opt = self.cmaes(opt_params, settings, eval_func, signals)
+        elif opt == 'open_loop':
+            values_opt = self.open_loop(
+                opt_params,
+                settings,
+                eval_func,
+                signals
+                )
 
 
         opt_params['values'] = values_opt
@@ -259,8 +316,7 @@ class Optimizer:
 
 
     def optimize_gate(self,
-            U0,
-            gate,
+            error_fn,
             sess,
             start_name='initial',
             ol_name='open_loop'
@@ -284,7 +340,7 @@ class Optimizer:
             tf.float64,
             shape=gate.parameters['initial'].shape
             )
-        g = self.gate_err(U0, gate, params)
+        g = error_fn(U0, gate, params)
         jac = tf.gradients(g, params)
         res = minimize(
                 lambda x: sess.run(g,
@@ -307,6 +363,7 @@ class Optimizer:
         gate.parameters[ol_name] = gate.to_bound_phys_scale(res.x)
         print('Optimal values:')
         gate.print_pulse(ol_name)
+
 
     def sweep_bounds(self, U0, gate, n_points=101):
         spectrum = []

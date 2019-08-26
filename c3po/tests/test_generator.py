@@ -11,6 +11,8 @@ from c3po.control.generator import Generator as Generator
 
 
 import uuid
+import tensorflow as tf
+import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
 
@@ -43,15 +45,17 @@ flattop_params2 = {
 }
 
 params_bounds = {
+    'amp' : [1e3 * 2 * np.pi, 15e6 * 2 * np.pi],
     'T_up' : [2e-9, 98e-9],
     'T_down' : [2e-9, 98e-9],
+    'xy_angle' : [-np.pi, np.pi],
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
 
-def my_flattop(t, idx, guess):
-    t_up = guess[idx['t_up']]
-    t_down = guess[idx['t_down']]
+def my_flattop(t, params):
+    t_up = params['T_up']
+    t_down = params['T_down']
     T2 = tf.maximum(t_up, t_down)
     T1 = tf.minimum(t_up, t_down)
     return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
@@ -160,8 +164,18 @@ class ControlSetup(Generator):
             mixer.calc_slice_num("sim")
             mixer.create_ts("sim")
 
-            I = np.interp(mixer.ts, awg.ts, awg.get_I())
-            Q = np.interp(mixer.ts, awg.ts, awg.get_Q())
+            I = tfp.math.interp_regular_1d_grid(
+                mixer.ts,
+                x_ref_min = awg.ts[0],
+                x_ref_max = awg.ts[-1],
+                y_ref = awg.get_I()
+                )
+            Q =  tfp.math.interp_regular_1d_grid(
+                mixer.ts,
+                x_ref_min = awg.ts[0],
+                x_ref_max = awg.ts[-1],
+                y_ref = awg.get_Q()
+                )
 
             mixer.Inphase = I
             mixer.Quadrature = Q
@@ -211,10 +225,10 @@ gen.resource_groups = resource_groups
 output = gen.generate_signals()
 
 
-gen.plot_signals()
-gen.plot_fft_signals()
+# gen.plot_signals()
+# gen.plot_fft_signals()atom://teletype/portal/229ec65b-17fe-42ae-8787-3045c994f73c
 
-# gen.plot_signals(resources)
+# gen.plot_signals(resources)#sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
 # gen.plot_fft_signals(resources)
 
 
