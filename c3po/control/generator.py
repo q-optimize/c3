@@ -235,7 +235,10 @@ class AWG(Device):
     def plot_fft_IQ_components(self, res_key, axs=None):
 
 
-        print("WARNING: still have to adjust the x-axis")
+        print("""WARNING: still have to ad from c3po.control.generator import Device as Device
+from c3po.control.generator import AWG as AWG
+from c3po.control.generator import Mixer as Mixer
+from c3po.control.generator import Generator as Generatorjust the x-axis""")
 
 
         ts = self.ts
@@ -292,8 +295,6 @@ class Generator:
         #
         ####
         raise NotImplementedError()
-<<<<<<< HEAD:c3po/signals/generator.py
-=======
 
 
 
@@ -348,6 +349,3 @@ class Generator:
             plt.title(ctrl_name + " (fft)")
 
             plt.show(block=True)
-
-
->>>>>>> calibration:c3po/control/generator.py

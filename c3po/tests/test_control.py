@@ -96,7 +96,7 @@ comps.append(p2)
 
 ctrl = Control()
 ctrl.name = "signal1"
-ctrl.t_start = 0
+ctrl.t_start = 0.0
 ctrl.t_end = 150e-9
 ctrl.comps = comps
 
@@ -123,8 +123,3 @@ print(" ")
 ctrl.save_params_to_history("test2")
 
 print(ctrl.get_history())
-
-
-
-
-

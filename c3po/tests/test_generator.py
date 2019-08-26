@@ -38,10 +38,13 @@ params_bounds = {
 }
 
 
-def my_flattop(t, params):
-    t_up = params['T_up']
-    t_down = params['T_down']
-    return flattop(t, t_up, t_down)
+def my_flattop(t, idx, guess):
+    t_up = guess[idx['t_up']]
+    t_down = guess[idx['t_down']]
+    T2 = tf.maximum(t_up, t_down)
+    T1 = tf.minimum(t_up, t_down)
+    return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
+(1 + tf.erf((-t + T2) / 2e-9)) / 2
 
 
 p1 = CtrlComp(
@@ -93,7 +96,7 @@ comps.append(p2)
 
 ctrl = Control()
 ctrl.name = "control1"
-ctrl.t_start = 0
+ctrl.t_start = 0.0
 ctrl.t_end = 150e-9
 ctrl.comps = comps
 
@@ -105,40 +108,40 @@ class ControlSetup(Generator):
             self,
             devices = {},
             resolutions = {},
-            ressources = [],
-            ressource_groups = {}
+            resources = [],
+            resource_groups = {}
            ):
 
-        super().__init__(devices, resolutions, ressources, ressource_groups)
+        super().__init__(devices, resolutions, resources, resource_groups)
 
 
-    def generate_signals(self, ressources = []):
+    def generate_signals(self, resources = []):
 
-        if ressources == []:
-            ressources = self.ressources
+        if resources == []:
+            resources = self.resources
 
         output = {}
 
         awg = self.devices["awg"]
         mixer = self.devices["mixer"]
 
-        for ctrl in ressources:
+        for ctrl in resources:
 
             awg.t_start = ctrl.t_start
             awg.t_end = ctrl.t_end
             awg.resolutions = self.resolutions
-            awg.ressources = [ctrl]
-            awg.ressource_groups = self.ressource_groups
+            awg.resources = [ctrl]
+            awg.resource_groups = self.resource_groups
             awg.create_IQ("awg")
 
-#            awg.plot_IQ_components("awg")
-#            awg.plot_fft_IQ_components("awg")
+            #awg.plot_IQ_components("awg")
+            #awg.plot_fft_IQ_components("awg")
 
             mixer.t_start = ctrl.t_start
             mixer.t_end = ctrl.t_end
             mixer.resolutions = self.resolutions
-            mixer.ressources = [ctrl]
-            mixer.ressource_groups = self.ressource_groups
+            mixer.resources = [ctrl]
+            mixer.resource_groups = self.resource_groups
             mixer.calc_slice_num("sim")
             mixer.create_ts("sim")
 
@@ -176,10 +179,10 @@ resolutions = {
 }
 
 
-ressources = [ctrl]
+resources = [ctrl]
 
 
-ressource_groups = {
+resource_groups = {
     "comp" : comp_group,
     "carrier" : carrier_group
 }
@@ -188,8 +191,8 @@ ressource_groups = {
 gen = ControlSetup()
 gen.devices = devices
 gen.resolutions = resolutions
-gen.ressources = ressources
-gen.ressource_groups = ressource_groups
+gen.resources = resources
+gen.resource_groups = resource_groups
 
 
 output = gen.generate_signals()
@@ -198,8 +201,8 @@ output = gen.generate_signals()
 gen.plot_signals()
 gen.plot_fft_signals()
 
-# gen.plot_signals(ressources)
-# gen.plot_fft_signals(ressources)
+# gen.plot_signals(resources)
+# gen.plot_fft_signals(resources)
 
 
 # print(output)
@@ -211,5 +214,3 @@ gen.plot_fft_signals()
 
 # plt.plot(ts, values)
 # plt.show()
-
-

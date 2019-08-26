@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from qutip import *
 import c3po
 
-from c3po.signals.component import *
+from c3po.cobj.component import *
 from c3po.main.model import Model as mdl
 from c3po.main.measurement import Simulation as sim
 
@@ -111,8 +111,3 @@ drive = Drive(
 chip_elements = [q1,q2,r1,q1r1,drive]
 
 initial_model = mdl(chip_elements)
-
-rechenknecht = sim(initial_model)
-
-res = 50e9
-rechenknecht.resolution=res

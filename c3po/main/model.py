@@ -1,7 +1,7 @@
 import qutip as qt
 import tensorflow as tf
 from c3po import utils
-from c3po.signals.component import *
+from c3po.cobj.component import *
 
 class Model:
     """

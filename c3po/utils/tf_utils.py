@@ -4,6 +4,7 @@ import tensorflow as tf
 import os
 import types
 
+
 def tf_log_level_info():
     """
     Function for displaying the information about different log levels in
@@ -21,7 +22,6 @@ def tf_log_level_info():
     print(info)
 
 
-
 def get_tf_log_level():
     """
     Function for displaying the current tensorflow log level of the system.
@@ -32,7 +32,6 @@ def get_tf_log_level():
         log_lvl = os.environ['TF_CPP_MIN_LOG_LEVEL']
 
     return log_lvl
-
 
 
 def set_tf_log_level(lvl):
@@ -57,18 +56,14 @@ def tf_list_avail_devices():
             about what information is needed, best practise is to output all
             information available.
     """
-
     local_dev = device_lib.list_local_devices()
-
     print(local_dev)
-
 
 
 def tf_setup():
     """
     Function for setting up the tensorflow environment to be used by c3po
     """
-
     config = tf.ConfigProto(
         intra_op_parallelism_threads=0,
         inter_op_parallelism_threads=0,
@@ -76,83 +71,33 @@ def tf_setup():
     )
     config.gpu_options.allow_growth = True
     sess = tf.Session(config = config)
-
-
     return sess
 
-def tf_evaluate(tf_obj_list, t, args):
+
+def tf_matmul_n(tensor_list):
+    l = int(tensor_list.shape[0])
+    if (l==1):
+        return tensor_list[0]
+    else:
+        even_half = tf.gather(tensor_list, list(range(0,l,2)))
+        odd_half = tf.gather(tensor_list, list(range(1,l,2)))
+        return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
+
+
+def tf_unitary_overlap(A, B):
     """
-    This function is a 1:1 replication of qutips Qobj.evaluate() function
-    but modified for the usecase with tensorflow objects.
-    For more information see:
-    http://qutip.org/docs/latest/modules/qutip/qobj.html#Qobj.evaluate
-
-    Evaluate a time-dependent tf.Tensor obj in list format. For
-    example,
-
-        tf_obj_list = [H0, [H1, func_t]]
-
-    is evaluated to
-
-        tf.Tensor(t) = H0 + H1 * func_t(t, args)
-
-    and
-
-        tf_obj_list = [H0, [H1, 'sin(w * t)']]
-
-    is evaluated to
-
-        tf.Tensor(t) = H0 + H1 * sin(args['w'] * t)
+    Unitary overlap between two matrices in Tensorflow(tm).
 
     Parameters
     ----------
-    tf_obj_list : list
-        A nested list of tf.Tensor obj instances and corresponding time-dependent
-        coefficients.
-    t : float
-        The time for which to evaluate the time-dependent Qobj instance.
-    args : dictionary
-        A dictionary with parameter values required to evaluate the
-        time-dependent tf.Tensor intance.
+    A : Tensor
+        Description of parameter `A`.
+    B : Tensor
+        Description of parameter `B`.
 
     Returns
     -------
-    output : tf.Tensor
-        A tf.Tensor instance that represents the value of tf_obj_list at time t.
-
+    type
+        Description of returned object.
     """
-    tf_obj_sum = 0
-    if isinstance(tf_obj_list, tf.Tensor):
-        tf_obj_sum = tf_obj_list
-    elif isinstnace(tf_obj_list, list):
-        for tf_obj in tf_obj_list:
-            if isinstance(tf_obj, tf.Tensor):
-                tf_obj_sum += tf_obj
-            elif (isinstance(tf_obj, list) and len(tf_obj) == 2 and
-                  isinstance(tf_obj[0], tf.Tensor)):
-                if isinstance(tf_obj[1], types.FunctionType):
-                    tf_obj_sum += tf_obj[0] * tf_obj[1](t, args)
-                elif isinstance(tf_obj[1], str):
-                    args['t'] = t
-                    tf_obj_sum = tf_obj[0] * float(eval(tf_obj[1], globals(), args))
-                else:
-                    raise TypeError('Unrecognized format for ' +
-                                    'specification of time-dependent tf.Tensor')
-            else:
-                raise TypeError('Unrecognized format for specification ' +
-                                'of time-dependent tf.Tensor')
-    else:
-        raise TypeError(
-            'Unrecognized format for specification of time-dependent tf.Tensor')
-
-    return tf_obj_sum
-
-
-    def matmul_n(tensor_list):
-        l = int(tensor_list.shape[0])
-        if (l==1):
-            return tensor_list[0]
-        else:
-            even_half = tf.gather(tensor_list, list(range(0,l,2)))
-            odd_half = tf.gather(tensor_list, list(range(1,l,2)))
-            return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
+    return tf.abs(tf.linalg.trace(tf.matmul(A.T, B)) / B.shape[1])
