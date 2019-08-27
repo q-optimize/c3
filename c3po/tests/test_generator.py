@@ -3,6 +3,7 @@ from c3po.control.envelopes import *
 from c3po.cobj.component import ControlComponent as CtrlComp
 from c3po.cobj.group import ComponentGroup as CompGroup
 from c3po.control.control import Control as Control
+from c3po.control.control import ControlSet as ControlSet
 
 from c3po.control.generator import Device as Device
 from c3po.control.generator import AWG as AWG
@@ -30,36 +31,36 @@ carr_group.desc = "group containing all components of type carrier"
 
 flattop_params1 = {
     'amp' : 15e6 * 2 * np.pi,
-    'T_up' : 5e-9,
-    'T_down' : 45e-9,
-    'xy_angle' : 0,
+    'T_up' : 3e-9,
+    'T_down' : 5e-9,
+    'xy_angle' : 0.0,
     'freq_offset' : 0e6 * 2 * np.pi
 }
 
 flattop_params2 = {
     'amp' : 3e6 * 2 * np.pi,
-    'T_up' : 25e-9,
-    'T_down' : 30e-9,
+    'T_up' : 5e-9,
+    'T_down' : 7e-9,
     'xy_angle' : np.pi / 2.0,
     'freq_offset' : 0e6 * 2 * np.pi
 }
 
 params_bounds = {
     'amp' : [1e3 * 2 * np.pi, 15e6 * 2 * np.pi],
-    'T_up' : [2e-9, 98e-9],
-    'T_down' : [2e-9, 98e-9],
+    'T_up' : [2e-9, 8e-9],
+    'T_down' : [2e-9, 8e-9],
     'xy_angle' : [-np.pi, np.pi],
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
 
 
 def my_flattop(t, params):
-    t_up = params['T_up']
-    t_down = params['T_down']
+    t_up = tf.cast(params['T_up'], tf.float64)
+    t_down = tf.cast(params['T_down'], tf.float64)
     T2 = tf.maximum(t_up, t_down)
     T1 = tf.minimum(t_up, t_down)
-    return (1 + tf.erf((t - T1) / 2e-9)) / 2 * \
-(1 + tf.erf((-t + T2) / 2e-9)) / 2
+    return (1 + tf.math.erf((t - T1) / 2e-9)) / 2 * \
+(1 + tf.math.erf((-t + T2) / 2e-9)) / 2
 
 
 p1 = CtrlComp(
@@ -116,9 +117,11 @@ comps.append(p2)
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
-ctrl.t_end = 150e-9
+ctrl.t_end = 10e-9
 ctrl.comps = comps
 
+
+ctrls = ControlSet([ctrl])
 
 
 class ControlSetup(Generator):

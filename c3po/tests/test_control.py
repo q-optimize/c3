@@ -1,6 +1,7 @@
 from c3po.control.envelopes import *
 from c3po.cobj.component import ControlComponent as CtrlComp
 from c3po.control.control import Control as Control
+from c3po.control.control import ControlSet as ControlSet
 
 from c3po.control.generator import Device as Device
 from c3po.control.generator import AWG as AWG

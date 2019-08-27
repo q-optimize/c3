@@ -163,29 +163,15 @@ class Model:
     def set_tf_session(self, tf_session):
         self.tf_session = tf_session
 
-    # TODO: Think about the distinction between System and Model classes
-    """
-    Federico: I believe the information about the physical system,
-    i.e. components and companent parameters should be in the system class
-    Then the Hamiltonian is constructed in the model class with parsers
-    (as above) or just provided by the user
-    """
 
-    def get_Hamiltonian(self, control_fields):
+    def get_Hamiltonians(self):
         H0 = sum(self.drift_Hs)
-        H = [H0.full()]
-        for ii in range(len(control_fields)):
-            H.append([self.control_Hs[ii].full(), control_fields[ii]])
-        return H
-
-    def get_tf_Hamiltonian(self, control_fields):
-        H0 = sum(self.drift_Hs)
-        H_drift = tf.constant(H0.full(), dtype=tf.complex128, name="H_drift")
-        tf_H = [H_drift]
-        for ii in range(len(control_fields)):
+        drift_H = tf.constant(H0.full(), dtype=tf.complex128, name="H_drift")
+        control_Hs = []
+        for ctrl_H in self.control_Hs:
             hc =  tf.constant(
-                self.control_Hs[ii].full(),
+                ctrl_H.full(),
                 dtype=tf.complex128,
                 name="hc")
-            tf_H.append([hc, control_fields[ii]])
-        return tf_H
+            control_Hs.append(hc)
+        return drift_H, control_Hs

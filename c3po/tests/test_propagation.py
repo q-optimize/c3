@@ -4,8 +4,6 @@ from test_model import *
 from c3po.optimizer.optimizer import Optimizer as Opt
 from c3po.simulation.simulator import Simulator as Sim
 
-rechenknecht = Opt()
-
 opt_map = {
     'amp' : [
         (ctrl.get_uuid(), p1.get_uuid()),
@@ -23,24 +21,28 @@ opt_map = {
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
+opt_params = ctrls.get_corresponding_control_parameters(opt_map)
+
 sim = Sim(initial_model, gen, ctrls)
 
+values = opt_params['values']
 
-# Goal to drive on qubit 1
-indx = initial_model.names.index('Q1')
-a_q1 = initial_model.ann_opers[indx]
-U_goal = a_q1 + a_q1.dag()
-
-def evaluate_signals(params, opt_params):
-    U = sim.propagation(params, opt_params)
-    return 1-tf_unitary_overlap(U, U_goal.full())
-
-opt_settings = {}
-rechenknecht.optimize_controls(
-    controls = ctrls,
-    opt_map = opt_map,
-    opt = 'open_loop',
-    settings = opt_settings,
-    calib_name = 'test',
-    eval_func = evaluate_signals
+params = tf.placeholder(
+    tf.float64,
+    shape=len(values)
     )
+
+ctrls.update_controls(params, opt_params)
+gen_output = gen.generate_signals(ctrls.controls)
+signals = []
+for key in gen_output:
+    out = gen_output[key]
+    ts = out["ts"]
+    signals.append(out["signal"])
+dt = tf.cast(ts[1]-ts[0], tf.complex128)
+h0, hks = initial_model.get_Hamiltonians()
+#U_final = sim.propagation(params, opt_params)
+
+U_final = tf_propagation(h0, hks, signals, dt)
+
+U = sess.run(U_final ,feed_dict={params: values})

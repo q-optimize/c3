@@ -39,7 +39,9 @@ class Device:
 
     def create_ts(self, res_key):
         if self.t_start != None and self.t_end != None and self.slice_num != None:
-            self.ts = tf.linspace(self.t_start, self.t_end, self.slice_num)
+            t_start = tf.constant(self.t_start, dtype=tf.float64)
+            t_end = tf.constant(self.t_end, dtype=tf.float64)
+            self.ts = tf.linspace(t_start, t_end, self.slice_num)
         else:
             self.ts = None
 
@@ -153,7 +155,7 @@ class AWG(Device):
         env_group = self.resource_groups["env"]
         env_group_id = env_group.get_uuid()
 
-        amp_tot_sq = 0
+        amp_tot_sq = 0.0
         I_components = []
         Q_components = []
 
@@ -176,7 +178,7 @@ class AWG(Device):
                     tf.sin(xy_angle + freq_offset * ts)
                     )
 
-        norm = tf.sqrt(amp_tot_sq)
+        norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
         Inphase = tf.add_n(I_components)/norm
         Quadrature = tf.add_n(Q_components)/norm
 

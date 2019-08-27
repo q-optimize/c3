@@ -3,6 +3,101 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
+class ControlSet:
+
+    def __init__(self, control_list):
+        self.controls = control_list
+
+    def get_corresponding_control_parameters(self, opt_map):
+        """
+        Takes a dictionary of paramaters that are supposed to be optimized
+        and returns the corresponding values and bounds. Writes them together
+        with a tuple (key, id) to a dict and returns them
+
+        Parameters
+        ----------
+
+        opt_map : dict
+            Dictionary of parameters that are supposed to be optimized, and
+            corresponding component identifier used to map
+            opt_params = {
+                    'T_up' : [1,2],
+                    'T_down' : [1,2],
+                    'freq' : [3]
+                }
+
+
+        Returns
+        -------
+y
+        opt_params : dict
+            Dictionary with values, bounds lists, plus a list with pairs of
+            shape (key, id) at the corresponding pos in the list as the
+            values and bounds to be able to identify the origin of the values,
+            bounds in the other lists.
+
+            Example:
+
+            opt_params = {
+                'values': [0,           0,           0,             0,             0],
+                'bounds': [[0, 0],      [0, 0],      [0, 0],        [0, 0],        [0.0]],
+                'origin': [('T_up', 1), ('T_up', 2), ('T_down', 1), ('T_down', 2), ('freq', 3)]
+                }
+
+        """
+
+        opt_params = {}
+        opt_params['values'] = []
+        opt_params['bounds'] = []
+        opt_params['origin'] = [] # array that holds tuple of (key, id) to be
+                                  # identify each entry in the above lists
+                                  # with it's corresponding entry
+
+        for key in opt_map:
+            for id_pair in opt_map[key]:
+                control_uuid = id_pair[0]
+                for control in self.controls:
+                    if control_uuid == control.get_uuid():
+                        comp_uuid = id_pair[1]
+                        val = control.get_parameter_value(key, comp_uuid)
+                        bounds = control.get_parameter_bounds(key, comp_uuid)
+
+                        opt_params['values'].append(val)
+                        opt_params['bounds'].append(bounds)
+                        opt_params['origin'].append((key, id_pair))
+        return opt_params
+
+
+    def set_corresponding_control_parameters(self, opt_params):
+        """
+            sets the values in opt_params in the original control class
+        """
+        for i in range(len(opt_params['origin'])):
+            key = opt_params['origin'][i][0]
+            id_pair = opt_params['origin'][i][1]
+
+            control_uuid = id_pair[0]
+            comp_uuid = id_pair[1]
+
+            for control in self.controls:
+                val = opt_params['values'][i]
+                bounds = opt_params['bounds'][i]
+
+                control.set_parameter_value(key, comp_uuid, val)
+                control.set_parameter_bounds(key, comp_uuid, bounds)
+
+
+    def get_values_bounds(self, opt_params):
+        values = opt_params['values']
+        bounds = opt_params['bounds']
+        return values, bounds
+
+
+    def update_controls(self, values, opt_params):
+        opt_params['values'] = values
+        self.set_corresponding_control_parameters(opt_params)
+
+
 class Control:
     """
 
@@ -104,5 +199,4 @@ class Control:
                     opt_map[key].append(entry)
                 else:
                     opt_map[key] = [(entry)]
-
         return opt_map
