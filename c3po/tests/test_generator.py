@@ -10,10 +10,10 @@ from c3po.control.generator import AWG as AWG
 from c3po.control.generator import Mixer as Mixer
 from c3po.control.generator import Generator as Generator
 
-
 import uuid
+
 import tensorflow as tf
-import tensorflow_probability as tfp
+
 import matplotlib.pyplot as plt
 
 
@@ -30,29 +30,21 @@ carr_group.desc = "group containing all components of type carrier"
 
 
 flattop_params1 = {
-    'amp' : 15e6 * 2 * np.pi,
-    'T_up' : 3e-9,
-    'T_down' : 5e-9,
+    'amp' :   np.pi * 1 / 20e-9,
+    'T_up' : 5e-9,
+    'T_down' : 25e-9,
     'xy_angle' : 0.0,
     'freq_offset' : 0e6 * 2 * np.pi
 }
 
-flattop_params2 = {
-    'amp' : 3e6 * 2 * np.pi,
-    'T_up' : 5e-9,
-    'T_down' : 7e-9,
-    'xy_angle' : np.pi / 2.0,
-    'freq_offset' : 0e6 * 2 * np.pi
-}
 
 params_bounds = {
-    'amp' : [1e3 * 2 * np.pi, 15e6 * 2 * np.pi],
-    'T_up' : [2e-9, 8e-9],
-    'T_down' : [2e-9, 8e-9],
+    'amp' : [10e6 * 2 * np.pi, 50e6 * 2 * np.pi],
+    'T_up' : [2e-9, 28e-9],
+    'T_down' : [2e-9, 28e-9],
     'xy_angle' : [-np.pi, np.pi],
     'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
 }
-
 
 def my_flattop(t, params):
     t_up = tf.cast(params['T_up'], tf.float64)
@@ -72,17 +64,6 @@ p1 = CtrlComp(
     groups = [env_group.get_uuid()]
 )
 env_group.add_element(p1)
-
-
-p2 = CtrlComp(
-    name = "pulse2",
-    desc = "flattop comp 2 of signal 1",
-    shape = my_flattop,
-    params = flattop_params2,
-    bounds = params_bounds,
-    groups = [env_group.get_uuid()]
-)
-env_group.add_element(p2)
 
 
 ####
@@ -110,87 +91,17 @@ carr_group.add_element(carr)
 comps = []
 comps.append(carr)
 comps.append(p1)
-comps.append(p2)
 
 
 
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
-ctrl.t_end = 10e-9
+ctrl.t_end = 30e-9
 ctrl.comps = comps
 
 
 ctrls = ControlSet([ctrl])
-
-
-class ControlSetup(Generator):
-
-    def __init__(
-            self,
-            devices = {},
-            resolutions = {},
-            resources = [],
-            resource_groups = {}
-           ):
-
-        super().__init__(devices, resolutions, resources, resource_groups)
-
-
-    def generate_signals(self, resources = []):
-
-        if resources == []:
-            resources = self.resources
-
-        output = {}
-
-        awg = self.devices["awg"]
-        mixer = self.devices["mixer"]
-
-        for ctrl in resources:
-
-            awg.t_start = ctrl.t_start
-            awg.t_end = ctrl.t_end
-            awg.resolutions = self.resolutions
-            awg.resources = [ctrl]
-            awg.resource_groups = self.resource_groups
-            awg.create_IQ("awg")
-
-            #awg.plot_IQ_components("awg")
-            #awg.plot_fft_IQ_components("awg")
-
-            mixer.t_start = ctrl.t_start
-            mixer.t_end = ctrl.t_end
-            mixer.resolutions = self.resolutions
-            mixer.resources = [ctrl]
-            mixer.resource_groups = self.resource_groups
-            mixer.calc_slice_num("sim")
-            mixer.create_ts("sim")
-
-            I = tfp.math.interp_regular_1d_grid(
-                mixer.ts,
-                x_ref_min = awg.ts[0],
-                x_ref_max = awg.ts[-1],
-                y_ref = awg.get_I()
-                )
-            Q =  tfp.math.interp_regular_1d_grid(
-                mixer.ts,
-                x_ref_min = awg.ts[0],
-                x_ref_max = awg.ts[-1],
-                y_ref = awg.get_Q()
-                )
-
-            mixer.Inphase = I
-            mixer.Quadrature = Q
-            mixer.combine("sim")
-
-            output[(ctrl.name,ctrl.get_uuid())] = {"ts" : mixer.ts}
-            output[(ctrl.name,ctrl.get_uuid())].update({"signal" : mixer.output})
-
-            self.output = output
-
-        return output
-
 
 
 awg = AWG()
@@ -202,10 +113,9 @@ devices = {
     "mixer" : mixer
 }
 
-
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e12
+    "sim" : 1e11
 }
 
 
@@ -218,7 +128,7 @@ resource_groups = {
 }
 
 
-gen = ControlSetup()
+gen = Generator()
 gen.devices = devices
 gen.resolutions = resolutions
 gen.resources = resources

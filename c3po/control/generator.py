@@ -1,6 +1,7 @@
 import uuid
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
 
@@ -143,48 +144,50 @@ class AWG(Device):
 
         """
 
-        self.calc_slice_num(res_key)
-        self.create_ts(res_key)
+        with tf.name_scope("I_Q_generation"):
 
-        ts = self.ts
+            self.calc_slice_num(res_key)
+            self.create_ts(res_key)
+
+            ts = self.ts
 
 
-        Inphase = []
-        Quadrature = []
+            Inphase = []
+            Quadrature = []
 
-        env_group = self.resource_groups["env"]
-        env_group_id = env_group.get_uuid()
+            env_group = self.resource_groups["env"]
+            env_group_id = env_group.get_uuid()
 
-        amp_tot_sq = 0.0
-        I_components = []
-        Q_components = []
+            amp_tot_sq = 0.0
+            I_components = []
+            Q_components = []
 
-        control = self.resources[0]
-        for comp in control.comps:
-            if env_group_id in comp.groups:
+            control = self.resources[0]
+            for comp in control.comps:
+                if env_group_id in comp.groups:
 
-                amp = comp.params['amp']
+                    amp = comp.params['amp']
 
-                amp_tot_sq += amp**2
+                    amp_tot_sq += amp**2
 
-                xy_angle = comp.params['xy_angle']
-                freq_offset = comp.params['freq_offset']
-                I_components.append(
-                    amp * comp.get_shape_values(ts) *
-                    tf.cos(xy_angle + freq_offset * ts)
-                    )
-                Q_components.append(
-                    amp * comp.get_shape_values(ts) *
-                    tf.sin(xy_angle + freq_offset * ts)
-                    )
+                    xy_angle = comp.params['xy_angle']
+                    freq_offset = comp.params['freq_offset']
+                    I_components.append(
+                        amp * comp.get_shape_values(ts) *
+                        tf.cos(xy_angle + freq_offset * ts)
+                        )
+                    Q_components.append(
+                        amp * comp.get_shape_values(ts) *
+                        tf.sin(xy_angle + freq_offset * ts)
+                        )
 
-        norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-        Inphase = tf.add_n(I_components)/norm
-        Quadrature = tf.add_n(Q_components)/norm
+            norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
+            Inphase = tf.add_n(I_components, name="Inhpase")/norm
+            Quadrature = tf.add_n(Q_components, name="Quadrature")/norm
 
-        self.amp_tot_sq = amp_tot_sq
-        self.Inphase = Inphase
-        self.Quadrature = Quadrature
+            self.amp_tot_sq = amp_tot_sq
+            self.Inphase = Inphase
+            self.Quadrature = Quadrature
 
 
     def get_I(self):
@@ -292,12 +295,59 @@ class Generator:
 
 
     def generate_signals(self, resources = []):
-        ####
-        #
-        # PLACEHOLDER
-        #
-        ####
-        raise NotImplementedError()
+        with tf.name_scope('Signal_generation'):
+
+            if resources == []:
+                resources = self.resources
+
+            output = {}
+
+            awg = self.devices["awg"]
+            mixer = self.devices["mixer"]
+
+            for ctrl in resources:
+
+                awg.t_start = ctrl.t_start
+                awg.t_end = ctrl.t_end
+                awg.resolutions = self.resolutions
+                awg.resources = [ctrl]
+                awg.resource_groups = self.resource_groups
+                awg.create_IQ("awg")
+
+                #awg.plot_IQ_components("awg")
+                #awg.plot_fft_IQ_components("awg")
+
+                mixer.t_start = ctrl.t_start
+                mixer.t_end = ctrl.t_end
+                mixer.resolutions = self.resolutions
+                mixer.resources = [ctrl]
+                mixer.resource_groups = self.resource_groups
+                mixer.calc_slice_num("sim")
+                mixer.create_ts("sim")
+
+                I = tfp.math.interp_regular_1d_grid(
+                    mixer.ts,
+                    x_ref_min = awg.ts[0],
+                    x_ref_max = awg.ts[-1],
+                    y_ref = awg.get_I()
+                    )
+                Q =  tfp.math.interp_regular_1d_grid(
+                    mixer.ts,
+                    x_ref_min = awg.ts[0],
+                    x_ref_max = awg.ts[-1],
+                    y_ref = awg.get_Q()
+                    )
+
+                mixer.Inphase = I
+                mixer.Quadrature = Q
+                mixer.combine("sim")
+
+                output[(ctrl.name,ctrl.get_uuid())] = {"ts" : mixer.ts}
+                output[(ctrl.name,ctrl.get_uuid())].update({"signal" : mixer.output})
+
+                self.output = output
+
+        return output
 
 
 

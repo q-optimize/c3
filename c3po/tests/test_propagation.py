@@ -1,23 +1,24 @@
-from test_generator import *
 from test_model import *
+from test_generator import *
 
 from c3po.optimizer.optimizer import Optimizer as Opt
 from c3po.simulation.simulator import Simulator as Sim
 
+from tensorflow.python import debug as tf_debug
+from c3po.utils.tf_utils import *
+
+sess = tf_setup()
+
 opt_map = {
     'amp' : [
-        (ctrl.get_uuid(), p1.get_uuid()),
-        (ctrl.get_uuid(), p2.get_uuid())
+        (ctrl.get_uuid(), p1.get_uuid())
         ],
     'T_up' : [
-        (ctrl.get_uuid(), p1.get_uuid()),
-        (ctrl.get_uuid(), p2.get_uuid())
+        (ctrl.get_uuid(), p1.get_uuid())
         ],
     'T_down' : [
-        (ctrl.get_uuid(), p1.get_uuid()),
-        (ctrl.get_uuid(), p2.get_uuid())
+        (ctrl.get_uuid(), p1.get_uuid())
         ],
-    'xy_angle': [(ctrl.get_uuid(), p2.get_uuid())],
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
@@ -32,17 +33,16 @@ params = tf.placeholder(
     shape=len(values)
     )
 
-ctrls.update_controls(params, opt_params)
-gen_output = gen.generate_signals(ctrls.controls)
-signals = []
-for key in gen_output:
-    out = gen_output[key]
-    ts = out["ts"]
-    signals.append(out["signal"])
-dt = tf.cast(ts[1]-ts[0], tf.complex128)
-h0, hks = initial_model.get_Hamiltonians()
 #U_final = sim.propagation(params, opt_params)
 
-U_final = tf_propagation(h0, hks, signals, dt)
+U_final = sim.propagation(params, opt_params)
+
+indx = initial_model.names.index('Q1')
+a_q1 = initial_model.ann_opers[indx]
+U_goal = a_q1 + a_q1.dag()
+
+fidelity = tf_unitary_overlap(U_final, U_goal.full())
+
+#sess = tf_debug.LocalCLIDebugWrapperSession(sess)
 
 U = sess.run(U_final ,feed_dict={params: values})

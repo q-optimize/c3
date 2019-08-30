@@ -36,7 +36,7 @@ class Simulator():
             out = gen_output[key]
             ts = out["ts"]
             signals.append(out["signal"])
-        dt = tf.cast(ts[1]-ts[0], tf.complex128)
+        dt = tf.cast(ts[1]-ts[0], tf.complex128, name="dt")
         h0, hks = self.model.get_Hamiltonians()
         U = tf_propagation(h0, hks, signals, dt)
         return U

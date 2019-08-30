@@ -101,7 +101,8 @@ def tf_unitary_overlap(A, B):
         Description of returned object.
     """
     return tf.abs(tf.linalg.trace(
-        tf.matmul(tf.transpose(A), B)) / tf.cast(B.shape[1], B.dtype)
+        tf.matmul(tf.transpose(A), B))/ tf.cast(B.shape[1], B.dtype),
+        name = "unitary_overlap"
         )
 
 
@@ -114,29 +115,38 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
 
 
 def tf_propagation(h0, hks, cflds, dt, history=False):
-    control_fields = tf.cast(
-        tf.transpose(tf.stack(cflds)),
-        tf.complex128,
-        name='Control_fields'
-        )
+    with tf.name_scope('Propagation'):
+        control_fields = tf.cast(
+            tf.transpose(tf.stack(cflds)),
+            tf.complex128,
+            name='Control_fields'
+            )
 
-    dUs = tf.map_fn(
-        lambda fields: tf_dU_of_t(h0, hks, fields, dt),
-        control_fields,
-        name='dU_of_t'
-        )
+        dUs = tf.map_fn(
+            lambda fields: tf_dU_of_t(h0, hks, fields, dt),
+            control_fields,
+            name='dU_of_t'
+            )
 
-    if history:
-        u_t = tf.gather(dUs,0)
-        history = [u_t]
-        for ii in range(dUs.shape[0]-1):
-            du = tf.gather(dUs, ii+1)
-            u_t = tf.matmul(du,u_t)
-            history.append(u_t)
-        return history, ts
-    else:
-        U = tf.gather(dUs, 0)
-        for ii in range(1, dUs.shape[0]):
-            U = tf.matmul(tf.gather(dUs, ii), U)
+        if history:
+            u_t = tf.gather(dUs,0)
+            history = [u_t]
+            for ii in range(dUs.shape[0]-1):
+                du = tf.gather(dUs, ii+1)
+                u_t = tf.matmul(du,u_t)
+                history.append(u_t)
+            return history, ts
+        else:
+            U = tf.gather(dUs, 0)
+            for ii in range(1, dUs.shape[0]):
+                U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
 
         return U
+
+def tf_log10(x):
+    """
+    Yes, seriously.
+    """
+    numerator = tf.log(x)
+    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
+    return numerator / denominator
