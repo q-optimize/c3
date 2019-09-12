@@ -65,8 +65,6 @@ def tf_setup():
     Function for setting up the tensorflow environment to be used by c3po
     """
     config = tf.ConfigProto(
-        intra_op_parallelism_threads=0,
-        inter_op_parallelism_threads=0,
         allow_soft_placement=True
     )
     config.gpu_options.allow_growth = True

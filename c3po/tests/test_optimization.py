@@ -50,11 +50,11 @@ def evaluate_signals(params, opt_params):
     return 1-tf_unitary_overlap(U, U_goal.full())
 
 
-
 rechenknecht.optimize_controls(
     controls = ctrls,
     opt_map = opt_map,
-    opt = 'tf_grad_desc',
+    opt = 'open_loop',
+#    opt = 'tf_grad_desc',
     settings=None,
     calib_name = 'test',
     eval_func = evaluate_signals

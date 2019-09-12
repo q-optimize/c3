@@ -115,7 +115,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e11
+    "sim" : 1e10
 }
 
 

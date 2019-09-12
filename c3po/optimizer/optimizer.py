@@ -177,20 +177,14 @@ class Optimizer:
         sess = self.sess
         params = self.__params
         bounds = self.bounds
-        run_metadata = tf.RunMetadata()
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         fid = sess.run(self.__g,
                            feed_dict={
                                params: self.to_bound_phys_scale(
                                    x,
                                    bounds
                                    )
-                               },
-                           run_metadata=run_metadata,
-                           options=run_options
+                               }
                            )
-        self.log_writer.add_run_metadata(run_metadata, uuid.uuid4().hex)
-        tf.summary.histogram("params", params)
         return fid
 
 
@@ -199,19 +193,14 @@ class Optimizer:
         params = self.__params
         bounds = self.bounds
         scale = np.diff(bounds)
-        run_metadata = tf.RunMetadata()
-        run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
         jac = sess.run(self.__jac,
                            feed_dict={
                                params: self.to_bound_phys_scale(
                                    x,
                                    bounds
                                    )
-                               },
-                           run_metadata=run_metadata,
-                           options=run_options
+                               }
                            )
-        self.log_writer.add_run_metadata(run_metadata, uuid.uuid4().hex)
         return jac[0]*scale.T
 
 
@@ -262,6 +251,7 @@ class Optimizer:
 
         goal = -10
         loss_opt = 1
+
         while loss_opt > goal:
             self.sess.run(train)
             values_opt, loss_opt = self.sess.run([params, loss])
