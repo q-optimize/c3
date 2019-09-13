@@ -28,15 +28,20 @@ class Simulator():
         self.controls = controls
 
 
-    def propagation(self, params, opt_params):
-        self.controls.update_controls(params, opt_params)
+    def propagation(self, model_params, pulse_params, opt_params):
+
+        self.model.update_parameters(model_params)
+        self.controls.update_controls(pulse_params, opt_params)
         gen_output = self.generator.generate_signals(self.controls.controls)
         signals = []
+
         for key in gen_output:
             out = gen_output[key]
             ts = out["ts"]
             signals.append(out["signal"])
+
         dt = tf.cast(ts[1]-ts[0], tf.complex128, name="dt")
         h0, hks = self.model.get_Hamiltonians()
         U = tf_propagation(h0, hks, signals, dt)
+
         return U

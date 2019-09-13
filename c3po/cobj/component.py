@@ -71,7 +71,6 @@ class PhysicalComponent(Component):
             name = " ",
             desc = " ",
             comment = " ",
-            hamiltonian = None,
             hilbert_dim = None
             ):
         super().__init__(
@@ -79,15 +78,12 @@ class PhysicalComponent(Component):
             desc = desc,
             comment = comment
             )
-        self.hamiltonian = hamiltonian
         self.hilbert_dim = hilbert_dim
         self.values = {}
 
     def get_values(self):
         return self.values
 
-    def get_hamiltonian(self, a):
-        return self.hamiltonian(a, self.values)
 
 class Qubit(PhysicalComponent):
     def __init__(
@@ -95,7 +91,6 @@ class Qubit(PhysicalComponent):
             name = " ",
             desc = " ",
             comment = " ",
-            hamiltonian = None,
             hilbert_dim = None,
             freq = None,
             delta = None,
@@ -104,7 +99,6 @@ class Qubit(PhysicalComponent):
             name = name,
             desc = desc,
             comment = comment,
-            hamiltonian = hamiltonian,
             hilbert_dim = hilbert_dim
             )
         self.values['freq'] = freq
@@ -116,7 +110,6 @@ class Resonator(PhysicalComponent):
             name = " ",
             desc = " ",
             comment = " ",
-            hamiltonian = None,
             hilbert_dim = None,
             freq = None
             ):
@@ -124,7 +117,6 @@ class Resonator(PhysicalComponent):
             name = name,
             desc = desc,
             comment = comment,
-            hamiltonian = hamiltonian,
             hilbert_dim = hilbert_dim
             )
         self.values['freq'] = freq
@@ -135,7 +127,6 @@ class Coupling(PhysicalComponent):
             name = " ",
             desc = " ",
             comment = " ",
-            hamiltonian = None,
             hilbert_dim = None,
             connected = None,
             strength = None
@@ -144,7 +135,6 @@ class Coupling(PhysicalComponent):
             name = name,
             desc = desc,
             comment = comment,
-            hamiltonian = hamiltonian,
             hilbert_dim = hilbert_dim
             )
         self.values['strength'] = strength
@@ -156,7 +146,6 @@ class Drive(PhysicalComponent):
             name = " ",
             desc = " ",
             comment = " ",
-            hamiltonian = None,
             hilbert_dim = None,
             connected = None,
             strength = None
@@ -165,7 +154,6 @@ class Drive(PhysicalComponent):
             name = name,
             desc = desc,
             comment = comment,
-            hamiltonian = hamiltonian,
             hilbert_dim = hilbert_dim
             )
         self.connected = connected

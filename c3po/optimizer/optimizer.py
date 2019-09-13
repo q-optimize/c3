@@ -204,15 +204,7 @@ class Optimizer:
         return jac[0]*scale.T
 
 
-    def open_loop(self, opt_params, settings, error_func, controls):
-        values, bounds = controls.get_values_bounds(opt_params)
-        self.bounds = np.array(bounds)
-
-        params = tf.placeholder(tf.float64, shape=(len(values)), name="params")
-
-        self.__params = params
-        self.__g = error_func(params, opt_params)
-        self.__jac = tf.gradients(self.__g, params)
+    def lbfgs(self, values, bounds):
 
         x0 = self.to_scale_one(values, bounds)
 
@@ -304,13 +296,22 @@ class Optimizer:
 
         if opt == 'cmaes':
             values_opt = self.cmaes(opt_params, settings, eval_func, controls)
-        elif opt == 'open_loop':
-            values_opt = self.open_loop(
-                opt_params,
-                settings,
-                eval_func,
-                controls
+
+        elif opt == 'lbfgs':
+            values, bounds = controls.get_values_bounds(opt_params)
+            bounds = np.array(bounds)
+            self.bounds = bounds
+
+            params = tf.placeholder(
+                tf.float64, shape=(len(values)), name="params"
                 )
+
+            self.__params = params
+            self.__g = eval_func(params, opt_params)
+            self.__jac = tf.gradients(self.__g, params)
+
+            values_opt = self.lbfgs(values, bounds)
+
         elif opt == 'tf_grad_desc':
             values_opt = self.tf_gradient_descent(
                 opt_params,
@@ -325,6 +326,25 @@ class Optimizer:
 
         for control in controls.controls:
             control.save_params_to_history(calib_name)
+
+
+    def learn_model(self, model, eval_func, meas_results):
+        values, bounds = model.get_values_bounds()
+        bounds = np.array(bounds)
+        self.bounds = bounds
+
+        params = tf.placeholder(
+            tf.float64, shape=(len(values)), name="params"
+            )
+
+        self.__params = params
+        self.__g = eval_func(params, meas_results)
+        self.__jac = tf.gradients(self.__g, params)
+
+
+        params_opt = self.lbfgs(values, bounds)
+
+        model.update_parameters(np.array(params_opt))
 
 
     def sweep_bounds(self, U0, gate, n_points=101):

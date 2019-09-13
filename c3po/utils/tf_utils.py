@@ -103,6 +103,9 @@ def tf_unitary_overlap(A, B):
         name = "unitary_overlap"
         )
 
+def tf_measure_operator(M, U):
+    return tf.linalg.trace(tf.matmul(M, U))
+
 
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
