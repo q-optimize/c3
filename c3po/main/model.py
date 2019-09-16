@@ -76,9 +76,7 @@ class Model:
                 if indy > indx:
                     a = qt.tensor(a, qI)
 
-            self.ann_opers.append(
-                tf.constant(a.full(), dtype=tf.complex128)
-                )
+            self.ann_opers.append(a.full())
 
         # Create drift Hamiltonian matrices and model parameter vector
         self.params = []

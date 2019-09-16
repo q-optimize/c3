@@ -5,8 +5,9 @@ from c3po.optimizer.optimizer import Optimizer as Opt
 from c3po.simulation.simulator import Simulator as Sim
 from c3po.utils.tf_utils import *
 
+import copy
+
 rechenknecht = Opt()
-rechenknecht.store_history = True
 
 tf_log_level_info()
 
@@ -38,8 +39,9 @@ opt_map = {
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
-sim = Sim(initial_model, gen, ctrls)
+ctrls_guess = copy.deepcopy(ctrls)
 
+sim = Sim(initial_model, gen, ctrls)
 
 # Goal to drive on qubit 1
 indx = initial_model.names.index('Q1')
@@ -48,7 +50,7 @@ U_goal = a_q1 + tf.transpose(a_q1)
 
 def evaluate_signals(pulse_params, opt_params):
     model_params = sim.model.params
-    U = sim.propagation(model_params, pulse_params, opt_params)
+    U = sim.propagation(pulse_params, opt_params, model_params)
     return 1-tf_unitary_overlap(U, U_goal)
 
 rechenknecht.optimize_controls(
@@ -60,3 +62,5 @@ rechenknecht.optimize_controls(
     calib_name = 'test',
     eval_func = evaluate_signals
     )
+
+ctrls_openloop = copy.deepcopy(ctrls)

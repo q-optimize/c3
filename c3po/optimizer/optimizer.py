@@ -110,31 +110,16 @@ class Optimizer:
         return tf.transpose(values)
 
 
-    def cmaes(self, opt_params, settings, eval_func, controls = None):
-
-        ####
-        #
-        # NOT YET TESTED
-        #
-        ####
-
-        values = opt_params['values']
-        bounds = opt_params['bounds']
-        if 'origin' in opt_params.keys():
-            origin = opt_params['origin']
-
+    def cmaes(self, values, bounds, settings, eval_func, controls = None):
 
         # TODO: rewrite from dict to list input
         if settings:
             if 'CMA_stds' in settings.keys():
                 scale_bounds = []
-
                 for i in range(len(bounds)):
                     scale = np.abs(bounds[i][0] - bounds[i][1])
                     scale_bounds.append(settings['CMA_stds'][i] / scale)
-
                 settings['CMA_stds'] = scale_bounds
-
 
 
         x0 = self.to_scale_one(values, bounds)
@@ -142,7 +127,6 @@ class Optimizer:
 
         while not es.stop():
             samples = es.ask()
-            samples_rescaled = [self.to_bound_phys_scale(x, bounds) for x in samples]
 
             if controls is not None:
                 opt_params_clone = copy.deepcopy(opt_params)
@@ -150,7 +134,7 @@ class Optimizer:
                 for sample in samples_rescaled:
                     sig_clones = copy.deepcopy(controls)
                     opt_params_clone['values'] = sample
-                    self.set_corresponding_control_parameters(sig_clones, opt_params_clone)
+                    sig_clones.set_corresponding_control_parameters(opt_params_clone)
                     test_controls.append(sig_clones)
 
 
@@ -159,10 +143,13 @@ class Optimizer:
             else:
                 eval_input = test_controls
 
+            solutions = []
+            for input in eval_input:
+                solution.append(self.fidelity(input))
 
             es.tell(
                     samples,
-                    eval_func(eval_input)
+                    solutions
                     )
             es.logger.add()
             es.disp()
@@ -314,6 +301,18 @@ class Optimizer:
         opt_params = controls.get_corresponding_control_parameters(opt_map)
 
         if opt == 'cmaes':
+            self.opt_params = opt_params
+            values, bounds = controls.get_values_bounds(opt_params)
+            bounds = np.array(bounds)
+            self.bounds = bounds
+
+            params = tf.placeholder(
+                tf.float64, shape=(len(values)), name="params"
+                )
+
+            self.__params = params
+            self.__g = eval_func(params, opt_params)
+
             values_opt = self.cmaes(opt_params, settings, eval_func, controls)
 
         elif opt == 'lbfgs':
