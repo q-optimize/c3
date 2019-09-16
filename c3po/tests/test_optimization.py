@@ -6,6 +6,7 @@ from c3po.simulation.simulator import Simulator as Sim
 from c3po.utils.tf_utils import *
 
 rechenknecht = Opt()
+rechenknecht.store_history = True
 
 tf_log_level_info()
 

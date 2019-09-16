@@ -18,8 +18,8 @@ q1 = Qubit(
     name = "Q1",
     desc = "Qubit 1",
     comment = "The one and only qubit in this chip",
-    freq = 6.021e9*2*np.pi,
-    delta = 99.99e6 * 2 * np.pi,
+    freq = 6e9*2*np.pi,
+    delta = 1e6 * 2 * np.pi,
     hilbert_dim = 3
     )
 
@@ -27,7 +27,7 @@ r1 = Resonator(
     name = "R1",
     desc = "Resonator 1",
     comment = "The resonator driving Qubit 1",
-    freq = 8.083e9*2*np.pi,
+    freq = 9e9*2*np.pi,
     hilbert_dim = 5
     )
 
@@ -36,7 +36,7 @@ q1r1 = Coupling(
     desc = "Coupling between Resonator 1 and Qubit 1",
     comment = " ",
     connected = [q1.name, r1.name],
-    strength = 149e6*2*np.pi
+    strength = 150e6*2*np.pi
     )
 
 drive = Drive(

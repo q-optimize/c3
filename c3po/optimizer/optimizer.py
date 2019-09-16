@@ -348,7 +348,11 @@ class Optimizer:
             control.save_params_to_history(calib_name)
 
 
-    def learn_model(self, model, eval_func, meas_results):
+    def learn_model(self, model, eval_func, meas_results=[]):
+
+        if not meas_results:
+            meas_results = self.optimizer_history
+
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
         self.bounds = bounds

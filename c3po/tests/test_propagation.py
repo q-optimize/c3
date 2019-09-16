@@ -33,16 +33,16 @@ params = tf.placeholder(
     shape=len(values)
     )
 
-#U_final = sim.propagation(params, opt_params)
-
 U_final = sim.propagation(params, opt_params)
+#sess = tf_debug.LocalCLIDebugWrapperSession(sess)
+U = sess.run(U_final ,feed_dict={params: values})
 
 indx = initial_model.names.index('Q1')
 a_q1 = initial_model.ann_opers[indx]
-U_goal = a_q1 + a_q1.dag()
+U_goal = a_q1 + tf.transpose(a_q1)
+fidelity = tf_unitary_overlap(U_final, U_goal)
+fid = sess.run(fidelity ,feed_dict={params: values})
 
-fidelity = tf_unitary_overlap(U_final, U_goal.full())
-
-#sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-
-U = sess.run(U_final ,feed_dict={params: values})
+opt_params = ctrls.get_corresponding_control_parameters(opt_map)
+pulse_params, bounds = ctrls.get_values_bounds(opt_params)
+stored_measurement = [[pulse_params, opt_params], [U_goal, fid]]

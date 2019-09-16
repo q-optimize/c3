@@ -37,35 +37,29 @@ opt_map = {
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
+initial_model.update_parameters([5.9e9*2*np.pi,0.9e6*2*np.pi,8.5e9*2*np.pi,148e6*2*np.pi])
 sim = Sim(initial_model, gen, ctrls)
-
-
-def match_model(model_params, measurements):
-    model_error = 0
-
-    for m in measurements:
-        pulse_params, opt_params = m[0]
-        operator, result = m[1]
-        U = sim.propagation(model_params, pulse_params, opt_params)
-        model_error += tf.abs(
-            tf_measure_operator(operator, U) - result
-            )
-
-    return model_error
 
 indx = initial_model.names.index('Q1')
 a_q1 = initial_model.ann_opers[indx]
-measured_op = a_q1 + tf.transpose(a_q1)
-
+U_goal = a_q1 + tf.transpose(a_q1)
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)
 pulse_params, bounds = ctrls.get_values_bounds(opt_params)
+stored_measurement = [[pulse_params, opt_params], [U_goal, 0.40053653853211163]]
 
-stored_measurement = [
-    [[pulse_params, opt_params], [measured_op, 3]]
-]
+def match_model(model_params, measurements):
+    model_error = 0
+    for m in measurements:
+        pulse_params, opt_params = m[0]
+        operator, result = m[1]
+        U = sim.propagation(pulse_params, opt_params, model_params)
+        model_error += tf.abs(
+            tf_unitary_overlap(U_goal, U) - result
+            )
+    return model_error
 
 rechenknecht.learn_model(
     initial_model,
     eval_func = match_model,
-    meas_results = stored_measurement
+    meas_results = [stored_measurement]
     )
