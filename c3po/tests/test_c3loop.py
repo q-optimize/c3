@@ -12,12 +12,12 @@ def match_model(model_params, measurements):
         result = m[1]
         U = sim.propagation(pulse_params, opt_params, model_params)
         model_error += tf.abs(
-            tf_unitary_overlap(U_goal, U) - result
+            (1-tf_unitary_overlap(U_goal, U)) - result
             )
     return model_error
 
 rechenknecht.learn_model(
     initial_model,
     eval_func = match_model,
-    meas_results = [stored_measurement]
+    meas_results = []
     )
