@@ -12,6 +12,8 @@ class Optimizer:
 
     def __init__(self):
         self.sess = None
+        self.store_history = False
+        self.optimizer_history = []
 
     def set_session(self, sess):
         self.sess = sess
@@ -177,14 +179,31 @@ class Optimizer:
         sess = self.sess
         params = self.__params
         bounds = self.bounds
-        fid = sess.run(self.__g,
-                           feed_dict={
-                               params: self.to_bound_phys_scale(
-                                   x,
-                                   bounds
-                                   )
-                               }
-                           )
+
+        fid = sess.run(
+            self.__g,
+            feed_dict={
+                params: self.to_bound_phys_scale(
+                    x,
+                    bounds
+                    )
+                }
+            )
+
+        if self.store_history:
+            pulse_params = sess.run(
+                params,
+                feed_dict={
+                  params: self.to_bound_phys_scale(
+                      x,
+                      bounds
+                      )
+                }
+            )
+            self.optimizer_history.append(
+                [[pulse_params, self.opt_params], [fid]]
+                )
+
         return fid
 
 
@@ -298,6 +317,7 @@ class Optimizer:
             values_opt = self.cmaes(opt_params, settings, eval_func, controls)
 
         elif opt == 'lbfgs':
+            self.opt_params = opt_params
             values, bounds = controls.get_values_bounds(opt_params)
             bounds = np.array(bounds)
             self.bounds = bounds

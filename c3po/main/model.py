@@ -150,12 +150,12 @@ class Model:
         drift_H = tf.zeros_like(self.drift_Hs[0])
 
         for ii in range(len(self.drift_Hs)):
-            drift_H += tf.cast(self.params[ii], tf.complex128) * self.drift_Hs[ii]
+            drift_H += tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
 
         return drift_H, self.control_Hs
 
 
     def get_values_bounds(self):
         values = self.params
-        bounds = [0.5*self.params, 1.5*self.params]
-        return values, bounds
+        bounds = np.kron(np.array([[0.5], [1.5]]), self.params)
+        return values, bounds.T
