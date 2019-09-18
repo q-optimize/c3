@@ -98,10 +98,11 @@ def tf_unitary_overlap(A, B):
     type
         Description of returned object.
     """
-    return tf.abs(tf.linalg.trace(
-        tf.matmul(tf.conj(tf.transpose(A)), B))/ tf.cast(B.shape[1], B.dtype),
-        name = "unitary_overlap"
-        )
+    overlap =tf.linalg.trace(
+        tf.matmul(tf.conj(tf.transpose(A)), B)
+        )/ tf.cast(B.shape[1], B.dtype)
+    return tf.cast(tf.conj(overlap)*overlap, tf.float64)
+
 
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))

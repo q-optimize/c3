@@ -18,7 +18,7 @@ q1 = Qubit(
     name = "Q1",
     desc = "Qubit 1",
     comment = "The one and only qubit in this chip",
-    freq = 6e9*2*np.pi,
+    freq = 5.5e9*2*np.pi,
     delta = 1e6 * 2 * np.pi,
     hilbert_dim = 2
     )
@@ -54,3 +54,27 @@ chip_elements = [
      ]
 
 initial_model = mdl(chip_elements)
+optimize_model = mdl(chip_elements)
+
+q2 = Qubit(
+    name = "Q1",
+    desc = "Qubit 2",
+    comment = "The one and only qubit in this chip",
+    freq = 5.6e9*2*np.pi,
+    delta = 1e6 * 2 * np.pi,
+    hilbert_dim = 2
+    )
+
+drive2 = Drive(
+    name = "D2",
+    desc = "Drive 2",
+    comment = "Drive line 1 on qubit 1",
+    connected = [q1.name]
+    )
+
+chip2_elements = [
+    q2,
+    drive2
+    ]
+
+real_model = mdl(chip2_elements)

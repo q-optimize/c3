@@ -77,7 +77,7 @@ env_group.add_element(p1)
 
 
 carrier_parameters = {
-    'freq' : 6e9 * 2 * np.pi
+    'freq' : 5.5e9 * 2 * np.pi
 }
 
 carr = CtrlComp(
@@ -115,7 +115,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e9
+    "sim" : 1e11
 }
 
 
