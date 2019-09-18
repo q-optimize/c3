@@ -46,6 +46,11 @@ drive = Drive(
     connected = [q1.name]
     )
 
-chip_elements = [q1,r1,q1r1,drive]
+chip_elements = [
+    q1,
+     # r1,
+     # q1r1,
+     drive
+     ]
 
 initial_model = mdl(chip_elements)

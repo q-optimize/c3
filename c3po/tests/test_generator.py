@@ -115,7 +115,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e11
+    "sim" : 1e9
 }
 
 
@@ -139,7 +139,7 @@ output = gen.generate_signals()
 
 
 # gen.plot_signals()
-# gen.plot_fft_signals()atom://teletype/portal/229ec65b-17fe-42ae-8787-3045c994f73c
+# gen.plot_fft_signals()
 
 # gen.plot_signals(resources)#sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
 # gen.plot_fft_signals(resources)

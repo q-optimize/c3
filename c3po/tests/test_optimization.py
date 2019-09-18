@@ -42,14 +42,16 @@ sim = Sim(initial_model, gen, ctrls)
 
 
 # Goal to drive on qubit 1
-indx = initial_model.names.index('Q1')
-a_q1 = initial_model.ann_opers[indx]
-U_goal = a_q1 + tf.transpose(a_q1)
+U_goal = np.array(
+    [[0.+0.j, 1.+0.j, 0.+0.j],
+     [1.+0.j, 0.+0.j, 0.+0.j],
+     [0.+0.j, 0.+0.j, 1.+0.j]]
+    )
 
 def evaluate_signals(pulse_params, opt_params):
     model_params = sim.model.params
-    U = sim.propagation(model_params, pulse_params, opt_params)
-    return 1-tf_unitary_overlap(U, U_goal)
+    U = sim.propagation(pulse_params, opt_params, model_params)
+    return 1-tf_unitary_overlap(U_goal, U)
 
 rechenknecht.optimize_controls(
     controls = ctrls,

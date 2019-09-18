@@ -1,6 +1,6 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
-import tensorflow as tf
 import os
 import types
 
@@ -77,9 +77,9 @@ def tf_matmul_n(tensor_list):
     if (l==1):
         return tensor_list[0]
     else:
-        even_half = tf.gather(tensor_list, list(range(0,l,2)))
-        odd_half = tf.gather(tensor_list, list(range(1,l,2)))
-        return tf.matmul(matmul_n(even_half),matmul_n(odd_half))
+        left_half = tf.gather(tensor_list, list(range(0,int(l/2))))
+        right_half = tf.gather(tensor_list, list(range(int(l/2),l)))
+        return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
 
 
 def tf_unitary_overlap(A, B):
@@ -105,6 +105,18 @@ def tf_unitary_overlap(A, B):
 
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
+
+
+def tf_expm(A):
+    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
+    A_powers = A
+    r += A
+
+    for ii in range(2,8):
+        A_powers = tf.matmul(A_powers, A)
+        r += A_powers/np.math.factorial(ii)
+
+    return r
 
 
 def tf_dU_of_t(h0, hks, cflds_t, dt):
