@@ -101,6 +101,10 @@ class ControlSet:
         for control in controls:
             control.save_params_to_history(name)
 
+    def get_history(self, opt_params):
+        #TODO
+        return None
+
 class Control:
     """
 
