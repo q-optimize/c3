@@ -29,7 +29,7 @@ class ControlSet:
 
         Returns
         -------
-y
+
         opt_params : dict
             Dictionary with values, bounds lists, plus a list with pairs of
             shape (key, id) at the corresponding pos in the list as the
@@ -97,6 +97,9 @@ y
         opt_params['values'] = values
         self.set_corresponding_control_parameters(opt_params)
 
+    def save_params_to_history(self, name):
+        for control in controls:
+            control.save_params_to_history(name)
 
 class Control:
     """

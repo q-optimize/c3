@@ -20,7 +20,7 @@ q1 = Qubit(
     comment = "The one and only qubit in this chip",
     freq = 6e9*2*np.pi,
     delta = 1e6 * 2 * np.pi,
-    hilbert_dim = 3
+    hilbert_dim = 2
     )
 
 r1 = Resonator(
