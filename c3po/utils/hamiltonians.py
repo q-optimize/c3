@@ -38,7 +38,7 @@ def duffing(a):
     """
     a_dag = tf.transpose(tf.conj(a))
     n = tf.matmul(a_dag, a)
-    return 1/2 * tf.matmul(n - 1, n)
+    return 1/2 * tf.matmul(n - tf.eye(int(n.shape[0]), dtype=tf.complex128), n)
 
 
 def int_XX(anhs):
