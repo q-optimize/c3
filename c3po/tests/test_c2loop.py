@@ -1,5 +1,3 @@
-from test_model import *
-from test_generator import *
 from test_optimization import *
 
 initial_model.update_parameters([5.9e9*2*np.pi,0.9e6*2*np.pi,8.5e9*2*np.pi,148e6*2*np.pi])

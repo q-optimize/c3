@@ -8,6 +8,7 @@ from c3po.utils.tf_utils import *
 import copy
 
 rechenknecht = Opt()
+rechenknecht.store_history = True
 
 tf_log_level_info()
 

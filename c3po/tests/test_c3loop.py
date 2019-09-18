@@ -1,8 +1,6 @@
-from test_model import *
-from test_generator import *
 from test_optimization import *
 
-rechenknecht.store_history = True
+rechenknecht.optimizer_history = []
 
 real_model = copy.deepcopy(initial_model)
 real_model.update_parameters([5.8e9*2*np.pi,0.7e6*2*np.pi,8.5e9*2*np.pi,143e6*2*np.pi])
