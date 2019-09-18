@@ -98,7 +98,7 @@ class ControlSet:
         self.set_corresponding_control_parameters(opt_params)
 
     def save_params_to_history(self, name):
-        for control in controls:
+        for control in self.controls:
             control.save_params_to_history(name)
 
     def get_history(self, opt_params):

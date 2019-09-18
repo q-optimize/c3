@@ -14,6 +14,7 @@ class Optimizer:
         self.sess = None
         self.store_history = False
         self.optimizer_history = []
+        self.parameter_history = {}
 
     def set_session(self, sess):
         self.sess = sess
@@ -110,17 +111,15 @@ class Optimizer:
         return tf.transpose(values)
 
 
-    def cmaes(self, values, bounds, settings, eval_func, controls = None):
+    def cmaes(self, opt_params, settings, eval_func, controls):
+
+        values, bounds = controls.get_values_bounds(opt_params)
 
         # TODO: rewrite from dict to list input
         if settings:
             if 'CMA_stds' in settings.keys():
-                scale_bounds = []
-                for i in range(len(bounds)):
-                    scale = np.abs(bounds[i][0] - bounds[i][1])
-                    scale_bounds.append(settings['CMA_stds'][i] / scale)
+                scale_bounds = self.to_scale_one(settings['CMA_stds'], bounds)
                 settings['CMA_stds'] = scale_bounds
-
 
         x0 = self.to_scale_one(values, bounds)
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
@@ -128,24 +127,14 @@ class Optimizer:
         while not es.stop():
             samples = es.ask()
 
-            if controls is not None:
-                opt_params_clone = copy.deepcopy(opt_params)
-                test_controls = []
-                for sample in samples_rescaled:
-                    sig_clones = copy.deepcopy(controls)
-                    opt_params_clone['values'] = sample
-                    sig_clones.set_corresponding_control_parameters(opt_params_clone)
-                    test_controls.append(sig_clones)
-
-
-            if controls == None:
-                eval_input = samples_rescaled
-            else:
-                eval_input = test_controls
-
             solutions = []
-            for input in eval_input:
-                solution.append(self.fidelity(input))
+            for sample in samples:
+                sample_rescaled = self.to_bound_phys_scale(sample, bounds)
+                fid = eval_func(sample_rescaled, opt_params)
+                solutions.append(fid)
+                self.optimizer_history.append(
+                    [[sample_rescaled, opt_params], [fid]]
+                    )
 
             es.tell(
                     samples,
@@ -187,9 +176,7 @@ class Optimizer:
                       )
                 }
             )
-            self.optimizer_history.append(
-                [[pulse_params, self.opt_params], [fid]]
-                )
+
 
         return fid
 
@@ -210,16 +197,17 @@ class Optimizer:
         return jac[0]*scale.T
 
 
-    def lbfgs(self, values, bounds):
+    def lbfgs(self, values, bounds, settings={}):
 
         x0 = self.to_scale_one(values, bounds)
 
+        settings['disp']=True
         res = minimize(
                 self.fidelity,
                 x0,
                 jac=self.fidelity_gradient,
                 method='L-BFGS-B',
-                options={'disp': True}
+                options=settings
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -306,13 +294,6 @@ class Optimizer:
             bounds = np.array(bounds)
             self.bounds = bounds
 
-            params = tf.placeholder(
-                tf.float64, shape=(len(values)), name="params"
-                )
-
-            self.__params = params
-            self.__g = eval_func(params, opt_params)
-
             values_opt = self.cmaes(opt_params, settings, eval_func, controls)
 
         elif opt == 'lbfgs':
@@ -342,12 +323,17 @@ class Optimizer:
         opt_params['values'] = values_opt
 
         controls.set_corresponding_control_parameters(opt_params)
+        controls.save_params_to_history(calib_name)
+        self.parameter_history[calib_name] = opt_params
 
-        for control in controls.controls:
-            control.save_params_to_history(calib_name)
 
-
-    def learn_model(self, model, eval_func, meas_results=[]):
+    def learn_model(
+        self,
+        model,
+        eval_func,
+        settings,
+        meas_results=[]
+        ):
 
         if not meas_results:
             meas_results = self.optimizer_history
@@ -365,9 +351,9 @@ class Optimizer:
         self.__jac = tf.gradients(self.__g, params)
 
 
-        params_opt = self.lbfgs(values, bounds)
+        params_opt = self.lbfgs(values, bounds, settings)
 
-        model.update_parameters(np.array(params_opt))
+        model.params = np.array(params_opt)
 
 
     def sweep_bounds(self, U0, gate, n_points=101):

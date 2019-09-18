@@ -77,7 +77,7 @@ env_group.add_element(p1)
 
 
 carrier_parameters = {
-    'freq' : 6e9 * 2 * np.pi
+    'freq' : 5.5e9 * 2 * np.pi
 }
 
 carr = CtrlComp(
@@ -139,7 +139,7 @@ output = gen.generate_signals()
 
 
 # gen.plot_signals()
-# gen.plot_fft_signals()atom://teletype/portal/229ec65b-17fe-42ae-8787-3045c994f73c
+# gen.plot_fft_signals()
 
 # gen.plot_signals(resources)#sess = tf_debug.LocalCLIDebugWrapperSession(sess) # Enable this to debug
 # gen.plot_fft_signals(resources)

@@ -40,28 +40,40 @@ opt_map = {
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
-ctrls_guess = copy.deepcopy(ctrls)
-
 sim = Sim(initial_model, gen, ctrls)
 
 # Goal to drive on qubit 1
-indx = initial_model.names.index('Q1')
-a_q1 = initial_model.ann_opers[indx]
-U_goal = a_q1 + tf.transpose(a_q1)
+# U_goal = np.array(
+#     [[0.+0.j, 1.+0.j, 0.+0.j],
+#      [1.+0.j, 0.+0.j, 0.+0.j],
+#      [0.+0.j, 0.+0.j, 1.+0.j]]
+#     )
 
+U_goal = np.array(
+    [[0.+0.j, 1.+0.j],
+     [1.+0.j, 0.+0.j]],
+    )
+
+sim.model = optimize_model
 def evaluate_signals(pulse_params, opt_params):
     model_params = sim.model.params
     U = sim.propagation(pulse_params, opt_params, model_params)
     return 1-tf_unitary_overlap(U, U_goal)
+
+print(
+"""
+#######################
+# Optimizing pulse... #
+#######################
+"""
+)
 
 rechenknecht.optimize_controls(
     controls = ctrls,
     opt_map = opt_map,
     opt = 'lbfgs',
 #    opt = 'tf_grad_desc',
-    settings=None,
+    settings = None,
     calib_name = 'test',
     eval_func = evaluate_signals
     )
-
-ctrls_openloop = copy.deepcopy(ctrls)
