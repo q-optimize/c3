@@ -185,17 +185,17 @@ class AWG(Device):
             Inphase = tf.add_n(I_components, name="Inhpase")/norm
             Quadrature = tf.add_n(Q_components, name="Quadrature")/norm
 
-            self.amp_tot_sq = amp_tot_sq
+            self.amp_tot = norm
             self.Inphase = Inphase
             self.Quadrature = Quadrature
 
 
     def get_I(self):
-        return self.amp_tot_sq * self.Inphase
+        return self.amp_tot * self.Inphase
 
 
     def get_Q(self):
-        return self.amp_tot_sq * self.Quadrature
+        return self.amp_tot * self.Quadrature
 
 
 
