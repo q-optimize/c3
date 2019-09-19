@@ -11,8 +11,7 @@ rechenknecht = Opt()
 rechenknecht.store_history = True
 
 tf_log_level_info()
-
-set_tf_log_level(2)
+set_tf_log_level(3)
 
 print("current log level: " + str(get_tf_log_level()))
 
@@ -31,12 +30,12 @@ opt_map = {
     'amp' : [
         (ctrl.get_uuid(), p1.get_uuid())
         ],
-    'T_up' : [
-        (ctrl.get_uuid(), p1.get_uuid())
-        ],
-    'T_down' : [
-        (ctrl.get_uuid(), p1.get_uuid())
-        ],
+    # 'T_up' : [
+    #     (ctrl.get_uuid(), p1.get_uuid())
+    #     ],
+    # 'T_down' : [
+    #     (ctrl.get_uuid(), p1.get_uuid())
+    #     ],
     'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
@@ -68,12 +67,18 @@ print(
 """
 )
 
+def callback(xk):
+    print(xk)
+
+settings = {'maxiter': 5}
+
 rechenknecht.optimize_controls(
     controls = ctrls,
     opt_map = opt_map,
     opt = 'lbfgs',
 #    opt = 'tf_grad_desc',
-    settings = None,
-    calib_name = 'test',
-    eval_func = evaluate_signals
+    settings = settings,
+    calib_name = 'openloop',
+    eval_func = evaluate_signals,
+    callback = callback
     )

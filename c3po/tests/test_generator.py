@@ -30,20 +30,20 @@ carr_group.desc = "group containing all components of type carrier"
 
 
 flattop_params1 = {
-    'amp' :   np.pi * 1 / 20e-9,
-    'T_up' : 5e-9,
-    'T_down' : 25e-9,
+    'amp' :   np.pi * 1.2 / 7e-9,
+    'T_up' : 3e-9,
+    'T_down' : 10e-9,
     'xy_angle' : 0.0,
     'freq_offset' : 0e6 * 2 * np.pi
 }
 
 
 params_bounds = {
-    'amp' : [10e6 * 2 * np.pi, 50e6 * 2 * np.pi],
-    'T_up' : [2e-9, 28e-9],
-    'T_down' : [2e-9, 28e-9],
+    'amp' : [50e6 * 2 * np.pi, 100e6 * 2 * np.pi],
+    'T_up' : [1e-9, 11e-9],
+    'T_down' : [1e-9, 11e-9],
     'xy_angle' : [-np.pi, np.pi],
-    'freq_offset' : [-1e9 * 2 * np.pi, 1e9 * 2 * np.pi]
+    'freq_offset' : [-0.2e9 * 2 * np.pi, 0.2e9 * 2 * np.pi]
 }
 
 def my_flattop(t, params):
@@ -51,8 +51,8 @@ def my_flattop(t, params):
     t_down = tf.cast(params['T_down'], tf.float64)
     T2 = tf.maximum(t_up, t_down)
     T1 = tf.minimum(t_up, t_down)
-    return (1 + tf.math.erf((t - T1) / 2e-9)) / 2 * \
-(1 + tf.math.erf((-t + T2) / 2e-9)) / 2
+    return (1 + tf.math.erf((t - T1) / 1e-9)) / 2 * \
+            (1 + tf.math.erf((-t + T2) / 1e-9)) / 2
 
 
 p1 = CtrlComp(
@@ -97,7 +97,7 @@ comps.append(p1)
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
-ctrl.t_end = 30e-9
+ctrl.t_end = 12e-9
 ctrl.comps = comps
 
 
@@ -115,7 +115,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 5e10
+    "sim" : 5e11
 }
 
 
@@ -142,6 +142,8 @@ output = gen.generate_signals()
 #     ts = sess.run(output[key]['ts'])
 #     signal = sess.run(output[key]['signal'])
 #     plt.plot(ts,signal)
+#
+# plt.show(block=False)
 
 # gen.plot_signals()
 # gen.plot_fft_signals()

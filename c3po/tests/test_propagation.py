@@ -8,6 +8,7 @@ from tensorflow.python import debug as tf_debug
 from c3po.utils.tf_utils import *
 
 sess = tf_setup()
+set_tf_log_level(3)
 
 opt_map = {
     'amp' : [
@@ -35,13 +36,15 @@ params = tf.placeholder(
 
 U_final = sim.propagation(params, opt_params)
 #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
-U = sess.run(U_final ,feed_dict={params: values})
+#U = sess.run(U_final ,feed_dict={params: values})
 
 indx = initial_model.names.index('Q1')
 a_q1 = initial_model.ann_opers[indx]
 U_goal = a_q1 + tf.transpose(a_q1)
-# fidelity = tf_unitary_overlap(U_final, U_goal)
-# fid = sess.run(fidelity ,feed_dict={params: values})
+fidelity = tf_unitary_overlap(U_final, U_goal)
+fid = sess.run(fidelity ,feed_dict={params: values})
+print(values)
+print(fid)
 
 # opt_params = ctrls.get_corresponding_control_parameters(opt_map)
 # pulse_params, bounds = ctrls.get_values_bounds(opt_params)

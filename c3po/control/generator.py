@@ -174,11 +174,11 @@ class AWG(Device):
                     freq_offset = comp.params['freq_offset']
                     I_components.append(
                         amp * comp.get_shape_values(ts) *
-                        tf.cos(xy_angle + freq_offset * ts)
+                        tf.cos(xy_angle - freq_offset * ts)
                         )
                     Q_components.append(
                         amp * comp.get_shape_values(ts) *
-                        tf.sin(xy_angle + freq_offset * ts)
+                        tf.sin(xy_angle - freq_offset * ts)
                         )
 
             norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))

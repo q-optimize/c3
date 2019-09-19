@@ -111,14 +111,56 @@ class Optimizer:
         return tf.transpose(values)
 
 
-    def cmaes(self, opt_params, settings, eval_func, controls):
+    def fidelity_run(self, x):
+        sess = self.sess
+        params = self.__params
+        bounds = self.bounds
 
-        values, bounds = controls.get_values_bounds(opt_params)
+        current_params = self.to_bound_phys_scale(x, bounds)
+
+        print('evaluating fidelity at')
+        print(current_params)
+
+        fid = sess.run(
+            self.__g,
+            feed_dict={params: current_params}
+            )
+
+        if self.store_history:
+            self.optimizer_history.append([current_params, fid])
+
+        return fid
+
+
+    def fidelity_gradient_run(self, x):
+        sess = self.sess
+        params = self.__params
+        bounds = self.bounds
+        scale = np.diff(bounds)
+
+        current_params = self.to_bound_phys_scale(x,bounds)
+
+        print('evaluating gradient at')
+        print(current_params)
+
+        jac = sess.run(
+            self.__jac,
+            feed_dict={params: current_params}
+            )
+        return jac[0]*scale.T
+
+
+    def cmaes(self, values, bounds, settings={}):
 
         # TODO: rewrite from dict to list input
         if settings:
             if 'CMA_stds' in settings.keys():
-                scale_bounds = self.to_scale_one(settings['CMA_stds'], bounds)
+                scale_bounds = []
+
+                for i in range(len(bounds)):
+                    scale = np.abs(bounds[i][0] - bounds[i][1])
+                    scale_bounds.append(settings['CMA_stds'][i] / scale)
+
                 settings['CMA_stds'] = scale_bounds
 
         x0 = self.to_scale_one(values, bounds)
@@ -126,15 +168,11 @@ class Optimizer:
 
         while not es.stop():
             samples = es.ask()
-
             solutions = []
             for sample in samples:
                 sample_rescaled = self.to_bound_phys_scale(sample, bounds)
-                fid = eval_func(sample_rescaled, opt_params)
+                fid = self.fidelity_run(sample)
                 solutions.append(fid)
-                self.optimizer_history.append(
-                    [[sample_rescaled, opt_params], [fid]]
-                    )
 
             es.tell(
                     samples,
@@ -151,63 +189,18 @@ class Optimizer:
         return values_opt
 
 
-    def fidelity(self, x):
-        sess = self.sess
-        params = self.__params
-        bounds = self.bounds
-
-        fid = sess.run(
-            self.__g,
-            feed_dict={
-                params: self.to_bound_phys_scale(
-                    x,
-                    bounds
-                    )
-                }
-            )
-
-        if self.store_history:
-            pulse_params = sess.run(
-                params,
-                feed_dict={
-                  params: self.to_bound_phys_scale(
-                      x,
-                      bounds
-                      )
-                }
-            )
-
-
-        return fid
-
-
-    def fidelity_gradient(self, x):
-        sess = self.sess
-        params = self.__params
-        bounds = self.bounds
-        scale = np.diff(bounds)
-        jac = sess.run(self.__jac,
-                           feed_dict={
-                               params: self.to_bound_phys_scale(
-                                   x,
-                                   bounds
-                                   )
-                               }
-                           )
-        return jac[0]*scale.T
-
-
     def lbfgs(self, values, bounds, settings={}):
 
         x0 = self.to_scale_one(values, bounds)
 
         settings['disp']=True
         res = minimize(
-                self.fidelity,
+                self.fidelity_run,
                 x0,
-                jac=self.fidelity_gradient,
+                jac=self.fidelity_gradient_run,
                 method='L-BFGS-B',
-                options=settings
+                options=settings,
+                callback=self.callback
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -254,12 +247,14 @@ class Optimizer:
         opt,
         settings,
         calib_name,
-        eval_func
+        eval_func,
+        callback = None
         ):
+
 
         ####
         #
-        # NOT YET TESTED
+        # NOT YET THOROUGHLY TESTED
         #
         ####
 
@@ -287,17 +282,23 @@ class Optimizer:
         """
 
         opt_params = controls.get_corresponding_control_parameters(opt_map)
+        self.opt_params = opt_params
 
         if opt == 'cmaes':
-            self.opt_params = opt_params
             values, bounds = controls.get_values_bounds(opt_params)
             bounds = np.array(bounds)
             self.bounds = bounds
 
-            values_opt = self.cmaes(opt_params, settings, eval_func, controls)
+            params = tf.placeholder(
+                tf.float64, shape=(len(values)), name="params"
+                )
+            self.__params = params
+            self.__g = eval_func(params, opt_params)
+
+            values_opt = self.cmaes(values, bounds, settings)
 
         elif opt == 'lbfgs':
-            self.opt_params = opt_params
+            self.callback = callback
             values, bounds = controls.get_values_bounds(opt_params)
             bounds = np.array(bounds)
             self.bounds = bounds
@@ -310,7 +311,7 @@ class Optimizer:
             self.__g = eval_func(params, opt_params)
             self.__jac = tf.gradients(self.__g, params)
 
-            values_opt = self.lbfgs(values, bounds)
+            values_opt = self.lbfgs(values, bounds, settings=settings)
 
         elif opt == 'tf_grad_desc':
             values_opt = self.tf_gradient_descent(
@@ -347,7 +348,7 @@ class Optimizer:
             )
 
         self.__params = params
-        self.__g = eval_func(params, meas_results)
+        self.__g = eval_func(params, self.opt_params, meas_results)
         self.__jac = tf.gradients(self.__g, params)
 
 

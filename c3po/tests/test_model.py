@@ -12,7 +12,10 @@ from c3po.main.model import Model as mdl
 
 import time
 
+from c3po.utils.tf_utils import *
 from tensorflow.python import debug as tf_debug
+
+set_tf_log_level(3)
 
 q1 = Qubit(
     name = "Q1",
@@ -60,7 +63,7 @@ q2 = Qubit(
     name = "Q1",
     desc = "Qubit 2",
     comment = "The one and only qubit in this chip",
-    freq = 5.6e9*2*np.pi,
+    freq = 5.55e9*2*np.pi,
     delta = 1e6 * 2 * np.pi,
     hilbert_dim = 2
     )

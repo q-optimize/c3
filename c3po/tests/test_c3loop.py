@@ -7,12 +7,16 @@ exp_sim = Sim(real_model, gen, ctrls)
 def experiment_evaluate(pulse_params, opt_params):
     model_params = exp_sim.model.params
     U = exp_sim.propagation(pulse_params, opt_params, model_params)
-    return 1-sess.run(tf_unitary_overlap(U, U_goal))
+    return 1-tf_unitary_overlap(U, U_goal)
+
+
+initial_spread = [5e6*2*np.pi, 30e6*2*np.pi]
 
 opt_settings = {
-    'maxiter' : 2,
+    'CMA_stds': initial_spread,
+    'maxiter' : 20,
     'ftarget' : 1e-4,
-    'popsize' : 4
+    'popsize' : 10
 }
 
 print(
@@ -30,14 +34,15 @@ rechenknecht.optimize_controls(
     opt = 'cmaes',
 #    opt = 'tf_grad_desc',
     settings = opt_settings,
-    calib_name = 'test',
+    calib_name = 'closedloop',
     eval_func = experiment_evaluate
     )
 
-def match_model(model_params, measurements):
+def match_model(model_params, opt_params, measurements):
     model_error = 0
+    measurements = measurements[-10::]
     for m in measurements:
-        pulse_params, opt_params = m[0]
+        pulse_params = m[0]
         result = m[1]
         U = sim.propagation(pulse_params, opt_params, model_params)
         diff = (1-tf_unitary_overlap(U_goal, U)) - result
@@ -45,7 +50,7 @@ def match_model(model_params, measurements):
     return model_error
 
 
-settings = {'maxiter': 3}
+settings = {'maxiter': 30}
 
 print(
 """
