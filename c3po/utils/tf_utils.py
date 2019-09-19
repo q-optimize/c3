@@ -125,7 +125,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     for ii in range(len(hks)):
             h += cflds_t[ii]*hks[ii]
 
-    return tf.linalg.expm(-1j*h*dt)
+    return tf_expm(-1j*h*dt)
 
 
 def tf_propagation(h0, hks, cflds, dt, history=False):

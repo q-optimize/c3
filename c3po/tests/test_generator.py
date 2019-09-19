@@ -115,7 +115,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 1e11
+    "sim" : 5e10
 }
 
 
@@ -134,9 +134,14 @@ gen.resolutions = resolutions
 gen.resources = resources
 gen.resource_groups = resource_groups
 
-
 output = gen.generate_signals()
 
+# from c3po.utils.tf_utils import *
+# sess = tf_setup()
+# for key in output.keys():
+#     ts = sess.run(output[key]['ts'])
+#     signal = sess.run(output[key]['signal'])
+#     plt.plot(ts,signal)
 
 # gen.plot_signals()
 # gen.plot_fft_signals()
