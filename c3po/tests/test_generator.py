@@ -77,7 +77,7 @@ env_group.add_element(p1)
 
 
 carrier_parameters = {
-    'freq' : 5.5e9 * 2 * np.pi
+    'freq' : 5.45e9 * 2 * np.pi
 }
 
 carr = CtrlComp(

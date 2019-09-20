@@ -48,16 +48,26 @@ sim = Sim(initial_model, gen, ctrls)
 #      [0.+0.j, 0.+0.j, 1.+0.j]]
 #     )
 
-U_goal = np.array(
-    [[0.+0.j, 1.+0.j],
-     [1.+0.j, 0.+0.j]],
+psi_init = np.array(
+    [[1.+0.j],
+     [0.+0.j]],
+    )
+
+psi_goal = np.array(
+    [[0.+0.j],
+     [1.+0.j]],
     )
 
 sim.model = optimize_model
+
 def evaluate_signals(pulse_params, opt_params):
+
     model_params = sim.model.params
     U = sim.propagation(pulse_params, opt_params, model_params)
-    return 1-tf_unitary_overlap(U, U_goal)
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+
+    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
 print(
 """
@@ -70,7 +80,7 @@ print(
 def callback(xk):
     print(xk)
 
-settings = {'maxiter': 5}
+settings = {'maxiter': 20}
 
 rechenknecht.optimize_controls(
     controls = ctrls,

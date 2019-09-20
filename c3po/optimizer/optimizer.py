@@ -118,9 +118,6 @@ class Optimizer:
 
         current_params = self.to_bound_phys_scale(x, bounds)
 
-        print('evaluating fidelity at')
-        print(current_params)
-
         fid = sess.run(
             self.__g,
             feed_dict={params: current_params}
@@ -139,9 +136,6 @@ class Optimizer:
         scale = np.diff(bounds)
 
         current_params = self.to_bound_phys_scale(x,bounds)
-
-        print('evaluating gradient at')
-        print(current_params)
 
         jac = sess.run(
             self.__jac,
@@ -172,7 +166,7 @@ class Optimizer:
             for sample in samples:
                 sample_rescaled = self.to_bound_phys_scale(sample, bounds)
                 fid = self.fidelity_run(sample)
-                solutions.append(fid)
+                solutions.append(fid[0][0])
 
             es.tell(
                     samples,
