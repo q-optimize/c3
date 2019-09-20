@@ -9,7 +9,6 @@ def experiment_evaluate(pulse_params, opt_params):
     U = exp_sim.propagation(pulse_params, opt_params, model_params)
     psi_actual = tf.matmul(U, psi_init)
     overlap = tf.matmul(psi_goal.T, psi_actual)
-
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
 
@@ -52,6 +51,19 @@ def match_model_U(model_params, opt_params, measurements):
         U = opt_sim.propagation(pulse_params, opt_params, model_params)
         diff = (1-tf_unitary_overlap(U_goal, U)) - result
         model_error += tf.conj(diff) * diff
+    return model_error
+
+def match_model(model_params, opt_params, measurements):
+    model_error = 0
+    measurements = measurements[-5::]
+    for m in measurements:
+        pulse_params = m[0]
+        result = m[1]
+        U = sim.propagation(pulse_params, opt_params, model_params)
+        psi_actual = tf.matmul(U, psi_init)
+        overlap = tf.matmul(psi_goal.T, psi_actual)
+        diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
+        model_error += diff * diff
     return model_error
 
 def match_model_psi(model_params, opt_params, measurements):
