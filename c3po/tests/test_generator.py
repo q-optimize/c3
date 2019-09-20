@@ -15,6 +15,15 @@ import tensorflow as tf
 
 import matplotlib.pyplot as plt
 
+from test_model import *
+from test_generator import *
+
+from c3po.optimizer.optimizer import Optimizer as Opt
+from c3po.simulation.simulator import Simulator as Sim
+from c3po.utils.tf_utils import *
+
+import copy
+
 env_group = CompGroup()
 env_group.name = "env_group"
 env_group.desc = "group containing all components of type envelop"
@@ -26,7 +35,7 @@ carr_group.desc = "group containing all components of type carrier"
 
 
 carrier_parameters = {
-    'freq' : 6.05e9 * 2 * np.pi
+    'freq' : 5.95e9 * 2 * np.pi
 }
 
 carr = CtrlComp(
@@ -158,3 +167,88 @@ output = gen.generate_signals()
 
 # plt.plot(ts, values)
 # plt.show()
+
+
+
+rechenknecht = Opt()
+rechenknecht.store_history = True
+
+tf_log_level_info()
+set_tf_log_level(3)
+
+print("current log level: " + str(get_tf_log_level()))
+
+# to make sure session is empty look up: tf.reset_default_graph()
+
+sess = tf_setup()
+
+print(" ")
+print("Available tensorflow devices: ")
+tf_list_avail_devices()
+writer = tf.summary.FileWriter( './logs/optim_log', sess.graph)
+rechenknecht.set_session(sess)
+rechenknecht.set_log_writer(writer)
+
+opt_map = {
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
+    # 'T_up' : [
+    #     (ctrl.get_uuid(), p1.get_uuid())
+    #     ],
+    # 'T_down' : [
+    #     (ctrl.get_uuid(), p1.get_uuid())
+    #     ],
+    # 'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
+}
+
+sim = Sim(initial_model, gen, ctrls)
+
+# Goal to drive on qubit 1
+# U_goal = np.array(
+#     [[0.+0.j, 1.+0.j, 0.+0.j],
+#      [1.+0.j, 0.+0.j, 0.+0.j],
+#      [0.+0.j, 0.+0.j, 1.+0.j]]
+#     )
+
+psi_init = np.array(
+    [[1.+0.j],
+     [0.+0.j]],
+    )
+
+psi_goal = np.array(
+    [[0.+0.j],
+     [1.+0.j]],
+    )
+
+sim.model = optimize_model
+
+def evaluate_signals_psi(pulse_params, opt_params):
+    model_params = sim.model.params
+    U = sim.propagation(pulse_params, opt_params, model_params)
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+
+print(
+"""
+#######################
+# Optimizing pulse... #
+#######################
+"""
+)
+
+def callback(xk):
+    print(xk)
+
+settings = {} #'maxiter': 5}
+
+rechenknecht.optimize_controls(
+    controls = ctrls,
+    opt_map = opt_map,
+    opt = 'lbfgs',
+#    opt = 'tf_grad_desc',
+    settings = settings,
+    calib_name = 'openloop',
+    eval_func = evaluate_signals_psi,
+    callback = callback
+    )

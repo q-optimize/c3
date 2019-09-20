@@ -13,8 +13,9 @@ class Optimizer:
     def __init__(self):
         self.sess = None
         self.store_history = False
-        self.optimizer_history = []
+        self.optimizer_history = {}
         self.parameter_history = {}
+        self.results = {}
 
     def set_session(self, sess):
         self.sess = sess
@@ -68,7 +69,6 @@ class Optimizer:
             control parameters that are compatible with bounds in physical units
 
         """
-
         values = []
 
         for i in range(len(x0)):
@@ -124,7 +124,9 @@ class Optimizer:
             )
 
         if self.store_history:
-            self.optimizer_history.append([current_params, fid])
+            self.optimizer_history[self.optim_name].append(
+                [current_params, fid]
+                )
 
         return fid
 
@@ -176,9 +178,14 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
+
         x_opt = res[0]
 
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
+
+        res[0] = values_opt
+
+        self.results[self.optim_name] = res
 
         return values_opt
 
@@ -198,6 +205,10 @@ class Optimizer:
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
+
+        res.x = values_opt
+
+        self.results[self.optim_name] = res
 
         return values_opt
 
@@ -277,6 +288,8 @@ class Optimizer:
 
         opt_params = controls.get_corresponding_control_parameters(opt_map)
         self.opt_params = opt_params
+        self.optim_name = calib_name
+        self.optimizer_history[calib_name] = []
 
         if opt == 'cmaes':
             values, bounds = controls.get_values_bounds(opt_params)
@@ -327,11 +340,15 @@ class Optimizer:
         model,
         eval_func,
         settings,
+        optim_name,
         meas_results=[]
         ):
 
-        if not meas_results:
-            meas_results = self.optimizer_history
+        self.optim_name = optim_name
+        self.optimizer_history[optim_name] = []
+
+        if isinstance(meas_results,str) :
+            meas_results = self.optimizer_history[meas_results]
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
@@ -349,6 +366,7 @@ class Optimizer:
         params_opt = self.lbfgs(values, bounds, settings)
 
         model.params = np.array(params_opt)
+
 
 
     def sweep_bounds(self, U0, gate, n_points=101):

@@ -47,15 +47,15 @@ opt_params = ctrls.get_corresponding_control_parameters(opt_map)
 pulse_params, bounds = ctrls.get_values_bounds(opt_params)
 stored_measurement = [[pulse_params, opt_params], [U_goal, 0.40053653853211163]]
 
-def match_model(model_params, measurements):
+def match_model(model_params, opt_params , measurements):
     model_error = 0
-    for m in measurements:
-        pulse_params, opt_params = m[0]
-        operator, result = m[1]
+    for m in measurements[-5::]:
+        pulse_params = m[0]
+        result = m[1]
         U = sim.propagation(pulse_params, opt_params, model_params)
-        model_error += tf.abs(
-            tf_unitary_overlap(U_goal, U) - result
-            )
+        U = opt_sim.propagation(pulse_params, opt_params, model_params)
+        diff = (1-tf_unitary_overlap(U_goal, U)) - result
+        model_error += tf.conj(diff) * diff
     return model_error
 
 rechenknecht.learn_model(
