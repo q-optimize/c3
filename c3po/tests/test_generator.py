@@ -1,4 +1,3 @@
-
 from c3po.control.envelopes import *
 from c3po.cobj.component import ControlComponent as CtrlComp
 from c3po.cobj.group import ComponentGroup as CompGroup
