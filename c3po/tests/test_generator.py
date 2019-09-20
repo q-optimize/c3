@@ -16,8 +16,6 @@ import tensorflow as tf
 
 import matplotlib.pyplot as plt
 
-
-
 env_group = CompGroup()
 env_group.name = "env_group"
 env_group.desc = "group containing all components of type envelop"
@@ -28,13 +26,25 @@ carr_group.name = "carr_group"
 carr_group.desc = "group containing all components of type carrier"
 
 
+carrier_parameters = {
+    'freq' : 6.05e9 * 2 * np.pi
+}
+
+carr = CtrlComp(
+    name = "carrier",
+    desc = "Frequency of the local oscillator",
+    params = carrier_parameters,
+    groups = [carr_group.get_uuid()]
+)
+carr_group.add_element(carr)
+
 
 flattop_params1 = {
-    'amp' :   np.pi * 1.2 / 7e-9,
+    'amp' : np.pi * 1.2 / 7e-9, # 448964342.3828554,
     'T_up' : 3e-9,
     'T_down' : 10e-9,
     'xy_angle' : 0.0,
-    'freq_offset' : 0e6 * 2 * np.pi
+    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
 }
 
 
@@ -75,18 +85,6 @@ env_group.add_element(p1)
 # plt.plot(t, p2.get_shape_values(t))
 # plt.show()
 
-
-carrier_parameters = {
-    'freq' : 5.5e9 * 2 * np.pi
-}
-
-carr = CtrlComp(
-    name = "carrier",
-    desc = "Frequency of the local oscillator",
-    params = carrier_parameters,
-    groups = [carr_group.get_uuid()]
-)
-carr_group.add_element(carr)
 
 comps = []
 comps.append(carr)

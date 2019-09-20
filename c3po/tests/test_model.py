@@ -21,7 +21,7 @@ q1 = Qubit(
     name = "Q1",
     desc = "Qubit 1",
     comment = "The one and only qubit in this chip",
-    freq = 5.5e9*2*np.pi,
+    freq = 6e9*2*np.pi,
     delta = 1e6 * 2 * np.pi,
     hilbert_dim = 2
     )
@@ -63,7 +63,7 @@ q2 = Qubit(
     name = "Q1",
     desc = "Qubit 2",
     comment = "The one and only qubit in this chip",
-    freq = 5.55e9*2*np.pi,
+    freq = 6.05e9*2*np.pi,
     delta = 1e6 * 2 * np.pi,
     hilbert_dim = 2
     )

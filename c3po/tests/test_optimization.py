@@ -27,16 +27,15 @@ rechenknecht.set_session(sess)
 rechenknecht.set_log_writer(writer)
 
 opt_map = {
-    'amp' : [
-        (ctrl.get_uuid(), p1.get_uuid())
-        ],
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
     # 'T_up' : [
     #     (ctrl.get_uuid(), p1.get_uuid())
     #     ],
     # 'T_down' : [
     #     (ctrl.get_uuid(), p1.get_uuid())
     #     ],
-    'freq_offset': [(ctrl.get_uuid(), p1.get_uuid())]
+    # 'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
 sim = Sim(initial_model, gen, ctrls)
@@ -70,7 +69,7 @@ print(
 def callback(xk):
     print(xk)
 
-settings = {'maxiter': 5}
+settings = {} #'maxiter': 5}
 
 rechenknecht.optimize_controls(
     controls = ctrls,

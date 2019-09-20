@@ -10,13 +10,13 @@ def experiment_evaluate(pulse_params, opt_params):
     return 1-tf_unitary_overlap(U, U_goal)
 
 
-initial_spread = [5e6*2*np.pi, 30e6*2*np.pi]
+initial_spread = [5e6*2*np.pi, 20e6*2*np.pi]
 
 opt_settings = {
     'CMA_stds': initial_spread,
-    'maxiter' : 20,
+#    'maxiter' : 20,
     'ftarget' : 1e-4,
-    'popsize' : 10
+    'popsize' : 20
 }
 
 print(
@@ -38,19 +38,21 @@ rechenknecht.optimize_controls(
     eval_func = experiment_evaluate
     )
 
+opt_sim = Sim(real_model, gen, ctrls)
+
 def match_model(model_params, opt_params, measurements):
     model_error = 0
-    measurements = measurements[-10::]
+    measurements = measurements[-100::5]
     for m in measurements:
         pulse_params = m[0]
         result = m[1]
-        U = sim.propagation(pulse_params, opt_params, model_params)
+        U = opt_sim.propagation(pulse_params, opt_params, model_params)
         diff = (1-tf_unitary_overlap(U_goal, U)) - result
         model_error += tf.conj(diff) * diff
     return model_error
 
 
-settings = {'maxiter': 30}
+settings = {'maxiter': 100}
 
 print(
 """
