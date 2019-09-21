@@ -132,6 +132,8 @@ class Optimizer:
     def fidelity_run_n(self, x):
         sess = self.sess
         params = self.__params
+        pulse_params = self.__pulse_params
+        result = self.__result
         bounds = self.bounds
 
         current_params = self.to_bound_phys_scale(x, bounds)
@@ -143,7 +145,8 @@ class Optimizer:
                     self.__g,
                     feed_dict={
                             params: current_params,
-                            meas_result: m
+                            pulse_params: m[0],
+                            result: m[1]
                         }
                 )
 
@@ -184,7 +187,8 @@ class Optimizer:
                     self.__jac,
                     feed_dict={
                             params: current_params,
-                            meas_result: m
+                            pulse_params: m[1]
+                            meas_result: m[2]
                         }
                 )
             jac += jac_m[0]
@@ -394,10 +398,15 @@ class Optimizer:
         params = tf.placeholder(
             tf.float64, shape=(len(values)), name="params"
             )
-        meas_result = tf.placeholder(tf.float64, shape=(2))
-
+        result = tf.placeholder(tf.float64, shape=(1))
+        pulse_params = tf.placeholder(
+                tf.float64, shape=(len(self.optimizer_history[0][0]))
+            )
         self.__params = params
-        self.__g = eval_func(params, self.opt_params, meas_result)
+        self.__pulse_params = pulse_params
+        self.__result = result
+        
+        self.__g = eval_func(params, self.opt_params, pulse_params, result)
         self.__jac = tf.gradients(self.__g, params)
 
         params_opt = self.lbfgs(

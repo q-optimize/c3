@@ -66,9 +66,7 @@ def match_model(model_params, opt_params, measurements):
         model_error += diff * diff
     return model_error
 
-def match_model_psi(model_params, opt_params, measurement):
-    pulse_params = measurement[0]
-    result = measurement[1]
+def match_model_psi(model_params, opt_params, pulse_params, result):
 
     U = sim.propagation(pulse_params, opt_params, model_params)
 
@@ -93,7 +91,7 @@ print(
 
 rechenknecht.learn_model(
     optimize_model,
-    eval_func = match_model,
+    eval_func = match_model_psi,
     settings = settings,
     meas_results = []
     )
