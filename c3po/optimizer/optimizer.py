@@ -129,6 +129,30 @@ class Optimizer:
         return fid
 
 
+    def fidelity_run_n(self, x):
+        sess = self.sess
+        params = self.__params
+        bounds = self.bounds
+
+        current_params = self.to_bound_phys_scale(x, bounds)
+
+        fid = 0
+
+        for m in self.optimizer_history:
+            fid += sess.run(
+                    self.__g,
+                    feed_dict={
+                            params: current_params,
+                            meas_result: m
+                        }
+                )
+
+        if self.store_history:
+            self.optimizer_history.append([current_params, fid])
+
+        return fid
+
+
     def fidelity_gradient_run(self, x):
         sess = self.sess
         params = self.__params
@@ -138,10 +162,34 @@ class Optimizer:
         current_params = self.to_bound_phys_scale(x,bounds)
 
         jac = sess.run(
-            self.__jac,
-            feed_dict={params: current_params}
+                self.__jac,
+                feed_dict={params: current_params}
             )
+
         return jac[0]*scale.T
+
+
+    def fidelity_gradient_run_n(self, x):
+        sess = self.sess
+        params = self.__params
+        bounds = self.bounds
+        scale = np.diff(bounds)
+
+        current_params = self.to_bound_phys_scale(x,bounds)
+
+        jac = np.zeros_like(scale)
+
+        for m in self.optimizer_history:
+            jac_m = sess.run(
+                    self.__jac,
+                    feed_dict={
+                            params: current_params,
+                            meas_result: m
+                        }
+                )
+            jac += jac_m[0]
+
+        return jac*scale.T
 
 
     def cmaes(self, values, bounds, settings={}):
@@ -183,15 +231,15 @@ class Optimizer:
         return values_opt
 
 
-    def lbfgs(self, values, bounds, settings={}):
+    def lbfgs(self, values, bounds, goal, grad, settings={}):
 
         x0 = self.to_scale_one(values, bounds)
 
         settings['disp']=True
         res = minimize(
-                self.fidelity_run,
+                goal,
                 x0,
-                jac=self.fidelity_gradient_run,
+                jac=grad,
                 method='L-BFGS-B',
                 options=settings,
                 callback=self.callback
@@ -305,14 +353,20 @@ class Optimizer:
             self.__g = eval_func(params, opt_params)
             self.__jac = tf.gradients(self.__g, params)
 
-            values_opt = self.lbfgs(values, bounds, settings=settings)
+            values_opt = self.lbfgs(
+                    values,
+                    bounds,
+                    self.fidelity_run,
+                    self.fidelity_gradient_run,
+                    settings=settings
+                )
 
         elif opt == 'tf_grad_desc':
             values_opt = self.tf_gradient_descent(
-                opt_params,
-                settings,
-                eval_func,
-                controls
+                    opt_params,
+                    settings,
+                    eval_func,
+                    controls
                 )
 
         opt_params['values'] = values_opt
@@ -330,8 +384,8 @@ class Optimizer:
         meas_results=[]
         ):
 
-        if not meas_results:
-            meas_results = self.optimizer_history
+        if not meas_results == []:
+            self.optimizer_history = meas_results
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
@@ -340,13 +394,19 @@ class Optimizer:
         params = tf.placeholder(
             tf.float64, shape=(len(values)), name="params"
             )
+        meas_result = tf.placeholder(tf.float64, shape=(2))
 
         self.__params = params
-        self.__g = eval_func(params, self.opt_params, meas_results)
+        self.__g = eval_func(params, self.opt_params, meas_result)
         self.__jac = tf.gradients(self.__g, params)
 
-
-        params_opt = self.lbfgs(values, bounds, settings)
+        params_opt = self.lbfgs(
+                    values,
+                    bounds,
+                    self.fidelity_run_n,
+                    self.fidelity_gradient_run_n,
+                    settings=settings
+                )
 
         model.params = np.array(params_opt)
 
