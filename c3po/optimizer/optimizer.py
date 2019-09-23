@@ -140,13 +140,14 @@ class Optimizer:
 
         fid = 0
 
-        for m in self.optimizer_history:
+        measurements = self.optimizer_history[-100::5]
+        for m in measurements:
             fid += sess.run(
                     self.__g,
                     feed_dict={
                             params: current_params,
                             pulse_params: m[0],
-                            result: m[1]
+                            result: m[1][0]
                         }
                 )
 
@@ -175,20 +176,23 @@ class Optimizer:
     def fidelity_gradient_run_n(self, x):
         sess = self.sess
         params = self.__params
+        pulse_params = self.__pulse_params
+        result = self.__result
         bounds = self.bounds
         scale = np.diff(bounds)
 
         current_params = self.to_bound_phys_scale(x,bounds)
 
-        jac = np.zeros_like(scale)
+        jac = np.zeros_like(current_params)
 
-        for m in self.optimizer_history:
+        measurements = self.optimizer_history[-100::5]
+        for m in measurements:
             jac_m = sess.run(
                     self.__jac,
                     feed_dict={
                             params: current_params,
-                            pulse_params: m[1]
-                            meas_result: m[2]
+                            pulse_params: m[0],
+                            result: m[1][0]
                         }
                 )
             jac += jac_m[0]
@@ -381,11 +385,11 @@ class Optimizer:
 
 
     def learn_model(
-        self,
-        model,
-        eval_func,
-        settings,
-        meas_results=[]
+            self,
+            model,
+            eval_func,
+            settings,
+            meas_results=[]
         ):
 
         if not meas_results == []:
