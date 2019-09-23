@@ -4,6 +4,8 @@ rechenknecht.optimizer_history = []
 
 exp_sim = Sim(real_model, gen, ctrls)
 
+rechenknecht.simulate_noise = True
+
 def experiment_evaluate(pulse_params, opt_params):
     model_params = exp_sim.model.params
     U = exp_sim.propagation(pulse_params, opt_params, model_params)

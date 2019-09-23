@@ -15,6 +15,7 @@ class Optimizer:
         self.store_history = False
         self.optimizer_history = []
         self.parameter_history = {}
+        self.simulate_noise = False
 
     def set_session(self, sess):
         self.sess = sess
@@ -111,25 +112,25 @@ class Optimizer:
         return tf.transpose(values)
 
 
-    def fidelity_run(self, x):
+    def goal_run(self, x):
         sess = self.sess
         params = self.__params
         bounds = self.bounds
 
         current_params = self.to_bound_phys_scale(x, bounds)
 
-        fid = sess.run(
+        goal = sess.run(
             self.__g,
             feed_dict={params: current_params}
             )
 
         if self.store_history:
-            self.optimizer_history.append([current_params, fid])
+            self.optimizer_history.append([current_params, goal])
 
-        return fid
+        return goal
 
 
-    def fidelity_run_n(self, x):
+    def goal_run_n(self, x):
         sess = self.sess
         params = self.__params
         pulse_params = self.__pulse_params
@@ -138,10 +139,10 @@ class Optimizer:
 
         current_params = self.to_bound_phys_scale(x, bounds)
 
-        fid = 0
+        goal = 0
 
         for m in self.optimizer_history:
-            fid += sess.run(
+            goal += sess.run(
                     self.__g,
                     feed_dict={
                             params: current_params,
@@ -151,12 +152,12 @@ class Optimizer:
                 )
 
         if self.store_history:
-            self.optimizer_history.append([current_params, fid])
+            self.optimizer_history.append([current_params, goal])
 
-        return fid
+        return goal
 
 
-    def fidelity_gradient_run(self, x):
+    def goal_gradient_run(self, x):
         sess = self.sess
         params = self.__params
         bounds = self.bounds
@@ -172,7 +173,7 @@ class Optimizer:
         return jac[0]*scale.T
 
 
-    def fidelity_gradient_run_n(self, x):
+    def goal_gradient_run_n(self, x):
         sess = self.sess
         params = self.__params
         bounds = self.bounds
@@ -217,8 +218,11 @@ class Optimizer:
             solutions = []
             for sample in samples:
                 sample_rescaled = self.to_bound_phys_scale(sample, bounds)
-                fid = self.fidelity_run(sample)
-                solutions.append(fid[0][0])
+                goal = self.goal_run(sample)
+
+                if rechenknecht.simulate_noise:
+                    goal = (1+0.2*np.random.randn()) * goal
+                solutions.append(goal[0][0])
 
             es.tell(
                     samples,
@@ -360,8 +364,8 @@ class Optimizer:
             values_opt = self.lbfgs(
                     values,
                     bounds,
-                    self.fidelity_run,
-                    self.fidelity_gradient_run,
+                    self.goal_run,
+                    self.goal_gradient_run,
                     settings=settings
                 )
 
@@ -405,15 +409,15 @@ class Optimizer:
         self.__params = params
         self.__pulse_params = pulse_params
         self.__result = result
-        
+
         self.__g = eval_func(params, self.opt_params, pulse_params, result)
         self.__jac = tf.gradients(self.__g, params)
 
         params_opt = self.lbfgs(
                     values,
                     bounds,
-                    self.fidelity_run_n,
-                    self.fidelity_gradient_run_n,
+                    self.goal_run_n,
+                    self.goal_gradient_run_n,
                     settings=settings
                 )
 

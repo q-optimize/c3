@@ -26,7 +26,7 @@ carr_group.desc = "group containing all components of type carrier"
 
 
 carrier_parameters = {
-    'freq' : 6.05e9 * 2 * np.pi
+    'freq' : 4.95e9 * 2 * np.pi
 }
 
 carr = CtrlComp(
@@ -48,7 +48,7 @@ flattop_params1 = {
 
 
 params_bounds = {
-    'amp' : [50e6 * 2 * np.pi, 100e6 * 2 * np.pi],
+    'amp' : [25e6 * 2 * np.pi, 150e6 * 2 * np.pi],
     'T_up' : [1e-9, 11e-9],
     'T_down' : [1e-9, 11e-9],
     'xy_angle' : [-np.pi, np.pi],
