@@ -79,7 +79,7 @@ print(
 def callback(xk):
     print(xk)
 
-settings = {} #'maxiter': 5}
+settings = {} #'maxiter': 1}
 
 rechenknecht.optimize_controls(
     controls = ctrls,
