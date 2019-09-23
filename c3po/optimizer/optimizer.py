@@ -223,7 +223,7 @@ class Optimizer:
                 sample_rescaled = self.to_bound_phys_scale(sample, bounds)
                 goal = self.goal_run(sample)
 
-                if rechenknecht.simulate_noise:
+                if self.simulate_noise:
                     goal = (1+0.2*np.random.randn()) * goal
 
                 solutions.append(goal[0][0])
