@@ -183,7 +183,8 @@ class Optimizer:
 
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
 
-        res[0] = values_opt
+        #cmaes res is tuple, tread carefully
+        #res[0] = values_opt
 
         self.results[self.optim_name] = res
 

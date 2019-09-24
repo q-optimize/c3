@@ -222,7 +222,7 @@ def experiment_evaluate_psi(pulse_params, opt_params):
 
 def match_model_psi(model_params, opt_params, measurements):
     model_error = 0
-    measurements = measurements[-50::5]
+    measurements = measurements[-30::5]
     for m in measurements:
         pulse_params = m[0]
         result = m[1]
@@ -265,7 +265,7 @@ rechenknecht.optimize_controls(
     controls = ctrls,
     opt_map = opt_map,
     opt = 'lbfgs',
-#    opt = 'tf_grad_desc',
+    #opt = 'tf_grad_desc',
     settings = settings,
     calib_name = 'openloop',
     eval_func = evaluate_signals_psi,
@@ -273,8 +273,7 @@ rechenknecht.optimize_controls(
     )
 
 system('clear')
-
-print(rechenknecht.optimizer_history)
+print(rechenknecht.results)
 
 print(
 """
@@ -302,8 +301,7 @@ rechenknecht.optimize_controls(
     )
 
 system('clear')
-
-print(rechenknecht.optimizer_history)
+print(rechenknecht.results)
 
 print(
 """
@@ -318,5 +316,9 @@ rechenknecht.learn_model(
     optimize_model,
     eval_func = match_model_psi,
     settings = settings,
+    optim_name = 'model_learn',
     meas_results = 'closedloop'
     )
+
+system('clear')
+print(rechenknecht.results)
