@@ -2,6 +2,8 @@ from test_optimization import *
 
 exp_sim = Sim(real_model, gen, ctrls)
 
+rechenknecht.simulate_noise = True
+
 def experiment_evaluate_psi(pulse_params, opt_params):
     model_params = exp_sim.model.params
     U = exp_sim.propagation(pulse_params, opt_params, model_params)
@@ -14,6 +16,7 @@ initial_spread = [5e6*2*np.pi, 20e6*2*np.pi]
 opt_settings = {
     'CMA_stds': initial_spread,
     'maxiter' : 20,
+#    'maxiter' : 1,
     'ftarget' : 1e-4,
     'popsize' : 10
 }
@@ -63,6 +66,17 @@ def match_model_psi(model_params, opt_params, measurements):
         model_error += diff * diff
     return model_error
 
+def match_model_psi_2(model_params, opt_params, pulse_params, result):
+
+    U = sim.propagation(pulse_params, opt_params, model_params)
+
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
+
+    model_error = diff * diff
+    return model_error
+
 print(
 """
 #######################
@@ -77,7 +91,5 @@ rechenknecht.learn_model(
     optimize_model,
     eval_func = match_model_psi,
     settings = settings,
-    meas_results = 'closedloop'
-    )
+    meas_results = 'closedloop')
 
-tf.summary.FileWriter( '/tmp/c3_logs', sess.graph)
