@@ -59,13 +59,11 @@ psi_goal = np.array(
 
 sim.model = optimize_model
 
-def evaluate_signals(pulse_params, opt_params):
-
+def evaluate_signals_psi(pulse_params, opt_params):
     model_params = sim.model.params
     U = sim.propagation(pulse_params, opt_params, model_params)
     psi_actual = tf.matmul(U, psi_init)
     overlap = tf.matmul(psi_goal.T, psi_actual)
-
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
 print(
@@ -88,6 +86,6 @@ rechenknecht.optimize_controls(
 #    opt = 'tf_grad_desc',
     settings = settings,
     calib_name = 'openloop',
-    eval_func = evaluate_signals,
+    eval_func = evaluate_signals_psi,
     callback = callback
     )

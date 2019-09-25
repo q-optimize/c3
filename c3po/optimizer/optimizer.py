@@ -15,6 +15,7 @@ class Optimizer:
         self.sess = None
         self.optimizer_logs = {}
         self.parameter_history = {}
+        self.results = {}
         self.simulate_noise = False
 
     def save_history(self, filename):
@@ -81,7 +82,6 @@ class Optimizer:
             control parameters that are compatible with bounds in physical units
 
         """
-
         values = []
 
         for i in range(len(x0)):
@@ -251,9 +251,15 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
+
         x_opt = res[0]
 
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
+
+        #cmaes res is tuple, tread carefully
+        #res[0] = values_opt
+
+        self.results[self.optim_name] = res
 
         return values_opt
 
@@ -273,6 +279,10 @@ class Optimizer:
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
+
+        res.x = values_opt
+
+        self.results[self.optim_name] = res
 
         return values_opt
 
@@ -352,6 +362,7 @@ class Optimizer:
 
         opt_params = controls.get_corresponding_control_parameters(opt_map)
         self.opt_params = opt_params
+        self.optim_name = calib_name
 
         if opt == 'cmaes':
             values, bounds = controls.get_values_bounds(opt_params)
@@ -408,15 +419,12 @@ class Optimizer:
 
 
     def learn_model(
-            self,
-            model,
-            eval_func,
-            settings,
-            meas_results=[]
+        self,
+        model,
+        eval_func,
+        settings,
+        optim_name
         ):
-
-        if not meas_results == []:
-            self.optimizer_logs = meas_results
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
@@ -447,6 +455,7 @@ class Optimizer:
                 )
 
         model.params = np.array(params_opt)
+
 
 
     def sweep_bounds(self, U0, gate, n_points=101):
