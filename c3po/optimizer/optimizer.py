@@ -1,5 +1,6 @@
 import copy
 import uuid
+import pickle
 import numpy as np
 import tensorflow as tf
 from c3po.utils.tf_utils import tf_log10 as log10
@@ -12,10 +13,21 @@ class Optimizer:
 
     def __init__(self):
         self.sess = None
-        self.store_history = False
-        self.optimizer_history = []
+        self.optimizer_logs = {}
         self.parameter_history = {}
         self.simulate_noise = False
+
+    def save_history(self, filename):
+        datafile = open(filename, 'wb')
+        pickle.dump(self.optimizer_logs, datafile)
+        datafile.close()
+        pass
+
+    def load_history(self, filename):
+        file = open(filename, 'rb')
+        self.optimizer_logs = pickle.load(file)
+        file.close()
+        pass
 
     def set_session(self, sess):
         self.sess = sess
@@ -119,13 +131,14 @@ class Optimizer:
 
         current_params = self.to_bound_phys_scale(x, bounds)
 
-        goal = sess.run(
-            self.__g,
-            feed_dict={params: current_params}
-            )
+        goal = float(
+                sess.run(
+                    self.__g,
+                    feed_dict={params: current_params}
+                    )
+                )
 
-        if self.store_history:
-            self.optimizer_history.append([current_params, goal])
+        self.optimizer_logs[self.optim_name].append([current_params, goal])
 
         return goal
 
@@ -141,19 +154,21 @@ class Optimizer:
 
         goal = 0
 
-        for m in self.optimizer_history:
-            goal += sess.run(
-                    self.__g,
-                    feed_dict={
-                            params: current_params,
-                            pulse_params: m[0],
-                            result: m[1][0]
-                        }
-                )
+        measurements = self.optimizer_logs['closed_loop'][-100::5]
+        for m in measurements:
+            goal += float(
+                        sess.run(
+                            self.__g,
+                            feed_dict={
+                                    params: current_params,
+                                    pulse_params: m[0],
+                                    result: m[1]
+                            }
+                        )
+                    )
 
-        if self.store_history:
-            self.optimizer_history.append([current_params, goal])
-
+        self.optimizer_logs[self.optim_name].append([current_params, goal])
+        
         return goal
 
 
@@ -185,14 +200,14 @@ class Optimizer:
 
         jac = np.zeros_like(current_params)
 
-        measurements = self.optimizer_history[-100::5]
+        measurements = self.optimizer_logs['closed_loop'][-100::5]
         for m in measurements:
             jac_m = sess.run(
                     self.__jac,
                     feed_dict={
                             params: current_params,
                             pulse_params: m[0],
-                            result: m[1][0]
+                            result: m[1]
                         }
                 )
             jac += jac_m[0]
@@ -226,7 +241,7 @@ class Optimizer:
                 if self.simulate_noise:
                     goal = (1+0.2*np.random.randn()) * goal
 
-                solutions.append(goal[0][0])
+                solutions.append(goal)
 
             es.tell(
                     samples,
@@ -254,7 +269,7 @@ class Optimizer:
                 jac=grad,
                 method='L-BFGS-B',
                 options=settings,
-                callback=self.callback
+               # callback=self.callback
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -348,6 +363,8 @@ class Optimizer:
                 )
             self.__params = params
             self.__g = eval_func(params, opt_params)
+            self.optim_name = 'closed_loop'
+            self.optimizer_logs[self.optim_name] = []
 
             values_opt = self.cmaes(values, bounds, settings)
 
@@ -365,6 +382,8 @@ class Optimizer:
             self.__g = eval_func(params, opt_params)
             self.__jac = tf.gradients(self.__g, params)
 
+            self.optim_name = 'open_loop'
+            self.optimizer_logs[self.optim_name] = []
             values_opt = self.lbfgs(
                     values,
                     bounds,
@@ -397,7 +416,7 @@ class Optimizer:
         ):
 
         if not meas_results == []:
-            self.optimizer_history = meas_results
+            self.optimizer_logs = meas_results
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
@@ -406,9 +425,9 @@ class Optimizer:
         params = tf.placeholder(
             tf.float64, shape=(len(values)), name="params"
             )
-        result = tf.placeholder(tf.float64, shape=(1))
+        result = tf.placeholder(tf.float64, shape=())
         pulse_params = tf.placeholder(
-                tf.float64, shape=(len(self.optimizer_history[0][0]))
+                tf.float64, shape=(len(self.optimizer_logs['closed_loop'][0][0]))
             )
         self.__params = params
         self.__pulse_params = pulse_params
@@ -417,6 +436,8 @@ class Optimizer:
         self.__g = eval_func(params, self.opt_params, pulse_params, result)
         self.__jac = tf.gradients(self.__g, params)
 
+        self.optim_name = 'learn_model'
+        self.optimizer_logs[self.optim_name] = []
         params_opt = self.lbfgs(
                     values,
                     bounds,
