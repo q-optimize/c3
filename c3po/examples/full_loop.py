@@ -147,7 +147,7 @@ p1 = CtrlComp(
     desc = "flattop comp 1 of signal 1",
     shape = my_flattop,
     params = flattop_params1,
-    bounds = params_bounds,
+    bounds = params_bounds1,
     groups = [env_group.get_uuid()]
 )
 p2 = CtrlComp(
@@ -261,12 +261,13 @@ if redo_open_loop:
         opt_map = opt_map,
         opt = 'lbfgs',
         settings = settings,
-        calib_name = 'openloop',
+        calib_name = 'open_loop',
         eval_func = evaluate_signals_psi,
         callback = callback
         )
     system('clear')
     print(rechenknecht.results)
+    rechenknecht.save_history('/localdisk/froy/6ghz_log_model_fid.pkl')
 
 if redo_closed_loop:
     rechenknecht.simulate_noise = True
@@ -277,7 +278,7 @@ if redo_closed_loop:
     #######################
     """
     )
-    initial_spread = [5e6*2*np.pi, 1e-9, 20e6*2*np.pi]
+    initial_spread = [5e6*2*np.pi, 1e6, 1e-9, np.pi/20, 5e6*2*np.pi]
     opt_settings = {
         'CMA_stds': initial_spread,
         'maxiter' : 20,
@@ -289,11 +290,12 @@ if redo_closed_loop:
         opt_map = opt_map,
         opt = 'cmaes',
         settings = opt_settings,
-        calib_name = 'closedloop',
+        calib_name = 'closed_loop',
         eval_func = experiment_evaluate_psi
         )
     system('clear')
     print(rechenknecht.results)
+    rechenknecht.save_history('/localdisk/froy/6ghz_log_model_fid.pkl')
 
 print(
 """
@@ -310,7 +312,6 @@ rechenknecht.learn_model(
     eval_func = match_model_psi,
     settings = settings,
     optim_name = 'model_learn',
-    meas_results = 'closedloop'
     )
 system('clear')
 print(rechenknecht.results)
