@@ -293,3 +293,5 @@ rechenknecht.learn_model(
     )
 system('clear')
 print(rechenknecht.results)
+
+rechenknecht.save_history('/localdisk/froy/6ghz_log_model_fid.pkl')
