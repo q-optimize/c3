@@ -114,10 +114,24 @@ flattop_params1 = {
     'xy_angle' : 0.0,
     'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
 }
-params_bounds = {
+flattop_params2 = {
+    'amp' : 5e6,
+    'T_up' : 4e-9,
+    'T_down' : 9e-9,
+    'xy_angle' : 90.0,
+    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
+}
+params_bounds1 = {
     'amp' : [50e6 * 2 * np.pi, 100e6 * 2 * np.pi],
     'T_up' : [4e-9, 13e-9],
-    #'T_down' : [1e-9, 11e-9],
+    'T_down' : [1e-9, 11e-9],
+    'xy_angle' : [-np.pi, np.pi],
+    'freq_offset' : [-0.2e9 * 2 * np.pi, 0.2e9 * 2 * np.pi]
+}
+params_bounds2 = {
+    'amp' : [1e6,9e6],
+    'T_up' : [4e-9, 13e-9],
+    'T_down' : [3e-9, 12e-9],
     'xy_angle' : [-np.pi, np.pi],
     'freq_offset' : [-0.2e9 * 2 * np.pi, 0.2e9 * 2 * np.pi]
 }
@@ -136,11 +150,21 @@ p1 = CtrlComp(
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
+p2 = CtrlComp(
+    name = "pulse2",
+    desc = "flattop comp 2 of signal 1",
+    shape = my_flattop,
+    params = flattop_params2,
+    bounds = params_bounds2,
+    groups = [env_group.get_uuid()]
+)
 env_group.add_element(p1)
+env_group.add_element(p2)
 
 comps = []
 comps.append(carr)
 comps.append(p1)
+comps.append(p2)
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
@@ -202,11 +226,11 @@ def experiment_evaluate_psi(pulse_params, opt_params):
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
 def match_model_psi(model_params, opt_params, pulse_params, result):
-        U = sim.propagation(pulse_params, opt_params, model_params)
-        psi_actual = tf.matmul(U, psi_init)
-        overlap = tf.matmul(psi_goal.T, psi_actual)
-        diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
-        model_error += diff * diff
+    U = sim.propagation(pulse_params, opt_params, model_params)
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
+    model_error += diff * diff
     return model_error
 
 ##### Define optimizer object
@@ -215,10 +239,10 @@ rechenknecht.set_session(sess)
 rechenknecht.set_log_writer(writer)
 
 opt_map = {
-    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
-    'T_up' : [ (ctrl.get_uuid(), p1.get_uuid()) ],
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid()),(ctrl.get_uuid(), p2.get_uuid())],
+    'T_up' : [(ctrl.get_uuid(), p1.get_uuid())],
     # 'T_down' : [ (ctrl.get_uuid(), p1.get_uuid()) ],
-    # 'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
+    'xy_angle' : [(ctrl.get_uuid(), p2.get_uuid())],
     'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
 }
 
@@ -256,7 +280,7 @@ if redo_closed_loop:
     initial_spread = [5e6*2*np.pi, 1e-9, 20e6*2*np.pi]
     opt_settings = {
         'CMA_stds': initial_spread,
-        #'maxiter' : 20,
+        'maxiter' : 20,
         'ftarget' : 1e-3,
         'popsize' : 20
     }
@@ -278,6 +302,8 @@ print(
 #######################
 """
 )
+rechenknecht.random_samples = True
+rechenknecht.shai_fid = True
 settings = {'maxiter': 100}
 rechenknecht.learn_model(
     model = optimize_model,
