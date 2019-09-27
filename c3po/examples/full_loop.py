@@ -201,17 +201,12 @@ def experiment_evaluate_psi(pulse_params, opt_params):
     overlap = tf.matmul(psi_goal.T, psi_actual)
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
-def match_model_psi(model_params, opt_params, measurements):
-    model_error = 0
-    measurements = measurements[-30::5]
-    for m in measurements:
-        pulse_params = m[0]
-        result = m[1]
+def match_model_psi(model_params, opt_params, pulse_params, result):
         U = sim.propagation(pulse_params, opt_params, model_params)
         psi_actual = tf.matmul(U, psi_init)
         overlap = tf.matmul(psi_goal.T, psi_actual)
         diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
-        model_error += tf.math.log(diff * diff)
+        model_error += diff * diff
     return model_error
 
 ##### Define optimizer object
@@ -258,7 +253,7 @@ if redo_closed_loop:
     #######################
     """
     )
-    initial_spread = [5e6*2*np.pi, 20e6*2*np.pi]
+    initial_spread = [5e6*2*np.pi, 1e-9, 20e6*2*np.pi]
     opt_settings = {
         'CMA_stds': initial_spread,
         #'maxiter' : 20,

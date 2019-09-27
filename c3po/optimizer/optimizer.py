@@ -17,6 +17,8 @@ class Optimizer:
         self.parameter_history = {}
         self.results = {}
         self.simulate_noise = False
+        self.random_samples = False
+        self.shai_fid = False
 
     def save_history(self, filename):
         datafile = open(filename, 'wb')
@@ -154,7 +156,15 @@ class Optimizer:
 
         goal = 0
 
-        measurements = self.optimizer_logs['closed_loop'][-100::5]
+        if self.random_samples:
+            batch_size = 20
+            data_size = len(self.optimizer_logs['closed_loop'])
+            batch_indeces = np.random.choice(data_size,
+                                             size=batch_size,
+                                             replace=False)
+            measurements = self.optimizer_logs['closed_loop'][batch_indeces]
+        else:
+            measurements = self.optimizer_logs['closed_loop'][-100::5]
         for m in measurements:
             goal += float(
                         sess.run(
@@ -167,8 +177,11 @@ class Optimizer:
                         )
                     )
 
+        if self.shai_fid:
+            goal = np.log(np.sqrt(goal/batch_size))
+
         self.optimizer_logs[self.optim_name].append([current_params, goal])
-        
+
         return goal
 
 
@@ -200,7 +213,15 @@ class Optimizer:
 
         jac = np.zeros_like(current_params)
 
-        measurements = self.optimizer_logs['closed_loop'][-100::5]
+        if self.random_samples:
+            batch_size = 20
+            data_size = len(self.optimizer_logs['closed_loop'])
+            batch_indeces = np.random.choice(data_size,
+                                             size=batch_size,
+                                             replace=False)
+            measurements = self.optimizer_logs['closed_loop'][batch_indeces]
+        else:
+            measurements = self.optimizer_logs['closed_loop'][-100::5]
         for m in measurements:
             jac_m = sess.run(
                     self.__jac,
@@ -211,6 +232,14 @@ class Optimizer:
                         }
                 )
             jac += jac_m[0]
+
+        if self.shai_fid:
+            # here I need to devide the jac by the sum of delta_fid^2 so no
+            # shai_fid otherwise I would get the log(sqrt()) of it
+            self.shai_fid = False
+            jac = jac / 2 / goal_run_n(x)
+            self.shai_fid = True
+            #TODO: this is a problem
 
         return jac*scale.T
 
@@ -239,7 +268,7 @@ class Optimizer:
                 goal = self.goal_run(sample)
 
                 if self.simulate_noise:
-                    goal = (1+0.2*np.random.randn()) * goal
+                    goal = (1+0.03*np.random.randn()) * goal
 
                 solutions.append(goal)
 
