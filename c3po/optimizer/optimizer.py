@@ -1,6 +1,7 @@
 import copy
 import uuid
 import pickle
+import random
 import numpy as np
 import tensorflow as tf
 from c3po.utils.tf_utils import tf_log10 as log10
@@ -154,9 +155,10 @@ class Optimizer:
 
         goal = 0
 
-        measurements = self.optimizer_logs['closed_loop'][-100::5]
+        #measurements = self.optimizer_logs['closed_loop'][-20::]
+        measurements = random.sample(self.optimizer_logs['closed_loop'], 20)
         for m in measurements:
-            goal += float(
+            this_goal = float(
                         sess.run(
                             self.__g,
                             feed_dict={
@@ -166,9 +168,13 @@ class Optimizer:
                             }
                         )
                     )
+            self.optimizer_logs['per_point_error'].append(this_goal)
+            goal += this_goal
+
+        goal = np.log10(np.sqrt(goal)/len(measurements))
 
         self.optimizer_logs[self.optim_name].append([current_params, goal])
-        
+
         return goal
 
 
@@ -200,7 +206,8 @@ class Optimizer:
 
         jac = np.zeros_like(current_params)
 
-        measurements = self.optimizer_logs['closed_loop'][-100::5]
+       # measurements = self.optimizer_logs['closed_loop'][-20::]
+        measurements = random.sample(self.optimizer_logs['closed_loop'], 20)
         for m in measurements:
             jac_m = sess.run(
                     self.__jac,
@@ -212,7 +219,11 @@ class Optimizer:
                 )
             jac += jac_m[0]
 
-        return jac*scale.T
+        jac = jac*scale.T/len(measurements)
+
+        jac = 1/jac /np.log(100)
+
+        return jac
 
 
     def cmaes(self, values, bounds, settings={}):
@@ -422,8 +433,7 @@ class Optimizer:
         self,
         model,
         eval_func,
-        settings,
-        optim_name
+        settings
         ):
 
         values, bounds = model.get_values_bounds()
@@ -446,6 +456,7 @@ class Optimizer:
 
         self.optim_name = 'learn_model'
         self.optimizer_logs[self.optim_name] = []
+        self.optimizer_logs['per_point_error'] = []
         params_opt = self.lbfgs(
                     values,
                     bounds,

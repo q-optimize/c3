@@ -25,8 +25,8 @@ import tensorflow as tf
 
 import matplotlib.pyplot as plt
 
-redo_closed_loop = True
-redo_open_loop = True
+redo_closed_loop = False
+redo_open_loop = False
 
 env_group = CompGroup()
 env_group.name = "env_group"
@@ -54,14 +54,30 @@ carr_group.add_element(carr)
 flattop_params1 = {
     'amp' : np.pi * 1.2 / 7e-9, # 448964342.3828554,
     'T_up' : 3e-9,
-    'T_down' : 10e-9,
+    'T_down' : 9e-9,
     'xy_angle' : 0.0,
+    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
+}
+
+flattop_params2 = {
+    'amp' : np.pi * 0.2 / 7e-9, # 448964342.3828554,
+    'T_up' : 1e-9,
+    'T_down' : 5e-9,
+    'xy_angle' : np.pi/2,
+    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
+}
+
+flattop_params3 = {
+    'amp' : np.pi * 0.2 / 7e-9, # 448964342.3828554,
+    'T_up' : 7e-9,
+    'T_down' : 11e-9,
+    'xy_angle' : -np.pi/2,
     'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
 }
 
 
 params_bounds = {
-    'amp' : [25e6 * 2 * np.pi, 150e6 * 2 * np.pi],
+    'amp' : [1e6 * 2 * np.pi, 200e6 * 2 * np.pi],
     'T_up' : [1e-9, 11e-9],
     'T_down' : [1e-9, 11e-9],
     'xy_angle' : [-np.pi, np.pi],
@@ -89,13 +105,21 @@ p2 = CtrlComp(
     name = "pulse1",
     desc = "flattop comp 1 of signal 1",
     shape = my_flattop,
-    params = flattop_params1,
+    params = flattop_params2,
+    bounds = params_bounds,
+    groups = [env_group.get_uuid()]
+)
+p3 = CtrlComp(
+    name = "pulse1",
+    desc = "flattop comp 1 of signal 1",
+    shape = my_flattop,
+    params = flattop_params3,
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
 env_group.add_element(p1)
 env_group.add_element(p2)
-
+env_group.add_element(p3)
 
 ####
 # Below code: For checking the single signal components
@@ -111,7 +135,7 @@ comps = []
 comps.append(carr)
 comps.append(p1)
 comps.append(p2)
-
+comps.append(p3)
 
 
 ctrl = Control()
@@ -164,7 +188,7 @@ q1 = Qubit(
     desc = "Qubit 1",
     comment = "The one and only qubit in this chip",
     freq = 5e9*2*np.pi,
-    delta = -250e6 * 2 * np.pi,
+    delta = -330e6 * 2 * np.pi,
     hilbert_dim = 3
     )
 
@@ -214,7 +238,7 @@ drive2 = Drive(
     name = "D2",
     desc = "Drive 2",
     comment = "Drive line 1 on qubit 1",
-    connected = [q1.name]
+    connected = [q2.name]
     )
 
 chip2_elements = [
@@ -242,11 +266,11 @@ print("Available tensorflow devices: ")
 tf_list_avail_devices()
 
 opt_map = {
-    'amp' : [(ctrl.get_uuid(), p1.get_uuid()), (ctrl.get_uuid(), p1.get_uuid())],
-    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
-    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
-    'xy_angle' : [(ctrl.get_uuid(), p2.get_uuid())],
-    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid()), (ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())],
+#    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
+#    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
+    'xy_angle' : [(ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),(ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())]
 }
 
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)
@@ -321,7 +345,7 @@ def experiment_evaluate(pulse_params, opt_params):
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 
 
-initial_spread = [5e6*2*np.pi, 5e6*2*np.pi, 1e-9, 1e-9, 0.1 ,20e6*2*np.pi]
+initial_spread = [5e6*2*np.pi, 5e6*2*np.pi, 5e6*2*np.pi, 0.1, 0.1,20e6*2*np.pi,20e6*2*np.pi,20e6*2*np.pi]
 
 opt_settings = {
     'CMA_stds': initial_spread,
@@ -370,14 +394,15 @@ settings = {'maxiter': 100}
 print(
 """
 #######################
-# Matching model...   #
+# Mtching model...   #
 #######################
 """
 )
+
+rechenknecht.load_history('qubit_3lvl_drag_new.pickle')
 
 rechenknecht.learn_model(
     optimize_model,
     eval_func = match_model_psi,
     settings = settings,
     )
-
