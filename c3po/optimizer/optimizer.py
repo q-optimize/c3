@@ -235,7 +235,7 @@ class Optimizer:
             # here I need to devide the jac by the sum of delta_fid^2 so no
             # shai_fid otherwise I would get the log(sqrt()) of it
             self.shai_fid = False
-            jac = jac / 2 / goal_run_n(x)
+            jac = jac / np.log(100) / goal_run_n(x)
             self.shai_fid = True
             #TODO: this is a problem
 
