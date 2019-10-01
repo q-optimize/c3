@@ -44,6 +44,7 @@ class Simulator():
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
             h0, hks = self.model.get_Hamiltonians()
+
         U = tf_propagation(h0, hks, signals, dt)
 
         return U

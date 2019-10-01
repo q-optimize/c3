@@ -46,7 +46,8 @@ class Model:
 
     def __init__(
             self,
-            chip_elements
+            chip_elements,
+            mV_to_Amp
             ):
 
         self.chip_elements = chip_elements
@@ -92,7 +93,7 @@ class Model:
                 self.params.append(element.values['freq'])
                 self.params_desc.append([element.name, 'freq'])
 
-                if isinstance(element, Qubit):
+                if isinstance(element, Qubit) and element.hilbert_dim > 2:
                     self.drift_Hs.append(duffing(ann_oper))
                     self.params.append(element.values['delta'])
                     self.params_desc.append([element.name, 'delta'])
@@ -117,7 +118,10 @@ class Model:
 
                 ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
                 self.control_Hs.append(drive(ann_opers))
+                self.params.append(mV_to_Amp)
+                self.params_desc.append([element.name, 'response'])
 
+        self.n_params = len(self.params)
         self.params = np.array(self.params)
 
 
@@ -129,8 +133,9 @@ class Model:
             if isinstance(element, Qubit):
                 element.values['freq'] = new_params[idx]
                 idx += 1
-                element.values['delta'] = new_params[idx]
-                idx += 1
+                if element.hilbert_dim > 2:
+                    element.values['delta'] = new_params[idx]
+                    idx += 1
 
             elif isinstance(element, Resonator):
                 element.values['freq'] = new_params[idx]
@@ -140,17 +145,27 @@ class Model:
                 element.values['strength'] = new_params[idx]
                 idx += 1
 
-
     def get_Hamiltonians(self, params=None):
         if params is None:
             params = self.params
 
         drift_H = tf.zeros_like(self.drift_Hs[0])
+        control_Hs = []
+        di = 0
+        ci = 0
+        for ii in range(self.n_params):
 
-        for ii in range(len(self.drift_Hs)):
-            drift_H += tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
+            if self.params_desc[ii][1]=='response':
+                control_Hs.append(
+                    tf.cast(params[ii], tf.complex128) * self.control_Hs[ci]
+                    )
+                ci += 1
+            else:
+                drift_H += tf.cast(params[ii], tf.complex128) * self.drift_Hs[di]
+                di += 1
 
-        return drift_H, self.control_Hs
+
+        return drift_H, control_Hs
 
 
     def get_values_bounds(self):

@@ -102,7 +102,8 @@ class Qubit(PhysicalComponent):
             hilbert_dim = hilbert_dim
             )
         self.values['freq'] = freq
-        self.values['delta'] = delta
+        if hilbert_dim > 2:
+            self.values['delta'] = delta
 
 class Resonator(PhysicalComponent):
     def __init__(

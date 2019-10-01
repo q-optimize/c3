@@ -164,7 +164,7 @@ class Optimizer:
                 self.optimizer_logs['closed_loop'], batch_size
                 )
         else:
-            measurements = self.optimizer_logs['closed_loop'][-100::5]
+            measurements = self.optimizer_logs['closed_loop'][-20::]
         for m in measurements:
             this_goal = float(
                         sess.run(
@@ -218,7 +218,7 @@ class Optimizer:
         if self.random_samples:
             measurements = random.sample(self.optimizer_logs['closed_loop'], 20)
         else:
-            measurements = self.optimizer_logs['closed_loop'][-100::5]
+            measurements = self.optimizer_logs['closed_loop'][-20::]
 
         for m in measurements:
             jac_m = sess.run(
