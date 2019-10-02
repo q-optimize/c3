@@ -339,7 +339,8 @@ if redo_closed_loop:
         eval_func = experiment_evaluate
         )
 
-opt_sim = Sim(real_model, gen, ctrls)
+# opt_sim = Sim(real_model, gen, ctrls)
+# Fed: this here really scared me for a second
 
 def match_model_psi(model_params, opt_params, pulse_params, result):
 
