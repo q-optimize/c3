@@ -235,7 +235,7 @@ class Optimizer:
             # here I need to devide the jac by the sum of delta_fid^2 so no
             # shai_fid otherwise I would get the log(sqrt()) of it
             self.shai_fid = False
-            jac = jac / np.log(100) / goal_run_n(x)
+            jac = jac / np.log(100) / self.goal_run_n(x)
             self.shai_fid = True
             #TODO: this is a problem
 
@@ -439,7 +439,6 @@ class Optimizer:
                 )
 
         opt_params['values'] = values_opt
-
         controls.set_corresponding_control_parameters(opt_params)
         controls.save_params_to_history(calib_name)
         self.parameter_history[calib_name] = opt_params
@@ -449,7 +448,8 @@ class Optimizer:
         self,
         model,
         eval_func,
-        settings
+        settings,
+        optim_name = [],
         ):
 
         values, bounds = model.get_values_bounds()
@@ -470,7 +470,10 @@ class Optimizer:
         self.__g = eval_func(params, self.opt_params, pulse_params, result)
         self.__jac = tf.gradients(self.__g, params)
 
-        self.optim_name = 'learn_model'
+        if optim_name:
+            self.optim_name = optim_name
+        else:
+            self.optim_name = 'learn_model'
         self.optimizer_logs[self.optim_name] = []
         self.optimizer_logs['per_point_error'] = []
         params_opt = self.lbfgs(
@@ -480,7 +483,6 @@ class Optimizer:
                     self.goal_gradient_run_n,
                     settings=settings
                 )
-
         model.params = np.array(params_opt)
 
 
