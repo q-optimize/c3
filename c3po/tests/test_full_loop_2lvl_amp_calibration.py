@@ -30,25 +30,21 @@ import matplotlib.pyplot as plt
 # USER FRONTEND SECTION #
 #########################
 
-previous_optim_log = 'learn_response_partial.pickle'
+previous_optim_log = 'learn_response.pickle'
 
-redo_closed_loop = False
-redo_open_loop = False
+redo_closed_loop = True
+redo_open_loop = True
 
-qubit_freq = 5e9*2*np.pi
+#qubit_freq = 5e9*2*np.pi
+qubit_freq = 31730085796.517048 # from previous optim
 qubit_lvls = 2
 
-opt_map = {
-    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
-#    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
-#    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
-#    'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
-    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
-}
 
 drive_amp = 80e-3 # 100 mV
 
-mV_to_Amp = 2e9*np.pi
+#mV_to_Amp = 2e9*np.pi
+
+mV_to_Amp = 4523893481.479533 # from previous optim
 
 psi_init = np.array(
     [[1.+0.j],
@@ -149,6 +145,13 @@ ctrl.comps = comps
 
 ctrls = ControlSet([ctrl])
 
+opt_map = {
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
+#    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
+#    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
+#    'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
+}
 
 awg = AWG()
 mixer = Mixer()
@@ -229,7 +232,7 @@ chip2_elements = [
     drive2
     ]
 
-real_model = mdl(chip2_elements, 0.72*mV_to_Amp)
+real_model = mdl(chip2_elements, 0.72*2e9*np.pi)
 
 rechenknecht = Opt()
 
@@ -264,6 +267,10 @@ sim = Sim(initial_model, gen, ctrls)
 
 sim.model = optimize_model
 
+exp_sim = Sim(real_model, gen, ctrls)
+
+rechenknecht.simulate_noise = True
+
 def evaluate_signals(pulse_params, opt_params):
 
     model_params = sim.model.params
@@ -272,6 +279,26 @@ def evaluate_signals(pulse_params, opt_params):
     overlap = tf.matmul(psi_goal.T, psi_actual)
 
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+
+def experiment_evaluate(pulse_params, opt_params):
+    model_params = exp_sim.model.params
+    U = exp_sim.propagation(pulse_params, opt_params, model_params)
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+
+def match_model_psi(model_params, opt_params, pulse_params, result):
+
+    U = sim.propagation(pulse_params, opt_params, model_params)
+
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal.T, psi_actual)
+    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
+
+    model_error = diff * diff
+
+    return model_error
+
 
 if redo_open_loop:
     print(
@@ -298,24 +325,13 @@ if redo_open_loop:
         callback = callback
         )
 
-exp_sim = Sim(real_model, gen, ctrls)
-
-rechenknecht.simulate_noise = True
-
-def experiment_evaluate(pulse_params, opt_params):
-    model_params = exp_sim.model.params
-    U = exp_sim.propagation(pulse_params, opt_params, model_params)
-    psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
-    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
-
 
 initial_spread = [5e-3, 0.1, 20e6*2*np.pi]
 
 opt_settings = {
     'CMA_stds': initial_spread,
 #    'maxiter' : 1,
-    'ftarget' : 1e-4
+#    'ftarget' : 1e-4,
     'popsize' : 20
 }
 
@@ -341,19 +357,6 @@ if redo_closed_loop:
 
 opt_sim = Sim(real_model, gen, ctrls)
 
-def match_model_psi(model_params, opt_params, pulse_params, result):
-
-    U = sim.propagation(pulse_params, opt_params, model_params)
-
-    psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
-    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
-
-    model_error = diff * diff
-
-    return model_error
-
-
 settings = {'maxiter': 100}
 
 print(
@@ -372,3 +375,28 @@ rechenknecht.learn_model(
     eval_func = match_model_psi,
     settings = settings,
     )
+
+rechenknecht.save_history('improved_model.pickle')
+
+# Enable this to rerun steps 1 and 2 with the improved model
+
+# rechenknecht.optimize_controls(
+#     controls = ctrls,
+#     opt_map = opt_map,
+#     opt = 'lbfgs',
+# #    opt = 'tf_grad_desc',
+#     settings = settings,
+#     calib_name = 'openloop_2',
+#     eval_func = evaluate_signals,
+#     callback = callback
+#     )
+#
+# rechenknecht.optimize_controls(
+#     controls = ctrls,
+#     opt_map = opt_map,
+#     opt = 'cmaes',
+# #    opt = 'tf_grad_desc',
+#     settings = opt_settings,
+#     calib_name = 'closedloop_2',
+#     eval_func = experiment_evaluate
+#     )
