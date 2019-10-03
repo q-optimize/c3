@@ -52,7 +52,6 @@ print("current log level: " + str(get_tf_log_level()))
 sess = tf_setup()
 print("Available tensorflow devices: ")
 tf_list_avail_devices()
-writer = tf.summary.FileWriter( './logs/optim_log', sess.graph)
 
 ###### Set up models: one assumed (initial), a real one and one to optimize
 q1_sim = Qubit(
@@ -116,31 +115,25 @@ carr = CtrlComp(
 )
 carr_group.add_element(carr)
 
-flattop_params = {
+gaus_params = {
     'amp' : drive_amp,
-    'T_up' : 3e-9,
-    'T_down' : 9e-9,
+    't0' : 6e-9,
+    'sigma' : 6e-9,
     'xy_angle' : 0.0,
     'freq_offset' : 0e6 * 2 * np.pi
 }
-drag_left = {
-    'amp' : drive_amp * 0.1,
-    'T_up' : 2e-9,
-    'T_down' : 4e-9,
+drag_params = {
+    'amp' : drive_amp * 0.25,
+    't0' : 6e-9,
+    'sigma' : 6e-9,
     'xy_angle' : np.pi/2,
     'freq_offset' : 0e6 * 2 * np.pi
 }
-drag_right = {
-    'amp' : drive_amp * 0.1,
-    'T_up' : 8e-9,
-    'T_down' : 10e-9,
-    'xy_angle' : -np.pi/2,
-    'freq_offset' : 0e6 * 2 * np.pi
-}
+
 params_bounds = {
     'amp' : [1e-3, 150e-3],
-    'T_up' : [3e-9, 13e-9],
-    'T_down' : [3e-9, 13e-9],
+    't0' : [3e-9, 13e-9],
+    'sigma' : [3e-9, 13e-9],
     'xy_angle' : [-np.pi, np.pi],
     'freq_offset' : [-0.1e9 * 2 * np.pi, 0.1e9 * 2 * np.pi]
 }
@@ -151,39 +144,41 @@ def my_flattop(t, params):
     T1 = tf.minimum(t_up, t_down)
     return (1 + tf.math.erf((t - T1) / 1e-9)) / 2 * \
             (1 + tf.math.erf((-t + T2) / 1e-9)) / 2
+
+def my_gaussian(t, params):
+    t0 = tf.cast(params['t0'], tf.float64)
+    sigma = tf.cast(params['sigma'], tf.float64)
+    return 1/tf.sqrt(2*np.pi*sigma**2) * tf.exp(-(t-t0)**2/2/sigma**2)
+
+def my_gaussian_dt(t, params):
+    t0 = tf.cast(params['t0'], tf.float64)
+    sigma = tf.cast(params['sigma'], tf.float64)
+    return -(t-t0)**2/sigma**2/tf.sqrt(2*np.pi*sigma**2) * tf.exp(-(t-t0)**2/2/sigma**2)
+
 p1 = CtrlComp(
     name = "Pulse 1",
-    desc = "flattop comp 1 of signal 1",
-    shape = my_flattop,
-    params = flattop_params,
+    desc = "gaussian comp 1 of signal 1",
+    shape = my_gaussian,
+    params = gaus_params,
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
-dragL = CtrlComp(
-    name = "Drag Left",
-    desc = "left part of the drag correction of the flat top",
-    shape = my_flattop,
-    params = drag_left,
+drag = CtrlComp(
+    name = "Drag",
+    desc = "drag correction of the gaussian",
+    shape = my_gaussian_dt,
+    params = drag_params,
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
-dragR = CtrlComp(
-    name = "Drag Right",
-    desc = "right part of the drag correction of the flat top",
-    shape = my_flattop,
-    params = drag_right,
-    bounds = params_bounds,
-    groups = [env_group.get_uuid()]
-)
+
 env_group.add_element(p1)
-env_group.add_element(dragL)
-env_group.add_element(dragR)
+env_group.add_element(drag)
 
 comps = []
 comps.append(carr)
 comps.append(p1)
-comps.append(dragL)
-comps.append(dragR)
+comps.append(drag)
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
@@ -255,17 +250,14 @@ def match_model_psi(model_params, opt_params, pulse_params, result):
 ##### Define optimizer object
 rechenknecht = Opt()
 rechenknecht.set_session(sess)
-rechenknecht.set_log_writer(writer)
 
 opt_map = {
     'amp' : [(ctrl.get_uuid(), p1.get_uuid()),
-             (ctrl.get_uuid(), dragL.get_uuid()),
-             (ctrl.get_uuid(), dragR.get_uuid())],
+             (ctrl.get_uuid(), drag.get_uuid())],
     #'T_up' : [(ctrl.get_uuid(), p1.get_uuid())],
     #'T_down' : [ (ctrl.get_uuid(), p1.get_uuid()) ],
     'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),
-                 (ctrl.get_uuid(), dragL.get_uuid()),
-                 (ctrl.get_uuid(), dragR.get_uuid())]
+                     (ctrl.get_uuid(), drag.get_uuid())]
 }
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)
 rechenknecht.opt_params = opt_params
