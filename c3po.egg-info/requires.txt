@@ -1,0 +1,9 @@
+cma
+cython
+matplotlib
+numpy
+qutip
+scipy
+tensorflow
+tensorflow_probability
+uuid

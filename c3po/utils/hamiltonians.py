@@ -16,7 +16,7 @@ def resonator(a):
         Number operator.
 
     """
-    a_dag = tf.transpose(tf.conj(a))
+    a_dag = tf.linalg.adjoint(a)
     return tf.matmul(a_dag, a)
 
 
@@ -36,7 +36,7 @@ def duffing(a):
         Number operator.
 
     """
-    a_dag = tf.transpose(tf.conj(a))
+    a_dag = tf.linalg.adjoint(a)
     n = tf.matmul(a_dag, a)
     return 1/2 * tf.matmul(n - tf.eye(int(n.shape[0]), dtype=tf.complex128), n)
 
@@ -59,7 +59,7 @@ def int_XX(anhs):
     """
     a = anhs[0]
     b = anhs[1]
-    a_dag = tf.transpose(tf.conj(a))
+    a_dag = tf.linalg.adjoint(a)
     b_dag = tf.transpose(tf.conj(b))
     return tf.matmul(a_dag + a, b_dag + b)
 
@@ -81,5 +81,5 @@ def drive(anhs):
 
     """
     a = anhs[0]
-    a_dag = tf.transpose(tf.conj(a))
+    a_dag = tf.linalg.adjoint(a)
     return a_dag + a

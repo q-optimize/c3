@@ -1,5 +1,5 @@
 import tensorflow as tf
-from c3po.utils.tf_utils import tf_propagation as tf_propagation
+from c3po.utils.tf_utils import tf_time_evo_operator as tf_time_evo_operator
 
 class Simulator():
     """Short summary.
@@ -45,6 +45,6 @@ class Simulator():
         else:
             h0, hks = self.model.get_Hamiltonians()
 
-        U = tf_propagation(h0, hks, signals, dt)
+        U = tf_time_evo_operator(h0, hks, signals, dt)
 
         return U

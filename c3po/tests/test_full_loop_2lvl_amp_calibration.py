@@ -164,7 +164,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 5e11
+    "sim" : 5e10
 }
 
 
@@ -237,17 +237,6 @@ real_model = mdl(chip2_elements, 0.72*2e9*np.pi)
 rechenknecht = Opt()
 
 
-
-tf_log_level_info()
-set_tf_log_level(3)
-
-print("current log level: " + str(get_tf_log_level()))
-
-# to make sure session is empty look up: tf.reset_default_graph()
-
-sess = tf_setup()
-rechenknecht.set_session(sess)
-print(" ")
 print("Available tensorflow devices: ")
 tf_list_avail_devices()
 
@@ -278,14 +267,14 @@ def evaluate_signals(pulse_params, opt_params):
     psi_actual = tf.matmul(U, psi_init)
     overlap = tf.matmul(psi_goal.T, psi_actual)
 
-    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+    return 1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64)
 
 def experiment_evaluate(pulse_params, opt_params):
     model_params = exp_sim.model.params
     U = exp_sim.propagation(pulse_params, opt_params, model_params)
     psi_actual = tf.matmul(U, psi_init)
     overlap = tf.matmul(psi_goal.T, psi_actual)
-    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+    return 1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64)
 
 def match_model_psi(model_params, opt_params, pulse_params, result):
 
@@ -293,7 +282,7 @@ def match_model_psi(model_params, opt_params, pulse_params, result):
 
     psi_actual = tf.matmul(U, psi_init)
     overlap = tf.matmul(psi_goal.T, psi_actual)
-    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
+    diff = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64)) - result
 
     model_error = diff * diff
 

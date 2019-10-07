@@ -71,7 +71,6 @@ def tf_setup():
     sess = tf.Session(config = config)
     return sess
 
-
 def tf_matmul_n(tensor_list):
     l = int(tensor_list.shape[0])
     if (l==1):
@@ -81,7 +80,7 @@ def tf_matmul_n(tensor_list):
         right_half = tf.gather(tensor_list, list(range(int(l/2),l)))
         return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
 
-
+# @tf.function
 def tf_unitary_overlap(A, B):
     """
     Unitary overlap between two matrices in Tensorflow(tm).
@@ -107,7 +106,7 @@ def tf_unitary_overlap(A, B):
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
 
-
+@tf.function
 def tf_expm(A):
     r = tf.eye(int(A.shape[0]), dtype=A.dtype)
     A_powers = A
@@ -119,14 +118,13 @@ def tf_expm(A):
 
     return r
 
-
+@tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
             h += cflds_t[ii]*hks[ii]
 
     return tf_expm(-1j*h*dt)
-
 
 def tf_propagation(h0, hks, cflds, dt, history=False):
     with tf.name_scope('Propagation'):
@@ -142,20 +140,27 @@ def tf_propagation(h0, hks, cflds, dt, history=False):
             name='dU_of_t'
             )
 
-        if history:
-            u_t = tf.gather(dUs,0)
-            history = [u_t]
-            for ii in range(dUs.shape[0]-1):
-                du = tf.gather(dUs, ii+1)
-                u_t = tf.matmul(du,u_t)
-                history.append(u_t)
-            return history, ts
-        else:
-            U = tf.gather(dUs, 0)
-            for ii in range(1, dUs.shape[0]):
-                U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
+        # if history:
+        #     u_t = tf.gather(dUs,0)
+        #     history = [u_t]
+        #     for ii in range(dUs.shape[0]-1):
+        #         du = tf.gather(dUs, ii+1)
+        #         u_t = tf.matmul(du,u_t)
+        #         history.append(u_t)
+        #     return history, ts
+        # else:
+        #     # U = tf_matmul_n(dUs)
+            # for ii in range(1, dUs.shape[0]):
+            #     U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
 
-        return U
+        return dUs
+
+def tf_time_evo_operator(h0, hks, cflds, dt):
+    dUs = tf_propagation(h0, hks, cflds, dt)
+    U = tf.gather(dUs, 0)
+    for ii in range(1, dUs.shape[0]):
+        U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
+    return U
 
 def tf_log10(x):
     """
