@@ -143,9 +143,10 @@ class Optimizer:
 
 
     def goal_run_n(self, x):
-        bounds = self.bounds
         with tf.GradientTape() as t:
-            current_params = self.to_bound_phys_scale(x, bounds)
+            current_params = tf.constant(
+                self.to_bound_phys_scale(x, self.bounds)
+            )
             t.watch(current_params)
             goal = 0
             batch_size = 20
@@ -157,7 +158,9 @@ class Optimizer:
             else:
                 measurements = self.optimizer_logs['closed_loop'][-batch_size::]
             for m in measurements:
-                this_goal = eval_func(current_params, self.opt_params,  m[0], m[1])
+                this_goal = self.eval_func(
+                    current_params, self.opt_params,  m[0], m[1]
+                    )
                 self.optimizer_logs['per_point_error'].append(this_goal)
                 goal += this_goal
 
@@ -326,9 +329,9 @@ class Optimizer:
         controls,
         opt_map,
         opt,
-        settings,
         calib_name,
         eval_func,
+        settings={},
         callback = None
         ):
 

@@ -1,6 +1,6 @@
 import tensorflow as tf
-from c3po.utils.tf_utils import tf_time_evo_operator as tf_time_evo_operator
-
+from c3po.utils.tf_utils import tf_propagation as tf_propagation
+from c3po.utils.tf_utils import tf_matmul_list as tf_matmul_list
 class Simulator():
     """Short summary.
 
@@ -27,7 +27,6 @@ class Simulator():
         self.generator = generator
         self.controls = controls
 
-
     def propagation(self, pulse_params, opt_params, model_params = None):
 
         self.controls.update_controls(pulse_params, opt_params)
@@ -44,7 +43,6 @@ class Simulator():
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
             h0, hks = self.model.get_Hamiltonians()
-
-        U = tf_time_evo_operator(h0, hks, signals, dt)
-
+        dUs =  tf_propagation(h0, hks, signals, dt)
+        U = tf_matmul_list(dUs)
         return U

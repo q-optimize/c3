@@ -60,7 +60,7 @@ def int_XX(anhs):
     a = anhs[0]
     b = anhs[1]
     a_dag = tf.linalg.adjoint(a)
-    b_dag = tf.transpose(tf.conj(b))
+    b_dag = tf.linalg.adjoint(b)
     return tf.matmul(a_dag + a, b_dag + b)
 
 

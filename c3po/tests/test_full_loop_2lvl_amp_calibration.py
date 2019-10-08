@@ -319,7 +319,7 @@ initial_spread = [5e-3, 0.1, 20e6*2*np.pi]
 
 opt_settings = {
     'CMA_stds': initial_spread,
-#    'maxiter' : 1,
+    'maxiter' : 2,
 #    'ftarget' : 1e-4,
     'popsize' : 20
 }

@@ -30,14 +30,37 @@ import matplotlib.pyplot as plt
 # USER FRONTEND SECTION #
 #########################
 
-previous_optim_log = ''
+redo_closed_loop = True
+redo_open_loop = True
 
-redo_closed_loop = False
-redo_open_loop = False
+qubit_freq = 5e9*2*np.pi
+qubit_inharm = -300e6*2*np.pi
+qubit_lvls = 4
 
-qubit_freq = 5e9*2*np.pi,
-qubit_anhar = -330e6 * 2 * np.pi,
-qubit_lvls = 3
+resonator_freq = 9e9*2*np.pi
+resonator_lvls = 10
+
+drive_amp = 80e-3 # 100 mV
+
+mV_to_Amp = 2e9*np.pi
+
+qubit_g = np.zeros([qubit_lvls, 1])
+qubit_g[0] = 1
+
+qubit_e = np.zeros([qubit_lvls, 1])
+qubit_e[1] = 1
+
+
+resonator_gs = np.zeros([resonator_lvls, 1])
+resonator_gs[0] = 1
+
+psi_init = tf.constant(
+    np.kron(qubit_g, resonator_gs), dtype=tf.complex128
+    )
+
+psi_goal = tf.constant(
+    np.kron(qubit_e, resonator_gs).T, dtype=tf.complex128
+    )
 
 ##########################
 #    END USER SECTION    #
@@ -67,31 +90,15 @@ carr_group.add_element(carr)
 
 
 flattop_params1 = {
-    'amp' : np.pi * 1.2 / 7e-9, # 448964342.3828554,
-    'T_up' : 3e-9,
-    'T_down' : 9e-9,
+    'amp' : drive_amp,
+    'T_up' : 3e-9,   # 3ns
+    'T_down' : 9e-9, # 9ns
     'xy_angle' : 0.0,
-    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
-}
-
-flattop_params2 = {
-    'amp' : np.pi * 0.2 / 7e-9, # 448964342.3828554,
-    'T_up' : 1e-9,
-    'T_down' : 5e-9,
-    'xy_angle' : np.pi/2,
-    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
-}
-
-flattop_params3 = {
-    'amp' : np.pi * 0.2 / 7e-9, # 448964342.3828554,
-    'T_up' : 7e-9,
-    'T_down' : 11e-9,
-    'xy_angle' : -np.pi/2,
-    'freq_offset' : 0e6 * 2 * np.pi, #150782.0898206234,
+    'freq_offset' : 0e6 * 2 * np.pi
 }
 
 params_bounds = {
-    'amp' : [1e6 * 2 * np.pi, 200e6 * 2 * np.pi],
+    'amp' : [5e-3, 350e-3],
     'T_up' : [1e-9, 11e-9],
     'T_down' : [1e-9, 11e-9],
     'xy_angle' : [-np.pi, np.pi],
@@ -106,6 +113,7 @@ def my_flattop(t, params):
     return (1 + tf.math.erf((t - T1) / 1e-9)) / 2 * \
             (1 + tf.math.erf((-t + T2) / 1e-9)) / 2
 
+
 p1 = CtrlComp(
     name = "pulse1",
     desc = "flattop comp 1 of signal 1",
@@ -114,31 +122,16 @@ p1 = CtrlComp(
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
-p2 = CtrlComp(
-    name = "pulse1",
-    desc = "flattop comp 1 of signal 1",
-    shape = my_flattop,
-    params = flattop_params2,
-    bounds = params_bounds,
-    groups = [env_group.get_uuid()]
-)
-p3 = CtrlComp(
-    name = "pulse1",
-    desc = "flattop comp 1 of signal 1",
-    shape = my_flattop,
-    params = flattop_params3,
-    bounds = params_bounds,
-    groups = [env_group.get_uuid()]
-)
+
 env_group.add_element(p1)
-env_group.add_element(p2)
-env_group.add_element(p3)
 
 ####
 # Below code: For checking the single signal components
 ####
 
-# t = np.linspace(0, 150e-9, int(150e-9*1e9))
+# t = np.linspace(0, 150e-9, int(150    #######################
+    # Mtching model...   #
+    #######################e-9*1e9))
 # plt.plot(t, p1.get_shape_values(t))
 # plt.plot(t, p2.get_shape_values(t))
 # plt.show()
@@ -147,8 +140,6 @@ env_group.add_element(p3)
 comps = []
 comps.append(carr)
 comps.append(p1)
-comps.append(p2)
-comps.append(p3)
 
 
 ctrl = Control()
@@ -160,6 +151,13 @@ ctrl.comps = comps
 
 ctrls = ControlSet([ctrl])
 
+opt_map = {
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid())],
+#    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
+#    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
+#    'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid())]
+}
 
 awg = AWG()
 mixer = Mixer()
@@ -172,7 +170,7 @@ devices = {
 
 resolutions = {
     "awg" : 1e9,
-    "sim" : 5e11
+    "sim" : 5e10
 }
 
 
@@ -202,7 +200,7 @@ q1 = Qubit(
     desc = "Qubit 1",
     comment = "The one and only qubit in this chip",
     freq = qubit_freq,
-    delta = qubit_anhar,
+    delta = qubit_inharm,
     hilbert_dim = qubit_lvls
     )
 
@@ -210,8 +208,8 @@ r1 = Resonator(
     name = "R1",
     desc = "Resonator 1",
     comment = "The resonator driving Qubit 1",
-    freq = 9e9*2*np.pi,
-    hilbert_dim = 5
+    freq = resonator_freq,
+    hilbert_dim = resonator_lvls
     )
 
 q1r1 = Coupling(
@@ -231,21 +229,38 @@ drive = Drive(
 
 chip_elements = [
     q1,
-     # r1,
-     # q1r1,
-     drive
-     ]
+    r1,
+    q1r1,
+    drive
+    ]
 
-initial_model = mdl(chip_elements)
-optimize_model = mdl(chip_elements)
+initial_model = mdl(chip_elements, mV_to_Amp)
+optimize_model = mdl(chip_elements, mV_to_Amp)
 
 q2 = Qubit(
     name = "Q1",
     desc = "Qubit 2",
     comment = "The one and only qubit in this chip",
     freq = 5.05e9*2*np.pi,
-    delta = -300e6 * 2 * np.pi,
-    hilbert_dim = 3
+    delta = qubit_inharm,
+    hilbert_dim = qubit_lvls
+    )
+
+r2 = Resonator(
+    name = "R1",
+    desc = "Resonator 1",
+    comment = "The resonator driving Qubit 1",
+    freq = 0.95*resonator_freq,
+    hilbert_dim = resonator_lvls
+    )
+
+
+q2r2 = Coupling(
+    name = "Q1-R1",
+    desc = "Coupling between Resonator 1 and Qubit 1",
+    comment = " ",
+    connected = [q2.name, r2.name],
+    strength = 140e6*2*np.pi
     )
 
 drive2 = Drive(
@@ -257,35 +272,14 @@ drive2 = Drive(
 
 chip2_elements = [
     q2,
+    r2,
+    q2r2,
     drive2
     ]
 
-real_model = mdl(chip2_elements)
+real_model = mdl(chip2_elements, 0.72*2e9*np.pi)
 
 rechenknecht = Opt()
-
-
-
-tf_log_level_info()
-set_tf_log_level(3)
-
-print("current log level: " + str(get_tf_log_level()))
-
-# to make sure session is empty look up: tf.reset_default_graph()
-
-sess = tf_setup()
-rechenknecht.set_session(sess)
-print(" ")
-print("Available tensorflow devices: ")
-tf_list_avail_devices()
-
-opt_map = {
-    'amp' : [(ctrl.get_uuid(), p1.get_uuid()), (ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())],
-#    'T_up' : [(ctrl.get_uuid(), p2.get_uuid())],
-#    'T_down' : [(ctrl.get_uuid(), p2.get_uuid())],
-    'xy_angle' : [(ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())],
-    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),(ctrl.get_uuid(), p2.get_uuid()),(ctrl.get_uuid(), p3.get_uuid())]
-}
 
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)
 rechenknecht.opt_params = opt_params
@@ -299,28 +293,40 @@ sim = Sim(initial_model, gen, ctrls)
 #      [0.+0.j, 0.+0.j, 1.+0.j]]
 #     )
 
-psi_init = np.array(
-    [[1.+0.j],
-     [0.+0.j],
-     [0.+0.j]],
-    )
-
-psi_goal = np.array(
-    [[0.+0.j],
-     [1.+0.j],
-     [0.+0.j]],
-    )
-
 sim.model = optimize_model
+
+exp_sim = Sim(real_model, gen, ctrls)
+
+rechenknecht.simulate_noise = True
 
 def evaluate_signals(pulse_params, opt_params):
 
     model_params = sim.model.params
     U = sim.propagation(pulse_params, opt_params, model_params)
     psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
+    overlap = tf.matmul(psi_goal, psi_actual)
 
-    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
+    return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
+
+def experiment_evaluate(pulse_params, opt_params):
+    model_params = exp_sim.model.params
+    U = exp_sim.propagation(pulse_params, opt_params, model_params)
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal, psi_actual)
+    return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
+
+def match_model_psi(model_params, opt_params, pulse_params, result):
+
+    U = sim.propagation(pulse_params, opt_params, model_params)
+
+    psi_actual = tf.matmul(U, psi_init)
+    overlap = tf.matmul(psi_goal, psi_actual)
+    diff = (1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)) - result
+
+    model_error = diff * diff
+
+    return model_error
+
 
 if redo_open_loop:
     print(
@@ -347,24 +353,13 @@ if redo_open_loop:
         callback = callback
         )
 
-exp_sim = Sim(real_model, gen, ctrls)
 
-rechenknecht.simulate_noise = True
-
-def experiment_evaluate(pulse_params, opt_params):
-    model_params = exp_sim.model.params
-    U = exp_sim.propagation(pulse_params, opt_params, model_params)
-    psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
-    return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
-
-
-initial_spread = [5e6*2*np.pi, 5e6*2*np.pi, 5e6*2*np.pi, 0.1, 0.1,20e6*2*np.pi,20e6*2*np.pi,20e6*2*np.pi]
+initial_spread = [5e-3, 0.1, 20e6*2*np.pi]
 
 opt_settings = {
     'CMA_stds': initial_spread,
 #    'maxiter' : 1,
-    'ftarget' : 1e-3,
+#    'ftarget' : 1e-4,
     'popsize' : 20
 }
 
@@ -388,28 +383,16 @@ if redo_closed_loop:
         eval_func = experiment_evaluate
         )
 
-opt_sim = Sim(real_model, gen, ctrls)
-
-def match_model_psi(model_params, opt_params, pulse_params, result):
-
-    U = sim.propagation(pulse_params, opt_params, model_params)
-
-    psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
-    diff = (1-tf.cast(tf.conj(overlap)*overlap, tf.float64)) - result
-
-    model_error = diff * diff
-
-    return model_error
-
+# opt_sim = Sim(real_model, gen, ctrls)
+# Fed: this here really scared me for a second
 
 settings = {'maxiter': 100}
 
 print(
 """
-#######################
-# Mtching model...   #
-#######################
+    #######################
+    # Matching model...   #
+    #######################
 """
 )
 
@@ -421,3 +404,28 @@ rechenknecht.learn_model(
     eval_func = match_model_psi,
     settings = settings,
     )
+
+rechenknecht.save_history('improved_model.pickle')
+
+# Enable this to rerun steps 1 and 2 with the improved model
+
+# rechenknecht.optimize_controls(
+#     controls = ctrls,
+#     opt_map = opt_map,
+#     opt = 'lbfgs',
+# #    opt = 'tf_grad_desc',
+#     settings = settings,
+#     calib_name = 'openloop_2',
+#     eval_func = evaluate_signals,
+#     callback = callback
+#     )
+#
+# rechenknecht.optimize_controls(
+#     controls = ctrls,
+#     opt_map = opt_map,
+#     opt = 'cmaes',
+# #    opt = 'tf_grad_desc',
+#     settings = opt_settings,
+#     calib_name = 'closedloop_2',
+#     eval_func = experiment_evaluate
+#     )

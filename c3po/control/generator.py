@@ -33,15 +33,16 @@ class Device:
         res = self.resolutions[res_key]
 
         if self.t_start != None and self.t_end != None and res != None:
-            self.slice_num = (int(np.abs(self.t_start - self.t_end) * res) + 1)
+            self.slice_num = int(np.abs(self.t_start - self.t_end) * res)
         else:
             self.slice_num = None
 
 
     def create_ts(self, res_key):
         if self.t_start != None and self.t_end != None and self.slice_num != None:
-            t_start = tf.constant(self.t_start, dtype=tf.float64)
-            t_end = tf.constant(self.t_end, dtype=tf.float64)
+            dt = 1/self.resolutions[res_key]
+            t_start = tf.constant(self.t_start + dt/2, dtype=tf.float64)
+            t_end = tf.constant(self.t_end - dt/2, dtype=tf.float64)
             self.ts = tf.linspace(t_start, t_end, self.slice_num)
         else:
             self.ts = None
