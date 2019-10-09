@@ -1,6 +1,9 @@
 import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
 from c3po.utils.tf_utils import tf_propagation as tf_propagation
 from c3po.utils.tf_utils import tf_matmul_list as tf_matmul_list
+
 class Simulator():
     """Short summary.
 
@@ -28,9 +31,9 @@ class Simulator():
         self.controls = controls
 
     def propagation(self, pulse_params, opt_params, model_params = None):
-
         self.controls.update_controls(pulse_params, opt_params)
         gen_output = self.generator.generate_signals(self.controls.controls)
+        self.generator.devices['awg'].plot_IQ_components(self.fig, self.axs)
         signals = []
 
         for key in gen_output:
@@ -44,5 +47,20 @@ class Simulator():
         else:
             h0, hks = self.model.get_Hamiltonians()
         dUs =  tf_propagation(h0, hks, signals, dt)
+        self.dUs = dUs
+        self.ts = ts
         U = tf_matmul_list(dUs)
         return U
+
+    def plot_dynamics(self, psi_init):
+        dUs = self.dUs
+        psi_t = psi_init.numpy()
+        pop_t = np.abs(psi_t)**2
+        for du in dUs:
+            psi_t = np.matmul(du.numpy(),psi_t)
+            pop_t = np.append(pop_t, np.abs(psi_t)**2 ,axis=1)
+        fig, axs = plt.subplots(1, 1)
+        plt.ion()
+        plt.plot(pop_t.T)
+        plt.grid()
+        plt.show(block=False)

@@ -444,7 +444,6 @@ class Optimizer:
         model.params = np.array(params_opt)
 
 
-
     def sweep_bounds(self, U0, gate, n_points=101):
         spectrum = []
         range = np.linspace(0, gate.bounds['scale'], n_points)

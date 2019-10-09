@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 
 qubit_freq = 6e9 * 2 * np.pi
 qubit_anhar = -100e6 *2 * np.pi
-qubit_lvls = 4
+qubit_lvls = 3
 
 mV_to_Amp = 2e9*np.pi
 
@@ -96,19 +96,19 @@ pulse_params = {
         'amp' : np.pi / mV_to_Amp,
         'T' : 8e-9,
         'xy_angle' : 0.0,
-        'freq_offset' : 50e6 * 2 * np.pi
+        'freq_offset' : 0e6 * 2 * np.pi
     }
 
 corr_params = {
         'amp' : np.pi / mV_to_Amp/qubit_anhar,
         'T' : 8e-9,
         'xy_angle' : np.pi/2,
-        'freq_offset' : 50e6 * 2 * np.pi
+        'freq_offset' : 0e6 * 2 * np.pi
     }
 
 params_bounds = {
         'amp' : [0.01* np.pi / mV_to_Amp, 1.5 * np.pi / mV_to_Amp] ,
-        'T' : [7e-9, 9e-9],
+        'T' : [7e-9, 12e-9],
         'xy_angle' : [-1 * np.pi/2,1  * np.pi/2],
         'freq_offset' : [-100* 1e6 * 2 * np.pi, 100* 1e6 * 2 * np.pi]
     }
@@ -116,7 +116,7 @@ params_bounds = {
 corr_bounds = {
         'amp' : [0.001* np.pi / mV_to_Amp/qubit_anhar,
                  3 * np.pi / mV_to_Amp/qubit_anhar] ,
-        'T' : [7e-9, 9e-9],
+        'T' : [7e-9, 12e-9],
         'xy_angle' : [-1 * np.pi/2,1  * np.pi/2],
         'freq_offset' : [-100* 1e6 * 2 * np.pi, 100* 1e6 * 2 * np.pi]
     }
@@ -170,7 +170,7 @@ comps.append(p2)
 ctrl = Control()
 ctrl.name = "control1"
 ctrl.t_start = 0.0
-ctrl.t_end = 8e-9
+ctrl.t_end = 12e-9
 ctrl.comps = comps
 
 ctrls = ControlSet([ctrl])
@@ -208,6 +208,13 @@ gen.resource_groups = resource_groups
 
 sim = Sim(simple_model, gen, ctrls)
 
+plt.rcParams['figure.dpi'] = 100
+fig, axs = plt.subplots(1, 1)
+plt.ion()
+plt.show()
+sim.fig = fig
+sim.axs = axs
+
 opt = Opt()
 
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -233,8 +240,10 @@ opt_map = {
              (ctrl.get_uuid(), p2.get_uuid())],
     'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),
                      (ctrl.get_uuid(), p2.get_uuid())],
+    'T' : [(ctrl.get_uuid(), p1.get_uuid()),
+                     (ctrl.get_uuid(), p2.get_uuid())],
     'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid()),
-                  (ctrl.get_uuid(), p2.get_uuid())],
+                     (ctrl.get_uuid(), p2.get_uuid())]
 }
 
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)

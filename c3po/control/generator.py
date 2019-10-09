@@ -47,6 +47,33 @@ class Device:
         else:
             self.ts = None
 
+    def plot_IQ_components(self, fig=None, ax=None):
+        """ Plotting control functions """
+
+        ts = self.ts
+        I = self.Inphase
+        Q = self.Quadrature
+
+        if ax is None:
+            plt.rcParams['figure.dpi'] = 100
+            fig, ax = plt.subplots(1, 1)
+        else:
+            ax.clear()
+
+        ax.plot(ts/1e-9, I)
+        ax.plot(ts/1e-9, Q)
+        ax.grid()
+        plt.legend(['I', 'Q'])
+        plt.xlabel('Time [ns]')
+        # I (Kevin) don't really understand the behaviour of plt.show()
+        # here. If I only put plt.show(block=False), I get error messages
+        # on my system at home. Adding a second plt.show() resolves that
+        # issue???
+        # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
+
+        fig.canvas.draw()
+        fig.canvas.flush_events()
+
 
 
 
@@ -199,30 +226,6 @@ class AWG(Device):
         return self.amp_tot * self.Quadrature
 
 
-
-    def plot_IQ_components(self, res_key):
-        """ Plotting control functions """
-
-        ts = self.ts
-        res = self.resolutions[res_key]
-        I = self.Inphase
-        Q = self.Quadrature
-
-        plt.rcParams['figure.dpi'] = 100
-        fig, axs = plt.subplots(2, 1)
-
-        axs[0].plot(ts * res, I)
-        axs[1].plot(ts * res, Q)
-        # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages
-        # on my system at home. Adding a second plt.show() resolves that
-        # issue???
-        # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
-        plt.show(block=False)
-        plt.show()
-
-
-
     # def plot_IQ(self, ts, Is, Qs):
         # """
         # Plot (hopefully) into an existing figure.
@@ -239,7 +242,7 @@ class AWG(Device):
 
 
 
-    def plot_fft_IQ_components(self, res_key, axs=None):
+    def plot_fft_IQ_components(self, axs=None):
 
 
         print("""WARNING: still have to ad from c3po.control.generator import Device as Device
@@ -249,7 +252,6 @@ from c3po.control.generator import Generator as Generatorjust the x-axis""")
 
 
         ts = self.ts
-        res = self.resolutions[res_key]
         I = self.Inphase
         Q = self.Quadrature
 
@@ -263,8 +265,8 @@ from c3po.control.generator import Generator as Generatorjust the x-axis""")
         fft_Q = np.fft.fftshift(fft_Q.real / max(fft_Q.real))
 
         fig, axs = plt.subplots(2, 1)
-        axs[0].plot(ts * res, fft_I)
-        axs[1].plot(ts * res, fft_Q)
+        axs[0].plot(ts, fft_I)
+        axs[1].plot(ts, fft_Q)
         # I (Kevin) don't really understand the behaviour of plt.show()
         # here. If I only put plt.show(block=False), I get error messages
         # on my system at home. Adding a second plt.show() resolves that
@@ -344,7 +346,9 @@ class Generator:
                 mixer.combine("sim")
 
                 output[(ctrl.name,ctrl.get_uuid())] = {"ts" : mixer.ts}
-                output[(ctrl.name,ctrl.get_uuid())].update({"signal" : mixer.output})
+                output[(ctrl.name,ctrl.get_uuid())].update(
+                    {"signal" : mixer.output}
+                    )
 
                 self.output = output
 
@@ -370,11 +374,11 @@ class Generator:
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts, signal)
+            ax.plot(ts.numpy(), signal.numpy())
             ax.set_xlabel('Time [ns]')
             plt.title(ctrl_name)
-
-            plt.show(block=True)
+            plt.grid()
+            plt.show(block=False)
 
 
     def plot_fft_signals(self, resources = []):
@@ -402,4 +406,4 @@ class Generator:
             plt.plot(ts, fft_signal)
             plt.title(ctrl_name + " (fft)")
 
-            plt.show(block=True)
+            plt.show(block=False)

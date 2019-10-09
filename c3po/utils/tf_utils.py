@@ -73,23 +73,6 @@ def tf_setup():
 
 
 @tf.function
-def tf_matmul_list(dUs):
-    U = dUs[0]
-    for ii in range(1, len(dUs)):
-        U = tf.matmul(dUs[ii], U, name="timestep_"+str(ii))
-    return U
-
-
-def tf_matmul_n(tensor_list):
-    l = len(tensor_list)
-    if (l==1):
-        return tensor_list[0]
-    else:
-        left_half = tensor_list[0:int(l/2)]
-        right_half = tensor_list[int(l/2):l]
-        return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
-
-@tf.function
 def tf_unitary_overlap(A, B):
     """
     Unitary overlap between two matrices in Tensorflow(tm).
@@ -132,51 +115,36 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
             h += cflds_t[ii]*hks[ii]
-
     return tf_expm(-1j*h*dt)
 
 
 def tf_propagation(h0, hks, cflds, dt, history=False):
     with tf.name_scope('Propagation'):
-        # control_fields = tf.cast(
-        #     tf.transpose(tf.stack(cflds)),
-        #     tf.complex128,
-        #     name='Control_fields'
-        #     )
-        #
-        # dUs = tf.map_fn(
-        #     lambda fields: tf_dU_of_t(h0, hks, fields, dt),
-        #     control_fields,
-        #     name='dU_of_t'
-        #     )
-
         dUs = []
         for ii in range(len(cflds[0])):
             cf_t = []
             for fields in cflds:
                 cf_t.append(tf.cast(fields[ii], tf.complex128))
             dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-
-        # if history:
-        #     u_t = tf.gather(dUs,0)
-        #     history = [u_t]
-        #     for ii in range(dUs.shape[0]-1):
-        #         du = tf.gather(dUs, ii+1)
-        #         u_t = tf.matmul(du,u_t)
-        #         history.append(u_t)
-        #     return history, ts
-        # else:
-        #     # U = tf_matmul_n(dUs)
-            # for ii in range(1, dUs.shape[0]):
-            #     U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
         return dUs
 
-@tf.function
-def tf_time_evo_operator(dUs):
-    U = tf.gather(dUs, 0)
-    for ii in range(1, dUs.shape[0]):
-        U = tf.matmul(tf.gather(dUs, ii), U, name="timestep_"+str(ii))
+
+def tf_matmul_list(dUs):
+    U = dUs[0]
+    for ii in range(1, len(dUs)):
+        U = tf.matmul(dUs[ii], U, name="timestep_"+str(ii))
     return U
+
+
+def tf_matmul_n(tensor_list):
+    l = len(tensor_list)
+    if (l==1):
+        return tensor_list[0]
+    else:
+        left_half = tensor_list[0:int(l/2)]
+        right_half = tensor_list[int(l/2):l]
+        return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
+
 
 def tf_log10(x):
     """
