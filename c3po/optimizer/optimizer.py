@@ -41,7 +41,8 @@ class Optimizer:
 
     def to_scale_one(self, values, bounds):
         """
-        Returns a vector of scale 1 that plays well with optimizers.
+        Returns a vector of scale 1 that plays well with optimizers. If the
+        input is higher dimension, it also linearizes.
 
         Parameters
         ----------
@@ -56,11 +57,13 @@ class Optimizer:
 
         """
         x0 = []
-        for i in range(len(values)):
-            scale = np.abs(bounds[i][0] - bounds[i][1])
-            offset = bounds[i][0]
+        v = values.flatten()
+        b = bounds.reshape(bounds.T.shape)
+        for i in range(len(v)):
+            scale = np.abs(b[i].T[0] - b[i].T[1])
+            offset = b[i].T[0]
 
-            tmp = (values[i] - offset) / scale
+            tmp = (v[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
 
@@ -69,7 +72,8 @@ class Optimizer:
 
     def to_bound_phys_scale(self, x0, bounds):
         """
-        Transforms an optimizer vector back to physical scale
+        Transforms an optimizer vector back to physical scale and original
+        shape.
 
         Parameters
         ----------
@@ -86,16 +90,16 @@ class Optimizer:
 
         """
         values = []
-
+        b = bounds.reshape(bounds.T.shape)
         for i in range(len(x0)):
-            scale = np.abs(bounds[i][0] - bounds[i][1])
-            offset = bounds[i][0]
+            scale = np.abs(b[i].T[0] - b[i].T[1])
+            offset = b[i].T[0]
 
             tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
             tmp = scale * tmp + offset
             values.append(tmp)
 
-        return values
+        return np.array(values).reshape(self.param_shape)
 
     def tf_to_bound_phys_scale(self, x0, bounds):
         """
@@ -135,7 +139,8 @@ class Optimizer:
             t.watch(current_params)
             goal = self.eval_func(current_params, self.opt_params)
 
-        self.gradients[str(x)] = t.gradient(goal, current_params)
+        grad = t.gradient(goal, current_params)
+        self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
             [current_params, goal.numpy()]
         )
@@ -177,8 +182,8 @@ class Optimizer:
 
     def goal_gradient_run(self, x):
         grad = self.gradients[str(x)]
-        scale = np.diff(self.bounds)
-        return grad.numpy()*scale.T
+        scale = np.diff(self.bounds.reshape(self.bounds.T.shape))
+        return grad*scale.T
 
 
     # def goal_gradient_run_n(self, x):
@@ -371,6 +376,8 @@ class Optimizer:
 
         if opt == 'cmaes':
             values, bounds = controls.get_values_bounds(opt_params)
+            values = np.array(values)
+            self.param_shape = values.shape
             bounds = np.array(bounds)
             self.bounds = bounds
 
@@ -384,6 +391,8 @@ class Optimizer:
         elif opt == 'lbfgs':
             self.callback = callback
             values, bounds = controls.get_values_bounds(opt_params)
+            values = np.array(values)
+            self.param_shape = values.shape
             bounds = np.array(bounds)
             self.bounds = bounds
 

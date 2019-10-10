@@ -191,31 +191,36 @@ class AWG(Device):
             Q_components = []
 
             control = self.resources[0]
-            for comp in control.comps:
-                if env_group_id in comp.groups:
+            if (control.comps[1].name == 'pwc'):
+                self.amp_tot = 1
+                self.Inphase = control.comps[1].params['Inphase']
+                self.Quadrature = control.comps[1].params['Quadrature']
+            else:
+                for comp in control.comps:
+                    if env_group_id in comp.groups:
 
-                    amp = comp.params['amp']
+                        amp = comp.params['amp']
 
-                    amp_tot_sq += amp**2
+                        amp_tot_sq += amp**2
 
-                    xy_angle = comp.params['xy_angle']
-                    freq_offset = comp.params['freq_offset']
-                    I_components.append(
-                        amp * comp.get_shape_values(ts) *
-                        tf.cos(xy_angle - freq_offset * ts)
-                        )
-                    Q_components.append(
-                        amp * comp.get_shape_values(ts) *
-                        tf.sin(xy_angle - freq_offset * ts)
-                        )
+                        xy_angle = comp.params['xy_angle']
+                        freq_offset = comp.params['freq_offset']
+                        I_components.append(
+                            amp * comp.get_shape_values(ts) *
+                            tf.cos(xy_angle - freq_offset * ts)
+                            )
+                        Q_components.append(
+                            amp * comp.get_shape_values(ts) *
+                            tf.sin(xy_angle - freq_offset * ts)
+                            )
 
-            norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-            Inphase = tf.add_n(I_components, name="Inhpase")/norm
-            Quadrature = tf.add_n(Q_components, name="Quadrature")/norm
+                norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
+                Inphase = tf.add_n(I_components, name="Inhpase")/norm
+                Quadrature = tf.add_n(Q_components, name="Quadrature")/norm
 
-            self.amp_tot = norm
-            self.Inphase = Inphase
-            self.Quadrature = Quadrature
+                self.amp_tot = norm
+                self.Inphase = Inphase
+                self.Quadrature = Quadrature
 
 
     def get_I(self):

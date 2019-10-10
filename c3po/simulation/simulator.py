@@ -29,6 +29,12 @@ class Simulator():
         self.model = model
         self.generator = generator
         self.controls = controls
+        plt.rcParams['figure.dpi'] = 100
+        fig, axs = plt.subplots(1, 1)
+        plt.ion()
+        plt.show()
+        self.fig = fig
+        self.axs = axs
 
     def propagation(self, pulse_params, opt_params, model_params = None):
         self.controls.update_controls(pulse_params, opt_params)
