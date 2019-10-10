@@ -57,13 +57,12 @@ class Optimizer:
 
         """
         x0 = []
-        v = values.flatten()
-        b = bounds.reshape(bounds.T.shape)
-        for i in range(len(v)):
-            scale = np.abs(b[i].T[0] - b[i].T[1])
-            offset = b[i].T[0]
+        values = values.flatten()
+        for i in range(len(values)):
+            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
+            offset = bounds[i].T[0]
 
-            tmp = (v[i] - offset) / scale
+            tmp = (values[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
 
@@ -90,10 +89,9 @@ class Optimizer:
 
         """
         values = []
-        b = bounds.reshape(bounds.T.shape)
         for i in range(len(x0)):
-            scale = np.abs(b[i].T[0] - b[i].T[1])
-            offset = b[i].T[0]
+            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
+            offset = bounds[i].T[0]
 
             tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
             tmp = scale * tmp + offset
@@ -182,7 +180,7 @@ class Optimizer:
 
     def goal_gradient_run(self, x):
         grad = self.gradients[str(x)]
-        scale = np.diff(self.bounds.reshape(self.bounds.T.shape))
+        scale = np.diff(self.bounds)
         return grad*scale.T
 
 
@@ -379,6 +377,8 @@ class Optimizer:
             values = np.array(values)
             self.param_shape = values.shape
             bounds = np.array(bounds)
+            if len(self.param_shape)>1:
+                bounds = bounds.reshape(bounds.T.shape)
             self.bounds = bounds
 
             self.opt_params = opt_params
@@ -394,6 +394,8 @@ class Optimizer:
             values = np.array(values)
             self.param_shape = values.shape
             bounds = np.array(bounds)
+            if len(self.param_shape)>1:
+                bounds = bounds.reshape(bounds.T.shape)
             self.bounds = bounds
 
             self.opt_params = opt_params

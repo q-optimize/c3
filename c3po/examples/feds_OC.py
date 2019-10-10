@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 qubit_freq = 6e9 * 2 * np.pi
 qubit_anhar = -100e6 *2 * np.pi
 qubit_lvls = 6
+
 mV_to_Amp = 2e9*np.pi
 
 q1 = Qubit(
@@ -56,27 +57,7 @@ chip_elements = [
 
 simple_model = mdl(chip_elements, mV_to_Amp)
 
-# Devices
-
-awg = AWG()
-mixer = Mixer()
-
-
-devices = {
-    "awg" : awg,
-    "mixer" : mixer
-}
-
-resolutions = {
-    "awg" : 1.2e9,
-    "sim" : 5e10
-}
-
-
 # Control
-
-def pwc(t, params):
-    return params
 
 def drag(t, params):
     T = params['T']
@@ -110,15 +91,6 @@ def gaussian_der(t, params):
      - T * tf.exp(-T ** 2 / (8 * sigma ** 2)))
     return - (np.exp(-(t - T / 2) ** 2 / (2 * sigma ** 2))) * (t - T / 2) / sigma ** 2 / norm
 
-pwc_params = {
-    'Inphase' : [ 9.13898568e-05,  2.80813774e-03,  2.60120629e-02,  1.02385901e-01, 1.75981964e-01,  1.32111432e-01,  3.63059188e-02, 1.30337408e-02,-1.95690865e-02, -1.05926448e-02, -3.21569528e-03, -5.68895051e-04, -5.73241538e-05, -1.01559353e-05],
-    'Quadrature' : [ 1.32687248e-04,  2.07430121e-03,  9.75677167e-03,  1.67460443e-02, 1.15514070e-02,  1.21689526e-02, -1.31089308e-02, -7.52268981e-02, -9.31263690e-02, -5.67853706e-02, -1.99634483e-02, -4.17341382e-03, -4.67876933e-04, -7.06997694e-06]
-}
-
-pwc_bounds = {
-    'Inphase' : [-150e-2,150e-2]*14,
-    'Quadrature' : [-150e-2,150e-2]*14
-    }
 
 pulse_params = {
         'amp' : np.pi / mV_to_Amp,
@@ -161,21 +133,12 @@ carr_group = CompGroup()
 carr_group.name = "carr_group"
 carr_group.desc = "group containing all components of type carrier"
 
-# p1 = CtrlComp(
-#     name = "pulse1",
-#     desc = "Gaussian comp 1 of signal 1",
-#     shape = drag,
-#     params = pulse_params,
-#     bounds = params_bounds,
-#     groups = [env_group.get_uuid()]
-# )
-
 p1 = CtrlComp(
-    name = "pwc",
-    desc = "PWC comp 1 of signal 1",
-    shape = pwc,
-    params = pwc_params,
-    bounds = pwc_bounds,
+    name = "pulse1",
+    desc = "Gaussian comp 1 of signal 1",
+    shape = drag,
+    params = pulse_params,
+    bounds = params_bounds,
     groups = [env_group.get_uuid()]
 )
 
@@ -189,7 +152,7 @@ p2 = CtrlComp(
 )
 
 env_group.add_element(p1)
-#env_group.add_element(p2)
+env_group.add_element(p2)
 
 carr = CtrlComp(
     name = "carrier",
@@ -202,7 +165,7 @@ carr_group.add_element(carr)
 comps = []
 comps.append(carr)
 comps.append(p1)
-#comps.append(p2)
+comps.append(p2)
 
 ctrl = Control()
 ctrl.name = "control1"
@@ -211,6 +174,22 @@ ctrl.t_end = 12e-9
 ctrl.comps = comps
 
 ctrls = ControlSet([ctrl])
+
+
+awg = AWG()
+mixer = Mixer()
+
+
+devices = {
+    "awg" : awg,
+    "mixer" : mixer
+}
+
+resolutions = {
+    "awg" : 1.2e9,
+    "sim" : 5e10
+}
+
 
 resources = [ctrl]
 
@@ -228,6 +207,13 @@ gen.resources = resources
 gen.resource_groups = resource_groups
 
 sim = Sim(simple_model, gen, ctrls)
+
+plt.rcParams['figure.dpi'] = 100
+fig, axs = plt.subplots(1, 1)
+plt.ion()
+plt.show()
+sim.fig = fig
+sim.axs = axs
 
 opt = Opt()
 
@@ -249,20 +235,15 @@ def evaluate_signals(pulse_params, opt_params):
 
     return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
 
-# opt_map = {
-#     'amp' : [(ctrl.get_uuid(), p1.get_uuid()),
-#              (ctrl.get_uuid(), p2.get_uuid())],
-#     'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),
-#                      (ctrl.get_uuid(), p2.get_uuid())],
-#     'T' : [(ctrl.get_uuid(), p1.get_uuid()),
-#                      (ctrl.get_uuid(), p2.get_uuid())],
-#     'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid()),
-#                      (ctrl.get_uuid(), p2.get_uuid())]
-# }
-
 opt_map = {
-    'Inphase' : [(ctrl.get_uuid(), p1.get_uuid())],
-    'Quadrature' : [(ctrl.get_uuid(), p1.get_uuid())]
+    'amp' : [(ctrl.get_uuid(), p1.get_uuid()),
+             (ctrl.get_uuid(), p2.get_uuid())],
+    'freq_offset' : [(ctrl.get_uuid(), p1.get_uuid()),
+                     (ctrl.get_uuid(), p2.get_uuid())],
+    'T' : [(ctrl.get_uuid(), p1.get_uuid()),
+                     (ctrl.get_uuid(), p2.get_uuid())],
+    'xy_angle' : [(ctrl.get_uuid(), p1.get_uuid()),
+                     (ctrl.get_uuid(), p2.get_uuid())]
 }
 
 opt_params = ctrls.get_corresponding_control_parameters(opt_map)
