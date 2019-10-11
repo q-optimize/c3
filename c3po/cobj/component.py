@@ -94,6 +94,9 @@ class Qubit(PhysicalComponent):
             hilbert_dim = None,
             freq = None,
             delta = None,
+            T1 = None,
+            T2star = None,
+            temp = None
             ):
         super().__init__(
             name = name,
@@ -104,6 +107,9 @@ class Qubit(PhysicalComponent):
         self.values['freq'] = freq
         if hilbert_dim > 2:
             self.values['delta'] = delta
+        self.values['T1'] = T1
+        self.values['T2star'] = T2star
+        self.values['temp'] = temp
 
 class Resonator(PhysicalComponent):
     def __init__(

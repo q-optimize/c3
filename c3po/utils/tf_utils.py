@@ -103,11 +103,9 @@ def tf_expm(A):
     r = tf.eye(int(A.shape[0]), dtype=A.dtype)
     A_powers = A
     r += A
-
     for ii in range(2,35):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers/np.math.factorial(ii)
-
     return r
 
 @tf.function
@@ -117,6 +115,17 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
             h += cflds_t[ii]*hks[ii]
     return tf_expm(-1j*h*dt)
 
+@tf.function
+def tf_dU_of_t_lind(h0, hks, col_op, cflds_t, dt):
+    h = h0
+    for ii in range(len(hks)):
+            h += cflds_t[ii]*hks[ii]
+    lind_op = -1j * (tf_spre(h)-tf_spost(h))
+    super_clp = tf_spre(col_op)*tf_spost(tf.linalg.adjoint(col_op))
+    anticomm_L_clp = 0.5 * tf_spre(tf.linalg.adjoint(col_op))*tf_spre(col_op)
+    anticomm_R_clp = 0.5 * tf_spost(col_op)*tf_spost(tf.linalg.adjoint(col_op))
+    lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
+    return tf_expm(lind_op*dt)
 
 def tf_propagation(h0, hks, cflds, dt, history=False):
     with tf.name_scope('Propagation'):
@@ -128,6 +137,15 @@ def tf_propagation(h0, hks, cflds, dt, history=False):
             dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
         return dUs
 
+def tf_propagation_lind(h0, hks, col_op, cflds, dt, history=False):
+    with tf.name_scope('Propagation'):
+        dUs = []
+        for ii in range(len(cflds[0])):
+            cf_t = []
+            for fields in cflds:
+                cf_t.append(tf.cast(fields[ii], tf.complex128))
+            dUs.append(tf_dU_of_t_lind(h0, hks, col_op, cf_t, dt))
+        return dUs
 
 def tf_matmul_list(dUs):
     U = dUs[0]
@@ -153,3 +171,30 @@ def tf_log10(x):
     numerator = tf.log(x)
     denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
+
+
+def Id_like(A):
+    """
+    identity of the same size as A
+    """
+    shape = tf.shape(A)
+    # if shape[0] == shape[1]:
+    #     dim = shape[0]
+    # else:
+    #     print('ERRORRRRR')
+    dim = shape[0]
+    return tf.eye(dim, dtype = tf.complex128)
+
+def tf_spre(A):
+    """
+    superoperator on the left of matrix A
+    """
+    Id = Id_like(A)
+    return tf.tensordot(A, Id, axes=0)
+
+def tf_spost(A):
+    """
+    superoperator on the right of matrix A
+    """
+    Id = Id_like(A)
+    return tf.tensordot(Id, A, axes=0)

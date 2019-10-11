@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from c3po.utils.tf_utils import tf_propagation as tf_propagation
+from c3po.utils.tf_utils import tf_propagation_lind as tf_propagation_lind
 from c3po.utils.tf_utils import tf_matmul_list as tf_matmul_list
 
 class Simulator():
@@ -36,7 +37,12 @@ class Simulator():
         self.fig = fig
         self.axs = axs
 
-    def propagation(self, pulse_params, opt_params, model_params = None):
+    def propagation(self,
+                    pulse_params,
+                    opt_params,
+                    model_params = None,
+                    lindbladian = False
+                    ):
         self.controls.update_controls(pulse_params, opt_params)
         gen_output = self.generator.generate_signals(self.controls.controls)
         self.generator.devices['awg'].plot_IQ_components(self.fig, self.axs)
@@ -52,7 +58,11 @@ class Simulator():
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
             h0, hks = self.model.get_Hamiltonians()
-        dUs =  tf_propagation(h0, hks, signals, dt)
+        if lindbladian:
+            col_op = self.model.get_lindbladian()
+            dUs =  tf_propagation_lind(h0, hks, col_op, signals, dt)
+        else:
+            dUs =  tf_propagation(h0, hks, signals, dt)
         self.dUs = dUs
         self.ts = ts
         U = tf_matmul_list(dUs)
