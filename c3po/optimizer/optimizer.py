@@ -4,6 +4,7 @@ import pickle
 import random
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 from c3po.utils.tf_utils import tf_log10 as log10
 
 from scipy.optimize import minimize as minimize
@@ -20,6 +21,11 @@ class Optimizer:
         self.simulate_noise = False
         self.random_samples = False
         self.shai_fid = False
+        plt.rcParams['figure.dpi'] = 100
+        fig, axs = plt.subplots(1, 1)
+        plt.ion()
+        self.fig = fig
+        self.axs = axs
 
     def save_history(self, filename):
         datafile = open(filename, 'wb')
@@ -140,9 +146,9 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
-            [current_params, goal.numpy()]
+            [current_params, float(goal.numpy())]
         )
-        return goal.numpy()
+        return float(goal.numpy())
 
 
     def goal_run_n(self, x):
@@ -172,7 +178,7 @@ class Optimizer:
 
         self.gradients[str(x)] = t.gradient(goal, current_params)
         self.optimizer_logs[self.optim_name].append(
-            [current_params, goal.numpy()]
+            [current_params, float(goal.numpy())]
             )
 
         return goal.numpy()
@@ -283,7 +289,7 @@ class Optimizer:
                 jac=grad,
                 method='L-BFGS-B',
                 options=settings,
-               # callback=self.callback
+                callback=self.plot_progress
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -371,6 +377,7 @@ class Optimizer:
         opt_params = controls.get_corresponding_control_parameters(opt_map)
         self.opt_params = opt_params
         self.optim_name = calib_name
+        self.goal = []
 
         if opt == 'cmaes':
             values, bounds = controls.get_values_bounds(opt_params)
@@ -478,3 +485,16 @@ class Optimizer:
             i+=1
         pbar.finish()
         return spectrum, range
+
+
+    def plot_progress(self, res):
+        fig = self.fig
+        ax = self.axs
+        self.goal.append(self.optimizer_logs[self.optim_name][-1][1])
+        ax.clear()
+        ax.semilogy(self.goal)
+        ax.set_xlabel('Iteration')
+        ax.set_ylabel('1-Fidelitiy')
+        ax.grid()
+        fig.canvas.draw()
+        fig.canvas.flush_events()

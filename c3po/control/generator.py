@@ -4,9 +4,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
-
-
-
+from c3po.control.envelopes import flattop as flattop
 
 class Device:
     """
@@ -60,17 +58,12 @@ class Device:
         else:
             ax.clear()
 
-        ax.plot(ts/1e-9, I)
-        ax.plot(ts/1e-9, Q)
+        ax.plot(ts/1e-9, I/1e-3)
+        ax.plot(ts/1e-9, Q/1e-3)
         ax.grid()
-        plt.legend(['I', 'Q'])
-        plt.xlabel('Time [ns]')
-        # I (Kevin) don't really understand the behaviour of plt.show()
-        # here. If I only put plt.show(block=False), I get error messages
-        # on my system at home. Adding a second plt.show() resolves that
-        # issue???
-        # look at:  https://github.com/matplotlib/matplotlib/issues/12692/
-
+        ax.legend(['I', 'Q'])
+        ax.set_xlabel('Time [ns]')
+        ax.set_ylabel('Amplitude [mV]')
         fig.canvas.draw()
         fig.canvas.flush_events()
 
@@ -193,8 +186,10 @@ class AWG(Device):
             control = self.resources[0]
             if (control.comps[1].name == 'pwc'):
                 self.amp_tot = 1
-                self.Inphase = control.comps[1].params['Inphase']
-                self.Quadrature = control.comps[1].params['Quadrature']
+                Inphase = control.comps[1].params['Inphase']
+                Quadrature = control.comps[1].params['Quadrature']
+                self.Inphase = Inphase
+                self.Quadrature = Quadrature
             else:
                 for comp in control.comps:
                     if env_group_id in comp.groups:
@@ -332,6 +327,19 @@ class Generator:
                 mixer.resource_groups = self.resource_groups
                 mixer.calc_slice_num("sim")
                 mixer.create_ts("sim")
+
+                # I = tfp.math.interp_regular_1d_grid(
+                #     mixer.ts,
+                #     x_ref_min = awg.ts[0],
+                #     x_ref_max = awg.ts[-1],
+                #     y_ref = awg.get_I()
+                #     )
+                # Q =  tfp.math.interp_regular_1d_grid(
+                #     mixer.ts,
+                #     x_ref_min = awg.ts[0],
+                #     x_ref_max = awg.ts[-1],
+                #     y_ref = awg.get_Q()
+                #     )
 
                 I = tfp.math.interp_regular_1d_grid(
                     mixer.ts,

@@ -32,7 +32,6 @@ class Simulator():
         plt.rcParams['figure.dpi'] = 100
         fig, axs = plt.subplots(1, 1)
         plt.ion()
-        plt.show()
         self.fig = fig
         self.axs = axs
 
@@ -67,6 +66,11 @@ class Simulator():
             pop_t = np.append(pop_t, np.abs(psi_t)**2 ,axis=1)
         fig, axs = plt.subplots(1, 1)
         plt.ion()
-        plt.plot(pop_t.T)
-        plt.grid()
-        plt.show(block=False)
+        ts = self.ts
+        dt = ts[1]-ts[0]
+        ts = np.append(0, ts+dt/2)
+        axs.plot(ts/1e-9, pop_t.T)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Population')
+        fig.show()

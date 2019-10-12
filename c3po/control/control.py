@@ -198,10 +198,10 @@ class Control:
 
 
     def generate_opt_map(self, opt_map={}):
-        sig_id = self.get_uuid()
+        sig_id = self.name
         for cmp in self.comps:
             for key in cmp.params.keys():
-                entry = (cmp.desc, sig_id, cmp.get_uuid())
+                entry = (sig_id, cmp.name)
                 if key in opt_map.keys():
                     opt_map[key].append(entry)
                 else:
