@@ -58,8 +58,8 @@ class Simulator():
         else:
             h0, hks = self.model.get_Hamiltonians()
         if lindbladian:
-            col_op = self.model.get_lindbladian()
-            dUs =  tf_propagation_lind(h0, hks, col_op, signals, dt)
+            col_ops = self.model.get_lindbladian()
+            dUs =  tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs =  tf_propagation(h0, hks, signals, dt)
         self.dUs = dUs
@@ -67,13 +67,16 @@ class Simulator():
         U = tf_matmul_list(dUs)
         return U
 
-    def plot_dynamics(self, psi_init):
+    def plot_dynamics(self, psi_init, lindbladian = False):
         dUs = self.dUs
         psi_t = psi_init.numpy()
-        pop_t = np.abs(psi_t)**2
+        print(psi_t)
+        pop_t = self.populations(psi_t, dv = lindbladian)
         for du in dUs:
             psi_t = np.matmul(du.numpy(),psi_t)
-            pop_t = np.append(pop_t, np.abs(psi_t)**2 ,axis=1)
+            print(psi_t)
+            pops = self.populations(psi_t, dv = lindbladian)
+            pop_t = np.append(pop_t, pops ,axis=1)
         fig, axs = plt.subplots(1, 1)
         plt.ion()
         ts = self.ts
@@ -84,3 +87,12 @@ class Simulator():
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         fig.show()
+
+    @staticmethod
+    def populations(state, dv = False):
+        if dv:
+            dim = int(np.sqrt(len(state)))
+            indeces = [n*dim+n for n in range(dim)]
+            return np.abs(state[indeces])
+        else:
+            np.abs(state)**2

@@ -211,7 +211,6 @@ sim = Sim(simple_model, gen, ctrls)
 plt.rcParams['figure.dpi'] = 100
 fig, axs = plt.subplots(1, 1)
 plt.ion()
-plt.show()
 sim.fig = fig
 sim.axs = axs
 

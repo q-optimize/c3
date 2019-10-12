@@ -29,11 +29,11 @@ import qutip as qt
 # System
 qubit_freq = 6e9 * 2 * np.pi
 qubit_anhar = -100e6 *2 * np.pi
-qubit_lvls = 6
+qubit_lvls = 3
 mV_to_Amp = 2e9*np.pi
-qubit_temp = 70*1e-3
-qubit_T2star = 30e-6
-qubit_T1 = 30e-6
+qubit_temp = 1e6 #70*1e-3
+qubit_T2star = 30e-9
+qubit_T1 = 2e-9
 
 q1 = Qubit(
     name = "Q1",
@@ -43,8 +43,8 @@ q1 = Qubit(
     delta = qubit_anhar,
     hilbert_dim = qubit_lvls,
     T1 = qubit_T1,
-    T2star = qubit_T2star,
-    temp = qubit_temp,
+    # T2star = qubit_T2star,
+    # temp = qubit_temp,
     )
 
 drive = Drive(
@@ -80,6 +80,8 @@ def drag_der(t, params):
     return - 2 * (tf.exp(-(t - T / 2) ** 2 / (2 * sigma ** 2)) - B)* \
             (np.exp(-(t - T / 2) ** 2 / (2 * sigma ** 2))) * (t - T / 2) / sigma ** 2 / norm
 
+def no_drive(t,params): return 0
+
 pulse_params = {
         'amp' : np.pi / mV_to_Amp,
         'T' : 8e-9,
@@ -88,7 +90,7 @@ pulse_params = {
     }
 
 corr_params = {
-        'amp' : np.pi / mV_to_Amp/qubit_anhar,
+        'amp' : np.pi / mV_to_Amp / qubit_anhar,
         'T' : 8e-9,
         'xy_angle' : np.pi/2,
         'freq_offset' : 0e6 * 2 * np.pi
@@ -113,7 +115,6 @@ carrier_parameters = {
     'freq' : 5.95e9 * 2 * np.pi
 }
 
-
 env_group = CompGroup()
 env_group.name = "env_group"
 env_group.desc = "group containing all components of type envelop"
@@ -124,7 +125,7 @@ carr_group.desc = "group containing all components of type carrier"
 p1 = CtrlComp(
     name = "gaussian",
     desc = "Gaussian comp of signal 1",
-    shape = drag,
+    shape = no_drive,
     params = pulse_params,
     bounds = params_bounds,
     groups = [env_group.get_uuid()]
@@ -133,7 +134,7 @@ p1 = CtrlComp(
 p2 = CtrlComp(
     name = "drag_corr",
     desc = "Drag correction to the gaussian",
-    shape = drag_der,
+    shape = no_drive,
     params = corr_params,
     bounds = corr_bounds,
     groups = [env_group.get_uuid()]
@@ -163,7 +164,6 @@ ctrl.comps = comps
 
 ctrls = ControlSet([ctrl])
 
-
 awg = AWG()
 mixer = Mixer()
 
@@ -178,15 +178,12 @@ resolutions = {
     "sim" : 5e10
 }
 
-
 resources = [ctrl]
-
 
 resource_groups = {
     "env" : env_group,
     "carr" : carr_group
 }
-
 
 gen = Generator()
 gen.devices = devices
@@ -199,34 +196,39 @@ sim = Sim(simple_model, gen, ctrls)
 plt.rcParams['figure.dpi'] = 100
 fig, axs = plt.subplots(1, 1)
 plt.ion()
-plt.show()
 sim.fig = fig
 sim.axs = axs
 
 opt = Opt()
 
-psi0 = qt.operator_to_vector(qt.ket2dm(qt.basis(qubit_lvls, 0))).full()
-psi1 = qt.operator_to_vector(qt.ket2dm(qt.basis(qubit_lvls, 1))).full()
+psi0 = qt.basis(qubit_lvls, 0)
+psi1 = qt.basis(qubit_lvls, 1)
 
-ket_init = tf.constant(
-                psi0,
-                dtype = tf.complex128,
-                shape = [qubit_lvls,qubit_lvls,1])
-bra_goal = tf.constant(
-                psi1.T,
-                dtype = tf.complex128,
-                shape = [1,qubit_lvls,qubit_lvls])
+dv_i = qt.operator_to_vector(qt.ket2dm(psi1)).full()
+dm_init = tf.constant(dv_i,dtype = tf.complex128,
+            shape = [qubit_lvls,qubit_lvls])
+dv_init = tf.constant(dv_i,dtype = tf.complex128,
+            shape = [qubit_lvls*qubit_lvls,1])
+psi_final = tf.constant(psi1.full(),dtype = tf.complex128)
+dv_f = qt.operator_to_vector(qt.ket2dm(psi0)).full()
+dm_final = tf.constant(dv_f,dtype = tf.complex128,
+            shape = [qubit_lvls,qubit_lvls])
 
-def evaluate_signals(pulse_params, opt_params):
+# alternative to the reshaping when doing tensordot in tf utils
+# is to do the correct reductiond later when multiplying the superoper
+# with shape [ql,ql,ql,ql] and the density matrix with shape [ql,ql]
+# tf.tensordot(superoper,dm,axes = [[1,3],[0,1]] )
+# tf.tensordot(superoper,superoper,axes = [[1,3],[0,2]] )
 
+def evaluate_signals_lind(pulse_params, opt_params):
     model_params = sim.model.params
     U = sim.propagation(pulse_params,
                         opt_params,
                         model_params,
                         lindbladian = True)
-    psi_actual = tf.matmul(U, ket_init)
-    overlap = tf.matmul(bra_goal, psi_actual)
-
+    dv_actual = tf.matmul(U, dv_init)
+    dm_actual = tf.reshape(dv_actual, [qubit_lvls,qubit_lvls])
+    overlap = tf_dmket_fid(dm_actual, psi_final)
     return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
 
 opt_map = {
@@ -247,5 +249,7 @@ opt.optimize_controls(
     opt_map = opt_map,
     opt = 'lbfgs',
     calib_name = 'openloop',
-    eval_func = evaluate_signals
+    eval_func = evaluate_signals_lind
     )
+
+sim.plot_dynamics(dv_init, lindbladian = True)

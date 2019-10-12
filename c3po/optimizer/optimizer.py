@@ -145,6 +145,8 @@ class Optimizer:
 
         grad = t.gradient(goal, current_params)
         self.gradients[str(x)] = grad.numpy().flatten()
+        # print(goal)
+        # print(goal.numpy())
         self.optimizer_logs[self.optim_name].append(
             [current_params, float(goal.numpy())]
         )

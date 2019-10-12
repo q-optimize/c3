@@ -168,7 +168,7 @@ class Model:
                                     tf.complex128)
                             det_bal = tf.exp(-hbar*freq_diff*beta)
                             det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                            return gamma * L2 * det_bal_mat
+                            return gamma * L2 @ det_bal_mat
 
                         self.collapse_ops.append(L2)
                         self.cops_params.append([vals['T1'],vals['temp']])
@@ -195,13 +195,15 @@ class Model:
         if cops_params is None:
             cops_params = self.cops_params
 
-        lind_op = tf.zeros_like(self.collapse_ops[0])
+        col_ops = []
         for ii in range(self.cops_n_params):
-            lind_op += self.cops_params_fcts[ii](
-                            self.cops_params[ii],
-                            self.collapse_ops[ii]
-                            )
-        return lind_op
+            col_ops.append(
+                    self.cops_params_fcts[ii](
+                        self.cops_params[ii],
+                        self.collapse_ops[ii]
+                        )
+                    )
+        return col_ops
 
     def update_parameters(self, new_params):
         idx = 0
