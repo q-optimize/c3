@@ -292,24 +292,14 @@ rechenknecht.opt_params = opt_params
 
 sim = Sim(initial_model, gen, ctrls)
 
-# Goal to drive on qubit 1
-# U_goal = np.array(
-#     [[0.+0.j, 1.+0.j, 0.+0.j],
-#      [1.+0.j, 0.+0.j, 0.+0.j],
-#      [0.+0.j, 0.+0.j, 1.+0.j]]
-#     )
+qubit_g = np.zeros([qubit_lvls, 1])
+qubit_g[0] = 1
 
-psi_init = np.array(
-    [[1.+0.j],
-     [0.+0.j],
-     [0.+0.j]],
-    )
+qubit_e = np.zeros([qubit_lvls, 1])
+qubit_e[1] = 1
 
-psi_goal = np.array(
-    [[0.+0.j],
-     [1.+0.j],
-     [0.+0.j]],
-    )
+ket_init = tf.constant(qubit_g, tf.complex128)
+bra_goal = tf.constant(qubit_e.T, tf.complex128)
 
 sim.model = optimize_model
 
@@ -317,8 +307,8 @@ def evaluate_signals(pulse_params, opt_params):
 
     model_params = sim.model.params
     U = sim.propagation(pulse_params, opt_params, model_params)
-    psi_actual = tf.matmul(U, psi_init)
-    overlap = tf.matmul(psi_goal.T, psi_actual)
+    psi_actual = tf.matmul(U, ket_init)
+    overlap = tf.matmul(bra_goal, psi_actual)
 
     return 1-tf.cast(tf.conj(overlap)*overlap, tf.float64)
 

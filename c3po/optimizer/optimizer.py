@@ -14,7 +14,10 @@ import cma.evolution_strategy as cmaes
 class Optimizer:
 
     def __init__(self):
+
         self.optimizer_logs = {}
+
+
         self.parameter_history = {}
         self.results = {}
         self.gradients = {}
@@ -22,10 +25,6 @@ class Optimizer:
         self.random_samples = False
         self.shai_fid = False
         plt.rcParams['figure.dpi'] = 100
-        fig, axs = plt.subplots(1, 1)
-        plt.ion()
-        self.fig = fig
-        self.axs = axs
 
     def save_history(self, filename):
         datafile = open(filename, 'wb')
@@ -105,35 +104,6 @@ class Optimizer:
 
         return np.array(values).reshape(self.param_shape)
 
-    def tf_to_bound_phys_scale(self, x0, bounds):
-        """
-        Transforms an optimizer vector back to physical scale
-
-        Parameters
-        ----------
-        one : array
-            Array of pulse parameters in scale 1
-
-        bounds: array
-            Array of control parameter bounds
-
-        Returns
-        -------
-        array
-            control parameters that are compatible with bounds in physical units
-
-        """
-        bounds = np.array(bounds)
-        scale = np.diff(bounds)
-        offset = bounds.T[0]
-
-        tmp = tf.math.acos(
-            tf.math.cos((x0 + 1) * np.pi / 2)
-            ) / np.pi
-        values = scale.T * tmp + offset
-
-        return tf.transpose(values)
-
 
     def goal_run(self, x):
         with tf.GradientTape() as t:
@@ -152,6 +122,7 @@ class Optimizer:
 
 
     def goal_run_n(self, x):
+        learn_from = self.learn_from
         with tf.GradientTape() as t:
             current_params = tf.constant(
                 self.to_bound_phys_scale(x, self.bounds)
@@ -162,21 +133,24 @@ class Optimizer:
 
             if self.random_samples:
                 measurements = random.sample(
-                    self.optimizer_logs['closed_loop'], batch_size
+                    self.optimizer_logs[learn_from], batch_size
                     )
             else:
-                measurements = self.optimizer_logs['closed_loop'][-batch_size::]
+                measurements = self.optimizer_logs[learn_from][-batch_size::]
             for m in measurements:
                 this_goal = self.eval_func(
                     current_params, self.opt_params,  m[0], m[1]
                     )
-                self.optimizer_logs['per_point_error'].append(this_goal)
+                self.optimizer_logs['per_point_error'].append(
+                    float(this_goal.numpy())
+                    )
                 goal += this_goal
 
             if self.shai_fid:
                 goal = np.log10(np.sqrt(goal/batch_size))
 
-        self.gradients[str(x)] = t.gradient(goal, current_params)
+        grad = t.gradient(goal, current_params)
+        self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
             [current_params, float(goal.numpy())]
             )
@@ -188,45 +162,6 @@ class Optimizer:
         grad = self.gradients[str(x)]
         scale = np.diff(self.bounds)
         return grad*scale.T
-
-
-    # def goal_gradient_run_n(self, x):
-    #
-    #     params = self.__params
-    #     pulse_params = self.__pulse_params
-    #     result = self.__result
-    #     bounds = self.bounds
-    #     scale = np.diff(bounds)
-    #
-    #     current_params = self.to_bound_phys_scale(x,bounds)
-    #
-    #     jac = np.zeros_like(current_params)
-    #
-    #     if self.random_samples:
-    #         measurements = random.sample(self.optimizer_logs['closed_loop'], 20)
-    #     else:
-    #         measurements = self.optimizer_logs['closed_loop'][-20::]
-    #
-    #     for m in measurements:
-    #         jac_m = sess.run(
-    #                 self.__jac,
-    #                 feed_dict={
-    #                         params: current_params,
-    #                         pulse_params: m[0],
-    #                         result: m[1]
-    #                     }
-    #             )
-    #         jac += jac_m[0]
-    #
-    #     if self.shai_fid:
-    #         # here I need to devide the jac by the sum of delta_fid^2 so no
-    #         # shai_fid otherwise I would get the log(sqrt()) of it
-    #         self.shai_fid = False
-    #         jac = jac / np.log(100) / self.goal_run_n(x)
-    #         self.shai_fid = True
-    #         #TODO: this is a problem
-    #
-    #     return jac*scale.T
 
 
     def cmaes(self, values, bounds, settings={}):
@@ -256,6 +191,7 @@ class Optimizer:
                     goal = (1+0.03*np.random.randn()) * goal
 
                 solutions.append(goal)
+                self.plot_progress()
 
             es.tell(
                     samples,
@@ -297,38 +233,6 @@ class Optimizer:
         res.x = values_opt
 
         self.results[self.optim_name] = res
-
-        return values_opt
-
-    def tf_gradient_descent(self, opt_params, settings, error_func, controls):
-        values, bounds = controls.get_values_bounds(opt_params)
-        x0 = self.to_scale_one(values, bounds)
-        params = tf.Variable(x0, dtype=tf.float64, name="params")
-
-        opt = tf.train.GradientDescentOptimizer(
-            learning_rate=0.001,
-        )
-
-        loss = log10(
-            error_func(
-                self.tf_to_bound_phys_scale(params, bounds),
-                opt_params
-                )
-            )
-
-        train = opt.minimize(loss=loss)
-
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
-
-        goal = -10
-        loss_opt = 1
-
-        while loss_opt > goal:
-            self.sess.run(train)
-            values_opt, loss_opt = self.sess.run([params, loss])
-            #print(loss_opt, values_opt)
-            print(loss_opt, self.to_bound_phys_scale(values_opt, bounds))
 
         return values_opt
 
@@ -374,56 +278,39 @@ class Optimizer:
             Special settings for the desired optimizer
         """
 
+        fig, axs = plt.subplots(1, 1)
+        self.fig = fig
+        self.axs = axs
+
         opt_params = controls.get_corresponding_control_parameters(opt_map)
         self.opt_params = opt_params
         self.optim_name = calib_name
         self.goal = []
 
+        self.callback = callback
+        values, bounds = controls.get_values_bounds(opt_params)
+        values = np.array(values)
+        self.param_shape = values.shape
+        bounds = np.array(bounds)
+        if len(self.param_shape)>1:
+            bounds = bounds.reshape(bounds.T.shape)
+        self.bounds = bounds
+
+        self.opt_params = opt_params
+        self.eval_func = eval_func
+
+        self.optimizer_logs[self.optim_name] = []
+
         if opt == 'cmaes':
-            values, bounds = controls.get_values_bounds(opt_params)
-            values = np.array(values)
-            self.param_shape = values.shape
-            bounds = np.array(bounds)
-            if len(self.param_shape)>1:
-                bounds = bounds.reshape(bounds.T.shape)
-            self.bounds = bounds
-
-            self.opt_params = opt_params
-            self.eval_func = eval_func
-            self.optim_name = 'closed_loop'
-            self.optimizer_logs[self.optim_name] = []
-
             values_opt = self.cmaes(values, bounds, settings)
 
         elif opt == 'lbfgs':
-            self.callback = callback
-            values, bounds = controls.get_values_bounds(opt_params)
-            values = np.array(values)
-            self.param_shape = values.shape
-            bounds = np.array(bounds)
-            if len(self.param_shape)>1:
-                bounds = bounds.reshape(bounds.T.shape)
-            self.bounds = bounds
-
-            self.opt_params = opt_params
-            self.eval_func = eval_func
-
-            self.optim_name = 'open_loop'
-            self.optimizer_logs[self.optim_name] = []
             values_opt = self.lbfgs(
                     values,
                     bounds,
                     self.goal_run,
                     self.goal_gradient_run,
                     settings=settings
-                )
-
-        elif opt == 'tf_grad_desc':
-            values_opt = self.tf_gradient_descent(
-                    opt_params,
-                    settings,
-                    eval_func,
-                    controls
                 )
 
         opt_params['values'] = values_opt
@@ -437,19 +324,25 @@ class Optimizer:
         model,
         eval_func,
         settings,
-        optim_name = [],
+        learn_from,
+        optim_name ='learn_model',
         ):
+
+        fig, axs = plt.subplots(1, 1)
+        self.fig = fig
+        self.axs = axs
+
+        self.goal = []
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)
         self.bounds = bounds
-
+        values = np.array(values)
+        self.param_shape = values.shape
         self.eval_func = eval_func
 
-        if optim_name:
-            self.optim_name = optim_name
-        else:
-            self.optim_name = 'learn_model'
+        self.learn_from = learn_from
+        self.optim_name = optim_name
         self.optimizer_logs[self.optim_name] = []
         self.optimizer_logs['per_point_error'] = []
         params_opt = self.lbfgs(
@@ -487,12 +380,13 @@ class Optimizer:
         return spectrum, range
 
 
-    def plot_progress(self, res):
+    def plot_progress(self, res=None):
         fig = self.fig
         ax = self.axs
         self.goal.append(self.optimizer_logs[self.optim_name][-1][1])
         ax.clear()
         ax.semilogy(self.goal)
+        ax.set_title(self.optim_name)
         ax.set_xlabel('Iteration')
         ax.set_ylabel('1-Fidelitiy')
         ax.grid()

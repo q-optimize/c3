@@ -29,16 +29,11 @@ class Simulator():
         self.model = model
         self.generator = generator
         self.controls = controls
-        plt.rcParams['figure.dpi'] = 100
-        fig, axs = plt.subplots(1, 1)
-        plt.ion()
-        self.fig = fig
-        self.axs = axs
 
     def propagation(self, pulse_params, opt_params, model_params = None):
         self.controls.update_controls(pulse_params, opt_params)
         gen_output = self.generator.generate_signals(self.controls.controls)
-        self.generator.devices['awg'].plot_IQ_components(self.fig, self.axs)
+        self.generator.devices['awg'].plot_IQ_components()
         signals = []
 
         for key in gen_output:
@@ -65,7 +60,6 @@ class Simulator():
             psi_t = np.matmul(du.numpy(),psi_t)
             pop_t = np.append(pop_t, np.abs(psi_t)**2 ,axis=1)
         fig, axs = plt.subplots(1, 1)
-        plt.ion()
         ts = self.ts
         dt = ts[1]-ts[0]
         ts = np.append(0, ts+dt/2)

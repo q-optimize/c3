@@ -104,7 +104,7 @@ def tf_expm(A):
     A_powers = A
     r += A
 
-    for ii in range(2,35):
+    for ii in range(2,14):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers/np.math.factorial(ii)
 
@@ -153,16 +153,3 @@ def tf_log10(x):
     numerator = tf.log(x)
     denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
-
-def tf_interp_sin(y_lo, x_lo, x_hi):
-    x_left = x_lo[0]
-    dx = x_lo[1]-x_lo[0]
-    n = int(x_hi.shape[0] / x_lo.shape[0])
-    y_hi = []
-    for xi in range(1, x_lo.shape[0]):
-        x_right = x_lo[xi]
-        x = tf.linspace(x_left, x_right, n)
-        y = (y_lo[xi-1] + (y_lo[xi] - y_lo[xi-1]) * tf.sin(np.pi/dx*x))
-        y_hi = tf.concat(y_hi, y)
-        x_left = x_right
-    return y_hi

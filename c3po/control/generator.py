@@ -26,6 +26,11 @@ class Device:
         self.resources = resources
         self.resource_groups = resource_groups
 
+        plt.rcParams['figure.dpi'] = 100
+        fig, axs = plt.subplots(1, 1)
+        self.fig = fig
+        self.axs = axs
+
 
     def calc_slice_num(self, res_key):
         res = self.resolutions[res_key]
@@ -45,25 +50,24 @@ class Device:
         else:
             self.ts = None
 
-    def plot_IQ_components(self, fig=None, ax=None):
+    def plot_IQ_components(self):
         """ Plotting control functions """
 
         ts = self.ts
         I = self.Inphase
         Q = self.Quadrature
 
-        if ax is None:
-            plt.rcParams['figure.dpi'] = 100
-            fig, ax = plt.subplots(1, 1)
-        else:
-            ax.clear()
+        fig = self.fig
+        ax = self.axs
 
+        ax.clear()
         ax.plot(ts/1e-9, I/1e-3)
         ax.plot(ts/1e-9, Q/1e-3)
         ax.grid()
         ax.legend(['I', 'Q'])
         ax.set_xlabel('Time [ns]')
         ax.set_ylabel('Amplitude [mV]')
+        plt.show()
         fig.canvas.draw()
         fig.canvas.flush_events()
 
@@ -143,6 +147,8 @@ class AWG(Device):
 
         super().__init__(name, desc, comment, resolutions, resources, resource_groups)
 
+        self.options = ""
+
         self.t_start = t_start
         self.t_end = t_end
 
@@ -184,10 +190,48 @@ class AWG(Device):
             Q_components = []
 
             control = self.resources[0]
-            if (control.comps[1].name == 'pwc'):
+            if (self.options == 'pwc'):
                 self.amp_tot = 1
                 Inphase = control.comps[1].params['Inphase']
                 Quadrature = control.comps[1].params['Quadrature']
+                self.Inphase = Inphase
+                self.Quadrature = Quadrature
+            elif  (self.options == 'drag'):
+                for comp in control.comps:
+                    if env_group_id in comp.groups:
+
+                        amp = comp.params['amp']
+
+                        amp_tot_sq += amp**2
+
+                        xy_angle = comp.params['xy_angle']
+                        freq_offset = comp.params['freq_offset']
+                        detuning = comp.params['detuning']
+
+                        with tf.GradientTape() as t:
+                            t.watch(ts)
+                            env = comp.get_shape_values(ts)
+
+                        denv = t.gradient(env, ts)
+                        phase = xy_angle - freq_offset * ts
+
+                        I_components.append(
+                            amp * (
+                                env * tf.cos(phase) +
+                                denv/detuning * tf.sin(phase)
+                            )
+                        )
+                        Q_components.append(
+                            amp * (
+                                env * tf.sin(phase) +
+                                denv/detuning * tf.cos(phase)
+                            )
+                        )
+                norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
+                Inphase = tf.add_n(I_components, name="Inhpase")/norm
+                Quadrature = tf.add_n(Q_components, name="Quadrature")/norm
+
+                self.amp_tot = norm
                 self.Inphase = Inphase
                 self.Quadrature = Quadrature
             else:
