@@ -253,3 +253,14 @@ opt.optimize_controls(
     )
 
 sim.plot_dynamics(dv_init, lindbladian = True)
+
+# # Test spre spost and tensor mult
+# X = np.array([[0,1,0],[1,0,0],[0,0,0]])
+# X_tf = tf.constant(X,dtype = tf.complex128)
+# print(tf.matmul(X_tf,ket_init))
+# X_l = tf_spre(X_tf)
+# X_r = tf_spost(X_tf)
+# left = tf.tensordot(X_l,dm_init,axes = [[1,3],[0,1]] )
+# print(left)
+# final = tf.tensordot(X_r,left,axes = [[1,3],[0,1]] )
+# print(final)

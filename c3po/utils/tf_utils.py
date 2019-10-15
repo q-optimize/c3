@@ -121,13 +121,7 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     for ii in range(len(hks)):
             h += cflds_t[ii]*hks[ii]
     lind_op = -1j * (tf_spre(h)-tf_spost(h))
-    print(h)
-    print(tf_spre(h))
-    print(tf_spost(h))
     for col_op in col_ops:
-        print(col_op)
-        print(tf_spre(col_op))
-        print(tf_spost(col_op))
         super_clp = tf.matmul(
                         tf_spre(col_op),
                         tf_spost(tf.linalg.adjoint(col_op))
@@ -225,6 +219,7 @@ def tf_spost(A):
     """
     Id = Id_like(A)
     dim = tf.shape(A)[0]
+    A = tf.linalg.adjoint(A)
     tensordot = tf.tensordot(Id, A, axes=0)
     reshaped = tf.reshape(
                 tf.transpose( tensordot, perm = [0,2,1,3]),

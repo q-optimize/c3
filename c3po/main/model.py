@@ -142,7 +142,7 @@ class Model:
                 ann_oper = self.ann_opers[el_indx]
                 L1 = ann_oper
                 def T1(T1, L1):
-                    gamma = tf.cast((0.5/T1)**0.5, tf.complex128)
+                    gamma = tf.cast((1/T1)**0.5, tf.complex128)
                     return gamma * L1
 
                 self.collapse_ops.append(L1)
@@ -161,7 +161,7 @@ class Model:
                          )
                         def T1_temp(T1_temp, L2):
                             gamma = tf.cast(
-                                    (0.5/T1_temp[0])**0.5,
+                                    (1/T1_temp[0])**0.5,
                                     tf.complex128)
                             beta = tf.cast(
                                     1 / (T1_temp[1] * boltzmann),

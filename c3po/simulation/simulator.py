@@ -70,11 +70,9 @@ class Simulator():
     def plot_dynamics(self, psi_init, lindbladian = False):
         dUs = self.dUs
         psi_t = psi_init.numpy()
-        print(psi_t)
         pop_t = self.populations(psi_t, dv = lindbladian)
         for du in dUs:
             psi_t = np.matmul(du.numpy(),psi_t)
-            print(psi_t)
             pops = self.populations(psi_t, dv = lindbladian)
             pop_t = np.append(pop_t, pops ,axis=1)
         fig, axs = plt.subplots(1, 1)
