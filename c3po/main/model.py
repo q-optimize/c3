@@ -47,12 +47,12 @@ class Model:
     def __init__(
             self,
             chip_elements,
-            mV_to_Amp
+            mV_to_Amp,
             ):
 
         self.chip_elements = chip_elements
         self.control_Hs = []
-        self.drift_Hs = []
+
 
         # Construct array with dimension of elements (only qubits & resonators)
         self.dims = []
@@ -124,6 +124,86 @@ class Model:
         self.n_params = len(self.params)
         self.params = np.array(self.params)
 
+    def initialise_lindbladian(self):
+        boltzmann = 1.380649e-23
+        h = 6.62607015e-34
+        hbar = h / (2*np.pi)
+
+        self.collapse_ops = []
+        self.cops_params = []
+        self.cops_params_desc = []
+        self.cops_params_fcts = []
+
+        for element in self.chip_elements:
+            vals = element.values
+
+            if 'T1' in vals:
+                el_indx = self.names.index(element.name)
+                ann_oper = self.ann_opers[el_indx]
+                L1 = ann_oper
+                def T1(T1, L1):
+                    gamma = tf.cast((1/T1)**0.5, tf.complex128)
+                    return gamma * L1
+
+                self.collapse_ops.append(L1)
+                self.cops_params.append(vals['T1'])
+                self.cops_params_desc.append([element.name, 'T1'])
+                self.cops_params_fcts.append(T1)
+
+                if 'temp' in vals:
+                    if vals['temp'] != 0:
+                        L2 = ann_oper.T.conj()
+                        dim = element.hilbert_dim
+                        omega_q = vals['freq']
+                        delta = vals['delta']
+                        freq_diff = np.array(
+                         [(n+1)*omega_q-0.5*n*(n+1)*delta for n in range(dim)]
+                         )
+                        def T1_temp(T1_temp, L2):
+                            gamma = tf.cast(
+                                    (1/T1_temp[0])**0.5,
+                                    tf.complex128)
+                            beta = tf.cast(
+                                    1 / (T1_temp[1] * boltzmann),
+                                    tf.complex128)
+                            det_bal = tf.exp(-hbar*freq_diff*beta)
+                            det_bal_mat = tf.linalg.tensor_diag(det_bal)
+                            return gamma * L2 @ det_bal_mat
+
+                        self.collapse_ops.append(L2)
+                        self.cops_params.append([vals['T1'],vals['temp']])
+                        self.cops_params_desc.append([element.name, 'T1 & temp'])
+                        self.cops_params_fcts.append(T1_temp)
+
+            if 'T2star' in vals:
+                el_indx = self.names.index(element.name)
+                ann_oper = self.ann_opers[el_indx]
+                L_dep = 2*ann_oper.T.conj()*ann_oper
+                def T2star(T2star, L_dep):
+                    gamma = tf.cast((0.5/T2star)**0.5, tf.complex128)
+                    return gamma * L_dep
+
+                self.collapse_ops.append(L_dep)
+                self.cops_params.append(vals['T2star'])
+                self.cops_params_desc.append([element.name, 'T2star'])
+                self.cops_params_fcts.append(T2star)
+
+        self.cops_n_params = len(self.cops_params)
+        self.cops_params = np.array(self.cops_params)
+
+    def get_lindbladian(self, cops_params=None):
+        if cops_params is None:
+            cops_params = self.cops_params
+
+        col_ops = []
+        for ii in range(self.cops_n_params):
+            col_ops.append(
+                    self.cops_params_fcts[ii](
+                        self.cops_params[ii],
+                        self.collapse_ops[ii]
+                        )
+                    )
+        return col_ops
 
     def update_parameters(self, new_params):
         idx = 0
@@ -164,9 +244,7 @@ class Model:
                 drift_H += tf.cast(params[ii], tf.complex128) * self.drift_Hs[di]
                 di += 1
 
-
         return drift_H, control_Hs
-
 
     def get_values_bounds(self):
         values = self.params

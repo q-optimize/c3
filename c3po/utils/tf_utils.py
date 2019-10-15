@@ -107,7 +107,6 @@ def tf_expm(A):
     for ii in range(2,14):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers/np.math.factorial(ii)
-
     return r
 
 @tf.function
@@ -116,6 +115,28 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     for ii in range(len(hks)):
             h += cflds_t[ii]*hks[ii]
     return tf_expm(-1j*h*dt)
+
+# @tf.function
+def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
+    h = h0
+    for ii in range(len(hks)):
+            h += cflds_t[ii]*hks[ii]
+    lind_op = -1j * (tf_spre(h)-tf_spost(h))
+    for col_op in col_ops:
+        super_clp = tf.matmul(
+                        tf_spre(col_op),
+                        tf_spost(tf.linalg.adjoint(col_op))
+                        )
+        anticomm_L_clp = 0.5 * tf.matmul(
+                                    tf_spre(tf.linalg.adjoint(col_op)),
+                                    tf_spre(col_op)
+                                    )
+        anticomm_R_clp = 0.5 * tf.matmul(
+                                    tf_spost(col_op),
+                                    tf_spost(tf.linalg.adjoint(col_op))
+                                    )
+        lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
+    return tf_expm(lind_op * dt)
 
 
 def tf_propagation(h0, hks, cflds, dt, history=False):
@@ -126,6 +147,17 @@ def tf_propagation(h0, hks, cflds, dt, history=False):
             for fields in cflds:
                 cf_t.append(tf.cast(fields[ii], tf.complex128))
             dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+        return dUs
+
+
+def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
+    with tf.name_scope('Propagation'):
+        dUs = []
+        for ii in range(len(cflds[0])):
+            cf_t = []
+            for fields in cflds:
+                cf_t.append(tf.cast(fields[ii], tf.complex128))
+            dUs.append(tf_dU_of_t_lind(h0, hks, col_ops, cf_t, dt))
         return dUs
 
 
@@ -153,3 +185,74 @@ def tf_log10(x):
     numerator = tf.log(x)
     denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
+
+
+def Id_like(A):
+    """
+    identity of the same size as A
+    """
+    shape = tf.shape(A)
+    # if shape[0] == shape[1]:
+    #     dim = shape[0]
+    # else:
+    #     print('ERRORRRRR')
+    dim = shape[0]
+    return tf.eye(dim, dtype = tf.complex128)
+
+@tf.function
+def tf_spre(A):
+    """
+    superoperator on the left of matrix A
+    """
+    Id = Id_like(A)
+    dim = tf.shape(A)[0]
+    tensordot = tf.tensordot(A, Id, axes=0)
+    reshaped = tf.reshape(
+                tf.transpose( tensordot, perm = [0,2,1,3]),
+                [dim**2,dim**2]
+                )
+    return reshaped
+
+@tf.function
+def tf_spost(A):
+    """
+    superoperator on the right of matrix A
+    """
+    Id = Id_like(A)
+    dim = tf.shape(A)[0]
+    A = tf.linalg.adjoint(A)
+    tensordot = tf.tensordot(Id, A, axes=0)
+    reshaped = tf.reshape(
+                tf.transpose( tensordot, perm = [0,2,1,3]),
+                [dim**2,dim**2]
+                )
+    return reshaped
+
+@tf.function
+# TODO needs fixing
+def tf_dmdm_fid(rho,sigma):
+    rhosqrt = tf.linalg.sqrtm(rho)
+    return tf.linalg.trace(
+                tf.linalg.sqrtm(
+                    tf.matmul(tf.matmul(rhosqrt,sigma),rhosqrt)
+                    )
+                )
+
+@tf.function
+def tf_dmket_fid(rho,psi):
+    return tf.sqrt(
+            tf.matmul(tf.matmul(tf.linalg.adjoint(psi),rho),psi)
+            )
+
+def tf_interp_sin(y_lo, x_lo, x_hi):
+    x_left = x_lo[0]
+    dx = x_lo[1]-x_lo[0]
+    n = int(x_hi.shape[0] / x_lo.shape[0])
+    y_hi = []
+    for xi in range(1, x_lo.shape[0]):
+        x_right = x_lo[xi]
+        x = tf.linspace(x_left, x_right, n)
+        y = (y_lo[xi-1] + (y_lo[xi] - y_lo[xi-1]) * tf.sin(np.pi/dx*x))
+        y_hi = tf.concat(y_hi, y)
+        x_left = x_right
+    return y_hi
