@@ -157,7 +157,7 @@ class Model:
                         omega_q = vals['freq']
                         delta = vals['delta']
                         freq_diff = np.array(
-                         [(n+1)*omega_q-0.5*n*(n+1)*delta for n in range(dim)]
+                         [(omega_q - n*delta for n in range(dim)]
                          )
                         def T1_temp(T1_temp, L2):
                             gamma = tf.cast(
