@@ -134,6 +134,7 @@ class Model:
         self.cops_params_desc = []
         self.cops_params_fcts = []
 
+
         for element in self.chip_elements:
             vals = element.values
 
