@@ -69,7 +69,7 @@ class Simulator():
         for du in dUs:
             psi_t = np.matmul(du.numpy(),psi_t)
             pops = self.populations(psi_t, dv = lindbladian)
-            pop_t = np.append(pop_t, pops ,axis=1)
+            pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1]-ts[0]
@@ -87,4 +87,4 @@ class Simulator():
             indeces = [n*dim+n for n in range(dim)]
             return np.abs(state[indeces])
         else:
-            np.abs(state)**2
+            return np.abs(state)**2

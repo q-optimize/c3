@@ -192,10 +192,6 @@ def Id_like(A):
     identity of the same size as A
     """
     shape = tf.shape(A)
-    # if shape[0] == shape[1]:
-    #     dim = shape[0]
-    # else:
-    #     print('ERRORRRRR')
     dim = shape[0]
     return tf.eye(dim, dtype = tf.complex128)
 
@@ -220,8 +216,7 @@ def tf_spost(A):
     """
     Id = Id_like(A)
     dim = tf.shape(A)[0]
-    A = tf.linalg.adjoint(A)
-    tensordot = tf.tensordot(Id, A, axes=0)
+    tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
     reshaped = tf.reshape(
                 tf.transpose( tensordot, perm = [0,2,1,3]),
                 [dim**2,dim**2]
