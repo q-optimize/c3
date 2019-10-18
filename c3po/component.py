@@ -5,23 +5,15 @@ class Component:
 
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
             ):
 
-        # make a random UUID which uniquely identifies/represents the component
-        # https://docs.python.org/2/library/uuid.html#uuid.uuid4
-        self.__uuid = uuid.uuid4()
         self.name = name
         self.desc = desc
         self.comment = comment
 
-    def get_uuid(self):
-        return self.__uuid
-
-    def set_uuid(self, uuid):
-        self.__uuid = uuid
 
 class ControlComponent(Component):
     """Represents a pulse.
@@ -40,12 +32,12 @@ class ControlComponent(Component):
 
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
-            params = {},
-            bounds = {},
-            groups = [],
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
+            params : dict = {},
+            bounds : dict = {},
+            groups : list = [],
             shape = None
             ):
         super().__init__(
@@ -58,20 +50,26 @@ class ControlComponent(Component):
         self.groups = groups
         self.shape = shape
 
-        # make a random UUID which uniquely identifies/represents the component
-        # https://docs.python.org/2/library/uuid.html#uuid.uuid4
-        self.__uuid = uuid.uuid4()
 
     def get_shape_values(self, ts):
         return self.shape(ts, self.params)
 
+
+class Envelope(ControlComponent):
+    pass
+
+
+class Carrier(ControlComponent):
+    pass
+
+
 class PhysicalComponent(Component):
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
-            hilbert_dim = None
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
+            hilbert_dim : int = 0,
             ):
         super().__init__(
             name = name,
@@ -88,9 +86,9 @@ class PhysicalComponent(Component):
 class Qubit(PhysicalComponent):
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
             hilbert_dim = None,
             freq = None,
             delta = None,
@@ -114,9 +112,9 @@ class Qubit(PhysicalComponent):
 class Resonator(PhysicalComponent):
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
             hilbert_dim = None,
             freq = None
             ):
@@ -131,9 +129,9 @@ class Resonator(PhysicalComponent):
 class Coupling(PhysicalComponent):
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
             hilbert_dim = None,
             connected = None,
             strength = None
@@ -150,9 +148,9 @@ class Coupling(PhysicalComponent):
 class Drive(PhysicalComponent):
     def __init__(
             self,
-            name = " ",
-            desc = " ",
-            comment = " ",
+            name : string = " ",
+            desc : string = " ",
+            comment : string = " ",
             Hamiltonian = None,
             hilbert_dim = None,
             connected = None,

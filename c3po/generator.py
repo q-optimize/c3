@@ -191,9 +191,6 @@ class AWG(Device):
             Inphase = []
             Quadrature = []
 
-            env_group = self.resource_groups["env"]
-            env_group_id = env_group.get_uuid()
-
             amp_tot_sq = 0.0
             I_components = []
             Q_components = []
