@@ -153,6 +153,7 @@ class Drive(PhysicalComponent):
             name = " ",
             desc = " ",
             comment = " ",
+            Hamiltonian = None,
             hilbert_dim = None,
             connected = None,
             strength = None
@@ -164,3 +165,4 @@ class Drive(PhysicalComponent):
             hilbert_dim = hilbert_dim
             )
         self.connected = connected
+        self.Hamiltonian = Hamiltonian

@@ -64,7 +64,7 @@ def int_XX(anhs):
     return tf.matmul(a_dag + a, b_dag + b)
 
 
-def drive(anhs):
+def x_drive(anhs):
     """
     Semiclassical drive. All Hamiltonian components are designed to be
     multiplied with exactly one model parameter.
@@ -80,6 +80,5 @@ def drive(anhs):
         Number operator.
 
     """
-    a = anhs[0]
-    a_dag = tf.linalg.adjoint(a)
-    return a_dag + a
+    anhs_dag = tf.linalg.adjoint(anhs)
+    return anhs_dag + anhs

@@ -60,6 +60,7 @@ class Simulator():
         self.dUs = dUs
         self.ts = ts
         U = tf_matmul_list(dUs)
+        self.U = U
         return U
 
     def plot_dynamics(self, psi_init, lindbladian = False):
@@ -87,4 +88,4 @@ class Simulator():
             indeces = [n*dim+n for n in range(dim)]
             return np.abs(state[indeces])
         else:
-            np.abs(state)**2
+            return np.abs(state)**2

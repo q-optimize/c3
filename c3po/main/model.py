@@ -47,7 +47,7 @@ class Model:
     def __init__(
             self,
             chip_elements,
-            mV_to_Amp,
+            mV_to_Hz,
             ):
 
         self.chip_elements = chip_elements
@@ -84,7 +84,6 @@ class Model:
         self.params_desc = []
         self.drift_Hs = []
         for element in chip_elements:
-
             if isinstance(element, Qubit) or isinstance(element, Resonator):
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
@@ -112,13 +111,13 @@ class Model:
 
             elif isinstance(element, Drive):
                 el_indxs = []
-
+                h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
                 for connected_element in element.connected:
-                    el_indxs.append(self.names.index(connected_element))
+                    a = self.ann_opers[self.names.index(connected_element)]
+                    h += element.Hamiltonian(a)
 
-                ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
-                self.control_Hs.append(drive(ann_opers))
-                self.params.append(mV_to_Amp)
+                self.control_Hs.append(h)
+                self.params.append(mV_to_Hz)
                 self.params_desc.append([element.name, 'response'])
 
         self.n_params = len(self.params)

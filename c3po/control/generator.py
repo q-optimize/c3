@@ -44,9 +44,15 @@ class Device:
     def create_ts(self, res_key):
         if self.t_start != None and self.t_end != None and self.slice_num != None:
             dt = 1/self.resolutions[res_key]
-            t_start = tf.constant(self.t_start + dt/2, dtype=tf.float64)
-            t_end = tf.constant(self.t_end - dt/2, dtype=tf.float64)
-            self.ts = tf.linspace(t_start, t_end, self.slice_num)
+            if res_key == 'awg':
+                offset = 0
+                num = self.slice_num
+            else:
+                offset = dt/2
+                num = self.slice_num + 1
+            t_start = tf.constant(self.t_start + offset, dtype=tf.float64)
+            t_end = tf.constant(self.t_end - offset, dtype=tf.float64)
+            self.ts = tf.linspace(t_start, t_end, num)
         else:
             self.ts = None
 
@@ -54,8 +60,8 @@ class Device:
         """ Plotting control functions """
 
         ts = self.ts
-        I = self.Inphase
-        Q = self.Quadrature
+        I = self.get_I()
+        Q = self.get_Q()
 
         fig = self.fig
         ax = self.axs
@@ -160,6 +166,10 @@ class AWG(Device):
         self.amp_tot_sq = None
 
 
+    def create_DC():
+        pass
+
+
     def create_IQ(self, res_key):
         """
         Construct the in-phase (I) and quadrature (Q) components of the
@@ -196,6 +206,7 @@ class AWG(Device):
                 Quadrature = control.comps[1].params['Quadrature']
                 self.Inphase = Inphase
                 self.Quadrature = Quadrature
+
             elif  (self.options == 'drag'):
                 for comp in control.comps:
                     if env_group_id in comp.groups:
@@ -371,19 +382,6 @@ class Generator:
                 mixer.resource_groups = self.resource_groups
                 mixer.calc_slice_num("sim")
                 mixer.create_ts("sim")
-
-                # I = tfp.math.interp_regular_1d_grid(
-                #     mixer.ts,
-                #     x_ref_min = awg.ts[0],
-                #     x_ref_max = awg.ts[-1],
-                #     y_ref = awg.get_I()
-                #     )
-                # Q =  tfp.math.interp_regular_1d_grid(
-                #     mixer.ts,
-                #     x_ref_min = awg.ts[0],
-                #     x_ref_max = awg.ts[-1],
-                #     y_ref = awg.get_Q()
-                #     )
 
                 I = tfp.math.interp_regular_1d_grid(
                     mixer.ts,
