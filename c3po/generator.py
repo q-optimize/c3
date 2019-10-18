@@ -1,10 +1,9 @@
 import uuid
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 
-from c3po.control.envelopes import flattop as flattop
+from c3po.envelopes import flattop as flattop
 
 class Device:
     """
@@ -382,18 +381,26 @@ class Generator:
                 mixer.calc_slice_num("sim")
                 mixer.create_ts("sim")
 
-                I = tfp.math.interp_regular_1d_grid(
-                    mixer.ts,
-                    x_ref_min = awg.ts[0],
-                    x_ref_max = awg.ts[-1],
-                    y_ref = awg.get_I()
-                    )
-                Q =  tfp.math.interp_regular_1d_grid(
-                    mixer.ts,
-                    x_ref_min = awg.ts[0],
-                    x_ref_max = awg.ts[-1],
-                    y_ref = awg.get_Q()
-                    )
+                # I = tfp.math.interp_regular_1d_grid(
+                #     mixer.ts,
+                #     x_ref_min = awg.ts[0],
+                #     x_ref_max = awg.ts[-1],
+                #     y_ref = awg.get_I()
+                #     )
+                # Q =  tfp.math.interp_regular_1d_grid(
+                #     mixer.ts,
+                #     x_ref_min = awg.ts[0],
+                #     x_ref_max = awg.ts[-1],
+                #     y_ref = awg.get_Q()
+                #     )
+                I = tf.image.resize_images(
+                    awg.get_I,
+                    mixer.ts.shape
+                )
+                Q = tf.image.resize_images(
+                    awg.get_Q,
+                    mixer.ts.shape
+                )
 
                 mixer.Inphase = I
                 mixer.Quadrature = Q

@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-from c3po.utils.tf_utils import tf_propagation as tf_propagation
-from c3po.utils.tf_utils import tf_propagation_lind as tf_propagation_lind
-from c3po.utils.tf_utils import tf_matmul_list as tf_matmul_list
+from c3po.tf_utils import tf_propagation as tf_propagation
+from c3po.tf_utils import tf_propagation_lind as tf_propagation_lind
+from c3po.tf_utils import tf_matmul_list as tf_matmul_list
 
 class Simulator():
     """Short summary.

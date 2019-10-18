@@ -5,7 +5,7 @@ import random
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.utils.tf_utils import tf_log10 as log10
+from c3po.tf_utils import tf_log10 as log10
 
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes

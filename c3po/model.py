@@ -1,8 +1,8 @@
 import numpy as np
 import qutip as qt
 import tensorflow as tf
-from c3po.utils.hamiltonians import *
-from c3po.cobj.component import *
+from c3po.hamiltonians import *
+from c3po.component import *
 
 class Model:
     """
