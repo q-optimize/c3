@@ -70,7 +70,7 @@ class Simulator():
         for du in dUs:
             psi_t = np.matmul(du.numpy(),psi_t)
             pops = self.populations(psi_t, dv = lindbladian)
-            pop_t = np.append(pop_t, pops ,axis=1)
+            pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1]-ts[0]

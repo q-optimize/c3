@@ -133,6 +133,7 @@ class Model:
         self.cops_params_desc = []
         self.cops_params_fcts = []
 
+
         for element in self.chip_elements:
             vals = element.values
 
@@ -140,44 +141,44 @@ class Model:
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
                 L1 = ann_oper
-                def T1(T1, L1):
-                    gamma = tf.cast((1/T1)**0.5, tf.complex128)
-                    return gamma * L1
 
-                self.collapse_ops.append(L1)
-                self.cops_params.append(vals['T1'])
-                self.cops_params_desc.append([element.name, 'T1'])
-                self.cops_params_fcts.append(T1)
+                if 'temp' not in vals:
+                    def T1(T1, L1):
+                        gamma = tf.cast((0.5/T1)**0.5, tf.complex128)
+                        return gamma * L1
 
-                if 'temp' in vals:
-                    if vals['temp'] != 0:
-                        L2 = ann_oper.T.conj()
-                        dim = element.hilbert_dim
-                        omega_q = vals['freq']
-                        delta = vals['delta']
-                        freq_diff = np.array(
-                         [(n+1)*omega_q-0.5*n*(n+1)*delta for n in range(dim)]
-                         )
-                        def T1_temp(T1_temp, L2):
-                            gamma = tf.cast(
-                                    (1/T1_temp[0])**0.5,
-                                    tf.complex128)
-                            beta = tf.cast(
-                                    1 / (T1_temp[1] * boltzmann),
-                                    tf.complex128)
-                            det_bal = tf.exp(-hbar*freq_diff*beta)
-                            det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                            return gamma * L2 @ det_bal_mat
+                    self.collapse_ops.append(L1)
+                    self.cops_params.append(vals['T1'])
+                    self.cops_params_desc.append([element.name, 'T1'])
+                    self.cops_params_fcts.append(T1)
 
-                        self.collapse_ops.append(L2)
-                        self.cops_params.append([vals['T1'],vals['temp']])
-                        self.cops_params_desc.append([element.name, 'T1 & temp'])
-                        self.cops_params_fcts.append(T1_temp)
+                else:
+                    L2 = ann_oper.T.conj()
+                    dim = element.hilbert_dim
+                    omega_q = vals['freq']
+                    if 'delta' in vals: delta = vals['delta']
+                    else: delta = 0
+                    freq_diff = np.array(
+                     [(omega_q + n*delta) for n in range(dim)]
+                     )
+                    def T1_temp(T1_temp, L2):
+                        gamma = tf.cast((0.5/T1_temp[0])**0.5, tf.complex128)
+                        beta = tf.cast(
+                                1 / (T1_temp[1] * boltzmann),
+                                tf.complex128)
+                        det_bal = tf.exp(-hbar*freq_diff*beta)
+                        det_bal_mat = tf.linalg.tensor_diag(det_bal)
+                        return gamma * (L1 + L2 @ det_bal_mat)
+
+                    self.collapse_ops.append(L2)
+                    self.cops_params.append([vals['T1'],vals['temp']])
+                    self.cops_params_desc.append([element.name, 'T1 & temp'])
+                    self.cops_params_fcts.append(T1_temp)
 
             if 'T2star' in vals:
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
-                L_dep = 2*ann_oper.T.conj()*ann_oper
+                L_dep = 2 * ann_oper.T.conj() @ ann_oper
                 def T2star(T2star, L_dep):
                     gamma = tf.cast((0.5/T2star)**0.5, tf.complex128)
                     return gamma * L_dep

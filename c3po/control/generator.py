@@ -225,7 +225,6 @@ class AWG(Device):
 
                         denv = t.gradient(env, ts)
                         phase = xy_angle - freq_offset * ts
-
                         I_components.append(
                             amp * (
                                 env * tf.cos(phase) +
@@ -234,7 +233,7 @@ class AWG(Device):
                         )
                         Q_components.append(
                             amp * (
-                                env * tf.sin(phase) +
+                                env * tf.sin(phase) -
                                 denv/detuning * tf.cos(phase)
                             )
                         )
