@@ -67,20 +67,16 @@ pwc_params = {
     'Inphase': np.ones(slice_num)*0.5*amp_limit,
     'Quadrature': np.ones(slice_num)*0.5*amp_limit
 }
-
 pwc_bounds = {
     'Inphase': [-amp_limit, amp_limit]*slice_num,
     'Quadrature': [-amp_limit, amp_limit]*slice_num
     }
-
 carrier_parameters = {
     'freq': 5.95e9 * 2 * np.pi
 }
-
 carrier_bounds = {
     'freq': [5e9 * 2 * np.pi, 7e9 * 2 * np.pi]
 }
-
 env1 = component.Envelope(
     name="pwc",
     desc="PWC comp 1 of signal 1",
@@ -88,7 +84,6 @@ env1 = component.Envelope(
     bounds=pwc_bounds,
     shape=envelopes.pwc
 )
-
 carr = component.Carrier(
     name="carrier",
     desc="Frequency of the local oscillator",
@@ -96,12 +91,12 @@ carr = component.Carrier(
     bounds=carrier_bounds
 )
 
-# TODO clean control and controlset
-ctrl = control.Control()
-ctrl.name = "line1"
-ctrl.t_start = 0.0
-ctrl.t_end = t_final
-ctrl.comps = [carr, env1]
+ctrl = control.Control(
+    name="line1",
+    t_start=0.0,
+    t_end=t_final,
+    comps=[carr, env1]
+)
 ctrls = control.ControlSet([ctrl])
 
 # Simulation class and fidelity function
