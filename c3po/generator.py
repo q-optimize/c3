@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from c3po.component import C3obj, Envelope, Carrier
-from c3po.controls import Control, ControlSet
+from c3po.control import Control, ControlSet
 
 
 class Device(C3obj):
@@ -15,9 +15,7 @@ class Device(C3obj):
             name: str = " ",
             desc: str = " ",
             comment: str = " ",
-            resolution: np.float64 = 0.0,
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
+            resolution: np.float64 = 0.0
             ):
         super().__init__(
             name=name,
@@ -25,8 +23,6 @@ class Device(C3obj):
             comment=comment
             )
         self.resolution = resolution
-        self.t_start = t_start
-        self.t_end = t_end
 
     def prepare_plot(self):
         plt.rcParams['figure.dpi'] = 100
@@ -35,13 +31,19 @@ class Device(C3obj):
         self.axs = axs
         # return self.fig, self.axs
 
-    def calc_slice_num(self):
+    def calc_slice_num(
+            self,
+            t_start: np.float64,
+            t_end: np.float64
+            ):
         res = self.resolution
-        self.slice_num = int(np.abs(self.t_start - self.t_end) * res)
+        self.slice_num = int(np.abs(t_start - t_end) * res)
         # return self.slice_num
 
     def create_ts(
             self,
+            t_start: np.float64,
+            t_end: np.float64,
             centered: bool = True
             ):
         if self.slice_num is None:
@@ -53,9 +55,10 @@ class Device(C3obj):
         else:
             offset = 0
             num = self.slice_num + 1
-        t_start = tf.constant(self.t_start + offset, dtype=tf.float64)
-        t_end = tf.constant(self.t_end - offset, dtype=tf.float64)
-        self.ts = tf.linspace(t_start, t_end, num)
+        t_start = tf.constant(t_start + offset, dtype=tf.float64)
+        t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        ts = tf.linspace(t_start, t_end, num)
+        return ts
 
 
 class Mixer(Device):
@@ -67,34 +70,25 @@ class Mixer(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            resolution=resolution,
-            t_start=t_start,
-            t_end=t_end
+            resolution=resolution
             )
+        self.mixed_signal = None
 
-        self.output = []
-
-
-    def combine(self, AWG_signal, LO_signal):
+    def combine(self, lo_signal, awg_signal):
         """Combine signal from AWG and LO."""
-        self.calc_slice_num()
-        self.create_ts()
-
-        ts = self.ts
-
-        omega_lo = LO_signal["freq"]
-        inphase = AWG_signal["inphase"]
-        quadrature = AWG_signal["quadrature"]
-        self.output = tf.zeros_like(ts)
-        self.output += (inphase * tf.cos(omega_lo * ts)
-                        + quadrature * tf.sin(omega_lo * ts))
+        ts = lo_signal["ts"]
+        omega_lo = lo_signal["freq"]
+        inphase = tf.image.resize_images(awg_signal["inphase"], ts.shape)
+        quadrature = tf.image.resize_images(awg_signal["quadrature"], ts.shape)
+        self.mixed_signal = tf.zeros_like(ts)
+        self.mixed_signal += (inphase * tf.cos(omega_lo * ts)
+                              + quadrature * tf.sin(omega_lo * ts))
+        return self.mixed_signal
 
 
 class LO(Device):
@@ -105,25 +99,25 @@ class LO(Device):
             name: str = " ",
             desc: str = " ",
             comment: str = " ",
-            resolution: np.float64 = 0.0,
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
+            resolution: np.float64 = 0.0
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            resolution=resolution,
-            t_start=t_start,
-            t_end=t_end
+            resolution=resolution
             )
 
-        self.LO_signal = {}
+        self.lo_signal = {}
 
-    def signal(self, controls: Control):
-        for comp in controls.comps:
+    def create_signal(self, control: Control):
+        # TODO check somewhere that there is only 1 carrier per control
+        ts = self.create_ts(control.t_start, control.t_end)
+        for comp in control.comps:
             if isinstance(comp, Carrier):
-                self.LO_signal["freq"] = comp.params["freq"]
+                self.lo_signal["freq"] = comp.params["freq"]
+                self.lo_signal["ts"] = ts
+        return self.lo_signal
 
 
 class AWG(Device):
@@ -135,27 +129,22 @@ class AWG(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            resolution=resolution,
-            t_start=t_start,
-            t_end=t_end
+            resolution=resolution
             )
 
         self.options = ""
-
-        self.inphase = []
-        self.quadrature = []
+        # TODO move the options pwc & drag to the control object
+        self.awg_signal = {}
         self.amp_tot_sq = None
 
 # TODO create DC function
 
-    def create_IQ(self, controls: Control):
+    def create_IQ(self, control: Control):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
 
@@ -168,28 +157,21 @@ class AWG(Device):
         with tf.name_scope("I_Q_generation"):
 
             self.calc_slice_num()
-            self.create_ts(centered=False)
-            ts = self.ts
-
-            inphase = []
-            quadrature = []
+            ts = self.create_ts(control.t_start, control.t_end)
 
             amp_tot_sq = 0.0
             inphase_comps = []
             quadrature_comps = []
 
-
             if (self.options == 'pwc'):
-                for comp in controls.comps:
+                for comp in control.comps:
                     if isinstance(comp, Envelope):
-                        self.amp_tot = 1
+                        norm = 1
                         inphase = comp.params['inphase']
                         quadrature = comp.params['quadrature']
-                        self.inphase = inphase
-                        self.quadrature = quadrature
 
             elif (self.options == 'drag'):
-                for comp in controls.comps:
+                for comp in control.comps:
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp']
@@ -221,12 +203,8 @@ class AWG(Device):
                 inphase = tf.add_n(inphase_comps, name="Inhpase")/norm
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
 
-                self.amp_tot = norm
-                self.inphase = inphase
-                self.quadrature = quadrature
-
             else:
-                for comp in controls.comps:
+                for comp in control.comps:
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp']
@@ -248,19 +226,20 @@ class AWG(Device):
                 inphase = tf.add_n(inphase_comps, name="Inhpase")/norm
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
 
-                self.amp_tot = norm
-                self.inphase = inphase
-                self.quadrature = quadrature
+        self.amp_tot = norm
+        self.awg_signal['inphase'] = inphase
+        self.awg_signal['quadrature'] = quadrature
+        return self.awg_signal
 
     def get_I(self):
-        return self.amp_tot * self.inphase
+        return self.amp_tot * self.awg_signal['inphase']
 
     def get_Q(self):
-        return self.amp_tot * self.quadrature
+        return self.amp_tot * self.awg_signal['quadrature']
 
-    def plot_IQ_components(self):
+    def plot_IQ_components(self, control: Control):
         """Plot control functions."""
-        ts = self.ts
+        ts = self.create_ts(control.t_start, control.t_end)
         inphase = self.get_I()
         quadrature = self.get_Q()
 
@@ -286,122 +265,46 @@ class Generator:
 
     def __init__(
             self,
-            devices: dict = {},
-            resolutions: dict = {}
+            devices: dict
             ):
+        # TODO consider making the dict into a list of devices
+        # TODO check that you get at least 1 set of LO, AWG and mixer.
         self.devices = devices
-        self.output = None
+        # TODO add line knowledge (mapping of which devices are connected)
 
     def generate_signals(self, controlset: ControlSet):
+        # TODO deal with multiple controls within controlset
         with tf.name_scope('Signal_generation'):
-            output = {}
+            gen_signal = {}
             awg = self.devices["awg"]
             mixer = self.devices["mixer"]
+            lo = self.devices["lo"]
 
-            for controls in controlset:
+            for control in controlset:
+                gen_signal[control.name] = {}
+                lo_signal = lo.create_signal(control)
+                awg_signal = awg.create_IQ(control)
+                mixed_signal = mixer.combine(lo_signal, awg_signal)
+                gen_signal[control.name]["ts"] = lo_signal["ts"]
+                gen_signal[control.name]["values"] = mixed_signal
 
-                awg.t_start = ctrl.t_start
-                awg.t_end = ctrl.t_end
-                awg.resolutions = self.resolutions
-                awg.resources = [ctrl]
-                awg.resource_groups = self.resource_groups
-                awg.create_IQ("awg")
+        self.gen_signal = gen_signal
+        return gen_signal
 
-                #awg.plot_IQ_components("awg")
-                #awg.plot_fft_IQ_components("awg")
-
-                mixer.t_start = ctrl.t_start
-                mixer.t_end = ctrl.t_end
-                mixer.resolutions = self.resolutions
-                mixer.resources = [ctrl]
-                mixer.resource_groups = self.resource_groups
-                mixer.calc_slice_num("sim")
-                mixer.create_ts("sim")
-
-                # I = tfp.math.interp_regular_1d_grid(
-                #     mixer.ts,
-                #     x_ref_min = awg.ts[0],
-                #     x_ref_max = awg.ts[-1],
-                #     y_ref = awg.get_I()
-                #     )
-                # Q =  tfp.math.interp_regular_1d_grid(
-                #     mixer.ts,
-                #     x_ref_min = awg.ts[0],
-                #     x_ref_max = awg.ts[-1],
-                #     y_ref = awg.get_Q()
-                #     )
-                I = tf.image.resize_images(
-                    awg.get_I,
-                    mixer.ts.shape
-                )
-                Q = tf.image.resize_images(
-                    awg.get_Q,
-                    mixer.ts.shape
-                )
-
-                mixer.inphase = I
-                mixer.quadrature = Q
-                mixer.combine("sim")
-
-                output[(ctrl.name,ctrl.get_uuid())] = {"ts" : mixer.ts}
-                output[(ctrl.name,ctrl.get_uuid())].update(
-                    {"signal" : mixer.output}
-                    )
-
-                self.output = output
-
-        return output
-
-
-
-    def plot_signals(self, resources = []):
-
-        if resources != []:
-            self.generate_signals(resources)
-
-        for entry in self.output:
-            ctrl_name = entry[0]
-            control = self.output[entry]
+    def plot_signals(self, controlset: ControlSet):
+        for control in ControlSet:
+            signal = self.gen_signal[control.name]
 
             """ Plotting control functions """
             plt.rcParams['figure.dpi'] = 100
 
-
-            ts = control["ts"]
-            signal = control["signal"]
+            ts = signal["ts"]
+            values = signal["values"]
 
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts.numpy(), signal.numpy())
+            ax.plot(ts.numpy(), values.numpy())
             ax.set_xlabel('Time [ns]')
-            plt.title(ctrl_name)
+            plt.title(control.name)
             plt.grid()
-            plt.show(block=False)
-
-
-    def plot_fft_signals(self, resources = []):
-
-        if resources != []:
-            self.generate_signals(resources)
-
-        print("WARNING: still have to adjust the x-axis")
-
-        for entry in self.output:
-            ctrl_name = entry[0]
-            control = self.output[entry]
-
-
-            """ Plotting control functions """
-            plt.rcParams['figure.dpi'] = 100
-
-            ts = control["ts"]
-            signal = control["signal"]
-
-
-            fft_signal = np.fft.fft(signal)
-            fft_signal = np.fft.fftshift(fft_signal.real / max(fft_signal.real))
-
-            plt.plot(ts, fft_signal)
-            plt.title(ctrl_name + " (fft)")
-
             plt.show(block=False)

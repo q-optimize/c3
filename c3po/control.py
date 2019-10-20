@@ -1,12 +1,15 @@
-import uuid
 import numpy as np
+from c3po.component import C3obj
 
 class GateSet:
+    """Contains all operation that can be performed by the experiment."""
+
 
     def __init__(self, controlset_list):
         self.controlsets = controlset_list
 
 class ControlSet:
+    """Contains all control drives (i.e. to all lines) for a given operation."""
 
     def __init__(self, control_list):
         self.controls = control_list

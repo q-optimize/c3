@@ -51,24 +51,16 @@ chip_elements = [q1, drive]
 simple_model = Mdl(chip_elements, mV_to_Amp)
 
 # Devices and generator
-# TODO clean device classes
-awg = generator.AWG()
+lo = generator.LO(resolution=sim_res)
+awg = generator.AWG(resolution=awg_res)
 mixer = generator.Mixer()
-
 devices = {
+    "lo": lo,
     "awg": awg,
     "mixer": mixer
 }
-
-resolutions = {
-    "awg": awg_res,
-    "sim": sim_res
-}
-
-# TODO clean and automate generator class
 gen = generator.Generator()
 gen.devices = devices
-gen.resolutions = resolutions
 
 # Pulses and Control
 pwc_params = {
