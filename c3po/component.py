@@ -4,9 +4,9 @@ import types
 import numpy as np
 
 
-class Component:
+class C3obj:
     """
-    Represents an abstract component object.
+    Represents an abstract object.
 
     Parameters
     ----------
@@ -30,7 +30,7 @@ class Component:
         self.comment = comment
 
 
-class ControlComponent(Component):
+class ControlComponent(C3obj):
     """
     Represents the components making up a pulse.
 
@@ -119,7 +119,7 @@ class Carrier(ControlComponent):
             )
 
 
-class PhysicalComponent(Component):
+class PhysicalComponent(C3obj):
     """
     Represents the components making up a chip.
 
@@ -227,7 +227,7 @@ class Resonator(PhysicalComponent):
         self.values['freq'] = freq
 
 
-class LineComponent(Component):
+class LineComponent(C3obj):
     """
     Represents the components connecting chip elements and drives.
 

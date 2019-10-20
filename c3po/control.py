@@ -108,7 +108,7 @@ class ControlSet:
         #TODO
         return None
 
-class Control:
+class Control(C3obj):
     """
 
     """
@@ -121,7 +121,11 @@ class Control:
             t_end = None,
             comps = []
             ):
-
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment
+            )
 
         # make a random UUID which uniquely identifies/represents the component
         # https://docs.python.org/2/library/uuid.html#uuid.uuid4

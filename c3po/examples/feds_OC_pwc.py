@@ -1,18 +1,17 @@
-from c3po.envelopes import *
-from c3po.tf_utils import *
-from c3po.component import *
-from c3po.control import *
-from c3po.generator import *
-from c3po.hamiltonians import *
+"""General clean OC script."""
+
+import c3po.envelopes as envelopes
+# import c3po.tf_utils as tf_utils
+import c3po.component as component
+import c3po.control as control
+import c3po.generator as generator
+import c3po.hamiltonians as hamiltonians
 from c3po.model import Model as Mdl
 from c3po.optimizer import Optimizer as Opt
 from c3po.simulator import Simulator as Sim
 
-import copy
-import pickle
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
 # System
 qubit_freq = 6e9 * 2 * np.pi
@@ -30,7 +29,7 @@ amp_limit = 300e-3  # 300mV
 sim_res = 5e10  # 50GHz
 
 # Chip and model
-q1 = Qubit(
+q1 = component.Qubit(
     name="Q1",
     desc="Qubit 1",
     comment="The one and only qubit in this chip",
@@ -39,21 +38,22 @@ q1 = Qubit(
     hilbert_dim=qubit_lvls
     )
 
-drive = Drive(
+drive = component.Drive(
     name="D1",
     desc="Drive 1",
     comment="Drive line 1 on qubit 1",
-    connected=[q1.name],
-    hamiltonian=x_drive
+    connected=["Q1"],
+    hamiltonian=hamiltonians.x_drive
     )
 
 chip_elements = [q1, drive]
+# TODO move mv2amp to the generator
 simple_model = Mdl(chip_elements, mV_to_Amp)
 
 # Devices and generator
 # TODO clean device classes
-awg = AWG()
-mixer = Mixer()
+awg = generator.AWG()
+mixer = generator.Mixer()
 
 devices = {
     "awg": awg,
@@ -66,7 +66,7 @@ resolutions = {
 }
 
 # TODO clean and automate generator class
-gen = Generator()
+gen = generator.Generator()
 gen.devices = devices
 gen.resolutions = resolutions
 
@@ -89,15 +89,15 @@ carrier_bounds = {
     'freq': [5e9 * 2 * np.pi, 7e9 * 2 * np.pi]
 }
 
-env1 = Envelope(
+env1 = component.Envelope(
     name="pwc",
     desc="PWC comp 1 of signal 1",
     params=pwc_params,
     bounds=pwc_bounds,
-    shape=pwc
+    shape=envelopes.pwc
 )
 
-carr = Carrier(
+carr = component.Carrier(
     name="carrier",
     desc="Frequency of the local oscillator",
     params=carrier_parameters,
@@ -105,12 +105,12 @@ carr = Carrier(
 )
 
 # TODO clean control and controlset
-ctrl = Control()
+ctrl = control.Control()
 ctrl.name = "line1"
 ctrl.t_start = 0.0
 ctrl.t_end = t_final
 ctrl.comps = [carr, env1]
-ctrls = ControlSet([ctrl])
+ctrls = control.ControlSet([ctrl])
 
 # Simulation class and fidelity function
 # TODO clean simulation class
