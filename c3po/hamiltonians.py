@@ -1,9 +1,11 @@
+"""Library of Hamiltonian functions."""
+
 import tensorflow as tf
+
 
 def resonator(a):
     """
-    Builds a harmonic oscillator from the given annihilator. All Hamiltonian
-    components are designed to be multiplied with exactly one model parameter.
+    Harmonic oscillator hamiltonian given the annihilation operator.
 
     Parameters
     ----------
@@ -22,8 +24,7 @@ def resonator(a):
 
 def duffing(a):
     """
-    Anharmonic part of the duffing oscillator. All Hamiltonian components are
-    designed to be multiplied with exactly one model parameter.
+    Anharmonic part of the duffing oscillator.
 
     Parameters
     ----------
@@ -43,8 +44,7 @@ def duffing(a):
 
 def int_XX(anhs):
     """
-    Dipole type coupling. All Hamiltonian components are designed to be
-    multiplied with exactly one model parameter.
+    Dipole type coupling.
 
     Parameters
     ----------
@@ -66,8 +66,7 @@ def int_XX(anhs):
 
 def x_drive(anhs):
     """
-    Semiclassical drive. All Hamiltonian components are designed to be
-    multiplied with exactly one model parameter.
+    Semiclassical drive.
 
     Parameters
     ----------

@@ -1,12 +1,17 @@
+"""The model class, containing information on the system and its modelling."""
+
 import numpy as np
 import qutip as qt
 import tensorflow as tf
 from c3po.hamiltonians import *
 from c3po.component import *
+from c3po.constants import *
+
 
 class Model:
     """
     What the theorist thinks about from the system.
+
     Class to store information about our system/problem/device. Different
     models can represent the same system.
 
@@ -41,8 +46,8 @@ class Model:
     get_Hamiltonian()
         Returns the Hamiltonian in a QuTip compatible way
     get_time_slices()
-    """
 
+    """
 
     def __init__(
             self,
@@ -50,33 +55,30 @@ class Model:
             mV_to_Hz,
             ):
 
+        # TODO move mV_to_Hz to generator and learn generator values too
+
         self.chip_elements = chip_elements
         self.control_Hs = []
-
 
         # Construct array with dimension of elements (only qubits & resonators)
         self.dims = []
         self.names = []
 
         for element in chip_elements:
-
             if isinstance(element, Qubit) or isinstance(element, Resonator):
                 self.dims.append(element.hilbert_dim)
                 self.names.append(element.name)
 
         # Create anninhilation operators for physical elements
         self.ann_opers = []
-
         for indx in range(len(self.dims)):
             a = qt.destroy(self.dims[indx])
-
             for indy in range(len(self.dims)):
                 qI = qt.qeye(self.dims[indy])
                 if indy < indx:
                     a = qt.tensor(qI, a)
                 if indy > indx:
                     a = qt.tensor(a, qI)
-
             self.ann_opers.append(a.full())
 
         # Create drift Hamiltonian matrices and model parameter vector
@@ -94,8 +96,8 @@ class Model:
 
                 if isinstance(element, Qubit) and element.hilbert_dim > 2:
                     self.drift_Hs.append(duffing(ann_oper))
-                    self.params.append(element.values['delta'])
-                    self.params_desc.append([element.name, 'delta'])
+                    self.params.append(element.values['anhar'])
+                    self.params_desc.append([element.name, 'anhar'])
 
             elif isinstance(element, Coupling):
                 el_indxs = []
@@ -124,74 +126,75 @@ class Model:
         self.params = np.array(self.params)
 
     def initialise_lindbladian(self):
-        boltzmann = 1.380649e-23
-        h = 6.62607015e-34
-        hbar = h / (2*np.pi)
-
+        """Construct Lindbladian (collapse) operators."""
         self.collapse_ops = []
         self.cops_params = []
         self.cops_params_desc = []
         self.cops_params_fcts = []
 
-
         for element in self.chip_elements:
             vals = element.values
 
-            if 'T1' in vals:
+            if 't1' in vals:
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
                 L1 = ann_oper
 
                 if 'temp' not in vals:
-                    def T1(T1, L1):
-                        gamma = tf.cast((0.5/T1)**0.5, tf.complex128)
+                    def t1(t1, L1):
+                        gamma = tf.cast((0.5/t1)**0.5, tf.complex128)
                         return gamma * L1
 
                     self.collapse_ops.append(L1)
-                    self.cops_params.append(vals['T1'])
-                    self.cops_params_desc.append([element.name, 'T1'])
-                    self.cops_params_fcts.append(T1)
+                    self.cops_params.append(vals['t1'])
+                    self.cops_params_desc.append([element.name, 't1'])
+                    self.cops_params_fcts.append(t1)
 
                 else:
                     L2 = ann_oper.T.conj()
                     dim = element.hilbert_dim
                     omega_q = vals['freq']
-                    if 'delta' in vals: delta = vals['delta']
-                    else: delta = 0
+                    if 'anhar' in vals:
+                        anhar = vals['anhar']
+                    else:
+                        anhar = 0
                     freq_diff = np.array(
-                     [(omega_q + n*delta) for n in range(dim)]
+                     [(omega_q + n*anhar) for n in range(dim)]
                      )
-                    def T1_temp(T1_temp, L2):
-                        gamma = tf.cast((0.5/T1_temp[0])**0.5, tf.complex128)
+
+                    def t1_temp(t1_temp, L2):
+                        gamma = tf.cast((0.5/t1_temp[0])**0.5, tf.complex128)
                         beta = tf.cast(
-                                1 / (T1_temp[1] * boltzmann),
+                                1 / (t1_temp[1] * kb),
                                 tf.complex128)
                         det_bal = tf.exp(-hbar*freq_diff*beta)
                         det_bal_mat = tf.linalg.tensor_diag(det_bal)
                         return gamma * (L1 + L2 @ det_bal_mat)
 
                     self.collapse_ops.append(L2)
-                    self.cops_params.append([vals['T1'],vals['temp']])
-                    self.cops_params_desc.append([element.name, 'T1 & temp'])
-                    self.cops_params_fcts.append(T1_temp)
+                    self.cops_params.append([vals['t1'], vals['temp']])
+                    self.cops_params_desc.append([element.name, 't1 & temp'])
+                    self.cops_params_fcts.append(t1_temp)
 
-            if 'T2star' in vals:
+            if 't2star' in vals:
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
                 L_dep = 2 * ann_oper.T.conj() @ ann_oper
-                def T2star(T2star, L_dep):
-                    gamma = tf.cast((0.5/T2star)**0.5, tf.complex128)
+
+                def t2star(t2star, L_dep):
+                    gamma = tf.cast((0.5/t2star)**0.5, tf.complex128)
                     return gamma * L_dep
 
                 self.collapse_ops.append(L_dep)
-                self.cops_params.append(vals['T2star'])
-                self.cops_params_desc.append([element.name, 'T2star'])
-                self.cops_params_fcts.append(T2star)
+                self.cops_params.append(vals['t2star'])
+                self.cops_params_desc.append([element.name, 't2star'])
+                self.cops_params_fcts.append(t2star)
 
         self.cops_n_params = len(self.cops_params)
         self.cops_params = np.array(self.cops_params)
 
     def get_lindbladian(self, cops_params=None):
+        """Return Lindbladian operators and their prefactors."""
         if cops_params is None:
             cops_params = self.cops_params
 
@@ -214,7 +217,7 @@ class Model:
                 element.values['freq'] = new_params[idx]
                 idx += 1
                 if element.hilbert_dim > 2:
-                    element.values['delta'] = new_params[idx]
+                    element.values['anhar'] = new_params[idx]
                     idx += 1
 
             elif isinstance(element, Resonator):
@@ -235,13 +238,14 @@ class Model:
         ci = 0
         for ii in range(self.n_params):
 
-            if self.params_desc[ii][1]=='response':
+            if self.params_desc[ii][1] == 'response':
                 control_Hs.append(
                     tf.cast(params[ii], tf.complex128) * self.control_Hs[ci]
                     )
                 ci += 1
             else:
-                drift_H += tf.cast(params[ii], tf.complex128) * self.drift_Hs[di]
+                drift_H += \
+                    tf.cast(params[ii], tf.complex128) * self.drift_Hs[di]
                 di += 1
 
         return drift_H, control_Hs

@@ -1,6 +1,10 @@
 import uuid
 import numpy as np
 
+class GateSet:
+
+    def __init__(self, controlset_list):
+        self.controlsets = controlset_list
 
 class ControlSet:
 

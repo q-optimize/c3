@@ -1,166 +1,311 @@
-import uuid
+"""Component class and subclasses."""
 
-# this is originally the class "Pulse"
+import types
+import numpy as np
+
+
 class Component:
+    """
+    Represents an abstract component object.
+
+    Parameters
+    ----------
+    name: str
+        short name that will be used as identifier
+    desc: str
+        longer description of the component
+    comment: str
+        additional information about the component
+
+    """
 
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
+            name: str,
+            desc: str = " ",
+            comment: str = " "
             ):
-
         self.name = name
         self.desc = desc
         self.comment = comment
 
 
 class ControlComponent(Component):
-    """Represents a pulse.
+    """
+    Represents the components making up a pulse.
 
     Parameters
     ----------
-    shape : func
-        Function handle to function specifying the exact shape of the pulse
-    parameters : dict
+    parameters: dict
         dictionary of the parameters needed for the shape-function to
         create the desired pulse
-    bounds : dict
+    bounds: dict
         boundaries of the parameters, i.e. technical limits of experimental
         setup or physical boundaries. needed for optimizer
+
     """
 
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            params : dict = {},
-            bounds : dict = {},
-            groups : list = [],
-            shape = None
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment
+            name=name,
+            desc=desc,
+            comment=comment
             )
         self.params = params
         self.bounds = bounds
-        self.groups = groups
-        self.shape = shape
-
-
-    def get_shape_values(self, ts):
-        return self.shape(ts, self.params)
+        # check that the parameters and bounds have the same key
+        if params.keys() != bounds.keys():
+            raise ValueError('params and bounds must have same keys')
 
 
 class Envelope(ControlComponent):
-    pass
+    """
+    Represents the envelopes shaping a pulse.
+
+    Parameters
+    ----------
+    shape: function
+        function evaluating the shape in time
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
+            shape: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            bounds=bounds,
+            )
+        self.shape = shape
+
+    def get_shape_values(self, ts):
+        """Return the value of the shape function at the specified times."""
+        return self.shape(ts, self.params)
 
 
 class Carrier(ControlComponent):
-    pass
+    """Represents the carrier of a pulse."""
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            bounds=bounds,
+            )
 
 
 class PhysicalComponent(Component):
+    """
+    Represents the components making up a chip.
+
+    Parameters
+    ----------
+    hilber_dim: int
+        dimension of the Hilbert space representing this physical component
+
+    """
+
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            hilbert_dim : int = 0,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 0,
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment
+            name=name,
+            desc=desc,
+            comment=comment
             )
         self.hilbert_dim = hilbert_dim
         self.values = {}
 
     def get_values(self):
+        """Return values of the physical component."""
         return self.values
 
 
 class Qubit(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as qubit.
+
+    Parameters
+    ----------
+    freq: np.float64
+        frequency of the qubit
+    anhar: np.float64
+        anharmonicity of the qubit. defined as w01 - w12
+    t1: np.float64
+        t1, the time decay of the qubit due to dissipation
+    t2star: np.float64
+        t2star, the time decay of the qubit due to pure dephasing
+    temp: np.float64
+        temperature of the qubit, used to determine the Boltzmann distribution
+        of energy level populations
+
+    """
+
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            hilbert_dim = None,
-            freq = None,
-            delta = None,
-            T1 = None,
-            T2star = None,
-            temp = None
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 4,
+            freq: np.float64 = 0.0,
+            anhar: np.float64 = 0.0,
+            t1: np.float64 = 0.0,
+            t2star: np.float64 = 0.0,
+            temp: np.float64 = 0.0
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment,
-            hilbert_dim = hilbert_dim
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
             )
         self.values['freq'] = freq
         if hilbert_dim > 2:
-            self.values['delta'] = delta
-        if T1: self.values['T1'] = T1
-        if T2star: self.values['T2star'] = T2star
-        if temp: self.values['temp'] = temp
+            self.values['anhar'] = anhar
+        if t1:
+            self.values['t1'] = t1
+        if t2star:
+            self.values['t2star'] = t2star
+        if temp:
+            self.values['temp'] = temp
+
 
 class Resonator(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as resonator.
+
+    Parameters
+    ----------
+    freq: np.float64
+        frequency of the resonator
+
+    """
+
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            hilbert_dim = None,
-            freq = None
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 4,
+            freq: np.float64 = 0.0
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment,
-            hilbert_dim = hilbert_dim
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
             )
         self.values['freq'] = freq
 
-class Coupling(PhysicalComponent):
+
+class LineComponent(Component):
+    """
+    Represents the components connecting chip elements and drives.
+
+    Parameters
+    ----------
+    connected: list
+        specifies the component that are connected with this line
+
+    """
+
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            hilbert_dim = None,
-            connected = None,
-            strength = None
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            connected: list = [],
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment,
-            hilbert_dim = hilbert_dim
+            name=name,
+            desc=desc,
+            comment=comment
             )
-        self.values['strength'] = strength
         self.connected = connected
 
-class Drive(PhysicalComponent):
+
+class Coupling(LineComponent):
+    """
+    Represents a coupling behaviour between elements.
+
+    Parameters
+    ----------
+    strength: np.float64
+        coupling strenght
+    connected: list
+        all physical components coupled via this specific coupling
+
+    """
+
     def __init__(
             self,
-            name : string = " ",
-            desc : string = " ",
-            comment : string = " ",
-            Hamiltonian = None,
-            hilbert_dim = None,
-            connected = None,
-            strength = None
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            connected: list = [],
+            strength: np.float64 = 0.0
             ):
         super().__init__(
-            name = name,
-            desc = desc,
-            comment = comment,
-            hilbert_dim = hilbert_dim
+            name=name,
+            desc=desc,
+            comment=comment,
+            connected=connected
             )
-        self.connected = connected
-        self.Hamiltonian = Hamiltonian
+        self.values['strength'] = strength
+
+
+class Drive(PhysicalComponent):
+    """
+    Represents a drive line.
+
+    Parameters
+    ----------
+    connected: list
+        all physical components recieving driving signals via this line
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            connected: list = [],
+            hamiltonian: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            connected=connected
+            )
+        self.hamiltonian = hamiltonian
