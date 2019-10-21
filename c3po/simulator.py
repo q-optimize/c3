@@ -26,12 +26,14 @@ class Simulator():
         self.controls = controls
 
     def propagation(self,
-                    pulse_params: dict,
+                    pulse_values: list,
                     opt_map: list,
                     model_params: dict = {},
                     lindbladian: bool = False
                     ):
-        self.controls.update_controls(pulse_params, opt_map)
+        print('pulse_values', pulse_values)
+        print('opt_map', opt_map)
+        self.controls.update_controls(pulse_values, opt_map)
         gen_signal = self.generator.generate_signals(self.controls)
         self.generator.devices['awg'].plot_IQ_components()
         signals = []

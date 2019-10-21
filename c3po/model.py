@@ -78,7 +78,7 @@ class Model:
                     a = np.kron(qI, a)
                 if indy > indx:
                     a = np.kron(a, qI)
-            self.ann_opers.append(a.full())
+            self.ann_opers.append(a)
 
         # Create drift Hamiltonian matrices and model parameter vector
         self.params = []
@@ -100,13 +100,11 @@ class Model:
 
             elif isinstance(element, Coupling):
                 el_indxs = []
-
                 for connected_element in element.connected:
                     el_indxs.append(self.names.index(connected_element))
-
                 ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
 
-                self.drift_Hs.append(int_XX(ann_opers))
+                self.drift_Hs.append(element.hamiltonian(ann_opers))
                 self.params.append(element.values['strength'])
                 self.params_desc.append([element.name, 'strength'])
 
@@ -115,7 +113,7 @@ class Model:
                 h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
                 for connected_element in element.connected:
                     a = self.ann_opers[self.names.index(connected_element)]
-                    h += element.Hamiltonian(a)
+                    h += element.hamiltonian(a)
 
                 self.control_Hs.append(h)
                 self.params.append(mV_to_Hz)

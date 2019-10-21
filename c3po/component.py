@@ -283,7 +283,7 @@ class Coupling(LineComponent):
         self.values['strength'] = strength
 
 
-class Drive(PhysicalComponent):
+class Drive(LineComponent):
     """
     Represents a drive line.
 

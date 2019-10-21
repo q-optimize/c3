@@ -104,7 +104,7 @@ class Optimizer:
                 self.to_bound_phys_scale(x, self.bounds)
             )
             t.watch(current_params)
-            goal = self.eval_func(current_params, self.opt_params)
+            goal = self.eval_func(current_params, self.opt_map)
 
         grad = t.gradient(goal, current_params)
         self.gradients[str(x)] = grad.numpy().flatten()
@@ -133,7 +133,7 @@ class Optimizer:
                 measurements = self.optimizer_logs[learn_from][-batch_size::]
             for m in measurements:
                 this_goal = self.eval_func(
-                    current_params, self.opt_params,  m[0], m[1]
+                    current_params, self.opt_map,  m[0], m[1]
                     )
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
@@ -251,7 +251,7 @@ class Optimizer:
         self.axs = axs
 
         opt_params = controls.get_corresponding_control_parameters(opt_map)
-        self.opt_params = opt_params
+        self.opt_map = opt_map
         self.optim_name = calib_name
         self.goal = []
 
@@ -263,7 +263,6 @@ class Optimizer:
         if len(self.param_shape) > 1:
             bounds = bounds.reshape(bounds.T.shape)
         self.bounds = bounds
-
         self.opt_params = opt_params
         self.eval_func = eval_func
 

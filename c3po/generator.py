@@ -46,8 +46,8 @@ class Device(C3obj):
             t_end: np.float64,
             centered: bool = True
             ):
-        if self.slice_num is None:
-            self.calc_slice_num()
+        if not hasattr(self, 'slice_num'):
+            self.calc_slice_num(t_start, t_end)
         dt = 1/self.resolution
         if centered:
             offset = dt/2
@@ -155,8 +155,6 @@ class AWG(Device):
 
         """
         with tf.name_scope("I_Q_generation"):
-
-            self.calc_slice_num()
             ts = self.create_ts(control.t_start, control.t_end)
 
             amp_tot_sq = 0.0
@@ -280,7 +278,7 @@ class Generator:
             mixer = self.devices["mixer"]
             lo = self.devices["lo"]
 
-            for control in controlset:
+            for control in controlset.controls:
                 gen_signal[control.name] = {}
                 lo_signal = lo.create_signal(control)
                 awg_signal = awg.create_IQ(control)
