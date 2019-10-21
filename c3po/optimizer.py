@@ -172,7 +172,6 @@ class Optimizer:
             samples = es.ask()
             solutions = []
             for sample in samples:
-                sample_rescaled = self.to_bound_phys_scale(sample, bounds)
                 goal = float(self.goal_run(sample))
                 if self.simulate_noise:
                     goal = (1+0.03*np.random.randn()) * goal
@@ -231,11 +230,10 @@ class Optimizer:
         callback=None
          ):
         """
-        Function perfomring the bulk of optimization/calibration
+        Apply a search algorightm to your parameters given a fidelity.
 
         Parameters
         ----------
-
         controls : class ControlSet
             control Class carrying all relevant information
 

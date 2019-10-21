@@ -1,31 +1,25 @@
+"""Various utility functions to speed up tensorflow coding."""
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-import types
 
 
 def tf_log_level_info():
-    """
-    Function for displaying the information about different log levels in
-    tensorflow.
-    """
-
-    info =  (
+    """Display the information about different log levels in tensorflow."""
+    info = (
             "Log levels of tensorflow:\n"
             "\t0 = all messages are logged (default behavior)\n"
             "\t1 = INFO messages are not printed\n"
             "\t2 = INFO and WARNING messages are not printed\n"
             "\t3 = INFO, WARNING, and ERROR messages are not printed\n"
             )
-
     print(info)
 
 
 def get_tf_log_level():
-    """
-    Function for displaying the current tensorflow log level of the system.
-    """
+    """Display the current tensorflow log level of the system."""
     log_lvl = '0'
 
     if 'TF_CPP_MIN_LOG_LEVEL' in os.environ:
@@ -36,7 +30,7 @@ def get_tf_log_level():
 
 def set_tf_log_level(lvl):
     """
-    Function for setting tensorflows system log level.
+    Set tensorflows system log level.
 
     REMARK: it seems like the 'TF_CPP_MIN_LOG_LEVEL' variable expects a string.
             the input of this function seems to work with both string and/or
@@ -46,11 +40,12 @@ def set_tf_log_level(lvl):
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(lvl)
 
 
-
 def tf_list_avail_devices():
     """
-    Function for displaying all available devices for tf_setuptensorflow operations
-    on the local machine.
+    List available devices.
+
+    Function for displaying all available devices for tf_setuptensorflow
+    operations on the local machine.
 
     TODO:   Refine output of this function. But without further knowledge
             about what information is needed, best practise is to output all
@@ -61,14 +56,12 @@ def tf_list_avail_devices():
 
 
 def tf_setup():
-    """
-    Function for setting up the tensorflow environment to be used by c3po
-    """
+    """Set up the tensorflow environment to be used by c3po."""
     config = tf.ConfigProto(
         allow_soft_placement=True
     )
     config.gpu_options.allow_growth = True
-    sess = tf.Session(config = config)
+    sess = tf.Session(config=config)
     return sess
 
 
@@ -88,15 +81,17 @@ def tf_unitary_overlap(A, B):
     -------
     type
         Description of returned object.
+
     """
-    overlap =tf.linalg.trace(
-        tf.matmul(tf.conj(tf.transpose(A)), B)
-        )/ tf.cast(B.shape[1], B.dtype)
+    overlap = tf.linalg.trace(
+        tf.matmul(tf.conj(tf.transpose(A)), B)) / tf.cast(B.shape[1], B.dtype)
     return tf.cast(tf.conj(overlap)*overlap, tf.float64)
+
 
 @tf.function
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
+
 
 @tf.function
 def tf_expm(A):
@@ -104,23 +99,25 @@ def tf_expm(A):
     A_powers = A
     r += A
 
-    for ii in range(2,14):
+    for ii in range(2, 14):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers/np.math.factorial(ii)
     return r
+
 
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
-            h += cflds_t[ii]*hks[ii]
+        h += cflds_t[ii] * hks[ii]
     return tf_expm(-1j*h*dt)
+
 
 # @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
-            h += cflds_t[ii]*hks[ii]
+        h += cflds_t[ii] * hks[ii]
     lind_op = -1j * (tf_spre(h)-tf_spost(h))
     for col_op in col_ops:
         super_clp = tf.matmul(
@@ -170,7 +167,7 @@ def tf_matmul_list(dUs):
 
 def tf_matmul_n(tensor_list):
     l = len(tensor_list)
-    if (l==1):
+    if (l == 1):
         return tensor_list[0]
     else:
         left_half = tensor_list[0:int(l/2)]
@@ -193,51 +190,52 @@ def Id_like(A):
     """
     shape = tf.shape(A)
     dim = shape[0]
-    return tf.eye(dim, dtype = tf.complex128)
+    return tf.eye(dim, dtype=tf.complex128)
+
 
 @tf.function
 def tf_spre(A):
-    """
-    superoperator on the left of matrix A
-    """
+    """Superoperator on the left of matrix A."""
     Id = Id_like(A)
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(A, Id, axes=0)
     reshaped = tf.reshape(
-                tf.transpose( tensordot, perm = [0,2,1,3]),
-                [dim**2,dim**2]
+                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+                [dim**2, dim**2]
                 )
     return reshaped
 
+
 @tf.function
 def tf_spost(A):
-    """
-    superoperator on the right of matrix A
-    """
+    """Superoperator on the right of matrix A."""
     Id = Id_like(A)
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
     reshaped = tf.reshape(
-                tf.transpose( tensordot, perm = [0,2,1,3]),
-                [dim**2,dim**2]
+                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+                [dim**2, dim**2]
                 )
     return reshaped
 
+
 @tf.function
 # TODO needs fixing
-def tf_dmdm_fid(rho,sigma):
+def tf_dmdm_fid(rho, sigma):
     rhosqrt = tf.linalg.sqrtm(rho)
     return tf.linalg.trace(
                 tf.linalg.sqrtm(
-                    tf.matmul(tf.matmul(rhosqrt,sigma),rhosqrt)
+                    tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
                     )
                 )
 
+
 @tf.function
-def tf_dmket_fid(rho,psi):
+def tf_dmket_fid(rho, psi):
     return tf.sqrt(
-            tf.matmul(tf.matmul(tf.linalg.adjoint(psi),rho),psi)
+            tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
             )
+
 
 def tf_interp_sin(y_lo, x_lo, x_hi):
     x_left = x_lo[0]

@@ -1,7 +1,6 @@
 """The model class, containing information on the system and its modelling."""
 
 import numpy as np
-import qutip as qt
 import tensorflow as tf
 from c3po.hamiltonians import *
 from c3po.component import *
@@ -26,8 +25,8 @@ class Model:
 
     Attributes
     ----------
-    H0: :class:'qutip.qobj' Drift Hamiltonian
-    Hcs: :class:'list of qutip.qobj' Control Hamiltonians
+    H0: :class: Drift Hamiltonian
+    Hcs: :class: Control Hamiltonians
     H_tf : empty, constructed when needed
 
     component_parameters :
@@ -44,7 +43,7 @@ class Model:
     construct_Hamiltonian(component_parameters, hilbert_space)
         Construct a model for this system, to be used in numerics.
     get_Hamiltonian()
-        Returns the Hamiltonian in a QuTip compatible way
+        Returns the Hamiltonian
     get_time_slices()
 
     """
@@ -72,13 +71,13 @@ class Model:
         # Create anninhilation operators for physical elements
         self.ann_opers = []
         for indx in range(len(self.dims)):
-            a = qt.destroy(self.dims[indx])
+            a = np.diag(np.sqrt(np.arange(1, self.dims[indx])), k=1)
             for indy in range(len(self.dims)):
-                qI = qt.qeye(self.dims[indy])
+                qI = np.identity(self.dims[indy])
                 if indy < indx:
-                    a = qt.tensor(qI, a)
+                    a = np.kron(qI, a)
                 if indy > indx:
-                    a = qt.tensor(a, qI)
+                    a = np.kron(a, qI)
             self.ann_opers.append(a.full())
 
         # Create drift Hamiltonian matrices and model parameter vector
