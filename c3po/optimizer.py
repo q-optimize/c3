@@ -1,23 +1,20 @@
-import copy
-import uuid
+"""Optimizer object, where the optimal control is done."""
+
 import pickle
 import random
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.tf_utils import tf_log10 as log10
 
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
 
 
 class Optimizer:
+    """Optimizer object, where the optimal control is done."""
 
     def __init__(self):
-
         self.optimizer_logs = {}
-
-
         self.parameter_history = {}
         self.results = {}
         self.gradients = {}
@@ -46,8 +43,9 @@ class Optimizer:
 
     def to_scale_one(self, values, bounds):
         """
-        Returns a vector of scale 1 that plays well with optimizers. If the
-        input is higher dimension, it also linearizes.
+        Return a vector of scale 1 that plays well with optimizers.
+
+        If theinput is higher dimension, it also linearizes.
 
         Parameters
         ----------
@@ -73,11 +71,9 @@ class Optimizer:
 
         return x0
 
-
     def to_bound_phys_scale(self, x0, bounds):
         """
-        Transforms an optimizer vector back to physical scale and original
-        shape.
+        Transform an optimizer vector back to physical scale & original shape.
 
         Parameters
         ----------
@@ -90,20 +86,17 @@ class Optimizer:
         Returns
         -------
         array
-            control parameters that are compatible with bounds in physical units
+            control parameters, compatible with bounds in physical units.
 
         """
         values = []
         for i in range(len(x0)):
             scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
             offset = bounds[i].T[0]
-
             tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
             tmp = scale * tmp + offset
             values.append(tmp)
-
         return np.array(values).reshape(self.param_shape)
-
 
     def goal_run(self, x):
         with tf.GradientTape() as t:
@@ -121,7 +114,6 @@ class Optimizer:
             [current_params, float(goal.numpy())]
         )
         return float(goal.numpy())
-
 
     def goal_run_n(self, x):
         learn_from = self.learn_from
@@ -159,36 +151,29 @@ class Optimizer:
 
         return goal.numpy()
 
-
     def goal_gradient_run(self, x):
         grad = self.gradients[str(x)]
         scale = np.diff(self.bounds)
         return grad*scale.T
 
-
     def cmaes(self, values, bounds, settings={}):
-
         # TODO: rewrite from dict to list input
         if settings:
             if 'CMA_stds' in settings.keys():
                 scale_bounds = []
-
                 for i in range(len(bounds)):
                     scale = np.abs(bounds[i][0] - bounds[i][1])
                     scale_bounds.append(settings['CMA_stds'][i] / scale)
-
                 settings['CMA_stds'] = scale_bounds
 
         x0 = self.to_scale_one(values, bounds)
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
-
         while not es.stop():
             samples = es.ask()
             solutions = []
             for sample in samples:
                 sample_rescaled = self.to_bound_phys_scale(sample, bounds)
                 goal = float(self.goal_run(sample))
-
                 if self.simulate_noise:
                     goal = (1+0.03*np.random.randn()) * goal
 
@@ -208,19 +193,16 @@ class Optimizer:
 
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
 
-        #cmaes res is tuple, tread carefully
-        #res[0] = values_opt
+        # cmaes res is tuple, tread carefully
+        # res[0] = values_opt
 
         self.results[self.optim_name] = res
 
         return values_opt
 
-
     def lbfgs(self, values, bounds, goal, grad, settings={}):
-
         x0 = self.to_scale_one(values, bounds)
-
-        settings['disp']=True
+        settings['disp'] = True
         res = minimize(
                 goal,
                 x0,
@@ -238,7 +220,6 @@ class Optimizer:
 
         return values_opt
 
-
     def optimize_controls(
         self,
         controls,
@@ -247,39 +228,26 @@ class Optimizer:
         calib_name,
         eval_func,
         settings={},
-        callback = None
-        ):
-
-
-        ####
-        #
-        # NOT YET THOROUGHLY TESTED
-        #
-        ####
-
+        callback=None
+         ):
         """
+        Function perfomring the bulk of optimization/calibration
+
         Parameters
         ----------
 
         controls : class ControlSet
             control Class carrying all relevant information
 
-        opt_map : dict
-            Dictionary of parameters that are supposed to be optimized, and
-            corresponding component identifier used to map
-            opt_params = {
-                    'T_up' : [1,2],
-                    'T_down' : [1,2],
-                    'freq' : [3]
-                }
+        opt_map : list
 
         opt : type
             Specification of the optimizer to be used, i.e. cmaes, powell, ...
 
         settings : dict
             Special settings for the desired optimizer
-        """
 
+        """
         fig, axs = plt.subplots(1, 1)
         self.fig = fig
         self.axs = axs
@@ -294,7 +262,7 @@ class Optimizer:
         values = np.array(values)
         self.param_shape = values.shape
         bounds = np.array(bounds)
-        if len(self.param_shape)>1:
+        if len(self.param_shape) > 1:
             bounds = bounds.reshape(bounds.T.shape)
         self.bounds = bounds
 
@@ -316,10 +284,9 @@ class Optimizer:
                 )
 
         opt_params['values'] = values_opt
-        controls.set_corresponding_control_parameters(opt_params)
+        controls.set_corresponding_control_parameters(opt_params, opt_map)
         controls.save_params_to_history(calib_name)
         self.parameter_history[calib_name] = opt_params
-
 
     def learn_model(
         self,
@@ -327,8 +294,8 @@ class Optimizer:
         eval_func,
         settings,
         learn_from,
-        optim_name ='learn_model',
-        ):
+        optim_name='learn_model',
+         ):
 
         fig, axs = plt.subplots(1, 1)
         self.fig = fig
@@ -355,32 +322,6 @@ class Optimizer:
                     settings=settings
                 )
         model.params = np.array(params_opt)
-
-
-    def sweep_bounds(self, U0, gate, n_points=101):
-        spectrum = []
-        range = np.linspace(0, gate.bounds['scale'], n_points)
-        range += gate.bounds['offset']
-        params = gate.parameters['initial']
-        widgets = [
-            'Sweep: ',
-           Percentage(),
-           ' ',
-           Bar(marker='=', left='[',right=']'),
-           ' ',
-           ETA()
-           ]
-        pbar = ProgressBar(widgets=widgets, maxval=n_points)
-        pbar.start()
-        i=0
-        for val in pbar(range):
-            params[gate.opt_idxes] = val
-            spectrum.append(1-self.gate_err(U0, gate, params))
-            pbar.update(i)
-            i+=1
-        pbar.finish()
-        return spectrum, range
-
 
     def plot_progress(self, res=None):
         fig = self.fig

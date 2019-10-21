@@ -67,6 +67,7 @@ class ControlSet:
     def set_corresponding_control_parameters(self, opt_params, opt_map):
         """Set the values in opt_params in the original control class."""
         # TODO make this more efficient: check index of control name beforehand
+        set_bounds = ('bounds' in opt_params)
         for indx in range(len(opt_map)):
             id = opt_map[indx]
             ctrl_name = id[0]
@@ -75,9 +76,10 @@ class ControlSet:
             for control in self.controls:
                 if ctrl_name == control.name:
                     value = opt_params['values'][indx]
-                    bounds = opt_params['bounds'][indx]
                     control.set_parameter_value(param, comp_name, value)
-                    control.set_parameter_bounds(param, comp_name, bounds)
+                    if set_bounds:
+                        bounds = opt_params['bounds'][indx]
+                        control.set_parameter_bounds(param, comp_name, bounds)
 
     def get_values_bounds(self, opt_params):
         values = opt_params['values']

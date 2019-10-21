@@ -30,8 +30,8 @@ def gaussian(t, params):
     sigma = params['sigma']
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-        * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-        - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
+            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
     offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
     return (gauss - offset) / norm
 
@@ -54,8 +54,8 @@ def drag(t, params):
     sigma = tf.cast(t_final / 6, tf.float64)
     drag = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-     * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-     - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
+            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
     offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
     return (drag - offset) ** 2 / norm
 
@@ -65,12 +65,13 @@ def drag_der(t, params):
     t_final = params['t_final']
     sigma = tf.cast(t_final / 6, tf.float64)
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-     * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-     - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
+            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
     offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
-    return - 2 * (tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) - offset) * \
-            (np.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))) * \
-            (t - t_final / 2) / sigma ** 2 / norm
+    der = - 2 * (tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) - offset) \
+        * (np.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))) \
+        * (t - t_final / 2) / sigma ** 2 / norm
+    return der
 
 
 def flattop_WMI(t, params):

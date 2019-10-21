@@ -64,43 +64,60 @@ gen.devices = devices
 
 # Pulses and Control
 pwc_params = {
-    'Inphase': np.ones(slice_num)*0.5*amp_limit,
-    'Quadrature': np.ones(slice_num)*0.5*amp_limit
+    'inphase': np.ones(slice_num)*0.5*amp_limit,
+    'quadrature': np.ones(slice_num)*0.5*amp_limit
 }
 pwc_bounds = {
-    'Inphase': [-amp_limit, amp_limit]*slice_num,
-    'Quadrature': [-amp_limit, amp_limit]*slice_num
+    'inphase': [-amp_limit, amp_limit]*slice_num,
+    'quadrature': [-amp_limit, amp_limit]*slice_num
     }
-carrier_parameters = {
-    'freq': 5.95e9 * 2 * np.pi
-}
-carrier_bounds = {
-    'freq': [5e9 * 2 * np.pi, 7e9 * 2 * np.pi]
-}
-env1 = component.Envelope(
+pwc_env = component.Envelope(
     name="pwc",
     desc="PWC comp 1 of signal 1",
     params=pwc_params,
     bounds=pwc_bounds,
     shape=envelopes.pwc
 )
+# gauss_params = {
+#         'amp': np.pi / mV_to_Amp,
+#         'T': 8e-9,
+#         'xy_angle': 0.0,
+#         'freq_offset': 0e6 * 2 * np.pi
+#     }
+# gauss_bounds = {
+#         'amp': [0.01 * np.pi / mV_to_Amp, 1.5 * np.pi / mV_to_Amp],
+#         'T': [7e-9, 12e-9],
+#         'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
+#         'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
+#     }
+# gauss_env = component.Envelope(
+#     name="gauss",
+#     desc="Gaussian comp 1 of signal 1",
+#     params=gauss_params,
+#     bounds=gauss_bounds,
+#     shape=envelopes.gaussian
+# )
+carrier_parameters = {
+    'freq': 5.95e9 * 2 * np.pi
+}
+carrier_bounds = {
+    'freq': [5e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+}
 carr = component.Carrier(
     name="carrier",
     desc="Frequency of the local oscillator",
     params=carrier_parameters,
     bounds=carrier_bounds
 )
-
 ctrl = control.Control(
     name="line1",
     t_start=0.0,
     t_end=t_final,
-    comps=[carr, env1]
+    comps=[carr, pwc_env]
 )
 ctrls = control.ControlSet([ctrl])
 
 # Simulation class and fidelity function
-# TODO clean simulation class
 sim = Sim(simple_model, gen, ctrls)
 
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -125,11 +142,14 @@ def evaluate_signals(pulse_params, opt_params):
 # Optimizer object
 opt = Opt()
 # TODO modify use of opt_map in optimizer and in control
-opt_map = {
-    'Inphase': [('line1', 'env1')],
-    'Quadrature': [('line1', 'env1')]
-}
-
+opt_map = [
+    ('line1', 'pwc', 'inphase'),
+    ('line1', 'pwc', 'quadrature')
+]
+# opt_map = [
+#     ('line1', 'gauss', 'amp'),
+#     ('line1', 'gauss', 'freq_offset')
+# ]
 opt.optimize_controls(
     controls=ctrls,
     opt_map=opt_map,

@@ -1,4 +1,4 @@
-"""All constants used in out code"""
+"""All constants used in out code."""
 global kb, h, hbar
 
 kb = 1.380649e-23
