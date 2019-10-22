@@ -83,11 +83,26 @@ class Mixer(Device):
         """Combine signal from AWG and LO."""
         ts = lo_signal["ts"]
         omega_lo = lo_signal["freq"]
-        inphase = tf.image.resize_images(awg_signal["inphase"], ts.shape)
-        quadrature = tf.image.resize_images(awg_signal["quadrature"], ts.shape)
-        self.mixed_signal = tf.zeros_like(ts)
-        self.mixed_signal += (inphase * tf.cos(omega_lo * ts)
-                              + quadrature * tf.sin(omega_lo * ts))
+        old_dim = awg_signal["inphase"].shape[0]
+        new_dim = ts.shape[0]
+        inphase = tf.reshape(
+                    tf.image.resize(
+                        tf.reshape(
+                            awg_signal["inphase"],
+                            shape=[1, old_dim, 1]),
+                        size=[1, new_dim],
+                        method='nearest'),
+                    shape=[new_dim]),
+        quadrature = tf.reshape(
+                        tf.image.resize(
+                            tf.reshape(
+                                awg_signal["quadrature"],
+                                shape=[1, old_dim, 1]),
+                            size=[1, new_dim],
+                            method='nearest'),
+                        shape=[new_dim])
+        self.mixed_signal = (inphase * tf.cos(omega_lo * ts)
+                             + quadrature * tf.sin(omega_lo * ts))
         return self.mixed_signal
 
 
@@ -115,8 +130,10 @@ class LO(Device):
         ts = self.create_ts(control.t_start, control.t_end)
         for comp in control.comps:
             if isinstance(comp, Carrier):
-                self.lo_signal["freq"] = comp.params["freq"]
-                self.lo_signal["ts"] = ts
+                self.lo_signal["freq"] = tf.cast(comp.params["freq"],
+                                                 dtype=tf.float64)
+                self.lo_signal["ts"] = tf.cast(ts,
+                                               dtype=tf.float64)
         return self.lo_signal
 
 

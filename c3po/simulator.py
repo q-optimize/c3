@@ -31,11 +31,11 @@ class Simulator():
                     model_params: dict = {},
                     lindbladian: bool = False
                     ):
-        print('pulse_values', pulse_values)
-        print('opt_map', opt_map)
         self.controls.update_controls(pulse_values, opt_map)
         gen_signal = self.generator.generate_signals(self.controls)
-        self.generator.devices['awg'].plot_IQ_components()
+        # TODO fix plotting to work on multiple controls
+        self.generator.devices['awg'].plot_IQ_components(
+                                        self.controls.controls[0])
         signals = []
         for key in gen_signal:
             out = gen_signal[key]
