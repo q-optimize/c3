@@ -26,23 +26,25 @@ class Simulator():
         self.controls = controls
 
     def propagation(self,
-                    pulse_params: dict,
+                    pulse_values: list,
                     opt_map: list,
-                    model_params: dict = {},
+                    model_params: list = [],
                     lindbladian: bool = False
                     ):
-        self.controls.update_controls(pulse_params, opt_map)
+        self.controls.update_controls(pulse_values, opt_map)
         gen_signal = self.generator.generate_signals(self.controls)
-        self.generator.devices['awg'].plot_IQ_components()
+        # TODO fix plotting to work on multiple controls
+        self.generator.devices['awg'].plot_IQ_components(
+                                        self.controls.controls[0])
         signals = []
         for key in gen_signal:
             out = gen_signal[key]
             ts = out["ts"]
             # TODO this points to the fact that all sim_res must be the same
-            signals.append(out["signal"])
+            signals.append(out["values"])
 
         dt = tf.cast(ts[1]-ts[0], tf.complex128, name="dt")
-        if model_params:
+        if model_params == []:
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
             h0, hks = self.model.get_Hamiltonians()

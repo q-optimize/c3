@@ -5,17 +5,17 @@ from c3po.component import C3obj
 class GateSet:
     """Contains all operation that can be performed by the experiment."""
 
-    def __init__(self, controlset_list):
-        self.controlsets = controlset_list
+    def __init__(self, controlsets):
+        self.controlsets = controlsets
 
 
 class ControlSet:
     """Contains all control drives (i.e. to all lines) for an operation."""
 
-    def __init__(self, control_list):
-        self.controls = control_list
+    def __init__(self, controls):
+        self.controls = controls
 
-    def get_corresponding_control_parameters(self, opt_map):
+    def get_corresponding_control_parameters(self, opt_map: list):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -30,9 +30,9 @@ class ControlSet:
 
             Example:
             opt_map = [
-                ('line1','gauss1','sigma')
-                ('line1','gauss2','amp')
-                ('line1','gauss2','freq')
+                ('line1','gauss1','sigma'),
+                ('line1','gauss2','amp'),
+                ('line1','gauss2','freq'),
                 ('line2','DC','amp')
                 ]
 
@@ -64,7 +64,10 @@ class ControlSet:
                     opt_params['bounds'].append(bounds)
         return opt_params
 
-    def set_corresponding_control_parameters(self, opt_params, opt_map):
+    def set_corresponding_control_parameters(self,
+                                             opt_params: dict,
+                                             opt_map: list
+                                             ):
         """Set the values in opt_params in the original control class."""
         # TODO make this more efficient: check index of control name beforehand
         set_bounds = ('bounds' in opt_params)
@@ -81,12 +84,13 @@ class ControlSet:
                         bounds = opt_params['bounds'][indx]
                         control.set_parameter_bounds(param, comp_name, bounds)
 
-    def get_values_bounds(self, opt_params):
+    def get_values_bounds(self, opt_params: dict):
+        # TODO check if we can change it to a tuple.
         values = opt_params['values']
         bounds = opt_params['bounds']
         return values, bounds
 
-    def update_controls(self, values, opt_map):
+    def update_controls(self, values: list, opt_map: list):
         opt_params = {}
         opt_params['values'] = values
         self.set_corresponding_control_parameters(opt_params, opt_map)

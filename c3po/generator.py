@@ -46,8 +46,8 @@ class Device(C3obj):
             t_end: np.float64,
             centered: bool = True
             ):
-        if self.slice_num is None:
-            self.calc_slice_num()
+        if not hasattr(self, 'slice_num'):
+            self.calc_slice_num(t_start, t_end)
         dt = 1/self.resolution
         if centered:
             offset = dt/2
@@ -83,11 +83,26 @@ class Mixer(Device):
         """Combine signal from AWG and LO."""
         ts = lo_signal["ts"]
         omega_lo = lo_signal["freq"]
-        inphase = tf.image.resize_images(awg_signal["inphase"], ts.shape)
-        quadrature = tf.image.resize_images(awg_signal["quadrature"], ts.shape)
-        self.mixed_signal = tf.zeros_like(ts)
-        self.mixed_signal += (inphase * tf.cos(omega_lo * ts)
-                              + quadrature * tf.sin(omega_lo * ts))
+        old_dim = awg_signal["inphase"].shape[0]
+        new_dim = ts.shape[0]
+        inphase = tf.reshape(
+                    tf.image.resize(
+                        tf.reshape(
+                            awg_signal["inphase"],
+                            shape=[1, old_dim, 1]),
+                        size=[1, new_dim],
+                        method='nearest'),
+                    shape=[new_dim]),
+        quadrature = tf.reshape(
+                        tf.image.resize(
+                            tf.reshape(
+                                awg_signal["quadrature"],
+                                shape=[1, old_dim, 1]),
+                            size=[1, new_dim],
+                            method='nearest'),
+                        shape=[new_dim])
+        self.mixed_signal = (inphase * tf.cos(omega_lo * ts)
+                             + quadrature * tf.sin(omega_lo * ts))
         return self.mixed_signal
 
 
@@ -115,8 +130,10 @@ class LO(Device):
         ts = self.create_ts(control.t_start, control.t_end)
         for comp in control.comps:
             if isinstance(comp, Carrier):
-                self.lo_signal["freq"] = comp.params["freq"]
-                self.lo_signal["ts"] = ts
+                self.lo_signal["freq"] = tf.cast(comp.params["freq"],
+                                                 dtype=tf.float64)
+                self.lo_signal["ts"] = tf.cast(ts,
+                                               dtype=tf.float64)
         return self.lo_signal
 
 
@@ -155,8 +172,6 @@ class AWG(Device):
 
         """
         with tf.name_scope("I_Q_generation"):
-
-            self.calc_slice_num()
             ts = self.create_ts(control.t_start, control.t_end)
 
             amp_tot_sq = 0.0
@@ -276,11 +291,12 @@ class Generator:
         # TODO deal with multiple controls within controlset
         with tf.name_scope('Signal_generation'):
             gen_signal = {}
-            awg = self.devices["awg"]
-            mixer = self.devices["mixer"]
             lo = self.devices["lo"]
+            awg = self.devices["awg"]
+            # TODO make mixer optional and have a signal chain (eg. Flux tuning)
+            mixer = self.devices["mixer"]
 
-            for control in controlset:
+            for control in controlset.controls:
                 gen_signal[control.name] = {}
                 lo_signal = lo.create_signal(control)
                 awg_signal = awg.create_IQ(control)
