@@ -291,9 +291,10 @@ class Generator:
         # TODO deal with multiple controls within controlset
         with tf.name_scope('Signal_generation'):
             gen_signal = {}
-            awg = self.devices["awg"]
-            mixer = self.devices["mixer"]
             lo = self.devices["lo"]
+            awg = self.devices["awg"]
+            # TODO make mixer optional and have a signal chain (eg. Flux tuning)
+            mixer = self.devices["mixer"]
 
             for control in controlset.controls:
                 gen_signal[control.name] = {}

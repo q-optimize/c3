@@ -30,9 +30,9 @@ class ControlSet:
 
             Example:
             opt_map = [
-                ('line1','gauss1','sigma')
-                ('line1','gauss2','amp')
-                ('line1','gauss2','freq')
+                ('line1','gauss1','sigma'),
+                ('line1','gauss2','amp'),
+                ('line1','gauss2','freq'),
                 ('line2','DC','amp')
                 ]
 
@@ -85,6 +85,7 @@ class ControlSet:
                         control.set_parameter_bounds(param, comp_name, bounds)
 
     def get_values_bounds(self, opt_params: dict):
+        # TODO check if we can change it to a tuple.
         values = opt_params['values']
         bounds = opt_params['bounds']
         return values, bounds

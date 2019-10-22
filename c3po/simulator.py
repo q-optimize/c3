@@ -28,7 +28,7 @@ class Simulator():
     def propagation(self,
                     pulse_values: list,
                     opt_map: list,
-                    model_params: dict = {},
+                    model_params: list = [],
                     lindbladian: bool = False
                     ):
         self.controls.update_controls(pulse_values, opt_map)
@@ -41,10 +41,10 @@ class Simulator():
             out = gen_signal[key]
             ts = out["ts"]
             # TODO this points to the fact that all sim_res must be the same
-            signals.append(out["signal"])
+            signals.append(out["values"])
 
         dt = tf.cast(ts[1]-ts[0], tf.complex128, name="dt")
-        if model_params:
+        if model_params == []:
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
             h0, hks = self.model.get_Hamiltonians()

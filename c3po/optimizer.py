@@ -281,6 +281,7 @@ class Optimizer:
                 )
 
         opt_params['values'] = values_opt
+        # TODO make these two happend at the same time if you pass a save name
         controls.set_corresponding_control_parameters(opt_params, opt_map)
         controls.save_params_to_history(calib_name)
         self.parameter_history[calib_name] = opt_params

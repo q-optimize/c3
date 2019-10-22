@@ -2,9 +2,9 @@
 
 import numpy as np
 import tensorflow as tf
-from c3po.hamiltonians import *
-from c3po.component import *
-from c3po.constants import *
+from c3po.hamiltonians import resonator, duffing
+from c3po.component import Qubit, Resonator, Drive, Coupling
+from c3po.constants import kb, hbar
 
 
 class Model:
