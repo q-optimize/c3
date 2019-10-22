@@ -7,6 +7,57 @@ from c3po.component import C3obj, Envelope, Carrier
 from c3po.control import Control, ControlSet
 
 
+class Generator:
+    """Generator, creates signal from digital to what arrives to the chip."""
+
+    def __init__(
+            self,
+            devices: dict
+            ):
+        # TODO consider making the dict into a list of devices
+        # TODO check that you get at least 1 set of LO, AWG and mixer.
+        self.devices = devices
+        # TODO add line knowledge (mapping of which devices are connected)
+
+    def generate_signals(self, controlset: ControlSet):
+        # TODO deal with multiple controls within controlset
+        with tf.name_scope('Signal_generation'):
+            gen_signal = {}
+            lo = self.devices["lo"]
+            awg = self.devices["awg"]
+            # TODO make mixer optional and have a signal chain (eg. Flux tuning)
+            mixer = self.devices["mixer"]
+
+            for control in controlset.controls:
+                gen_signal[control.name] = {}
+                lo_signal = lo.create_signal(control)
+                awg_signal = awg.create_IQ(control)
+                mixed_signal = mixer.combine(lo_signal, awg_signal)
+                gen_signal[control.name]["ts"] = lo_signal["ts"]
+                gen_signal[control.name]["values"] = mixed_signal
+
+        self.gen_signal = gen_signal
+        return gen_signal
+
+    def plot_signals(self, controlset: ControlSet):
+        for control in ControlSet:
+            signal = self.gen_signal[control.name]
+
+            """ Plotting control functions """
+            plt.rcParams['figure.dpi'] = 100
+
+            ts = signal["ts"]
+            values = signal["values"]
+
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            ax.plot(ts.numpy(), values.numpy())
+            ax.set_xlabel('Time [ns]')
+            plt.title(control.name)
+            plt.grid()
+            plt.show(block=False)
+
+
 class Device(C3obj):
     """Device that is part of the stack generating the control signals."""
 
@@ -92,7 +143,8 @@ class Mixer(Device):
                             shape=[1, old_dim, 1]),
                         size=[1, new_dim],
                         method='nearest'),
-                    shape=[new_dim]),
+                    shape=[new_dim])
+        self.inphase = inphase
         quadrature = tf.reshape(
                         tf.image.resize(
                             tf.reshape(
@@ -172,7 +224,10 @@ class AWG(Device):
 
         """
         with tf.name_scope("I_Q_generation"):
-            ts = self.create_ts(control.t_start, control.t_end)
+            ts = self.create_ts(control.t_start,
+                                control.t_end,
+                                centered=True)
+            self.ts = ts
 
             amp_tot_sq = 0.0
             inphase_comps = []
@@ -215,7 +270,7 @@ class AWG(Device):
                             )
                         )
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-                inphase = tf.add_n(inphase_comps, name="Inhpase")/norm
+                inphase = tf.add_n(inphase_comps, name="inphase")/norm
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
 
             else:
@@ -238,13 +293,14 @@ class AWG(Device):
                             )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-                inphase = tf.add_n(inphase_comps, name="Inhpase")/norm
-                quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
+                inphase = tf.add_n(inphase_comps, name="inphase")
+                quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.awg_signal['inphase'] = inphase
-        self.awg_signal['quadrature'] = quadrature
-        return self.awg_signal
+        self.awg_signal['inphase'] = inphase / norm
+        self.awg_signal['quadrature'] = quadrature / norm
+        return {"inphase": inphase, "quadrature": quadrature}
+        # TODO decide when and where to return/sotre params scaled or not
 
     def get_I(self):
         return self.amp_tot * self.awg_signal['inphase']
@@ -275,52 +331,24 @@ class AWG(Device):
         fig.canvas.flush_events()
 
 
-class Generator:
-    """Generator, creates signal from digital to what arrives to the chip."""
+class mV_to_Amp(Device):
+    """Upsacle the voltage singla to an amplitude to plug in the model."""
 
     def __init__(
             self,
-            devices: dict
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
             ):
-        # TODO consider making the dict into a list of devices
-        # TODO check that you get at least 1 set of LO, AWG and mixer.
-        self.devices = devices
-        # TODO add line knowledge (mapping of which devices are connected)
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+            )
 
-    def generate_signals(self, controlset: ControlSet):
-        # TODO deal with multiple controls within controlset
-        with tf.name_scope('Signal_generation'):
-            gen_signal = {}
-            lo = self.devices["lo"]
-            awg = self.devices["awg"]
-            # TODO make mixer optional and have a signal chain (eg. Flux tuning)
-            mixer = self.devices["mixer"]
-
-            for control in controlset.controls:
-                gen_signal[control.name] = {}
-                lo_signal = lo.create_signal(control)
-                awg_signal = awg.create_IQ(control)
-                mixed_signal = mixer.combine(lo_signal, awg_signal)
-                gen_signal[control.name]["ts"] = lo_signal["ts"]
-                gen_signal[control.name]["values"] = mixed_signal
-
-        self.gen_signal = gen_signal
-        return gen_signal
-
-    def plot_signals(self, controlset: ControlSet):
-        for control in ControlSet:
-            signal = self.gen_signal[control.name]
-
-            """ Plotting control functions """
-            plt.rcParams['figure.dpi'] = 100
-
-            ts = signal["ts"]
-            values = signal["values"]
-
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts.numpy(), values.numpy())
-            ax.set_xlabel('Time [ns]')
-            plt.title(control.name)
-            plt.grid()
-            plt.show(block=False)
+        self.options = ""
+        # TODO move the options pwc & drag to the control object
+        self.awg_signal = {}
+        self.amp_tot_sq = None

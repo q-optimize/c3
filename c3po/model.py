@@ -89,12 +89,20 @@ class Model:
                 el_indx = self.names.index(element.name)
                 ann_oper = self.ann_opers[el_indx]
 
-                self.drift_Hs.append(resonator(ann_oper))
+                self.drift_Hs.append(
+                                tf.constant(
+                                    resonator(ann_oper),
+                                    dtype=tf.complex128)
+                                    )
                 self.params.append(element.values['freq'])
                 self.params_desc.append([element.name, 'freq'])
 
                 if isinstance(element, Qubit) and element.hilbert_dim > 2:
-                    self.drift_Hs.append(duffing(ann_oper))
+                    self.drift_Hs.append(
+                                    tf.constant(
+                                        duffing(ann_oper),
+                                        dtype=tf.complex128)
+                                        )
                     self.params.append(element.values['anhar'])
                     self.params_desc.append([element.name, 'anhar'])
 
@@ -104,7 +112,11 @@ class Model:
                     el_indxs.append(self.names.index(connected_element))
                 ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
 
-                self.drift_Hs.append(element.hamiltonian(ann_opers))
+                self.drift_Hs.append(
+                                tf.constant(
+                                    element.hamiltonian(ann_opers),
+                                    dtype=tf.complex128)
+                                    )
                 self.params.append(element.values['strength'])
                 self.params_desc.append([element.name, 'strength'])
 
@@ -113,7 +125,9 @@ class Model:
                 h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
                 for connected_element in element.connected:
                     a = self.ann_opers[self.names.index(connected_element)]
-                    h += element.hamiltonian(a)
+                    h += tf.constant(
+                            element.hamiltonian(a),
+                            dtype=tf.complex128)
 
                 self.control_Hs.append(h)
                 self.params.append(mV_to_Hz)
