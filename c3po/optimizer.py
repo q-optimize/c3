@@ -250,20 +250,20 @@ class Optimizer:
         self.fig = fig
         self.axs = axs
 
-        opt_params = controls.get_corresponding_control_parameters(opt_map)
+        values, bounds = controls.get_corresponding_control_parameters(opt_map)
         self.opt_map = opt_map
         self.optim_name = calib_name
-        self.goal = []
 
         self.callback = callback
-        values, bounds = controls.get_values_bounds(opt_params)
+        # TODO Make sure values and bounds are already np.arrays
         values = np.array(values)
         self.param_shape = values.shape
         bounds = np.array(bounds)
+        # TODO fix this horrible mess and make the shape of bounds general for
+        # PWC and carrier based controls
         if len(self.param_shape) > 1:
             bounds = bounds.reshape(bounds.T.shape)
         self.bounds = bounds
-        self.opt_params = opt_params
         self.eval_func = eval_func
 
         self.optimizer_logs[self.optim_name] = []
@@ -273,18 +273,19 @@ class Optimizer:
 
         elif opt == 'lbfgs':
             values_opt = self.lbfgs(
-                    values,
-                    bounds,
-                    self.goal_run,
-                    self.goal_gradient_run,
-                    settings=settings
-                )
+                values,
+                bounds,
+                self.goal_run,
+                self.goal_gradient_run,
+                settings=settings
+            )
 
-        opt_params['values'] = values_opt
+        values = values_opt
         # TODO make these two happend at the same time if you pass a save name
-        controls.set_corresponding_control_parameters(opt_params, opt_map)
+        # TODO use update_controls here, (and change to set_values)
+        controls.update_controls(values, opt_map)
         controls.save_params_to_history(calib_name)
-        self.parameter_history[calib_name] = opt_params
+        self.parameter_history[calib_name] = values
 
     def learn_model(
         self,
@@ -293,13 +294,11 @@ class Optimizer:
         settings,
         learn_from,
         optim_name='learn_model',
-         ):
+        ):
 
         fig, axs = plt.subplots(1, 1)
         self.fig = fig
         self.axs = axs
-
-        self.goal = []
 
         values, bounds = model.get_values_bounds()
         bounds = np.array(bounds)

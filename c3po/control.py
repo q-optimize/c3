@@ -42,15 +42,14 @@ class ControlSet:
             Dictionary with values, bounds lists.
 
             Example:
-            opt_params = {
-                'values': [0,           0,           0,             0],
-                'bounds': [[0, 0],      [0, 0],      [0, 0],        [0.0]]
-                }
+            opt_params = (
+                [0,           0,           0,             0],    # Values
+                [[0, 0],      [0, 0],      [0, 0],        [0.0]] # Bounds
+                )
 
         """
-        opt_params = {}
-        opt_params['values'] = []
-        opt_params['bounds'] = []
+        values = []
+        bounds = []
 
         for id in opt_map:
             ctrl_name = id[0]
@@ -60,17 +59,13 @@ class ControlSet:
                 if ctrl_name == control.name:
                     value = control.get_parameter_value(param, comp_name)
                     bounds = control.get_parameter_bounds(param, comp_name)
-                    opt_params['values'].append(value)
-                    opt_params['bounds'].append(bounds)
-        return opt_params
+                    values.append(value)
+                    bounds.append(bounds)
+        return values, bounds
 
-    def set_corresponding_control_parameters(self,
-                                             opt_params: dict,
-                                             opt_map: list
-                                             ):
+    def update_controls(self, values: list, opt_map: list):
         """Set the values in opt_params in the original control class."""
         # TODO make this more efficient: check index of control name beforehand
-        set_bounds = ('bounds' in opt_params)
         for indx in range(len(opt_map)):
             id = opt_map[indx]
             ctrl_name = id[0]
@@ -78,22 +73,8 @@ class ControlSet:
             param = id[2]
             for control in self.controls:
                 if ctrl_name == control.name:
-                    value = opt_params['values'][indx]
+                    value = values[indx]
                     control.set_parameter_value(param, comp_name, value)
-                    if set_bounds:
-                        bounds = opt_params['bounds'][indx]
-                        control.set_parameter_bounds(param, comp_name, bounds)
-
-    def get_values_bounds(self, opt_params: dict):
-        # TODO check if we can change it to a tuple.
-        values = opt_params['values']
-        bounds = opt_params['bounds']
-        return values, bounds
-
-    def update_controls(self, values: list, opt_map: list):
-        opt_params = {}
-        opt_params['values'] = values
-        self.set_corresponding_control_parameters(opt_params, opt_map)
 
     def save_params_to_history(self, name):
         # TODO save history in ControlSet too?
