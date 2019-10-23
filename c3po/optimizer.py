@@ -254,6 +254,8 @@ class Optimizer:
         self.opt_map = opt_map
         self.optim_name = calib_name
 
+        self.goal = []
+
         self.callback = callback
         # TODO Make sure values and bounds are already np.arrays
         values = np.array(values)

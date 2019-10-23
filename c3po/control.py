@@ -58,9 +58,9 @@ class ControlSet:
             for control in self.controls:
                 if ctrl_name == control.name:
                     value = control.get_parameter_value(param, comp_name)
-                    bounds = control.get_parameter_bounds(param, comp_name)
+                    bound = control.get_parameter_bounds(param, comp_name)
                     values.append(value)
-                    bounds.append(bounds)
+                    bounds.append(bound)
         return values, bounds
 
     def update_controls(self, values: list, opt_map: list):

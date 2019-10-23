@@ -72,8 +72,7 @@ class TestControl(unittest.TestCase):
             ('line1', 'gauss', 'amp'),
             ('line1', 'gauss', 'freq_offset')
         ]
-        opt_params = ctrls.get_corresponding_control_parameters(opt_map)
-        values, bounds = ctrls.get_values_bounds(opt_params)
+        values, bounds = ctrls.get_corresponding_control_parameters(opt_map)
         self.assertCountEqual(
             bounds, [
                 [0.01 * 150e6 * 2 * np.pi, 1.5 * 150e6 * 2 * np.pi],
