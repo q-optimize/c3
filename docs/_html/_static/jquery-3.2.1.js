@@ -699,7 +699,7 @@ var i,
 				return "\uFFFD";
 			}
 
-			// Control characters and (dependent upon position) numbers get escaped as code points
+			// Instruction characters and (dependent upon position) numbers get escaped as code points
 			return ch.slice( 0, -1 ) + "\\" + ch.charCodeAt( ch.length - 1 ).toString( 16 ) + " ";
 		}
 
@@ -3489,7 +3489,7 @@ function adoptValue( value, resolve, reject, noValue ) {
 		// Other non-thenables
 		} else {
 
-			// Control `resolve` arguments by letting Array#slice cast boolean `noValue` to integer:
+			// Instruction `resolve` arguments by letting Array#slice cast boolean `noValue` to integer:
 			// * false: [ value ].slice( 0 ) => resolve( value )
 			// * true: [ value ].slice( 1 ) => resolve()
 			resolve.apply( undefined, [ value ].slice( noValue ) );

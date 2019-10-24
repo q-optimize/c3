@@ -26,7 +26,7 @@ class Model:
     Attributes
     ----------
     H0: :class: Drift Hamiltonian
-    Hcs: :class: Control Hamiltonians
+    Hcs: :class: Instruction Hamiltonians
     H_tf : empty, constructed when needed
 
     component_parameters :

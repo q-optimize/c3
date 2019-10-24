@@ -30,7 +30,7 @@ class C3obj:
         self.comment = comment
 
 
-class ControlComponent(C3obj):
+class InstructionComponent(C3obj):
     """
     Represents the components making up a pulse.
 
@@ -65,7 +65,7 @@ class ControlComponent(C3obj):
             raise ValueError('params and bounds must have same keys')
 
 
-class Envelope(ControlComponent):
+class Envelope(InstructionComponent):
     """
     Represents the envelopes shaping a pulse.
 
@@ -99,7 +99,7 @@ class Envelope(ControlComponent):
         return self.shape(ts, self.params)
 
 
-class Carrier(ControlComponent):
+class Carrier(InstructionComponent):
     """Represents the carrier of a pulse."""
 
     def __init__(

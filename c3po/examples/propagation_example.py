@@ -7,26 +7,24 @@ import c3po.control as control
 import c3po.generator as generator
 import c3po.hamiltonians as hamiltonians
 from c3po.model import Model as Mdl
-from c3po.optimizer import Optimizer as Opt
 from c3po.simulator import Simulator as Sim
 
 import numpy as np
-import tensorflow as tf
 
 # System
 qubit_freq = 6e9 * 2 * np.pi
 qubit_anhar = -100e6 * 2 * np.pi
 qubit_lvls = 6
-mV_to_Amp = 2e9*np.pi
+mV_to_Amp = 2e9 * np.pi
 
 # For pwc calculate the number of slices beforehand:
-awg_res = 1.2e9  # 1.2GHz
+awg_res = 1e9  # 1.2GHz
 t_final = 8e-9  # 8ns
 slice_num = int(t_final * awg_res)
 amp_limit = 300e-3  # 300mV
 
 # Simulation variables
-sim_res = 5e10  # 50GHz
+sim_res = 1e11
 
 # Chip and model
 q1 = component.Qubit(
@@ -59,24 +57,9 @@ devices = {
     "awg": awg,
     "mixer": mixer
 }
+
 gen = generator.Generator(devices)
 
-# Pulses and Control
-# pwc_params = {
-#     'inphase': np.ones(slice_num)*0.5*amp_limit,
-#     'quadrature': np.ones(slice_num)*0.5*amp_limit
-# }
-# pwc_bounds = {
-#     'inphase': [-amp_limit, amp_limit]*slice_num,
-#     'quadrature': [-amp_limit, amp_limit]*slice_num
-#     }
-# pwc_env = component.Envelope(
-#     name="pwc",
-#     desc="PWC comp 1 of signal 1",
-#     params=pwc_params,
-#     bounds=pwc_bounds,
-#     shape=envelopes.pwc
-# )
 gauss_params = {
         'amp': np.pi / mV_to_Amp,
         't_final': 8e-9,
@@ -108,23 +91,28 @@ carr = component.Carrier(
     params=carrier_parameters,
     bounds=carrier_bounds
 )
-ctrl = control.Control(
-    name="line1",
+
+ctrl = control.Instruction(
+    name="X90p",
     t_start=0.0,
     t_end=t_final,
-    comps=[carr, gauss_env]
+    channels=["d1"]
 )
-ctrls = control.ControlSet([ctrl])
+
+ctrl.add_component(gauss_env, "d1")
+ctrl.add_component(carr, "d1")
+
+gates = control.GateSet()
+gates.add_instruction(ctrl)
 
 # Simulation class and fidelity function
-sim = Sim(simple_model, gen, ctrls)
+sim = Sim(simple_model, gen, gates)
 
-opt_map = [
-    ('line1', 'gauss', 'amp'),
-    ('line1', 'gauss', 'freq_offset')
-]
+opt_map = gates.list_parameters()
 
-pulse_values, _ = ctrls.get_corresponding_control_parameters(opt_map)
+pulse_values, _ = gates.get_parameters(opt_map)
 model_params, _ = simple_model.get_values_bounds()
 
-U = sim.propagation(pulse_values, opt_map, model_params)
+signal = gen.generate_signals(ctrl)
+
+U = sim.propagation(signal, model_params)

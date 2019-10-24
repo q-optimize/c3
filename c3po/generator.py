@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from c3po.component import C3obj, Envelope, Carrier
-from c3po.control import Control, ControlSet
+from c3po.control import Instruction, GateSet
 
 
 class Generator:
@@ -12,38 +12,42 @@ class Generator:
 
     def __init__(
             self,
-            devices: dict
+            devices: dict,
+            resolution: np.float64 = 0.0
             ):
         # TODO consider making the dict into a list of devices
         # TODO check that you get at least 1 set of LO, AWG and mixer.
         self.devices = devices
+        self.resolution = resolution
         # TODO add line knowledge (mapping of which devices are connected)
 
-    def generate_signals(self, controlset: ControlSet):
-        # TODO deal with multiple controls within controlset
+    def generate_signals(self, instr: Instruction):
+        # TODO deal with multiple instructions within GateSet
         with tf.name_scope('Signal_generation'):
             gen_signal = {}
             lo = self.devices["lo"]
             awg = self.devices["awg"]
             # TODO make mixer optional and have a signal chain (eg. Flux tuning)
             mixer = self.devices["mixer"]
-
-            for control in controlset.controls:
-                gen_signal[control.name] = {}
-                lo_signal = lo.create_signal(control)
-                awg_signal = awg.create_IQ(control)
+            t_start = instr.t_start
+            t_end = instr.t_end
+            for chan in instr.comps:
+                gen_signal[chan] = {}
+                channel = instr.comps[chan]
+                lo_signal = lo.create_signal(channel, t_start, t_end)
+                awg_signal = awg.create_IQ(channel, t_start, t_end)
                 mixed_signal = mixer.combine(lo_signal, awg_signal)
-                gen_signal[control.name]["ts"] = lo_signal["ts"]
-                gen_signal[control.name]["values"] = mixed_signal
+                gen_signal[chan]["values"] = mixed_signal
+                gen_signal[chan]["ts"] = lo_signal['ts']
 
         self.gen_signal = gen_signal
         return gen_signal
 
-    def plot_signals(self, controlset: ControlSet):
-        for control in ControlSet:
-            signal = self.gen_signal[control.name]
+    def plot_signals(self, GateSet: GateSet):
+        for instruction in GateSet:
+            signal = self.gen_signal[instruction.name]
 
-            """ Plotting control functions """
+            """ Plotting instruction functions """
             plt.rcParams['figure.dpi'] = 100
 
             ts = signal["ts"]
@@ -53,13 +57,13 @@ class Generator:
             ax = fig.add_subplot(1, 1, 1)
             ax.plot(ts.numpy(), values.numpy())
             ax.set_xlabel('Time [ns]')
-            plt.title(control.name)
+            plt.title(instruction.name)
             plt.grid()
             plt.show(block=False)
 
 
 class Device(C3obj):
-    """Device that is part of the stack generating the control signals."""
+    """Device that is part of the stack generating the instruction signals."""
 
     def __init__(
             self,
@@ -99,7 +103,7 @@ class Device(C3obj):
             ):
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
-        dt = 1/self.resolution
+        dt = 1 / self.resolution
         if centered:
             offset = dt/2
             num = self.slice_num
@@ -119,21 +123,20 @@ class Mixer(Device):
             self,
             name: str = " ",
             desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
+            comment: str = " "
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            resolution=resolution
             )
+
         self.mixed_signal = None
 
     def combine(self, lo_signal, awg_signal):
         """Combine signal from AWG and LO."""
-        ts = lo_signal["ts"]
-        omega_lo = lo_signal["freq"]
+        cos, sin = lo_signal["values"]
+        ts = lo_signal['ts']
         old_dim = awg_signal["inphase"].shape[0]
         new_dim = ts.shape[0]
         inphase = tf.reshape(
@@ -153,8 +156,7 @@ class Mixer(Device):
                             size=[1, new_dim],
                             method='nearest'),
                         shape=[new_dim])
-        self.mixed_signal = (inphase * tf.cos(omega_lo * ts)
-                             + quadrature * tf.sin(omega_lo * ts))
+        self.mixed_signal = (inphase * cos + quadrature * sin)
         return self.mixed_signal
 
 
@@ -177,15 +179,17 @@ class LO(Device):
 
         self.lo_signal = {}
 
-    def create_signal(self, control: Control):
-        # TODO check somewhere that there is only 1 carrier per control
-        ts = self.create_ts(control.t_start, control.t_end)
-        for comp in control.comps:
+    def create_signal(self, channel: dict, t_start: float, t_end: float):
+        # TODO check somewhere that there is only 1 carrier per instruction
+        ts = self.create_ts(t_start, t_end, centered=True)
+        for c in channel:
+            comp = channel[c]
             if isinstance(comp, Carrier):
-                self.lo_signal["freq"] = tf.cast(comp.params["freq"],
-                                                 dtype=tf.float64)
-                self.lo_signal["ts"] = tf.cast(ts,
-                                               dtype=tf.float64)
+                omega_lo = comp.params['freq']
+                self.lo_signal["values"] = (
+                    tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
+                )
+                self.lo_signal["ts"] = ts
         return self.lo_signal
 
 
@@ -206,27 +210,26 @@ class AWG(Device):
             resolution=resolution
             )
 
+
         self.options = ""
-        # TODO move the options pwc & drag to the control object
+        # TODO move the options pwc & drag to the instruction object
         self.awg_signal = {}
         self.amp_tot_sq = None
 
 # TODO create DC function
 
-    def create_IQ(self, control: Control):
+    def create_IQ(self, channel: dict, t_start: float, t_end: float):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
 
         These are universal to either experiment or simulation.
         In the experiment these will be routed to AWG and mixer
         electronics, while in the simulation they provide the shapes of the
-        control fields to be added to the Hamiltonian.
+        instruction fields to be added to the Hamiltonian.
 
         """
         with tf.name_scope("I_Q_generation"):
-            ts = self.create_ts(control.t_start,
-                                control.t_end,
-                                centered=True)
+            ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
 
             amp_tot_sq = 0.0
@@ -234,14 +237,16 @@ class AWG(Device):
             quadrature_comps = []
 
             if (self.options == 'pwc'):
-                for comp in control.comps:
+                for key in channel:
+                    comp = channel[key]
                     if isinstance(comp, Envelope):
                         norm = 1
                         inphase = comp.params['inphase']
                         quadrature = comp.params['quadrature']
 
             elif (self.options == 'drag'):
-                for comp in control.comps:
+                for key in channel:
+                    comp = channel[key]
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp']
@@ -274,7 +279,8 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
 
             else:
-                for comp in control.comps:
+                for key in channel:
+                    comp = channel[key]
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp']
@@ -308,9 +314,9 @@ class AWG(Device):
     def get_Q(self):
         return self.amp_tot * self.awg_signal['quadrature']
 
-    def plot_IQ_components(self, control: Control):
-        """Plot control functions."""
-        ts = self.create_ts(control.t_start, control.t_end)
+    def plot_IQ_components(self, instruction: Instruction):
+        """Plot instruction functions."""
+        ts = self.create_ts(instruction.t_start, instruction.t_end)
         inphase = self.get_I()
         quadrature = self.get_Q()
 
@@ -349,6 +355,6 @@ class mV_to_Amp(Device):
             )
 
         self.options = ""
-        # TODO move the options pwc & drag to the control object
+        # TODO move the options pwc & drag to the instruction object
         self.awg_signal = {}
         self.amp_tot_sq = None

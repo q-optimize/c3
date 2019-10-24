@@ -61,7 +61,7 @@ devices = {
 }
 gen = generator.Generator(devices)
 
-# Pulses and Control
+# Pulses and Instruction
 # pwc_params = {
 #     'inphase': np.ones(slice_num)*0.5*amp_limit,
 #     'quadrature': np.ones(slice_num)*0.5*amp_limit
@@ -108,13 +108,13 @@ carr = component.Carrier(
     params=carrier_parameters,
     bounds=carrier_bounds
 )
-ctrl = control.Control(
+ctrl = control.Instruction(
     name="line1",
     t_start=0.0,
     t_end=t_final,
     comps=[carr, gauss_env]
 )
-ctrls = control.ControlSet([ctrl])
+ctrls = control.GateSet([ctrl])
 
 # Simulation class and fidelity function
 sim = Sim(simple_model, gen, ctrls)

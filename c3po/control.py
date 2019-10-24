@@ -1,27 +1,24 @@
 import numpy as np
-from c3po.component import C3obj, ControlComponent
+from c3po.component import C3obj, InstructionComponent
 
 
 class GateSet:
     """Contains all operations and corresponding instructions."""
 
-    def __init__(self, instructions: dict):
-        self.instructions = instructions
+    def __init__(self):
+        self.instructions = {}
 
-    def evaluate_gates(self):
-        pass
-
-    def seq_evaluation(self, gate_seq, psi_init):
-        pass
+    def add_instruction(self, instr):
+        self.instructions[instr.name] = instr
 
     def list_parameters(self):
         par_list = []
-        instr = self.instructions
-        for gate in instr.keys():
-            for chan in instr[gate].comps.keys():
-                for comp in instr[gate].comps[chan]:
-                    for par in instr[gate].comps[chan][comp].params:
-                        par_list.append((gate,chan,comp,par))
+        for gate in self.instructions.keys():
+            instr = self.instructions[gate]
+            for chan in instr.comps.keys():
+                for comp in instr.comps[chan]:
+                    for par in instr.comps[chan][comp].params:
+                        par_list.append([(gate, chan, comp, par)])
         return par_list
 
     def get_parameters(self, opt_map: list):
@@ -64,7 +61,7 @@ class GateSet:
 
         for id in opt_map:
             gate = id[0][0]
-            par_id = id[0][1:3]
+            par_id = id[0][1:4]
             gate_instr = self.instructions[gate]
             value, bound = gate_instr.get_parameter_value_bounds(par_id)
             values.append(value)
@@ -77,9 +74,9 @@ class GateSet:
             ids = opt_map[indx]
             for id in ids:
                 gate = id[0]
-                par_id = id[1:3]
+                par_id = id[1:4]
                 gate_instr = self.instructions[gate]
-                gate_instr.set_parameter_value(par_id, values[idx])
+                gate_instr.set_parameter_value(par_id, values[indx])
 
 
 class Instruction(C3obj):
@@ -129,9 +126,9 @@ class Instruction(C3obj):
         self.t_end = t_end
         self.comps = {}
         for chan in channels:
-            self.comps[chan] = []
+            self.comps[chan] = {}
 
-    def add_component(self, comp: ControlComponent, chan: str):
+    def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
 
     def get_parameter_value_bounds(self, par_id: tuple):

@@ -234,7 +234,7 @@ class Optimizer:
 
         Parameters
         ----------
-        controls : class ControlSet
+        controls : class GateSet
             control Class carrying all relevant information
 
         opt_map : list

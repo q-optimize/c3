@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from c3po.model import Model
-from c3po.control import ControlSet, GateSet
+from c3po.control import GateSet
 from c3po.generator import Generator
 
 from c3po.tf_utils import tf_propagation as tf_propagation
@@ -20,12 +20,11 @@ class Simulator():
                  model: Model,
                  generator: Generator,
                  gateset: GateSet
-                 #controls: ControlSet
+                 # controls: GateSet
                  ):
         self.model = model
         self.generator = generator
-        self.controls = controls
-        self.gate_dictionary = {}
+        self.gateset = gateset
 
     def propagation(self,
                     signal: dict,
@@ -40,7 +39,7 @@ class Simulator():
             # TODO this points to the fact that all sim_res must be the same
             signals.append(out["values"])
 
-        dt = tf.cast(ts[1]-ts[0], tf.complex128, name="dt")
+        dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
         if model_params == []:
             h0, hks = self.model.get_Hamiltonians(model_params)
         else:
@@ -70,9 +69,9 @@ class Simulator():
             pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
-        dt = ts[1]-ts[0]
-        ts = np.append(0, ts+dt/2)
-        axs.plot(ts/1e-9, pop_t.T)
+        dt = ts[1] - ts[0]
+        ts = np.append(0, ts + dt / 2)
+        axs.plot(ts / 1e-9, pop_t.T)
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
@@ -82,7 +81,7 @@ class Simulator():
     def populations(state, dv=False):
         if dv:
             dim = int(np.sqrt(len(state)))
-            indeces = [n*dim+n for n in range(dim)]
+            indeces = [n * dim + n for n in range(dim)]
             return np.abs(state[indeces])
         else:
             return np.abs(state)**2

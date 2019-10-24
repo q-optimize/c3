@@ -28,7 +28,7 @@ class TestModel(unittest.TestCase):
         )
 
 
-class TestControl(unittest.TestCase):
+class TestInstruction(unittest.TestCase):
     def test_parameter_set_get(self):
         gauss_params = {
             'amp': 150e6 * 2 * np.pi,
@@ -61,18 +61,21 @@ class TestControl(unittest.TestCase):
             params=carrier_parameters,
             bounds=carrier_bounds
         )
-        ctrl = control.Control(
-            name="line1",
+        ctrl = control.Instruction(
+            name="call1",
             t_start=0.0,
             t_end=10e-9,
-            comps=[carr, gauss_env]
+            channels=["d1"]
         )
-        ctrls = control.ControlSet([ctrl])
-        opt_map = [
-            ('line1', 'gauss', 'amp'),
-            ('line1', 'gauss', 'freq_offset')
-        ]
-        values, bounds = ctrls.get_corresponding_control_parameters(opt_map)
+        ctrl.add_component(gauss_env, "d1")
+        ctrl.add_component(carr, "d1")
+
+        gates = control.GateSet()
+        gates.add_instruction(ctrl)
+        opt_map = [[('call1', 'd1', 'gauss', 'amp')],
+                   [('call1', 'd1', 'gauss', 'freq_offset')]]
+
+        values, bounds = gates.get_parameters(opt_map)
         self.assertCountEqual(
             bounds, [
                 [0.01 * 150e6 * 2 * np.pi, 1.5 * 150e6 * 2 * np.pi],
