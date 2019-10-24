@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from c3po.model import Model
-from c3po.control import ControlSet
+from c3po.control import ControlSet, GateSet
 from c3po.generator import Generator
 
 from c3po.tf_utils import tf_propagation as tf_propagation
@@ -19,26 +19,23 @@ class Simulator():
     def __init__(self,
                  model: Model,
                  generator: Generator,
-                 controls: ControlSet
+                 gateset: GateSet
+                 #controls: ControlSet
                  ):
         self.model = model
         self.generator = generator
         self.controls = controls
+        self.gate_dictionary = {}
 
     def propagation(self,
-                    pulse_values: list,
-                    opt_map: list,
+                    signal: dict,
                     model_params: list = [],
                     lindbladian: bool = False
                     ):
-        self.controls.update_controls(pulse_values, opt_map)
-        gen_signal = self.generator.generate_signals(self.controls)
-        # TODO fix plotting to work on multiple controls
-        self.generator.devices['awg'].plot_IQ_components(
-                                        self.controls.controls[0])
+
         signals = []
-        for key in gen_signal:
-            out = gen_signal[key]
+        for key in signal:
+            out = signal[key]
             ts = out["ts"]
             # TODO this points to the fact that all sim_res must be the same
             signals.append(out["values"])

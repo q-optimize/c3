@@ -1,21 +1,30 @@
 import numpy as np
-from c3po.component import C3obj
+from c3po.component import C3obj, ControlComponent
 
 
 class GateSet:
-    """Contains all operation that can be performed by the experiment."""
+    """Contains all operations and corresponding instructions."""
 
-    def __init__(self, controlsets):
-        self.controlsets = controlsets
+    def __init__(self, instructions: dict):
+        self.instructions = instructions
 
+    def evaluate_gates(self):
+        pass
 
-class ControlSet:
-    """Contains all control drives (i.e. to all lines) for an operation."""
+    def seq_evaluation(self, gate_seq, psi_init):
+        pass
 
-    def __init__(self, controls):
-        self.controls = controls
+    def list_parameters(self):
+        par_list = []
+        instr = self.instructions
+        for gate in instr.keys():
+            for chan in instr[gate].comps.keys():
+                for comp in instr[gate].comps[chan]:
+                    for par in instr[gate].comps[chan][comp].params:
+                        par_list.append((gate,chan,comp,par))
+        return par_list
 
-    def get_corresponding_control_parameters(self, opt_map: list):
+    def get_parameters(self, opt_map: list):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -25,15 +34,17 @@ class ControlSet:
         Parameters
         -------
         opt_map : list
-            List of parameters that are supposed to be optimized, specified
-            with a tupple of control name, component name and parameter.
+            List of parameters that will be optimized, specified with a tuple
+            of gate name, control name, component name and parameter.
+            Parameters that are copies of each other are collected in lists.
 
             Example:
             opt_map = [
-                ('line1','gauss1','sigma'),
-                ('line1','gauss2','amp'),
-                ('line1','gauss2','freq'),
-                ('line2','DC','amp')
+                [('X90p','line1','gauss1','sigma'),
+                 ('Y90p','line1','gauss1','sigma')],
+                [('X90p','line1','gauss2','amp')],
+                [('Cnot','line1','flattop','amp')],
+                [('Cnot','line2','DC','amp')]
                 ]
 
         Returns
@@ -52,53 +63,62 @@ class ControlSet:
         bounds = []
 
         for id in opt_map:
-            ctrl_name = id[0]
-            comp_name = id[1]
-            param = id[2]
-            for control in self.controls:
-                if ctrl_name == control.name:
-                    value = control.get_parameter_value(param, comp_name)
-                    bound = control.get_parameter_bounds(param, comp_name)
-                    values.append(value)
-                    bounds.append(bound)
+            gate = id[0][0]
+            par_id = id[0][1:3]
+            gate_instr = self.instructions[gate]
+            value, bound = gate_instr.get_parameter_value_bounds(par_id)
+            values.append(value)
+            bounds.append(bound)
         return values, bounds
 
-    def update_controls(self, values: list, opt_map: list):
-        """Set the values in opt_params in the original control class."""
-        # TODO make this more efficient: check index of control name beforehand
+    def set_parameters(self, values: list, opt_map: list):
+        """Set the values in the original instruction class."""
         for indx in range(len(opt_map)):
-            id = opt_map[indx]
-            ctrl_name = id[0]
-            comp_name = id[1]
-            param = id[2]
-            for control in self.controls:
-                if ctrl_name == control.name:
-                    value = values[indx]
-                    control.set_parameter_value(param, comp_name, value)
-
-    def save_params_to_history(self, name):
-        # TODO save history in ControlSet too?
-        for control in self.controls:
-            control.save_params_to_history(name)
-
-    def get_history(self, opt_map=None):
-        # TODO make function return only history of given params
-        for control in self.controls:
-            control.get_history()
-        return None
+            ids = opt_map[indx]
+            for id in ids:
+                gate = id[0]
+                par_id = id[1:3]
+                gate_instr = self.instructions[gate]
+                gate_instr.set_parameter_value(par_id, values[idx])
 
 
-class Control(C3obj):
-    """Collection of components making up the control signal for a line."""
+class Instruction(C3obj):
+    """
+    Collection of components making up the control signal for a line.
+
+    Parameters
+    ----------
+    t_start : np.float64
+        Start of the signal.
+    t_end : np.float64
+        End of the signal.
+    channels : list
+        List of channel names (strings)
+
+
+    Attributes
+    ----------
+    comps : dict
+        Nested dictionary with lines and components as keys
+
+    Example:
+    comps = {
+             'channel_1' : {
+                            'envelope1': envelope1,
+                            'envelope2': envelope2,
+                            'carrier': carrier
+                            }
+             }
+    """
 
     def __init__(
             self,
             name: str = " ",
             desc: str = " ",
             comment: str = " ",
+            channels: list = [],
             t_start: np.float64 = 0.0,
             t_end: np.float64 = 0.0,
-            comps: list = []
             ):
         super().__init__(
             name=name,
@@ -107,54 +127,31 @@ class Control(C3obj):
             )
         self.t_start = t_start
         self.t_end = t_end
-        self.history = {}
-        self.comps = comps
+        self.comps = {}
+        for chan in channels:
+            self.comps[chan] = []
 
-    def get_parameter_value(self, param, comp_name):
-        for comp in self.comps:
-            if comp_name == comp.name:
-                return comp.params[param]
+    def add_component(self, comp: ControlComponent, chan: str):
+        self.comps[chan][comp.name] = comp
 
-    def set_parameter_value(self, param, comp_name, value):
-        for comp in self.comps:
-            if comp_name == comp.name:
-                comp.params[param] = value
+    def get_parameter_value_bounds(self, par_id: tuple):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        value = self.comps[chan][comp].params[param]
+        bounds = self.comps[chan][comp].bounds[param]
+        return value, bounds
 
-    def get_parameter_bounds(self, param, comp_name):
-        for comp in self.comps:
-            if comp_name == comp.name:
-                return comp.bounds[param]
+    def set_parameter_value(self, par_id: tuple, value):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        self.comps[chan][comp].params[param] = value
 
-    def set_parameter_bounds(self, param, comp_name, value):
-        for comp in self.comps:
-            if comp_name == comp.name:
-                comp.bounds[param] = value
-
-    def get_parameters(self):
-        params = {}
-        for comp in self.comps:
-            for key in comp.params.keys():
-                if key not in params:
-                    params[key] = {}
-                comp_name = comp.name
-                params[key][comp_name] = {}
-                params[key][comp_name]['value'] = comp.params[key]
-                # TODO discuss: shouldn't all params have bounds? why if?
-                if key in comp.bounds:
-                    params[key][comp_name]['bounds'] = comp.bounds[key]
-        return params
-
-    def save_params_to_history(self, name):
-        self.history['name'] = self.get_parameters()
-
-    def get_history(self):
-        return self.history
-
-    def generate_opt_map(self):
-        opt_map = []
-        ctrl_id = self.name
-        for comp in self.comps:
-            for key in comp.params.keys():
-                entry = (ctrl_id, comp.name, key)
-                opt_map.append(entry)
-        return opt_map
+    def set_parameter_bounds(self, par_id: tuple, bounds):
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        self.comps[chan][comp].bounds[param] = bounds
