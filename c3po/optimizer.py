@@ -148,7 +148,6 @@ class Optimizer:
         self.optimizer_logs[self.optim_name].append(
             [current_params, float(goal.numpy())]
             )
-
         return goal.numpy()
 
     def goal_gradient_run(self, x):
@@ -175,10 +174,8 @@ class Optimizer:
                 goal = float(self.goal_run(sample))
                 if self.simulate_noise:
                     goal = (1+0.03*np.random.randn()) * goal
-
                 solutions.append(goal)
                 self.plot_progress()
-
             es.tell(
                     samples,
                     solutions
@@ -187,16 +184,10 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
-
         x_opt = res[0]
-
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
-
-        # cmaes res is tuple, tread carefully
-        # res[0] = values_opt
-
+        # cmaes res is tuple, tread carefully. res[0] = values_opt
         self.results[self.optim_name] = res
-
         return values_opt
 
     def lbfgs(self, values, bounds, goal, grad, settings={}):
@@ -212,11 +203,8 @@ class Optimizer:
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
-
         res.x = values_opt
-
         self.results[self.optim_name] = res
-
         return values_opt
 
     def optimize_controls(
@@ -250,7 +238,7 @@ class Optimizer:
         self.fig = fig
         self.axs = axs
 
-        values, bounds = controls.get_corresponding_control_parameters(opt_map)
+        values, bounds = controls.get_parameters(opt_map)
         self.opt_map = opt_map
         self.optim_name = calib_name
 
@@ -271,7 +259,11 @@ class Optimizer:
         self.optimizer_logs[self.optim_name] = []
 
         if opt == 'cmaes':
-            values_opt = self.cmaes(values, bounds, settings)
+            values_opt = self.cmaes(
+                values,
+                bounds,
+                settings
+            )
 
         elif opt == 'lbfgs':
             values_opt = self.lbfgs(
@@ -281,13 +273,11 @@ class Optimizer:
                 self.goal_gradient_run,
                 settings=settings
             )
-
-        values = values_opt
-        # TODO make these two happend at the same time if you pass a save name
-        # TODO use update_controls here, (and change to set_values)
-        controls.update_controls(values, opt_map)
-        controls.save_params_to_history(calib_name)
-        self.parameter_history[calib_name] = values
+        controls.set_parameters(values_opt, opt_map)
+        # TODO decide if gateset object should have history and implement
+        # TODO save while setting if you pass a save name
+        # pseudocode: controls.save_params_to_history(calib_name)
+        self.parameter_history[calib_name] = values_opt
 
     def learn_model(
         self,
@@ -296,7 +286,7 @@ class Optimizer:
         settings,
         learn_from,
         optim_name='learn_model',
-        ):
+    ):
 
         fig, axs = plt.subplots(1, 1)
         self.fig = fig

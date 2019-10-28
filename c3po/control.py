@@ -79,81 +79,6 @@ class GateSet:
                 gate_instr.set_parameter_value(par_id, values[indx])
 
 
-class Instruction(C3obj):
-    """
-    Collection of components making up the control signal for a line.
-
-    Parameters
-    ----------
-    t_start : np.float64
-        Start of the signal.
-    t_end : np.float64
-        End of the signal.
-    channels : list
-        List of channel names (strings)
-
-
-    Attributes
-    ----------
-    comps : dict
-        Nested dictionary with lines and components as keys
-
-    Example:
-    comps = {
-             'channel_1' : {
-                            'envelope1': envelope1,
-                            'envelope2': envelope2,
-                            'carrier': carrier
-                            }
-             }
-    """
-
-    def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            channels: list = [],
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-            )
-        self.t_start = t_start
-        self.t_end = t_end
-        self.comps = {}
-        for chan in channels:
-            self.comps[chan] = {}
-
-    def add_component(self, comp: InstructionComponent, chan: str):
-        self.comps[chan][comp.name] = comp
-
-    def get_parameter_value_bounds(self, par_id: tuple):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        value = self.comps[chan][comp].params[param]
-        bounds = self.comps[chan][comp].bounds[param]
-        return value, bounds
-
-    def set_parameter_value(self, par_id: tuple, value):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].params[param] = value
-
-    def set_parameter_bounds(self, par_id: tuple, bounds):
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].bounds[param] = bounds
-
-
 class InstructionComponent(C3obj):
     """
     Represents the components making up a pulse.
@@ -187,7 +112,6 @@ class InstructionComponent(C3obj):
         # check that the parameters and bounds have the same key
         if params.keys() != bounds.keys():
             raise ValueError('params and bounds must have same keys')
-
 
 class Envelope(InstructionComponent):
     """
@@ -241,3 +165,79 @@ class Carrier(InstructionComponent):
             params=params,
             bounds=bounds,
             )
+
+
+class Instruction(C3obj):
+    """
+    Collection of components making up the control signal for a line.
+
+    Parameters
+    ----------
+    t_start : np.float64
+        Start of the signal.
+    t_end : np.float64
+        End of the signal.
+    channels : list
+        List of channel names (strings)
+
+
+    Attributes
+    ----------
+    comps : dict
+        Nested dictionary with lines and components as keys
+
+    Example:
+    comps = {
+             'channel_1' : {
+                            'envelope1': envelope1,
+                            'envelope2': envelope2,
+                            'carrier': carrier
+                            }
+             }
+
+    """
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            channels: list = [],
+            t_start: np.float64 = 0.0,
+            t_end: np.float64 = 0.0,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment
+            )
+        self.t_start = t_start
+        self.t_end = t_end
+        self.comps = {}
+        for chan in channels:
+            self.comps[chan] = {}
+
+    def add_component(self, comp: InstructionComponent, chan: str):
+        self.comps[chan][comp.name] = comp
+
+    def get_parameter_value_bounds(self, par_id: tuple):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        value = self.comps[chan][comp].params[param]
+        bounds = self.comps[chan][comp].bounds[param]
+        return value, bounds
+
+    def set_parameter_value(self, par_id: tuple, value):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        self.comps[chan][comp].params[param] = value
+
+    def set_parameter_bounds(self, par_id: tuple, bounds):
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        self.comps[chan][comp].bounds[param] = bounds

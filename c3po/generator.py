@@ -120,7 +120,7 @@ class Device(C3obj):
 
 
 class Volts_to_Hertz(Device):
-    """Transform signal from value of V to Hz."""
+    """Upsacle the voltage singal to an amplitude to plug in the model."""
 
     def __init__(
             self,
@@ -288,7 +288,6 @@ class AWG(Device):
             resolution=resolution
             )
 
-
         self.options = ""
         # TODO move the options pwc & drag to the instruction object
         self.awg_signal = {}
@@ -413,26 +412,3 @@ class AWG(Device):
         plt.show()
         fig.canvas.draw()
         fig.canvas.flush_events()
-
-
-class mV_to_Amp(Device):
-    """Upsacle the voltage singla to an amplitude to plug in the model."""
-
-    def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-            )
-
-        self.options = ""
-        # TODO move the options pwc & drag to the instruction object
-        self.awg_signal = {}
-        self.amp_tot_sq = None

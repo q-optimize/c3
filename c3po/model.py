@@ -50,11 +50,8 @@ class Model:
 
     def __init__(
             self,
-            chip_elements,
-            mV_to_Hz,
+            chip_elements
             ):
-
-        # TODO move mV_to_Hz to generator and learn generator values too
 
         self.chip_elements = chip_elements
         self.control_Hs = []
@@ -131,7 +128,8 @@ class Model:
                             dtype=tf.complex128)
 
                 self.control_Hs.append(h)
-                self.params.append(mV_to_Hz)
+                # TODO avoid appending for control Hamiltonians
+                self.params.append(1.0)
                 self.params_desc.append([element.name, 'response'])
 
         self.n_params = len(self.params)
