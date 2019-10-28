@@ -160,9 +160,23 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
 
 
 def tf_matmul_list(dUs):
+    """
+    Multiplies a list of matrices from the left.
+
+    Parameters
+    ----------
+    dUs : type
+        Description of parameter `dUs`.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
     U = dUs[0]
     for ii in range(1, len(dUs)):
-        U = tf.matmul(dUs[ii], U, name="timestep_"+str(ii))
+        U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
     return U
 
 

@@ -36,8 +36,8 @@ class Simulator():
         model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             signal = self.generator.generate_signals(
-                      self.gateset.instructions[gate]
-                      )
+                self.gateset.instructions[gate]
+            )
             U = self.propagation(signal, model_params, lindbladian)
             gates[gate].append(U)
         return gates

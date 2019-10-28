@@ -61,17 +61,17 @@ devices = {
 gen = generator.Generator(devices)
 
 gauss_params = {
-        'amp': np.pi / mV_to_Amp,
-        't_final': 8e-9,
-        'xy_angle': 0.0,
-        'freq_offset': 0e6 * 2 * np.pi
-    }
+    'amp': np.pi / mV_to_Amp,
+    't_final': 8e-9,
+    'xy_angle': 0.0,
+    'freq_offset': 0e6 * 2 * np.pi
+}
 gauss_bounds = {
-        'amp': [0.01 * np.pi / mV_to_Amp, 1.5 * np.pi / mV_to_Amp],
-        't_final': [7e-9, 12e-9],
-        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
-    }
+    'amp': [0.01 * np.pi / mV_to_Amp, 1.5 * np.pi / mV_to_Amp],
+    't_final': [7e-9, 12e-9],
+    'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
+    'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
+}
 gauss_env = component.Envelope(
     name="gauss",
     desc="Gaussian comp 1 of signal 1",
