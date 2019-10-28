@@ -121,6 +121,7 @@ class Model:
                 self.params_desc.append([element.name, 'strength'])
 
             elif isinstance(element, Drive):
+                # TODO order drives by driveline name
                 el_indxs = []
                 h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
                 for connected_element in element.connected:

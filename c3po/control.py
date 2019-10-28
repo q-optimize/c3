@@ -1,5 +1,5 @@
 import numpy as np
-from c3po.component import C3obj, InstructionComponent
+from c3po.component import C3obj
 
 
 class GateSet:
@@ -152,3 +152,92 @@ class Instruction(C3obj):
         comp = par_id[1]
         param = par_id[2]
         self.comps[chan][comp].bounds[param] = bounds
+
+
+class InstructionComponent(C3obj):
+    """
+    Represents the components making up a pulse.
+
+    Parameters
+    ----------
+    parameters: dict
+        dictionary of the parameters needed for the shape-function to
+        create the desired pulse
+    bounds: dict
+        boundaries of the parameters, i.e. technical limits of experimental
+        setup or physical boundaries. needed for optimizer
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment
+            )
+        self.params = params
+        self.bounds = bounds
+        # check that the parameters and bounds have the same key
+        if params.keys() != bounds.keys():
+            raise ValueError('params and bounds must have same keys')
+
+
+class Envelope(InstructionComponent):
+    """
+    Represents the envelopes shaping a pulse.
+
+    Parameters
+    ----------
+    shape: function
+        function evaluating the shape in time
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
+            shape: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            bounds=bounds,
+            )
+        self.shape = shape
+
+    def get_shape_values(self, ts):
+        """Return the value of the shape function at the specified times."""
+        return self.shape(ts, self.params)
+
+
+class Carrier(InstructionComponent):
+    """Represents the carrier of a pulse."""
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            bounds: dict = {},
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            bounds=bounds,
+            )

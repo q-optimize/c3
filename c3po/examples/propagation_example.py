@@ -111,6 +111,7 @@ sim = Sim(simple_model, gen, gates)
 opt_map = gates.list_parameters()
 
 pulse_values, _ = gates.get_parameters(opt_map)
+# here we need to update ctrl with pulse values if required
 model_params, _ = simple_model.get_values_bounds()
 
 signal = gen.generate_signals(ctrl)

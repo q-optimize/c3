@@ -26,17 +26,47 @@ class Simulator():
         self.generator = generator
         self.gateset = gateset
 
+    def get_gates(self,
+                  gateset_params: list,
+                  opt_map: dict,
+                  lindbladian: bool = False
+                  ):
+        gates = {}
+        pulse_values, _ = self.gateset.get_parameters(opt_map)
+        model_params, _ = self.model.get_values_bounds()
+        for gate in self.gateset.instructions.keys():
+            signal = self.generator.generate_signals(
+                      self.gateset.instructions[gate]
+                      )
+            U = self.propagation(signal, model_params, lindbladian)
+            gates[gate].append(U)
+        return gates
+
+    def evaluate_sequences(self,
+                           gateset_params: list,
+                           opt_map: dict,
+                           sequence: list,
+                           lindbladian: bool = False
+                           ):
+        gates = self.get_gates(gateset_params, opt_map, lindbladian)
+        Us = []
+        for gate in sequence:
+            Us.append(gates[gate])
+        U = tf_matmul_list(Us)
+        return U
+
     def propagation(self,
                     signal: dict,
                     model_params: list = [],
                     lindbladian: bool = False
                     ):
-
         signals = []
-        for key in signal:
+        # This sorting ensures that signals and hks are matched
+        # TODO do hks and signals matching more rigorously
+        for key in sorted(signal):
             out = signal[key]
-            ts = out["ts"]
             # TODO this points to the fact that all sim_res must be the same
+            ts = out["ts"]
             signals.append(out["values"])
 
         dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")

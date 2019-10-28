@@ -1,5 +1,6 @@
 """Singal generation stack."""
 
+import types
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ class Generator:
             gen_signal = {}
             lo = self.devices["lo"]
             awg = self.devices["awg"]
-            # TODO make mixer optional and have a signal chain (eg. Flux tuning)
+            # TODO make mixer optional and have a signal chain (eg Flux tuning)
             mixer = self.devices["mixer"]
             t_start = instr.t_start
             t_end = instr.t_end
@@ -115,6 +116,78 @@ class Device(C3obj):
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
+
+class Volts_to_Hertz(Device):
+    """Transform signal from value of V to Hz."""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            V_to_Hz: np.float64 = 1.0
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            )
+        self.Hz_signal = None
+
+    def tansform(self, mixed_signal):
+        """Transform signal from value of V to Hz."""
+        self.Hz_signal = mixed_signal * V_to_Hz
+        return self.Hz_signal
+
+
+class Filter(Device):
+    """Apply a filter function to the signal."""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            filter_fuction: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            )
+        self.filter_fuction = filter_fuction
+        self.filter_signal = None
+
+    def filter(self, Hz_signal):
+        """Apply a filter function to the signal."""
+        self.filter_signal = filter_fuction(Hz_signal)
+        return self.filter_signal
+
+class Transfer(Device):
+    """Apply a transfer function to the signal."""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            transfer_fuction: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            )
+        self.transfer_fuction = transfer_fuction
+        self.transfer_signal = None
+
+    def transfer(self, filter_signal):
+        """Apply a transfer function to the signal."""
+        self.transfer_signal = transfer_fuction(filter_signal)
+        return self.transfer_signal
 
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
