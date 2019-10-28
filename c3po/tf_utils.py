@@ -100,7 +100,7 @@ def tf_expm(A):
     r += A
 
     # TODO dynamically calculate the number of steps required
-    for ii in range(2, 14):
+    for ii in range(2, 24):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers/np.math.factorial(ii)
     return r

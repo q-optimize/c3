@@ -14,13 +14,13 @@ v_hz_conversion = 2e9 * np.pi
 t_final = 10e-9
 
 # Simulation variables
-sim_res = 1e11
-awg_res = 1e9  # 1.2GHz
+sim_res = 1e11  # 100GHz
+awg_res = 1e9  # GHz
 
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-gates = create_gates(t_final)
+gates = create_gates(t_final, v_hz_conversion)
 
 # Simulation class and fidelity function
 sim = Sim(model, gen, gates)

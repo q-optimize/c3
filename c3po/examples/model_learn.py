@@ -15,6 +15,12 @@ drive_ham = hamiltonians.x_drive
 v_hz_conversion = 2e9 * np.pi
 t_final = 10e-9
 
+# Define the ground state
+qubit_g = np.zeros([qubit_lvls, 1])
+qubit_g[0] = 1
+ket_0 = tf.constant(qubit_g, tf.complex128)
+bra_0 = tf.constant(qubit_g.T, tf.complex128)
+
 # Simulation variables
 sim_res = 1e11
 awg_res = 1e9  # 1.2GHz
@@ -24,19 +30,23 @@ model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
 gates = create_gates(t_final, v_hz_conversion)
 
-# Simulation class and fidelity function
-sim = Sim(model, gen, gates)
-opt_map = gates.list_parameters()
-
-qubit_g = np.zeros([qubit_lvls, 1])
-qubit_g[0] = 1
-qubit_e = np.zeros([qubit_lvls, 1])
-qubit_e[0] = 1
-ket_init = tf.constant(qubit_g, tf.complex128)
-bra_goal = tf.constant(qubit_g.T, tf.complex128)
-
-# Optimizer object
 opt = Opt()
+sim = Sim(model, gen, gates)
+
+def match_ORBIT(
+    model_values: list,
+    gateset_values: list,
+    opt_map: list,
+    seq: list,
+    fid: np.float64
+):
+    U = sim.evaluate_sequence(model_values, gateset_values, opt_map, seq)
+    ket_actual = tf.matmul(U, ket_0)
+    overlap = tf.matmul(bra_0, ket_actual)
+    diff = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64)) - fid
+    model_error = diff * diff
+    return model_error
+
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp'),
      ('Y90p', 'd1', 'gauss', 'amp'),
@@ -46,23 +56,15 @@ opt_map = [
      ('Y90p', 'd1', 'gauss', 'freq_offset'),
      ('X90m', 'd1', 'gauss', 'freq_offset'),
      ('Y90m', 'd1', 'gauss', 'freq_offset')],
-    [('X90p', 'd1', 'gauss', 'xy_angle')],
-    [('Y90p', 'd1', 'gauss', 'xy_angle')],
-    [('X90m', 'd1', 'gauss', 'xy_angle')],
-    [('Y90m', 'd1', 'gauss', 'xy_angle')],
 ]
-
-def evaluate_signals(gateset_values: list, opt_map: list):
-    seq = ['X90p', 'Y90m', 'Y90p', 'X90m']
-    U = sim.evaluate_sequence(gateset_values, opt_map, seq)
-    psi_actual = tf.matmul(U, ket_init)
-    overlap = tf.matmul(bra_goal, psi_actual)
-    return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
-
-opt.optimize_controls(
-    controls=gates,
-    opt_map=opt_map,
-    opt='lbfgs',
-    calib_name='openloop',
-    eval_func=evaluate_signals
-    )
+opt.opt_map = opt_map
+opt.random_samples = True
+opt.learn_from = [
+    ([np.pi/v_hz_conversion, 1e6*2*np.pi], ['X90p', 'Y90m', 'Y90p', 'X90m'], 0.99),
+    ([1.1*np.pi/v_hz_conversion, 1.1e6*2*np.pi], ['X90m', 'Y90m', 'Y90p', 'X90m', 'X90m', 'X90m'], 0.97),
+    ([0.9*np.pi/v_hz_conversion, 0.9e6*2*np.pi], ['X90m', 'Y90m', 'Y90p', 'X90p', 'X90p', 'X90m'], 0.974)
+]
+opt.learn_model(
+    model,
+    eval_func=match_ORBIT
+)

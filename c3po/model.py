@@ -262,5 +262,5 @@ class Model:
 
     def get_values_bounds(self):
         values = self.params
-        bounds = np.kron(np.array([[0.5], [1.5]]), self.params)
-        return values, bounds.T
+        bounds = np.kron(np.array([[0.5], [1.5]]), self.params).T
+        return values, bounds

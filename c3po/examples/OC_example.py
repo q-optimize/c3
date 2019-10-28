@@ -22,7 +22,7 @@ awg_res = 1e9  # 1.2GHz
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-gates = create_gates(t_final)
+gates = create_gates(t_final, v_hz_conversion)
 
 # Simulation class and fidelity function
 sim = Sim(model, gen, gates)
@@ -41,7 +41,7 @@ bra_goal = tf.constant(qubit_e.T, tf.complex128)
 def evaluate_signals(pulse_values: list, opt_map: list):
     gates.set_parameters(pulse_values, opt_map)
     model_params, _ = sim.model.get_values_bounds()
-    signal = gen.generate_signals(gates.instructions["X90p"])
+    signal = gen.generate_signals(gates.instructions["X180"])
     U = sim.propagation(signal, model_params)
     psi_actual = tf.matmul(U, ket_init)
     overlap = tf.matmul(bra_goal, psi_actual)
@@ -51,8 +51,8 @@ def evaluate_signals(pulse_values: list, opt_map: list):
 # Optimizer object
 opt = Opt()
 opt_map = [
-    [('line1', 'gauss', 'amp')],
-    [('line1', 'gauss', 'freq_offset')]
+    [('X180', 'd1', 'gauss', 'amp')],
+    [('X180', 'd1', 'gauss', 'freq_offset')]
 ]
 opt.optimize_controls(
     controls=gates,

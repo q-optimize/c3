@@ -1,3 +1,4 @@
+import types
 import numpy as np
 from c3po.component import C3obj
 
@@ -70,6 +71,7 @@ class GateSet:
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""
+        # TODO catch key errors
         for indx in range(len(opt_map)):
             ids = opt_map[indx]
             for id in ids:

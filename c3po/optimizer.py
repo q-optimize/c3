@@ -118,35 +118,38 @@ class Optimizer:
     def goal_run_n(self, x):
         learn_from = self.learn_from
         with tf.GradientTape() as t:
-            current_params = tf.constant(
+            model_params = tf.constant(
                 self.to_bound_phys_scale(x, self.bounds)
             )
-            t.watch(current_params)
+            t.watch(model_params)
             goal = 0
-            batch_size = 20
+            batch_size = 3
 
             if self.random_samples:
-                measurements = random.sample(
-                    self.optimizer_logs[learn_from], batch_size
-                    )
+                measurements = random.sample(learn_from, batch_size)
             else:
-                measurements = self.optimizer_logs[learn_from][-batch_size::]
+                measurements = learn_from[-batch_size::]
             for m in measurements:
+                pars = m[0]
+                seq = m[1]
+                fid = m[2]
                 this_goal = self.eval_func(
-                    current_params, self.opt_map,  m[0], m[1]
-                    )
+                    model_params, pars, self.opt_map, seq, fid
+                )
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
                     )
                 goal += this_goal
 
+            self.goal.append(goal)
+
             if self.shai_fid:
                 goal = np.log10(np.sqrt(goal/batch_size))
 
-        grad = t.gradient(goal, current_params)
+        grad = t.gradient(goal, model_params)
         self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
-            [current_params, float(goal.numpy())]
+            [model_params, float(goal.numpy())]
             )
         return goal.numpy()
 
@@ -279,39 +282,6 @@ class Optimizer:
         # pseudocode: controls.save_params_to_history(calib_name)
         self.parameter_history[calib_name] = values_opt
 
-    def learn_model(
-        self,
-        model,
-        eval_func,
-        settings,
-        learn_from,
-        optim_name='learn_model',
-    ):
-
-        fig, axs = plt.subplots(1, 1)
-        self.fig = fig
-        self.axs = axs
-
-        values, bounds = model.get_values_bounds()
-        bounds = np.array(bounds)
-        self.bounds = bounds
-        values = np.array(values)
-        self.param_shape = values.shape
-        self.eval_func = eval_func
-
-        self.learn_from = learn_from
-        self.optim_name = optim_name
-        self.optimizer_logs[self.optim_name] = []
-        self.optimizer_logs['per_point_error'] = []
-        params_opt = self.lbfgs(
-                    values,
-                    bounds,
-                    self.goal_run_n,
-                    self.goal_gradient_run,
-                    settings=settings
-                )
-        model.params = np.array(params_opt)
-
     def plot_progress(self, res=None):
         fig = self.fig
         ax = self.axs
@@ -324,3 +294,36 @@ class Optimizer:
         ax.grid()
         fig.canvas.draw()
         fig.canvas.flush_events()
+
+    def learn_model(
+        self,
+        model,
+        eval_func,
+        optim_name='learn_model',
+        settings={}
+    ):
+        # TODO allow for specific data from optimizer to be used for learning
+        fig, axs = plt.subplots(1, 1)
+        self.fig = fig
+        self.axs = axs
+
+        values, bounds = model.get_values_bounds()
+        bounds = np.array(bounds)
+        self.bounds = bounds
+        values = np.array(values)
+        self.param_shape = values.shape
+        self.eval_func = eval_func
+
+        self.optim_name = optim_name
+        self.optimizer_logs[self.optim_name] = []
+        self.optimizer_logs['per_point_error'] = []
+        self.goal = []
+
+        params_opt = self.lbfgs(
+                    values,
+                    bounds,
+                    self.goal_run_n,
+                    self.goal_gradient_run,
+                    settings=settings
+                )
+        model.params = np.array(params_opt)

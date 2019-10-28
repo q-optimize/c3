@@ -26,29 +26,39 @@ class Simulator():
         self.generator = generator
         self.gateset = gateset
 
-    def get_gates(self,
-                  gateset_values: list,
-                  opt_map: dict,
-                  lindbladian: bool = False
-                  ):
+    def get_gates(
+        self,
+        model_params,
+        gateset_values: list,
+        opt_map: dict,
+        lindbladian: bool = False
+    ):
         gates = {}
         self.gateset.set_parameters(gateset_values, opt_map)
-        model_params, _ = self.model.get_values_bounds()
+        # TODO allow for not passing model params
+        # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             signal = self.generator.generate_signals(
                 self.gateset.instructions[gate]
             )
             U = self.propagation(signal, model_params, lindbladian)
-            gates[gate].append(U)
+            gates[gate] = U
         return gates
 
-    def evaluate_sequences(self,
-                           gateset_values: list,
-                           opt_map: dict,
-                           sequence: list,
-                           lindbladian: bool = False
-                           ):
-        gates = self.get_gates(gateset_values, opt_map, lindbladian)
+    def evaluate_sequence(
+        self,
+        model_params: list,
+        gateset_values: list,
+        opt_map: dict,
+        sequence: list,
+        lindbladian: bool = False
+    ):
+        gates = self.get_gates(
+            model_params,
+            gateset_values,
+            opt_map,
+            lindbladian
+        )
         Us = []
         for gate in sequence:
             Us.append(gates[gate])
@@ -57,7 +67,7 @@ class Simulator():
 
     def propagation(self,
                     signal: dict,
-                    model_params: list = [],
+                    model_params: list = None,
                     lindbladian: bool = False
                     ):
         signals = []
@@ -70,10 +80,7 @@ class Simulator():
             signals.append(out["values"])
 
         dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
-        if model_params == []:
-            h0, hks = self.model.get_Hamiltonians(model_params)
-        else:
-            h0, hks = self.model.get_Hamiltonians()
+        h0, hks = self.model.get_Hamiltonians(model_params)
         if lindbladian:
             col_ops = self.model.get_lindbladian()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)

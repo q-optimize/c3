@@ -4,8 +4,8 @@ import types
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.component import C3obj, Envelope, Carrier
-from c3po.control import Instruction, GateSet
+from c3po.component import C3obj
+from c3po.control import Instruction, GateSet, Envelope, Carrier
 
 
 class Generator:
@@ -43,12 +43,12 @@ class Generator:
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
 
-        self.gen_signal = gen_signal
+        self.signal = gen_signal
         return gen_signal
 
     def plot_signals(self, GateSet: GateSet):
         for instruction in GateSet:
-            signal = self.gen_signal[instruction.name]
+            signal = self.signal[instruction.name]
 
             """ Plotting instruction functions """
             plt.rcParams['figure.dpi'] = 100
@@ -138,7 +138,7 @@ class Volts_to_Hertz(Device):
         self.signal = None
         self.V_to_Hz = V_to_Hz
 
-    def tansform(self, mixed_signal):
+    def transform(self, mixed_signal):
         """Transform signal from value of V to Hz."""
         self.signal = mixed_signal * self.V_to_Hz
         return self.signal
@@ -161,12 +161,12 @@ class Filter(Device):
             comment=comment,
             )
         self.filter_fuction = filter_fuction
-        self.filter_signal = None
+        self.signal = None
 
     def filter(self, Hz_signal):
         """Apply a filter function to the signal."""
-        self.filter_signal = self.filter_fuction(Hz_signal)
-        return self.filter_signal
+        self.signal = self.filter_fuction(Hz_signal)
+        return self.signal
 
 
 class Transfer(Device):
@@ -186,12 +186,12 @@ class Transfer(Device):
             comment=comment,
         )
         self.transfer_fuction = transfer_fuction
-        self.transfer_signal = None
+        self.signal = None
 
     def transfer(self, filter_signal):
         """Apply a transfer function to the signal."""
-        self.transfer_signal = self.transfer_fuction(filter_signal)
-        return self.transfer_signal
+        self.signal = self.transfer_fuction(filter_signal)
+        return self.signal
 
 
 class Mixer(Device):
@@ -209,7 +209,7 @@ class Mixer(Device):
             comment=comment,
         )
 
-        self.mixed_signal = None
+        self.signal = None
 
     def combine(self, lo_signal, awg_signal):
         """Combine signal from AWG and LO."""
@@ -234,8 +234,8 @@ class Mixer(Device):
                             size=[1, new_dim],
                             method='nearest'),
                         shape=[new_dim])
-        self.mixed_signal = (inphase * cos + quadrature * sin)
-        return self.mixed_signal
+        self.signal = (inphase * cos + quadrature * sin)
+        return self.signal
 
 
 class LO(Device):
@@ -255,7 +255,7 @@ class LO(Device):
             resolution=resolution
             )
 
-        self.lo_signal = {}
+        self.signal = {}
 
     def create_signal(self, channel: dict, t_start: float, t_end: float):
         # TODO check somewhere that there is only 1 carrier per instruction
@@ -264,11 +264,11 @@ class LO(Device):
             comp = channel[c]
             if isinstance(comp, Carrier):
                 omega_lo = comp.params['freq']
-                self.lo_signal["values"] = (
+                self.signal["values"] = (
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
-                self.lo_signal["ts"] = ts
-        return self.lo_signal
+                self.signal["ts"] = ts
+        return self.signal
 
 
 class AWG(Device):
@@ -290,7 +290,7 @@ class AWG(Device):
 
         self.options = ""
         # TODO move the options pwc & drag to the instruction object
-        self.awg_signal = {}
+        self.signal = {}
         self.amp_tot_sq = None
 
 # TODO create DC function
@@ -380,16 +380,16 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.awg_signal['inphase'] = inphase / norm
-        self.awg_signal['quadrature'] = quadrature / norm
+        self.signal['inphase'] = inphase / norm
+        self.signal['quadrature'] = quadrature / norm
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/sotre params scaled or not
 
     def get_I(self):
-        return self.amp_tot * self.awg_signal['inphase']
+        return self.amp_tot * self.signal['inphase']
 
     def get_Q(self):
-        return self.amp_tot * self.awg_signal['quadrature']
+        return self.amp_tot * self.signal['quadrature']
 
     def plot_IQ_components(self, instruction: Instruction):
         """Plot instruction functions."""
