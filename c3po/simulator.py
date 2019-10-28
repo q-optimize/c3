@@ -27,12 +27,12 @@ class Simulator():
         self.gateset = gateset
 
     def get_gates(self,
-                  gateset_params: list,
+                  gateset_values: list,
                   opt_map: dict,
                   lindbladian: bool = False
                   ):
         gates = {}
-        pulse_values, _ = self.gateset.get_parameters(opt_map)
+        self.gateset.set_parameters(gateset_values, opt_map)
         model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             signal = self.generator.generate_signals(
@@ -43,12 +43,12 @@ class Simulator():
         return gates
 
     def evaluate_sequences(self,
-                           gateset_params: list,
+                           gateset_values: list,
                            opt_map: dict,
                            sequence: list,
                            lindbladian: bool = False
                            ):
-        gates = self.get_gates(gateset_params, opt_map, lindbladian)
+        gates = self.get_gates(gateset_values, opt_map, lindbladian)
         Us = []
         for gate in sequence:
             Us.append(gates[gate])
