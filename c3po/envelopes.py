@@ -4,6 +4,11 @@ import numpy as np
 import tensorflow as tf
 
 
+def no_drive(t, params):
+    """Do nothing."""
+    return 0
+
+
 def pwc(t, params):
     """Piecewise constant pulse."""
     return params
@@ -40,6 +45,14 @@ def gaussian(t, params):
     """Normalized gaussian with fixed time/sigma ratio."""
     params['sigma'] = params['t_final']/6
     return gaussian_sigma(t, params)
+
+
+def gaussian_nonorm(t, params):
+    """Gaussian."""
+    t_final = tf.cast(params['t_final'], dtype=tf.float64)
+    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
+    return gauss
 
 
 def gaussian_der(t, params):

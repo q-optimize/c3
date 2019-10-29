@@ -11,6 +11,7 @@ from c3po.generator import Generator
 from c3po.tf_utils import tf_propagation as tf_propagation
 from c3po.tf_utils import tf_propagation_lind as tf_propagation_lind
 from c3po.tf_utils import tf_matmul_list as tf_matmul_list
+from c3po.tf_utils import tf_super as tf_super
 
 
 class Simulator():
@@ -43,6 +44,11 @@ class Simulator():
             )
             U = self.propagation(signal, model_params, lindbladian)
             gates[gate] = U
+            if hasattr(self, 'VZ'):
+                if lindbladian:
+                    gates[gate] = tf_super(self.VZ) * gates[gate]
+                else:
+                    gates[gate] = self.VZ * gates[gate]
         return gates
 
     def evaluate_sequence(

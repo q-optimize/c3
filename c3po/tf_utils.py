@@ -235,6 +235,16 @@ def tf_spost(A):
 
 
 @tf.function
+def tf_super(A):
+    """Superoperator from both sides of matrix A."""
+    superA = tf.matmul(
+        tf_spre(A),
+        tf_spost(tf.linalg.adjoint(A))
+    )
+    return superA
+
+
+@tf.function
 # TODO needs fixing
 def tf_dmdm_fid(rho, sigma):
     rhosqrt = tf.linalg.sqrtm(rho)

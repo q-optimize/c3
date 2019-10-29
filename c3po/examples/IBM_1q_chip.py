@@ -12,25 +12,29 @@ import c3po.generator as generator
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     gauss_params = {
-        'amp': np.pi / v_hz_conversion,
+        'amp': 0.8,
         't_final': t_final,
-        'xy_angle': 0.0,
-        'freq_offset': 0e6 * 2 * np.pi
+        'sigma': t_final/4,
+        'xy_angle': 0.0399,
+        'freq_offset': 50000,
+        'delta': -0.5,
     }
     gauss_bounds = {
-        'amp': [0.01 * np.pi / v_hz_conversion, 1.5 * np.pi / v_hz_conversion],
+        'amp': [0.1, 1.5],
         't_final': [7e-9, 12e-9],
+        'sigma': [t_final/10, t_final/2],
         'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
+        'freq_offset': [-100 * 1e6, 100 * 1e6],
+        'delta': [-1.0, 0.5]
     }
     gauss_env = control.Envelope(
         name="gauss",
         desc="Gaussian comp 1 of signal 1",
         params=gauss_params,
         bounds=gauss_bounds,
-        shape=envelopes.gaussian
+        shape=envelopes.gaussian_nonorm
     )
     carrier_parameters = {
         'freq': qubit_freq
@@ -55,24 +59,41 @@ def create_gates(t_final, v_hz_conversion, qubit_freq):
 
     Y90p = copy.deepcopy(X90p)
     Y90p.name = "Y90p"
-    Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
+    Y90p.comps['d1']['gauss'].params['xy_angle'] = 1.601
     Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
     X90m = copy.deepcopy(X90p)
     X90m.name = "X90m"
-    X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
+    X90m.comps['d1']['gauss'].params['xy_angle'] = 3.160
     X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
     Y90m = copy.deepcopy(X90p)
     Y90m.name = "Y90m"
-    Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
-    Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+    Y90m.comps['d1']['gauss'].params['xy_angle'] = 4.7537
+    Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [2 * np.pi/2, 4 * np.pi/2]
+
+    nodrive_env = control.Envelope(
+        name="nodrive_env",
+        params=gauss_params,
+        bounds=gauss_bounds,
+        shape=envelopes.no_drive
+    )
+    QId = control.Instruction(
+        name="QId",
+        t_start=0.0,
+        t_end=t_final,
+        channels=["d1"]
+    )
+    QId.add_component(nodrive_env, "d1")
+    QId.add_component(carr, "d1")
 
     gates = control.GateSet()
     gates.add_instruction(X90p)
     gates.add_instruction(X90m)
     gates.add_instruction(Y90m)
     gates.add_instruction(Y90p)
+    gates.add_instruction(QId)
+
     return gates
 
 

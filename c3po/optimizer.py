@@ -123,7 +123,7 @@ class Optimizer:
             )
             t.watch(model_params)
             goal = 0
-            batch_size = 3
+            batch_size = 5
 
             if self.random_samples:
                 measurements = random.sample(learn_from, batch_size)

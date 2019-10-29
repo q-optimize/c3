@@ -331,7 +331,7 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        detuning = comp.params['detuning']
+                        delta = comp.params['delta']
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
@@ -342,18 +342,18 @@ class AWG(Device):
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
-                                + denv/detuning * tf.sin(phase)
+                                + denv * delta * tf.sin(phase)
                             )
                         )
                         quadrature_comps.append(
                             amp * (
                                 env * tf.sin(phase)
-                                - denv/detuning * tf.cos(phase)
+                                - denv * delta * tf.cos(phase)
                             )
                         )
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-                inphase = tf.add_n(inphase_comps, name="inphase")/norm
-                quadrature = tf.add_n(quadrature_comps, name="quadrature")/norm
+                inphase = tf.add_n(inphase_comps, name="inphase")
+                quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
             else:
                 for key in channel:
