@@ -55,14 +55,27 @@ def tf_list_avail_devices():
     print(local_dev)
 
 
-def tf_setup():
-    """Set up the tensorflow environment to be used by c3po."""
-    config = tf.ConfigProto(
-        allow_soft_placement=True
-    )
-    config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
-    return sess
+def tf_limit_gpu_memory(memory_limit):
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+        try:
+            tf.config.experimental.set_virtual_device_configuration(
+                gpus[0],
+                [tf.config.experimental.VirtualDeviceConfiguration(
+                    memory_limit=memory_limit
+                )]
+            )
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(
+                len(gpus),
+                "Physical GPUs,",
+                len(logical_gpus),
+                "Logical GPUs"
+            )
+        except RuntimeError as e:
+            # Virtual devices must be set before GPUs have been initialized
+            print(e)
 
 
 @tf.function
@@ -181,28 +194,24 @@ def tf_matmul_list(dUs):
 
 
 def tf_matmul_n(tensor_list):
-    l = len(tensor_list)
-    if (l == 1):
+    ln = len(tensor_list)
+    if (ln == 1):
         return tensor_list[0]
     else:
-        left_half = tensor_list[0:int(l/2)]
-        right_half = tensor_list[int(l/2):l]
+        left_half = tensor_list[0:int(ln/2)]
+        right_half = tensor_list[int(ln/2):ln]
         return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
 
 
 def tf_log10(x):
-    """
-    Yes, seriously.
-    """
+    """Yes, seriously."""
     numerator = tf.log(x)
     denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
 
 
 def Id_like(A):
-    """
-    identity of the same size as A
-    """
+    """Identity of the same size as A."""
     shape = tf.shape(A)
     dim = shape[0]
     return tf.eye(dim, dtype=tf.complex128)

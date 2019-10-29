@@ -81,6 +81,7 @@ class Device(C3obj):
             comment=comment
             )
         self.resolution = resolution
+        self.params = {}
 
     def prepare_plot(self):
         plt.rcParams['figure.dpi'] = 100
@@ -118,6 +119,25 @@ class Device(C3obj):
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
+    def get_parameters(self):
+        params = []
+        for key in sorted(self.params.keys()):
+            params.append(self.params[key])
+        return params
+
+    def set_parameters(self, values):
+        idx = 0
+        for key in sorted(self.params.keys()):
+            self.params[key] = values[idx]
+            idx += 1
+
+    def list_parameters(self):
+        par_list = []
+        for par_key in sorted(self.params.keys()):
+            par_id = (self.name, par_key)
+            par_list.append(par_id)
+        return par_list
+
 
 class Volts_to_Hertz(Device):
     """Upsacle the voltage singal to an amplitude to plug in the model."""
@@ -136,11 +156,11 @@ class Volts_to_Hertz(Device):
             comment=comment,
         )
         self.signal = None
-        self.V_to_Hz = V_to_Hz
+        self.params['V_to_Hz'] = V_to_Hz
 
     def transform(self, mixed_signal):
         """Transform signal from value of V to Hz."""
-        self.signal = mixed_signal * self.V_to_Hz
+        self.signal = mixed_signal * self.params['V_to_Hz']
         return self.signal
 
 

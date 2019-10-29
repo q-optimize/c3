@@ -118,10 +118,10 @@ class Optimizer:
     def goal_run_n(self, x):
         learn_from = self.learn_from
         with tf.GradientTape() as t:
-            model_params = tf.constant(
+            exp_params = tf.constant(
                 self.to_bound_phys_scale(x, self.bounds)
             )
-            t.watch(model_params)
+            t.watch(exp_params)
             goal = 0
             batch_size = 5
 
@@ -130,11 +130,16 @@ class Optimizer:
             else:
                 measurements = learn_from[-batch_size::]
             for m in measurements:
-                pars = m[0]
+                gateset_params = m[0]
                 seq = m[1]
                 fid = m[2]
                 this_goal = self.eval_func(
-                    model_params, pars, self.opt_map, seq, fid
+                    exp_params,
+                    self.exp_opt_map,
+                    gateset_params,
+                    self.gateset_opt_map,
+                    seq,
+                    fid
                 )
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
@@ -146,10 +151,10 @@ class Optimizer:
             if self.shai_fid:
                 goal = np.log10(np.sqrt(goal/batch_size))
 
-        grad = t.gradient(goal, model_params)
+        grad = t.gradient(goal, exp_params)
         self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
-            [model_params, float(goal.numpy())]
+            [exp_params, float(goal.numpy())]
             )
         return goal.numpy()
 
@@ -297,7 +302,7 @@ class Optimizer:
 
     def learn_model(
         self,
-        model,
+        exp,
         eval_func,
         optim_name='learn_model',
         settings={}
@@ -307,7 +312,7 @@ class Optimizer:
         self.fig = fig
         self.axs = axs
 
-        values, bounds = model.get_values_bounds()
+        values, bounds = exp.get_parameters(self.exp_opt_map)
         bounds = np.array(bounds)
         self.bounds = bounds
         values = np.array(values)
@@ -326,4 +331,4 @@ class Optimizer:
                     self.goal_gradient_run,
                     settings=settings
                 )
-        model.params = np.array(params_opt)
+        exp.set_parameters(params_opt, self.exp_opt_map)

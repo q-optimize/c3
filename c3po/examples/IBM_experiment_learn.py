@@ -7,6 +7,7 @@ from scipy.linalg import expm as expm
 import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
+from c3po.experiment import Experiment as Exp
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
 # System
@@ -32,27 +33,37 @@ model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
 gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
 
-sim = Sim(model, gen, gates)
+exp = Exp(model, gen)
+sim = Sim(exp, gates)
 a_q = model.ann_opers[0]
-sim.VZ = expm(1.0j*a_q.T.conj()@a_q*qubit_freq*t_final)
+sim.VZ = expm(1.0j * a_q.T.conj() @ a_q * qubit_freq * t_final)
 
-# def match_ORBIT(
-#     model_values: list,
-#     gateset_values: list,
-#     opt_map: list,
-#     seq: list,
-#     fid: np.float64
-# ):
-#     U = sim.evaluate_sequence(model_values, gateset_values, opt_map, seq)
-#     ket_actual = tf.matmul(U, ket_0)
-#     overlap = tf.matmul(bra_0, ket_actual)
-#     fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
-#     print('overlap of final state with ground: ', overlap.numpy())
-#     print('1-|overlap| i.e. population in 1: ', fid_sim.numpy())
-#     print('population in 1 in the experiment: ', fid)
-#     diff = fid_sim - fid
-#     model_error = diff * diff
-#     return model_error
+
+def match_ORBIT(
+    exp_values: list,
+    exp_opt_map: list,
+    gateset_values: list,
+    gateset_opt_map: list,
+    seq: list,
+    fid: np.float64
+):
+    U = sim.evaluate_sequence(
+        exp_values,
+        exp_opt_map,
+        gateset_values,
+        gateset_opt_map,
+        seq
+    )
+    ket_actual = tf.matmul(U, ket_0)
+    overlap = tf.matmul(bra_0, ket_actual)
+    fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
+    print('overlap of final state with ground: ', overlap.numpy())
+    print('1-|overlap| i.e. population in 1: ', fid_sim.numpy())
+    print('population in 1 in the experiment: ', fid)
+    diff = fid_sim - fid
+    model_error = diff * diff
+    return model_error
+
 
 # IBM OTHER PARAMS
 # phase for gates = 0.0
@@ -66,7 +77,15 @@ sim.VZ = expm(1.0j*a_q.T.conj()@a_q*qubit_freq*t_final)
 # 20 sequences per point
 # 30 iterations
 
-opt_map = [
+# exp_opt_map = [
+#     ('Q1', 'freq'),
+#     ('Q1', 'anhar'),
+#     ('D1', 'response'),
+#     ('v2hz', 'V_to_Hz')
+# ]
+exp_opt_map = exp.list_parameters()
+
+gateset_opt_map = [
     [('X90p', 'd1', 'gauss', 'amp'),
      ('Y90p', 'd1', 'gauss', 'amp'),
      ('X90m', 'd1', 'gauss', 'amp'),
@@ -85,17 +104,12 @@ with open(
         'rb+') as file:
     learn_from = pickle.load(file)
 opt = Opt()
-# opt.opt_map = opt_map
-# opt.random_samples = True
-# # gen.devices['awg'].options = 'drag'
-# opt.learn_from = learn_from
-# opt.learn_model(
-#     model,
-#     eval_func=match_ORBIT
-# )
-
-gates.set_parameters(learn_from[976][0], opt_map)
-model_params, _ = model.get_values_bounds()
-signal = gen.generate_signals(gates.instructions["X90p"])
-U = sim.propagation(signal, model_params)
-sim.plot_dynamics(ket_0)
+opt.gateset_opt_map = gateset_opt_map
+opt.exp_opt_map = exp_opt_map
+opt.random_samples = True
+# gen.devices['awg'].options = 'drag'
+opt.learn_from = learn_from
+opt.learn_model(
+    exp,
+    eval_func=match_ORBIT
+)

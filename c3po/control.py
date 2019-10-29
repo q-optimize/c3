@@ -115,6 +115,7 @@ class InstructionComponent(C3obj):
         if params.keys() != bounds.keys():
             raise ValueError('params and bounds must have same keys')
 
+
 class Envelope(InstructionComponent):
     """
     Represents the envelopes shaping a pulse.

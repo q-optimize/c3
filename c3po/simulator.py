@@ -4,9 +4,8 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 
-from c3po.model import Model
+from c3po.experiment import Experiment
 from c3po.control import GateSet
-from c3po.generator import Generator
 
 from c3po.tf_utils import tf_propagation as tf_propagation
 from c3po.tf_utils import tf_propagation_lind as tf_propagation_lind
@@ -18,31 +17,28 @@ class Simulator():
     """Simulator object."""
 
     def __init__(self,
-                 model: Model,
-                 generator: Generator,
+                 exp: Experiment,
                  gateset: GateSet
                  # controls: GateSet
                  ):
-        self.model = model
-        self.generator = generator
+        self.exp = exp
         self.gateset = gateset
 
     def get_gates(
         self,
-        model_params,
         gateset_values: list,
-        opt_map: dict,
+        gateset_opt_map: list,
         lindbladian: bool = False
     ):
         gates = {}
-        self.gateset.set_parameters(gateset_values, opt_map)
+        self.gateset.set_parameters(gateset_values, gateset_opt_map)
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
-            signal = self.generator.generate_signals(
+            signal = self.exp.generator.generate_signals(
                 self.gateset.instructions[gate]
             )
-            U = self.propagation(signal, model_params, lindbladian)
+            U = self.propagation(signal, lindbladian)
             gates[gate] = U
             if hasattr(self, 'VZ'):
                 if lindbladian:
@@ -53,16 +49,17 @@ class Simulator():
 
     def evaluate_sequence(
         self,
-        model_params: list,
+        exp_params: list,
+        exp_opt_map: list,
         gateset_values: list,
-        opt_map: dict,
+        gateset_opt_map: list,
         sequence: list,
         lindbladian: bool = False
     ):
+        self.exp.set_parameters(exp_params, exp_opt_map)
         gates = self.get_gates(
-            model_params,
             gateset_values,
-            opt_map,
+            gateset_opt_map,
             lindbladian
         )
         Us = []
@@ -73,7 +70,6 @@ class Simulator():
 
     def propagation(self,
                     signal: dict,
-                    model_params: list = None,
                     lindbladian: bool = False
                     ):
         signals = []
@@ -86,9 +82,9 @@ class Simulator():
             signals.append(out["values"])
 
         dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
-        h0, hks = self.model.get_Hamiltonians(model_params)
+        h0, hks = self.exp.model.get_Hamiltonians()
         if lindbladian:
-            col_ops = self.model.get_lindbladian()
+            col_ops = self.exp.model.get_lindbladian()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)

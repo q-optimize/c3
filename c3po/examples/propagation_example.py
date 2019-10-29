@@ -27,6 +27,6 @@ sim = Sim(model, gen, gates)
 opt_map = gates.list_parameters()
 
 pulse_values, _ = gates.get_parameters(opt_map)
-model_params, _ = model.get_values_bounds()
+model_params, _ = model.get_parameters()
 signal = gen.generate_signals(gates.instructions["X90p"])
 U = sim.propagation(signal, model_params)

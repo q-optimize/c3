@@ -81,6 +81,7 @@ class Model:
         self.params = []
         self.params_desc = []
         self.drift_Hs = []
+        # TODO avoid checking element type, instead call function in element
         for element in chip_elements:
             if isinstance(element, Qubit) or isinstance(element, Resonator):
                 el_indx = self.names.index(element.name)
@@ -92,7 +93,7 @@ class Model:
                                     dtype=tf.complex128)
                                     )
                 self.params.append(element.values['freq'])
-                self.params_desc.append([element.name, 'freq'])
+                self.params_desc.append((element.name, 'freq'))
 
                 if isinstance(element, Qubit) and element.hilbert_dim > 2:
                     self.drift_Hs.append(
@@ -101,7 +102,7 @@ class Model:
                                         dtype=tf.complex128)
                                         )
                     self.params.append(element.values['anhar'])
-                    self.params_desc.append([element.name, 'anhar'])
+                    self.params_desc.append((element.name, 'anhar'))
 
             elif isinstance(element, Coupling):
                 el_indxs = []
@@ -115,7 +116,7 @@ class Model:
                                     dtype=tf.complex128)
                                     )
                 self.params.append(element.values['strength'])
-                self.params_desc.append([element.name, 'strength'])
+                self.params_desc.append((element.name, 'strength'))
 
             elif isinstance(element, Drive):
                 # TODO order drives by driveline name
@@ -130,7 +131,7 @@ class Model:
                 self.control_Hs.append(h)
                 # TODO avoid appending for control Hamiltonians
                 self.params.append(1.0)
-                self.params_desc.append([element.name, 'response'])
+                self.params_desc.append((element.name, 'response'))
 
         self.n_params = len(self.params)
         self.params = np.array(self.params)
@@ -157,7 +158,7 @@ class Model:
 
                     self.collapse_ops.append(L1)
                     self.cops_params.append(vals['t1'])
-                    self.cops_params_desc.append([element.name, 't1'])
+                    self.cops_params_desc.append((element.name, 't1'))
                     self.cops_params_fcts.append(t1)
 
                 else:
@@ -260,7 +261,23 @@ class Model:
 
         return drift_H, control_Hs
 
-    def get_values_bounds(self):
-        values = self.params
-        bounds = np.kron(np.array([[0.5], [1.5]]), self.params).T
-        return values, bounds
+    def get_parameters(self):
+        values = []
+        values.extend(self.params)
+        if hasattr(self, 'collapse_ops'):
+            values.extend(self.cops_params)
+        return values
+
+    def set_parameters(self, values):
+        ln = len(self.params)
+        self.params = values[0:ln]
+        if hasattr(self, 'collapse_ops'):
+            self.cops_params = values[ln:-1]
+        return values
+
+    def list_parameters(self):
+        par_list = []
+        par_list.extend(self.params_desc)
+        if hasattr(self, 'collapse_ops'):
+            par_list.extend(self.cops_params_desc)
+        return par_list
