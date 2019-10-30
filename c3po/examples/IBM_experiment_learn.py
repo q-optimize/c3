@@ -16,8 +16,11 @@ qubit_freq = 5.1173e9 * 2 * np.pi
 qubit_anhar = -3155137343 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 1e9 * 0.2545
+v_hz_conversion = 1e9 * 0.31
 t_final = 15e-9
+t1 = 30e-6
+t2star = 30e-6
+temp = 0.0  # i.e. don't thermalise but dissipate
 
 # Define the ground state
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -30,7 +33,13 @@ sim_res = 6e11  # 600GHz
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
-model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
+model = create_chip_model(qubit_freq,
+                          qubit_anhar,
+                          qubit_lvls,
+                          drive_ham,
+                          t1,
+                          t2star,
+                          temp)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
 # gen.devices['awg'].options = 'drag'
 gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
@@ -79,13 +88,15 @@ def match_ORBIT(
 # 20 sequences per point
 # 30 iterations
 
-# exp_opt_map = [
-#     ('Q1', 'freq'),
-#     ('Q1', 'anhar'),
-#     ('D1', 'response'),
-#     ('v2hz', 'V_to_Hz')
-# ]
-exp_opt_map = exp.list_parameters()
+exp_opt_map = [
+    ('Q1', 'freq'),
+    ('Q1', 'anhar'),
+    # ('D1', 'response'),
+    ('Q1', 't1'),
+    ('Q1', 't2star'),
+    ('v2hz', 'V_to_Hz')
+]
+# exp_opt_map = exp.list_parameters()
 
 gateset_opt_map = [
     [('X90p', 'd1', 'gauss', 'amp'),
@@ -111,10 +122,10 @@ opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
 opt.random_samples = True
 opt.learn_from = learn_from
-# opt.learn_model(
-#     exp,
-#     eval_func=match_ORBIT
-# )
+opt.learn_model(
+    exp,
+    eval_func=match_ORBIT
+)
 
 
 gate_dict = sim.get_gates(learn_from[1895][0], gateset_opt_map)
@@ -131,6 +142,6 @@ print('overlap of final state with ground: ', overlap.numpy())
 print('1-|overlap| i.e. population in 1: ', fid_sim.numpy())
 print('population in 1 in the experiment: ', fid)
 
-signal = gen.generate_signals(gates.instructions["Y90p"])
-y90p = sim.propagation(signal)
-sim.plot_dynamics(ket_0)
+# signal = gen.generate_signals(gates.instructions["Y90p"])
+# y90p = sim.propagation(signal)
+# sim.plot_dynamics(ket_0)

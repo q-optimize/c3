@@ -101,14 +101,23 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
 
 
 # Chip and model
-def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
+def create_chip_model(qubit_freq,
+                      qubit_anhar,
+                      qubit_lvls,
+                      drive_ham,
+                      t1,
+                      t2star,
+                      temp):
     q1 = component.Qubit(
         name="Q1",
         desc="Qubit 1",
         comment="The one and only qubit in this chip",
         freq=qubit_freq,
         anhar=qubit_anhar,
-        hilbert_dim=qubit_lvls
+        hilbert_dim=qubit_lvls,
+        t1=t1,
+        t2star=t2star,
+        temp=temp
         )
     drive = component.Drive(
         name="D1",
@@ -119,6 +128,8 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
         )
     chip_elements = [q1, drive]
     model = Mdl(chip_elements)
+    if t1 or t2star:
+        model.initialise_lindbladian()
     return model
 
 
