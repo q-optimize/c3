@@ -5,6 +5,7 @@ import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
+from c3po.experiment import Experiment as Exp
 from single_qubit import create_chip_model, create_generator, create_gates
 
 # System
@@ -22,11 +23,11 @@ awg_res = 1e9  # 1.2GHz
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-gates = create_gates(t_final, v_hz_conversion)
+gates = create_gates(t_final, v_hz_conversion, qubit_freq)
 
 # Simulation class and fidelity function
-sim = Sim(model, gen, gates)
-opt_map = gates.list_parameters()
+exp = Exp(model, gen)
+sim = Sim(exp, gates)
 
 qubit_g = np.zeros([qubit_lvls, 1])
 qubit_g[0] = 1
@@ -37,7 +38,7 @@ bra_goal = tf.constant(qubit_g.T, tf.complex128)
 
 # Optimizer object
 opt = Opt()
-opt_map = [
+gateset_opt_map = [
     [('X90p', 'd1', 'gauss', 'amp'),
      ('Y90p', 'd1', 'gauss', 'amp'),
      ('X90m', 'd1', 'gauss', 'amp'),
@@ -54,14 +55,14 @@ opt_map = [
 
 def evaluate_signals(gateset_values: list, opt_map: list):
     seq = ['X90p', 'Y90m', 'Y90p', 'X90m']
-    U = sim.evaluate_sequence(gateset_values, opt_map, seq)
+    U = sim.evaluate_sequence(gateset_values, gateset_opt_map, seq)
     psi_actual = tf.matmul(U, ket_init)
     overlap = tf.matmul(bra_goal, psi_actual)
     return 1-tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
 
 opt.optimize_controls(
     controls=gates,
-    opt_map=opt_map,
+    opt_map=gateset_opt_map,
     opt='lbfgs',
     calib_name='openloop',
     eval_func=evaluate_signals
