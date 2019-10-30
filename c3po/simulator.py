@@ -23,6 +23,7 @@ class Simulator():
                  ):
         self.exp = exp
         self.gateset = gateset
+        self.unitaries = {}
 
     def get_gates(
         self,
@@ -45,6 +46,7 @@ class Simulator():
                     gates[gate] = tf.matmul(tf_super(self.VZ), gates[gate])
                 else:
                     gates[gate] = tf.matmul(self.VZ, gates[gate])
+            self.unitaries = gates
         return gates
 
     def evaluate_sequence(

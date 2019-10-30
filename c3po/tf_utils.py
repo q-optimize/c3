@@ -98,7 +98,7 @@ def tf_unitary_overlap(A, B):
     """
     overlap = tf.linalg.trace(
         tf.matmul(tf.conj(tf.transpose(A)), B)) / tf.cast(B.shape[1], B.dtype)
-    return tf.cast(tf.conj(overlap)*overlap, tf.float64)
+    return tf.cast(tf.conj(overlap) * overlap, tf.float64)
 
 
 @tf.function
@@ -115,7 +115,7 @@ def tf_expm(A):
     # TODO dynamically calculate the number of steps required
     for ii in range(2, 24):
         A_powers = tf.matmul(A_powers, A)
-        r += A_powers/np.math.factorial(ii)
+        r += A_powers / np.math.factorial(ii)
     return r
 
 
@@ -124,7 +124,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
         h += cflds_t[ii] * hks[ii]
-    return tf_expm(-1j*h*dt)
+    return tf_expm(-1j * h * dt)
 
 
 # @tf.function

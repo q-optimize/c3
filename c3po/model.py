@@ -217,32 +217,12 @@ class Model:
         col_ops = []
         for ii in range(self.cops_n_params):
             col_ops.append(
-                    self.cops_params_fcts[ii](
-                        self.cops_params[ii],
-                        self.collapse_ops[ii]
-                        )
-                    )
+                self.cops_params_fcts[ii](
+                    self.cops_params[ii],
+                    self.collapse_ops[ii]
+                )
+            )
         return col_ops
-
-    def update_parameters(self, new_params):
-        idx = 0
-        self.params = new_params
-        for element in self.chip_elements:
-
-            if isinstance(element, Qubit):
-                element.values['freq'] = new_params[idx]
-                idx += 1
-                if element.hilbert_dim > 2:
-                    element.values['anhar'] = new_params[idx]
-                    idx += 1
-
-            elif isinstance(element, Resonator):
-                element.values['freq'] = new_params[idx]
-                idx += 1
-
-            elif isinstance(element, Coupling):
-                element.values['strength'] = new_params[idx]
-                idx += 1
 
     def get_Hamiltonians(self, params=None):
         if params is None:
@@ -275,9 +255,9 @@ class Model:
 
     def set_parameters(self, values):
         ln = len(self.params)
-        self.params = values[0:ln]
+        self.params = values[:ln]
         if hasattr(self, 'collapse_ops'):
-            self.cops_params = values[ln:-1]
+            self.cops_params = values[ln:]
         return values
 
     def list_parameters(self):

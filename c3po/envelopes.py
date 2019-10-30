@@ -1,4 +1,8 @@
-"""Library of envelope functions."""
+"""
+Library of envelope functions.
+
+All functions assume the input of a time vector.
+"""
 
 import numpy as np
 import tensorflow as tf
@@ -6,7 +10,7 @@ import tensorflow as tf
 
 def no_drive(t, params):
     """Do nothing."""
-    return 0
+    return tf.zeros_like(t, dtype=tf.float64)
 
 
 def pwc(t, params):

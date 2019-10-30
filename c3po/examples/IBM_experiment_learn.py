@@ -19,7 +19,7 @@ drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1e9 * 0.31
 t_final = 15e-9
 t1 = 30e-6
-t2star = 30e-6
+t2star = 25e-6
 temp = 0.0  # i.e. don't thermalise but dissipate
 
 # Define the ground state
@@ -33,16 +33,18 @@ sim_res = 6e11  # 600GHz
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
-model = create_chip_model(qubit_freq,
-                          qubit_anhar,
-                          qubit_lvls,
-                          drive_ham,
-                          t1,
-                          t2star,
-                          temp)
+model = create_chip_model(
+    qubit_freq,
+    qubit_anhar,
+    qubit_lvls,
+    drive_ham,
+    t1,
+    t2star,
+    temp
+)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-# gen.devices['awg'].options = 'drag'
-gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
+gen.devices['awg'].options = 'drag'
+gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res)
 
 exp = Exp(model, gen)
 sim = Sim(exp, gates)
@@ -69,7 +71,7 @@ def match_ORBIT(
     overlap = tf.matmul(bra_0, ket_actual)
     fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
     print('overlap of final state with ground: ', overlap.numpy())
-    print('1-|overlap| i.e. population in 1: ', fid_sim.numpy())
+    print('1-|overlap| i.e. population in 1: ', float(fid_sim.numpy()))
     print('population in 1 in the experiment: ', fid)
     diff = fid_sim - fid
     model_error = diff * diff
@@ -92,8 +94,8 @@ exp_opt_map = [
     ('Q1', 'freq'),
     ('Q1', 'anhar'),
     # ('D1', 'response'),
-    ('Q1', 't1'),
-    ('Q1', 't2star'),
+#    ('Q1', 't1'),
+#    ('Q1', 't2star'),
     ('v2hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()
@@ -112,11 +114,7 @@ gateset_opt_map = [
      ('X90m', 'd1', 'gauss', 'delta'),
      ('Y90m', 'd1', 'gauss', 'delta')],
 ]
-with open(
-    '/home/usersFWM/niwitt/Dropbox/C3PO/IBMZ/learn_from.pickle',
-    # '/home/usersFWM/froy/Documents/PHD/other_code/IBMZ/learn_from.pickle',
-    # 'C:\\Users\\froy\\Desktop\\c3po\\learn_from.pickle',
-        'rb+') as file:
+with open('learn_from.pickle', 'rb+') as file:
     learn_from = pickle.load(file)
 opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
@@ -129,20 +127,20 @@ opt.learn_model(
 )
 
 
-gate_dict = sim.get_gates(learn_from[1895][0], gateset_opt_map)
-fid = learn_from[1895][2]
-seq = learn_from[1895][1]
-Us = []
-for gate in seq:
-    Us.append(gate_dict[gate])
-U = tf_matmul_list(Us)
-ket_actual = tf.matmul(U, ket_0)
-overlap = tf.matmul(bra_0, ket_actual)
-fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
-print('overlap of final state with ground: ', overlap.numpy())
-print('1-|overlap| i.e. population in 1: ', fid_sim.numpy())
-print('population in 1 in the experiment: ', fid)
-
+# gate_dict = sim.get_gates(learn_from[1895][0], gateset_opt_map)
+# fid = learn_from[1895][2]
+# seq = learn_from[1895][1]
+# Us = []
+# for gate in seq:
+#     Us.append(gate_dict[gate])
+# U = tf_matmul_list(Us)
+# ket_actual = tf.matmul(U, ket_0)
+# overlap = tf.matmul(bra_0, ket_actual)
+# fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
+# print('overlap of final state with ground: ', overlap.numpy())
+# print('1-|overlap| i.e. population in 1: ', float(fid_sim.numpy()))
+# print('population in 1 in the experiment: ', fid)
+#
 # signal = gen.generate_signals(gates.instructions["Y90p"])
 # y90p = sim.propagation(signal)
 # sim.plot_dynamics(ket_0)
