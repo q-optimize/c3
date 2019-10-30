@@ -102,8 +102,9 @@ gateset_opt_map = [
      ('Y90m', 'd1', 'gauss', 'delta')],
 ]
 with open(
+    '/home/usersFWM/niwitt/Dropbox/C3PO/IBMZ/learn_from.pickle',
     # '/home/usersFWM/froy/Documents/PHD/other_code/IBMZ/learn_from.pickle',
-    'C:\\Users\\froy\\Desktop\\c3po\\learn_from.pickle',
+    # 'C:\\Users\\froy\\Desktop\\c3po\\learn_from.pickle',
         'rb+') as file:
     learn_from = pickle.load(file)
 opt = Opt()
