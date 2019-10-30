@@ -12,18 +12,18 @@ from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 import c3po.generator as generator
 
 #Limit graphics memory to 1GB
-tf_limit_gpu_memory(1024)
+# tf_limit_gpu_memory(1024)
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res):
     gauss_params = {
-        'amp': 0.8,
+        'amp': 0.8, # 800mV
         't_final': t_final,
-        'sigma': t_final/4,
+        'sigma': t_final / 4,
         'xy_angle': 0.0399,
         'freq_offset': 50000,
-        'delta': -0.5,
-    }
+        'delta': -0.5,         # Delta for DRAG is defined in terms of AWG
+    }                          # samples.
     gauss_bounds = {
         'amp': [0.1, 1.5],
         't_final': [7e-9, 12e-9],

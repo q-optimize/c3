@@ -15,7 +15,7 @@ class Generator:
             self,
             devices: dict,
             resolution: np.float64 = 0.0
-            ):
+    ):
         # TODO consider making the dict into a list of devices
         # TODO check that you get at least 1 set of LO, AWG and mixer.
         self.devices = devices
@@ -46,9 +46,9 @@ class Generator:
         self.signal = gen_signal
         return gen_signal
 
-    def plot_signals(self, GateSet: GateSet):
-        for instruction in GateSet:
-            signal = self.signal[instruction.name]
+    def plot_signals(self, gateset: GateSet):
+        for chan in self.signal.keys():
+            signal = self.signal[chan]
 
             """ Plotting instruction functions """
             plt.rcParams['figure.dpi'] = 100
@@ -74,12 +74,12 @@ class Device(C3obj):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment
-            )
+        )
         self.resolution = resolution
         self.params = {}
 
@@ -262,18 +262,18 @@ class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""
 
     def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0
-            ):
+        self,
+        name: str = " ",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             resolution=resolution
-            )
+        )
 
         self.signal = {}
 
@@ -328,7 +328,7 @@ class AWG(Device):
         with tf.name_scope("I_Q_generation"):
             ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
-
+            dt = ts[1] - ts[0]
             amp_tot_sq = 0.0
             inphase_comps = []
             quadrature_comps = []
@@ -351,13 +351,16 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        delta = comp.params['delta']
+                        delta = comp.params['delta'] * dt
+                        # TODO Deal with the scale of delta
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
                             env = comp.get_shape_values(ts)
 
                         denv = t.gradient(env, ts)
+                        if denv is None:
+                            denv = tf.zeros_like(ts, dtype=tf.float64)
                         phase = xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * (
