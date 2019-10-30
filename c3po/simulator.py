@@ -42,9 +42,9 @@ class Simulator():
             gates[gate] = U
             if hasattr(self, 'VZ'):
                 if lindbladian:
-                    gates[gate] = tf_super(self.VZ) * gates[gate]
+                    gates[gate] = tf.matmul(tf_super(self.VZ), gates[gate])
                 else:
-                    gates[gate] = self.VZ * gates[gate]
+                    gates[gate] = tf.matmul(self.VZ, gates[gate])
         return gates
 
     def evaluate_sequence(
