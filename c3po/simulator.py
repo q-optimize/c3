@@ -51,14 +51,11 @@ class Simulator():
 
     def evaluate_sequence(
         self,
-        exp_params: list,
-        exp_opt_map: list,
         gateset_values: list,
         gateset_opt_map: list,
         sequence: list,
         lindbladian: bool = False
     ):
-        self.exp.set_parameters(exp_params, exp_opt_map)
         gates = self.get_gates(
             gateset_values,
             gateset_opt_map,

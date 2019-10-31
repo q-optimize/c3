@@ -54,20 +54,15 @@ sim.VZ = expm(1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final)
 
 
 def match_ORBIT(
-    exp_values: list,
+    exp_params: list,
     exp_opt_map: list,
     gateset_values: list,
     gateset_opt_map: list,
     seq: list,
     fid: np.float64
 ):
-    U = sim.evaluate_sequence(
-        exp_values,
-        exp_opt_map,
-        gateset_values,
-        gateset_opt_map,
-        seq
-    )
+    exp.set_parameters(exp_params, exp_opt_map)
+    U = sim.evaluate_sequence(gateset_values, gateset_opt_map, seq)
     ket_actual = tf.matmul(U, ket_0)
     overlap = tf.matmul(bra_0, ket_actual)
     fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
