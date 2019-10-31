@@ -2,9 +2,10 @@
 
 import pickle
 import random
+import os
+import time
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
@@ -21,7 +22,6 @@ class Optimizer:
         self.simulate_noise = False
         self.random_samples = False
         self.shai_fid = False
-        plt.rcParams['figure.dpi'] = 100
 
     def save_history(self, filename):
         datafile = open(filename, 'wb')
@@ -123,7 +123,7 @@ class Optimizer:
             )
             t.watch(exp_params)
             goal = 0
-            batch_size = 5
+            batch_size = 25
 
             if self.random_samples:
                 measurements = random.sample(learn_from, batch_size)
@@ -141,15 +141,18 @@ class Optimizer:
                     seq,
                     fid
                 )
+                print(
+                    f("      Simulation: {float(fid_sim.numpy()):8.5f})"",  "Experiment: {fid:8.5}   Error: {abs(float(fid_sim.numpy()-fid)):8.5f}")
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
                     )
                 goal += this_goal
 
+            goal = tf.sqrt(goal / batch_size)
             self.goal.append(goal)
 
             if self.shai_fid:
-                goal = np.log10(np.sqrt(goal/batch_size))
+                goal = np.log10(np.sqrt(goal / batch_size))
 
         grad = t.gradient(goal, exp_params)
         self.gradients[str(x)] = grad.numpy().flatten()
@@ -161,7 +164,7 @@ class Optimizer:
     def goal_gradient_run(self, x):
         grad = self.gradients[str(x)]
         scale = np.diff(self.bounds)
-        return grad*scale.T
+        return grad * scale.T
 
     def cmaes(self, values, bounds, settings={}):
         # TODO: rewrite from dict to list input
@@ -181,7 +184,7 @@ class Optimizer:
             for sample in samples:
                 goal = float(self.goal_run(sample))
                 if self.simulate_noise:
-                    goal = (1+0.03*np.random.randn()) * goal
+                    goal = (1 + 0.03*np.random.randn()) * goal
                 solutions.append(goal)
                 self.plot_progress()
             es.tell(
@@ -206,8 +209,7 @@ class Optimizer:
                 x0,
                 jac=grad,
                 method='L-BFGS-B',
-                options=settings,
-                callback=self.plot_progress
+                options=settings
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -242,10 +244,6 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-        fig, axs = plt.subplots(1, 1)
-        self.fig = fig
-        self.axs = axs
-
         values, bounds = controls.get_parameters(opt_map)
         self.opt_map = opt_map
         self.optim_name = calib_name
@@ -287,19 +285,6 @@ class Optimizer:
         # pseudocode: controls.save_params_to_history(calib_name)
         self.parameter_history[calib_name] = values_opt
 
-    def plot_progress(self, res=None):
-        fig = self.fig
-        ax = self.axs
-        self.goal.append(self.optimizer_logs[self.optim_name][-1][1])
-        ax.clear()
-        ax.semilogy(self.goal)
-        ax.set_title(self.optim_name)
-        ax.set_xlabel('Iteration')
-        ax.set_ylabel('1-Fidelitiy')
-        ax.grid()
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-
     def learn_model(
         self,
         exp,
@@ -308,10 +293,6 @@ class Optimizer:
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        fig, axs = plt.subplots(1, 1)
-        self.fig = fig
-        self.axs = axs
-
         values, bounds = exp.get_parameters(self.exp_opt_map)
         bounds = np.array(bounds)
         self.bounds = bounds
@@ -324,11 +305,25 @@ class Optimizer:
         self.optimizer_logs['per_point_error'] = []
         self.goal = []
 
-        params_opt = self.lbfgs(
-                    values,
-                    bounds,
-                    self.goal_run_n,
-                    self.goal_gradient_run,
-                    settings=settings
-                )
+        self.log_setup()
+        with open(self.log_filename, 'w') as self.logfile:
+            params_opt = self.lbfgs(
+                values,
+                bounds,
+                self.goal_run_n,
+                self.goal_gradient_run,
+                settings=settings
+            )
         exp.set_parameters(params_opt, self.exp_opt_map)
+
+    def log_setup(self):
+        data_path = "/tmp/c3logs/"
+        if not os.path.isdir(data_path):
+            os.makedirs(data_path)
+        pwd = data_path + time.strftime(
+            "%Y%m%d%H%M%S", time.localtime()
+        )
+        os.makedirs(pwd)
+        self.log_filename = pwd + '/' + self.optim_name + ".log"
+
+    def callback(x):

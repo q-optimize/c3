@@ -210,6 +210,9 @@ def tf_log10(x):
     return numerator / denominator
 
 
+def tf_abs(x):
+    return tf.sqrt(tf.math.conj(x)*x)
+
 def Id_like(A):
     """Identity of the same size as A."""
     shape = tf.shape(A)
