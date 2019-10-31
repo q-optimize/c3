@@ -87,7 +87,7 @@ exp_opt_map = [
     ('Q1', 'anhar'),
 #    ('Q1', 't1'),
 #    ('Q1', 't2star'),
-    ('v2hz', 'V_to_Hz')
+    ('v_to_hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()
 
@@ -110,7 +110,8 @@ with open('learn_from.pickle', 'rb+') as file:
 opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
-opt.random_samples = False
+opt.random_samples = True
+opt.batch_size = 10
 opt.learn_from = learn_from
 opt.learn_model(
     exp,

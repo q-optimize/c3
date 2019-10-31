@@ -22,6 +22,7 @@ class Optimizer:
         self.gradients = {}
         self.simulate_noise = False
         self.random_samples = False
+        self.batch_size = 1
         self.shai_fid = False
 
     def save_history(self, filename):
@@ -124,7 +125,7 @@ class Optimizer:
             )
             t.watch(exp_params)
             goal = 0
-            batch_size = 25
+            batch_size = self.batch_size
 
             if self.random_samples:
                 measurements = random.sample(learn_from, batch_size)
@@ -154,12 +155,11 @@ class Optimizer:
                 self.logfile.flush()
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
-                    )
+                )
                 goal += this_goal
 
             goal = tf.sqrt(goal / batch_size)
             self.goal.append(goal)
-
 
             if self.shai_fid:
                 goal = np.log10(np.sqrt(goal / batch_size))
@@ -168,7 +168,7 @@ class Optimizer:
         self.gradients[str(x)] = grad.numpy().flatten()
         self.optimizer_logs[self.optim_name].append(
             [exp_params, float(goal.numpy())]
-            )
+        )
         self.optim_status['params'] = list(zip(
             self.exp_opt_map, exp_params.numpy()
         ))
@@ -323,9 +323,9 @@ class Optimizer:
 
         self.log_setup()
         with open(self.log_filename, 'w') as self.logfile:
-            start_time = time.localtime()
+            start_time = time.time()
             self.logfile.write(
-                f"Starting optimization at {time.asctime(start_time)}\n\n"
+                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
             params_opt = self.lbfgs(
                 values,
@@ -334,12 +334,12 @@ class Optimizer:
                 self.goal_gradient_run,
                 settings=settings
             )
-            end_time = time.localtime()
+            end_time = time.time()
             self.logfile.write(
-                f"Finished at {time.asctime(end_time)}\n"
+                f"Finished at {time.asctime(time.localtime())}\n"
             )
             self.logfile.write(
-                f"Total runtime: {time.asctime(end_time-start_time)}"
+                f"Total runtime:{end_time-start_time}"
             )
         exp.set_parameters(params_opt, self.exp_opt_map)
 
@@ -359,5 +359,5 @@ class Optimizer:
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
         self.iteration += 1
-        self.logfile.write(f"Starting iteration {self.iteration}")
+        self.logfile.write(f"Starting iteration {self.iteration}\n")
         self.logfile.flush()

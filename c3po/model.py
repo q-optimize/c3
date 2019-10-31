@@ -226,7 +226,6 @@ class Model:
             params = self.params
 
         drift_H = tf.zeros_like(self.drift_Hs[0])
-        control_Hs = []
         for ii in range(self.n_params):
             drift_H += \
                 tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
