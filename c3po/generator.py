@@ -140,7 +140,7 @@ class Device(C3obj):
 
 
 class Volts_to_Hertz(Device):
-    """Upsacle the voltage singal to an amplitude to plug in the model."""
+    """Upsacle the voltage signal to an amplitude to plug in the model."""
 
     def __init__(
             self,
@@ -174,12 +174,12 @@ class Filter(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             filter_fuction: types.FunctionType = None,
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            )
+        )
         self.filter_fuction = filter_fuction
         self.signal = None
 

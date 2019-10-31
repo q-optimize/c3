@@ -9,6 +9,7 @@ from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
 from c3po.tf_utils import tf_matmul_list as tf_matmul_list
+from c3po.tf_utils import tf_abs as tf_abs
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
 # System
@@ -29,7 +30,7 @@ ket_0 = tf.constant(qubit_g, tf.complex128)
 bra_0 = tf.constant(qubit_g.T, tf.complex128)
 
 # Simulation variables
-sim_res = 6e11  # 600GHz
+sim_res = 60e9  # 600GHz
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
@@ -64,13 +65,9 @@ def match_ORBIT(
     U = sim.evaluate_sequence(gateset_values, gateset_opt_map, seq)
     ket_actual = tf.matmul(U, ket_0)
     overlap = tf.matmul(bra_0, ket_actual)
-    fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
-    print('overlap of final state with ground: ', overlap.numpy())
-    print('1-|overlap| i.e. population in 1: ', float(fid_sim.numpy()))
-    print('population in 1 in the experiment: ', fid)
+    fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
     diff = fid_sim - fid
-    model_error = diff * diff
-    return model_error
+    return diff * diff
 
 
 # IBM OTHER PARAMS
@@ -88,10 +85,9 @@ def match_ORBIT(
 exp_opt_map = [
     ('Q1', 'freq'),
     ('Q1', 'anhar'),
-    # ('D1', 'response'),
 #    ('Q1', 't1'),
 #    ('Q1', 't2star'),
-    ('v2hz', 'V_to_Hz')
+    ('v_to_hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()
 
@@ -115,6 +111,7 @@ opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
 opt.random_samples = True
+opt.batch_size = 10
 opt.learn_from = learn_from
 opt.learn_model(
     exp,

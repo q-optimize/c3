@@ -129,9 +129,6 @@ class Model:
                             dtype=tf.complex128)
 
                 self.control_Hs.append(h)
-                # TODO avoid appending for control Hamiltonians
-                self.params.append(1.0)
-                self.params_desc.append((element.name, 'response'))
 
         self.n_params = len(self.params)
         self.params = np.array(self.params)
@@ -229,22 +226,11 @@ class Model:
             params = self.params
 
         drift_H = tf.zeros_like(self.drift_Hs[0])
-        control_Hs = []
-        di = 0
-        ci = 0
         for ii in range(self.n_params):
+            drift_H += \
+                tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
 
-            if self.params_desc[ii][1] == 'response':
-                control_Hs.append(
-                    tf.cast(params[ii], tf.complex128) * self.control_Hs[ci]
-                    )
-                ci += 1
-            else:
-                drift_H += \
-                    tf.cast(params[ii], tf.complex128) * self.drift_Hs[di]
-                di += 1
-
-        return drift_H, control_Hs
+        return drift_H, self.control_Hs
 
     def get_parameters(self):
         values = []

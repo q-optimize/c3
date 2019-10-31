@@ -154,12 +154,13 @@ def create_generator(sim_res, awg_res, v_hz_conversion):
     lo = generator.LO(name='lo', resolution=sim_res)
     awg = generator.AWG(name='awg', resolution=awg_res)
     mixer = generator.Mixer(name='mixer')
-    v_to_hz = generator.Volts_to_Hertz(name='v2hz', V_to_Hz=v_hz_conversion)
+    v_to_hz = generator.Volts_to_Hertz(name='v_to_hz', V_to_Hz=v_hz_conversion)
+    # TODO Add devices by their names
     devices = {
         "lo": lo,
         "awg": awg,
         "mixer": mixer,
         "v_to_hz": v_to_hz
-        }
+    }
     gen = generator.Generator(devices)
     return gen

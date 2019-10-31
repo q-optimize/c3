@@ -61,16 +61,12 @@ class Experiment:
             pars[par_ii] = values[indx]
             indx = indx + 1
         first_ind = 0
-        count = 0
-        dev_keys = list(self.generator.devices.keys())
-        for length in self.par_lens:
-            last_ind = first_ind + length
-            params = pars[first_ind:last_ind]
-            if count == 0:
-                self.model.set_parameters(params)
-            else:
-                dev_key = dev_keys[count-1]
-                pars = self.generator.devices[dev_key].get_parameters()
-                if not (pars == []):
-                    self.generator.devices[dev_key].set_paramaters(params)
-            count = count + 1
+        last_ind = first_ind + self.par_lens[0]
+        params = pars[first_ind:last_ind]
+        self.model.set_parameters(params)
+        devs = self.generator.devices
+        indx = 0
+        for par in opt_map:
+            if par[0] in devs.keys():
+                devs[par[0]].params[par[1]] = values[indx]
+            indx += 1
