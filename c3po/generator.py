@@ -361,7 +361,7 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
-                        phase = xy_angle - freq_offset * ts
+                        phase = - xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
@@ -389,14 +389,13 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
+                        phase = - xy_angle - freq_offset * ts
                         inphase_comps.append(
-                            amp * comp.get_shape_values(ts)
-                            * tf.cos(xy_angle - freq_offset * ts)
-                            )
+                            amp * comp.get_shape_values(ts) * tf.cos(phase)
+                        )
                         quadrature_comps.append(
-                            amp * comp.get_shape_values(ts)
-                            * tf.sin(xy_angle - freq_offset * ts)
-                            )
+                            amp * comp.get_shape_values(ts) * tf.sin(phase)
+                        )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
                 inphase = tf.add_n(inphase_comps, name="inphase")
