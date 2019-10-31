@@ -183,7 +183,7 @@ class Optimizer:
                 if self.simulate_noise:
                     goal = (1+0.03*np.random.randn()) * goal
                 solutions.append(goal)
-                self.plot_progress()
+                # self.plot_progress()
             es.tell(
                     samples,
                     solutions
@@ -207,7 +207,7 @@ class Optimizer:
                 jac=grad,
                 method='L-BFGS-B',
                 options=settings,
-                callback=self.plot_progress
+                callback=None #self.plot_progress
                 )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -242,9 +242,9 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-        fig, axs = plt.subplots(1, 1)
-        self.fig = fig
-        self.axs = axs
+        # fig, axs = plt.subplots(1, 1)
+        # self.fig = fig
+        # self.axs = axs
 
         values, bounds = controls.get_parameters(opt_map)
         self.opt_map = opt_map

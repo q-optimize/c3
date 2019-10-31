@@ -12,20 +12,30 @@ from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 import c3po.generator as generator
 
 #Limit graphics memory to 1GB
-# tf_limit_gpu_memory(1024)
+tf_limit_gpu_memory(1024)
+
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res):
+def create_gates(t_final,
+                 qubit_freq,
+                 qubit_anhar,
+                 amp=0.8,
+                 delta=-0.5,
+                 freq_offset=0.0,
+                 IBM_angles=True,
+                 pwc=False
+                 ):
+
     gauss_params = {
-        'amp': 0.8, # 800mV
+        'amp': amp,
         't_final': t_final,
         'sigma': t_final / 4,
-        'xy_angle': 0.0399,
-        'freq_offset': 50000,
-        'delta': -0.5,         # Delta for DRAG is defined in terms of AWG
+        'xy_angle': 0,  # 0.0399,
+        'freq_offset': 0.0,
+        'delta': delta,         # Delta for DRAG is defined in terms of AWG
     }                          # samples.
     gauss_bounds = {
-        'amp': [0.1, 1.5],
+        'amp': [0.01, 10],
         't_final': [7e-9, 12e-9],
         'sigma': [t_final/10, t_final/2],
         'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
@@ -62,18 +72,24 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res):
 
     Y90p = copy.deepcopy(X90p)
     Y90p.name = "Y90p"
-    Y90p.comps['d1']['gauss'].params['xy_angle'] = 1.601
+    Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi/2  # 1.601
     Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
     X90m = copy.deepcopy(X90p)
     X90m.name = "X90m"
-    X90m.comps['d1']['gauss'].params['xy_angle'] = 3.160
+    X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi  # 3.160
     X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
     Y90m = copy.deepcopy(X90p)
     Y90m.name = "Y90m"
-    Y90m.comps['d1']['gauss'].params['xy_angle'] = 4.7537
+    Y90m.comps['d1']['gauss'].params['xy_angle'] = 3 * np.pi/2  # 4.7537
     Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [2 * np.pi/2, 4 * np.pi/2]
+
+    if IBM_angles:
+        X90p.comps['d1']['gauss'].params['xy_angle'] = 0.0399
+        Y90p.comps['d1']['gauss'].params['xy_angle'] = 1.601
+        X90m.comps['d1']['gauss'].params['xy_angle'] = 3.160
+        Y90m.comps['d1']['gauss'].params['xy_angle'] = 4.7537
 
     nodrive_env = control.Envelope(
         name="nodrive_env",

@@ -413,9 +413,9 @@ class AWG(Device):
     def get_Q(self):
         return self.amp_tot * self.signal['quadrature']
 
-    def plot_IQ_components(self, instruction: Instruction):
+    def plot_IQ_components(self):
         """Plot instruction functions."""
-        ts = self.create_ts(instruction.t_start, instruction.t_end)
+        ts = self.ts
         inphase = self.get_I()
         quadrature = self.get_Q()
 
