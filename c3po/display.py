@@ -22,4 +22,4 @@ def plot_logs(logfilename):
         plt.plot(parameters[key])
         plt.title(key)
     plt.figure()
-    plt.plot(goal_function)
+    plt.semilogy(goal_function)

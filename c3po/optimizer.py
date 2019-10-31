@@ -124,7 +124,7 @@ class Optimizer:
             )
             t.watch(exp_params)
             goal = 0
-            batch_size = 1
+            batch_size = 25
 
             if self.random_samples:
                 measurements = random.sample(learn_from, batch_size)
@@ -319,6 +319,7 @@ class Optimizer:
         self.optimizer_logs['per_point_error'] = []
         self.goal = []
         self.optim_status = {}
+        self.iteration = 0
 
         self.log_setup()
         with open(self.log_filename, 'w') as self.logfile:
@@ -357,4 +358,6 @@ class Optimizer:
         self.logfile.write("\n")
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
+        self.iteration += 1
+        self.logfile.write(f"Starting iteration {self.iteration}")
         self.logfile.flush()

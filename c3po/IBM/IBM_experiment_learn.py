@@ -110,7 +110,7 @@ with open('learn_from.pickle', 'rb+') as file:
 opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
-opt.random_samples = True
+opt.random_samples = False
 opt.learn_from = learn_from
 opt.learn_model(
     exp,
