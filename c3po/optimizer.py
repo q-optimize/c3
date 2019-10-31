@@ -4,6 +4,7 @@ import pickle
 import random
 import os
 import time
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -123,7 +124,7 @@ class Optimizer:
             )
             t.watch(exp_params)
             goal = 0
-            batch_size = 25
+            batch_size = 1
 
             if self.random_samples:
                 measurements = random.sample(learn_from, batch_size)
@@ -141,8 +142,16 @@ class Optimizer:
                     seq,
                     fid
                 )
-                print(
-                    f("      Simulation: {float(fid_sim.numpy()):8.5f})"",  "Experiment: {fid:8.5}   Error: {abs(float(fid_sim.numpy()-fid)):8.5f}")
+                self.logfile.write(
+                    f"  Simulation:  {abs(float(this_goal.numpy())-fid):8.5f}"
+                )
+                self.logfile.write(
+                    f"  Experiment: {fid:8.5f}"
+                )
+                self.logfile.write(
+                    f"  Error: {float(this_goal.numpy()):8.5f}\n"
+                )
+                self.logfile.flush()
                 self.optimizer_logs['per_point_error'].append(
                     float(this_goal.numpy())
                     )
@@ -150,6 +159,7 @@ class Optimizer:
 
             goal = tf.sqrt(goal / batch_size)
             self.goal.append(goal)
+
 
             if self.shai_fid:
                 goal = np.log10(np.sqrt(goal / batch_size))
@@ -159,6 +169,11 @@ class Optimizer:
         self.optimizer_logs[self.optim_name].append(
             [exp_params, float(goal.numpy())]
             )
+        self.optim_status['params'] = list(zip(
+            self.exp_opt_map, exp_params.numpy()
+        ))
+        self.optim_status['goal'] = float(goal.numpy())
+        self.optim_status['gradient'] = list(grad.numpy())
         return goal.numpy()
 
     def goal_gradient_run(self, x):
@@ -184,7 +199,7 @@ class Optimizer:
             for sample in samples:
                 goal = float(self.goal_run(sample))
                 if self.simulate_noise:
-                    goal = (1 + 0.03*np.random.randn()) * goal
+                    goal = (1 + 0.03 * np.random.randn()) * goal
                 solutions.append(goal)
                 self.plot_progress()
             es.tell(
@@ -203,14 +218,13 @@ class Optimizer:
 
     def lbfgs(self, values, bounds, goal, grad, settings={}):
         x0 = self.to_scale_one(values, bounds)
-        settings['disp'] = True
         res = minimize(
-                goal,
-                x0,
-                jac=grad,
-                method='L-BFGS-B',
-                options=settings
-                )
+            goal,
+            x0,
+            jac=grad,
+            method='L-BFGS-B',
+            callback=self.log_parameters
+        )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
         res.x = values_opt
@@ -226,7 +240,7 @@ class Optimizer:
         eval_func,
         settings={},
         callback=None
-         ):
+    ):
         """
         Apply a search algorightm to your parameters given a fidelity.
 
@@ -304,15 +318,27 @@ class Optimizer:
         self.optimizer_logs[self.optim_name] = []
         self.optimizer_logs['per_point_error'] = []
         self.goal = []
+        self.optim_status = {}
 
         self.log_setup()
         with open(self.log_filename, 'w') as self.logfile:
+            start_time = time.localtime()
+            self.logfile.write(
+                f"Starting optimization at {time.asctime(start_time)}\n\n"
+            )
             params_opt = self.lbfgs(
                 values,
                 bounds,
                 self.goal_run_n,
                 self.goal_gradient_run,
                 settings=settings
+            )
+            end_time = time.localtime()
+            self.logfile.write(
+                f"Finished at {time.asctime(end_time)}\n"
+            )
+            self.logfile.write(
+                f"Total runtime: {time.asctime(end_time-start_time)}"
             )
         exp.set_parameters(params_opt, self.exp_opt_map)
 
@@ -325,5 +351,10 @@ class Optimizer:
         )
         os.makedirs(pwd)
         self.log_filename = pwd + '/' + self.optim_name + ".log"
+        print(f"Saving to:\n {self.log_filename}\n")
 
-    def callback(x):
+    def log_parameters(self, x):
+        self.logfile.write("\n")
+        self.logfile.write(json.dumps(self.optim_status))
+        self.logfile.write("\n")
+        self.logfile.flush()

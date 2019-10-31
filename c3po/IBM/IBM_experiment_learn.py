@@ -65,8 +65,7 @@ def match_ORBIT(
     U = sim.evaluate_sequence(gateset_values, gateset_opt_map, seq)
     ket_actual = tf.matmul(U, ket_0)
     overlap = tf.matmul(bra_0, ket_actual)
-    fid_sim = (1-tf.cast(tf.linalg.adjoint(overlap)*overlap, tf.float64))
-    print(f"      Simulation: {float(fid_sim.numpy()):8.5f}  Experiment: {fid:8.5}   Error: {abs(float(fid_sim.numpy()-fid)):8.5f}")
+    fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
     diff = fid_sim - fid
     return diff * diff
 
