@@ -8,8 +8,8 @@ import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from c3po.tf_utils import tf_matmul_list as tf_matmul_list
-from c3po.tf_utils import tf_abs as tf_abs
+# from c3po.tf_utils import tf_matmul_list as tf_matmul_list
+# from c3po.tf_utils import tf_abs as tf_abs
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
 # System
@@ -17,7 +17,7 @@ qubit_freq = 5.1173e9 * 2 * np.pi
 qubit_anhar = -3155137343 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 1e9 * 0.31
+v_hz_conv = 1e9 * 0.31
 t_final = 15e-9
 t1 = 30e-6
 t2star = 25e-6
@@ -43,9 +43,9 @@ model = create_chip_model(
     t2star,
     temp
 )
-gen = create_generator(sim_res, awg_res, v_hz_conversion)
+gen = create_generator(sim_res, awg_res, v_hz_conv)
 gen.devices['awg'].options = 'drag'
-gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res)
+gates = create_gates(t_final, v_hz_conv, qubit_freq, qubit_anhar, awg_res)
 
 exp = Exp(model, gen)
 sim = Sim(exp, gates)
@@ -83,10 +83,17 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
+<<<<<<< HEAD
 #    ('Q1', 'freq'),
 #    ('Q1', 'anhar'),
 #    ('Q1', 't1'),
 #    ('Q1', 't2star'),
+=======
+    ('Q1', 'freq'),
+    ('Q1', 'anhar'),
+    # ('Q1', 't1'),
+    # ('Q1', 't2star'),
+>>>>>>> 1322374077a5d509dcb47176c0f9ea4899a8433f
     ('v_to_hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()

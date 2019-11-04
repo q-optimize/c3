@@ -196,7 +196,7 @@ class Optimizer:
                 if self.simulate_noise:
                     goal = (1 + 0.03 * np.random.randn()) * goal
                 solutions.append(goal)
-                self.plot_progress()
+                # self.plot_progress()
             es.tell(
                 samples,
                 solutions

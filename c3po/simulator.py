@@ -40,20 +40,20 @@ class Simulator():
                 self.gateset.instructions[gate]
             )
             U = self.propagation(signal, lindbladian)
-            gates[gate] = U
             if hasattr(self, 'VZ'):
                 if lindbladian:
-                    gates[gate] = tf.matmul(tf_super(self.VZ), gates[gate])
+                    U = tf.matmul(tf_super(self.VZ), U)
                 else:
-                    gates[gate] = tf.matmul(self.VZ, gates[gate])
+                    U = tf.matmul(self.VZ, U)
+            gates[gate] = U
             self.unitaries = gates
         return gates
 
-    def evaluate_sequence(
+    def evaluate_sequences(
         self,
         gateset_values: list,
         gateset_opt_map: list,
-        sequence: list,
+        sequences: list,
         lindbladian: bool = False
     ):
         gates = self.get_gates(
@@ -61,10 +61,14 @@ class Simulator():
             gateset_opt_map,
             lindbladian
         )
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U = tf_matmul_list(Us)
+
+        # TODO deal with the case where you only evaluate one sequence
+        U = []
+        for sequence in sequences:
+            Us = []
+            for gate in sequence:
+                Us.append(gates[gate])
+            U.append(tf_matmul_list(Us))
         return U
 
     def propagation(self,
@@ -90,6 +94,11 @@ class Simulator():
         self.dUs = dUs
         self.ts = ts
         U = tf_matmul_list(dUs)
+        if hasattr(self, 'VZ'):
+            if lindbladian:
+                U = tf.matmul(tf_super(self.VZ), U)
+            else:
+                U = tf.matmul(self.VZ, U)
         self.U = U
         return U
 
