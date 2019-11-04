@@ -7,9 +7,11 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+from c3po.tf_utils import tf_abs, tf_ave
+from c3po.qt_utils import basis, xy_basis, perfect_gate, single_length_RB
 # import matplotlib.pyplot as plt
 
-from scipy.linalg import expm as expm
+from scipy.linalg import expm
 import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
@@ -49,21 +51,10 @@ data = shelve.open('{}{}'.format(newpath, datafile), 'c')
 os.system('cp hockey_open.py {}config.py'.format(newpath))
 
 # Define states & unitaries
-# TODO create basic unit vectors with a function call or an import
-psi_g = np.zeros([qubit_lvls, 1])
-psi_g[0] = 1
-psi_e = np.zeros([qubit_lvls, 1])
-psi_e[1] = 1
-ket_0 = tf.constant(psi_g, dtype=tf.complex128)
-bra_1 = tf.constant(psi_e.T, dtype=tf.complex128)
-psi_ym = (psi_g - 1.0j * psi_e) / np.sqrt(2)
-bra_ym = tf.constant(psi_ym.T, dtype=tf.complex128)
-psi_yp = (psi_g + 1.0j * psi_e) / np.sqrt(2)
-bra_yp = tf.constant(psi_yp.T, dtype=tf.complex128)
-psi_xm = (psi_g - psi_e) / np.sqrt(2)
-bra_xm = tf.constant(psi_xm.T, dtype=tf.complex128)
-psi_xp = (psi_g + psi_e) / np.sqrt(2)
-bra_xp = tf.constant(psi_xp.T, dtype=tf.complex128)
+ket_0 = tf.constant(basis(qubit_lvls, 0), dtype=tf.complex128)
+bra_0 = tf.constant(basis(qubit_lvls, 0).T, dtype=tf.complex128)
+bra_yp = tf.constant(xy_basis(qubit_lvls, 'yp').T, dtype=tf.complex128)
+X90p = tf.constant(perfect_gate(qubit_lvls, 'X90p'), dtype=tf.complex128)
 
 # Iter over different length pulses for CREATING DATA
 overlap_inf = []
@@ -128,14 +119,35 @@ for sample_num in sample_numbers:
         ]
 
     def state_transfer_infid(pulse_values: list, opt_map: list):
-        gates.set_parameters(pulse_values, opt_map)
+        sim.gateset.set_parameters(pulse_values, opt_map)
         signal = gen.generate_signals(gates.instructions["X90p"])
         U = sim.propagation(signal)
         ket_actual = tf.matmul(U, ket_0)
-        overlap = tf.matmul(bra_yp, ket_actual)
-        overlap_abs = tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
-        infid = 1 - overlap_abs
+        overlap = tf_abs(tf.matmul(bra_yp, ket_actual))
+        infid = 1 - overlap
         return infid
+
+    def unitary_infid(pulse_values: list, opt_map: list):
+        sim.gateset.set_parameters(pulse_values, opt_map)
+        signal = gen.generate_signals(gates.instructions["X90p"])
+        U = sim.propagation(signal)
+        unit_fid = tf_abs(
+                    tf.trace(
+                        tf.matmul(U, X90p)
+                        ) / 2
+                    )**2
+        infid = 1 - unit_fid
+        return infid
+
+    def orbit_infid(pulse_values: list, opt_map: list):
+        seqs = single_length_RB(RB_number=25, RB_length=20)
+        U_seqs = sim.evaluate_sequence(pulse_values, gateset_opt_map, seqs)
+        infids = []
+        for U in U_seqs:
+            ket_actual = tf.matmul(U, ket_0)
+            overlap = tf_abs(tf.matmul(bra_0, ket_actual))
+            infids.append(1 - overlap)
+        return tf_ave(infids)
 
     opt = Opt()
     opt.optimize_controls(
