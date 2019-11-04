@@ -49,11 +49,11 @@ class Simulator():
             self.unitaries = gates
         return gates
 
-    def evaluate_sequence(
+    def evaluate_sequences(
         self,
         gateset_values: list,
         gateset_opt_map: list,
-        sequence: list,
+        sequences: list,
         lindbladian: bool = False
     ):
         gates = self.get_gates(
@@ -61,10 +61,14 @@ class Simulator():
             gateset_opt_map,
             lindbladian
         )
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U = tf_matmul_list(Us)
+
+        # TODO deal with the case where you only evaluate one sequence
+        U = []
+        for sequence in sequences:
+            Us = []
+            for gate in sequence:
+                Us.append(gates[gate])
+            U.append(tf_matmul_list(Us))
         return U
 
     def propagation(self,
