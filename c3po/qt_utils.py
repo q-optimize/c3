@@ -42,7 +42,7 @@ def basis(lvls: int, pop_lvl: int):
     return psi
 
 
-def xy_basis(lvls: int, vect: list):
+def xy_basis(lvls: int, vect: str):
     psi_g = basis(lvls, 0)
     psi_e = basis(lvls, 1)
     if vect == 'zm':
