@@ -9,8 +9,11 @@ from c3po.simulator import Simulator as Sim
 from c3po.experiment import Experiment as Exp
 # from c3po.tf_utils import tf_matmul_list as tf_matmul_list
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
+from c3po.tf_utils import tf_abs
+from c3po.qt_utils import basis, xy_basis, perfect_gate
 
 # System
+pulse_type = 'gauss'  # 'gauss' 'drag' 'pwc'
 qubit_freq = 5.1173e9 * 2 * np.pi
 qubit_anhar = -3155137343 * 2 * np.pi
 qubit_lvls = 4
@@ -42,7 +45,10 @@ model = create_chip_model(
     temp
 )
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-# gen.devices['awg'].options = 'drag'
+if pulse_type == 'drag':
+    gen.devices['awg'].options = 'drag'
+elif pulse_type == 'pwc':
+    gen.devices['awg'].options = 'pwc'
 gates = create_gates(t_final,
                      qubit_freq,
                      qubit_anhar,
@@ -55,42 +61,44 @@ sim = Sim(exp, gates)
 a_q = model.ann_opers[0]
 sim.VZ = expm(1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final)
 
-gateset_opt_map = [
-            [('X90p', 'd1', 'gauss', 'amp')],
-            [('X90p', 'd1', 'gauss', 'freq_offset')],
-            # [('X90p', 'd1', 'gauss', 'delta')]
-]
+if pulse_type == 'gauss':
+    gateset_opt_map = [
+        [('X90p', 'd1', 'gauss', 'amp')],
+        [('X90p', 'd1', 'gauss', 'freq_offset')]
+    ]
+if pulse_type == 'drag':
+    gateset_opt_map = [
+                [('X90p', 'd1', 'gauss', 'amp')],
+                [('X90p', 'd1', 'gauss', 'freq_offset')],
+                [('X90p', 'd1', 'gauss', 'delta')]
+    ]
 
 # Define states & unitaries
-# TODO create basic unit vectors with a function call or an import
-psi_g = np.zeros([qubit_lvls, 1])
-psi_g[0] = 1
-psi_e = np.zeros([qubit_lvls, 1])
-psi_e[1] = 1
-ket_0 = tf.constant(psi_g, dtype=tf.complex128)
-bra_1 = tf.constant(psi_e.T, dtype=tf.complex128)
-psi_ym = (psi_g - 1.0j * psi_e) / np.sqrt(2)
-bra_ym = tf.constant(psi_ym.T, dtype=tf.complex128)
-psi_yp = (psi_g + 1.0j * psi_e) / np.sqrt(2)
-bra_yp = tf.constant(psi_yp.T, dtype=tf.complex128)
-psi_xm = (psi_g - psi_e) / np.sqrt(2)
-bra_xm = tf.constant(psi_xm.T, dtype=tf.complex128)
-psi_xp = (psi_g + psi_e) / np.sqrt(2)
-bra_xp = tf.constant(psi_xp.T, dtype=tf.complex128)
+ket_0 = tf.constant(basis(qubit_lvls, 0), dtype=tf.complex128)
+bra_0 = tf.constant(basis(qubit_lvls, 0).T, dtype=tf.complex128)
+bra_yp = tf.constant(xy_basis(qubit_lvls, 'yp').T, dtype=tf.complex128)
+X90p = tf.constant(perfect_gate(qubit_lvls, 'X90p'), dtype=tf.complex128)
 
 # pulse_params = [1.49775076e+00, -1.00676867e+07, -4.59827744e-01]
-# pulse_params = [1.70349896e+00,  3.08792384e+07, -2.53171726e-01]
-pulse_params = [1.68732807e+00, -3.85382920e+06]
+if pulse_type == 'gauss':
+    pulse_params = [1.68732807e+00, -3.85382920e+06]
+if pulse_type == 'drag':
+    pulse_params = [1.70349896e+00,  3.08792384e+07, -2.53171726e-01]
 gates.set_parameters(pulse_params, gateset_opt_map)
 signal = gen.generate_signals(gates.instructions["X90p"])
 U = sim.propagation(signal)
 ket_actual = tf.matmul(U, ket_0)
-overlap = tf.matmul(bra_yp, ket_actual)
-overlap_abs = tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
-infid = 1 - overlap_abs
-print('overlap')
-print(overlap)
-print('overlap fidelity')
-print(infid)
+overlap = tf_abs(tf.matmul(bra_yp, ket_actual))
+ov_infid = 1 - overlap
+unit_fid = tf_abs(
+            tf.linalg.trace(
+                tf.matmul(U, tf.linalg.adjoint(X90p))
+                ) / 2
+            )**2
+un_infid = 1 - unit_fid
+print('overlap error')
+print(ov_infid)
+print('unitary error')
+print(un_infid)
 gen.devices['awg'].plot_IQ_components()
 sim.plot_dynamics(ket_0)
