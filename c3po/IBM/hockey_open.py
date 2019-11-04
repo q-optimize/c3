@@ -7,7 +7,7 @@ from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from scipy.linalg import expm as expm
 import c3po.hamiltonians as hamiltonians

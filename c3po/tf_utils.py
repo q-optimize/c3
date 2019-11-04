@@ -211,7 +211,9 @@ def tf_log10(x):
 
 
 def tf_abs(x):
+    """Rewritten so that is has a gradient."""
     return tf.sqrt(tf.math.conj(x)*x)
+
 
 def Id_like(A):
     """Identity of the same size as A."""

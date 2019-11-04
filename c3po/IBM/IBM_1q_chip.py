@@ -11,7 +11,7 @@ from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
 
-#Limit graphics memory to 1GB
+# Limit graphics memory to 1GB
 tf_limit_gpu_memory(1024)
 
 

@@ -5,9 +5,9 @@ import tensorflow as tf
 from scipy.linalg import expm as expm
 import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
-from c3po.optimizer import Optimizer as Opt
+# from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from c3po.tf_utils import tf_matmul_list as tf_matmul_list
+# from c3po.tf_utils import tf_matmul_list as tf_matmul_list
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
 # System
@@ -80,7 +80,7 @@ bra_xp = tf.constant(psi_xp.T, dtype=tf.complex128)
 
 # pulse_params = [1.49775076e+00, -1.00676867e+07, -4.59827744e-01]
 # pulse_params = [1.70349896e+00,  3.08792384e+07, -2.53171726e-01]
-pulse_params = [ 1.68732807e+00, -3.85382920e+06]
+pulse_params = [1.68732807e+00, -3.85382920e+06]
 gates.set_parameters(pulse_params, gateset_opt_map)
 signal = gen.generate_signals(gates.instructions["X90p"])
 U = sim.propagation(signal)
