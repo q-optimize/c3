@@ -10,14 +10,14 @@ from single_qubit import create_chip_model, create_generator, create_gates
 
 # System
 qubit_freq = 6e9 * 2 * np.pi
-qubit_anhar = -100e6 * 2 * np.pi
-qubit_lvls = 6
+qubit_anhar = -300e6 * 2 * np.pi
+qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 2e9 * np.pi
 t_final = 10e-9
 
 # Simulation variables
-sim_res = 1e11
+sim_res = 60e9
 awg_res = 1e9  # 1.2GHz
 
 # Create system
@@ -54,7 +54,8 @@ def evaluate_signals(pulse_values: list, opt_map: list):
 opt = Opt()
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
-    [('X90p', 'd1', 'gauss', 'freq_offset')]
+    [('X90p', 'd1', 'gauss', 'freq_offset')],
+    [('X90p', 'd1', 'gauss', 'xy_angle')]
 ]
 opt.optimize_controls(
     controls=gates,
@@ -62,4 +63,4 @@ opt.optimize_controls(
     opt='lbfgs',
     calib_name='openloop',
     eval_func=evaluate_signals
-    )
+)
