@@ -21,7 +21,7 @@ from IBM_1q_chip import create_chip_model, create_generator, create_gates
 # Script parameters
 lindbladian = True
 IBM_angles = False
-search_fid = 'state'  # 'state' 'unit' 'EPC'
+search_fid = 'unit'  # 'state' 'unit' 'EPC'
 pulse_type = 'gauss'  # 'gauss' 'drag' 'pwc'
 sim_res = 3e11  # 300GHz
 awg_res = 1.2e9  # 1.2GHz
@@ -132,8 +132,8 @@ for sample_num in sample_numbers:
         signal = gen.generate_signals(gates.instructions["X90p"])
         U = sim.propagation(signal)
         unit_fid = tf_abs(
-                    tf.trace(
-                        tf.matmul(U, X90p)
+                    tf.linalg.trace(
+                        tf.matmul(U, tf.linalg.adjoint(X90p))
                         ) / 2
                     )**2
         infid = 1 - unit_fid
@@ -150,12 +150,18 @@ for sample_num in sample_numbers:
         return tf_ave(infids)
 
     opt = Opt()
+    if search_fid == 'state':
+        eval_func = state_transfer_infid
+    elif search_fid == 'unit':
+        eval_func = unitary_infid
+    elif search_fid == 'orbit':
+        eval_func = orbit_infid
     opt.optimize_controls(
         controls=gates,
         opt_map=gateset_opt_map,
         opt='lbfgs',
         calib_name='openloop',
-        eval_func=state_transfer_infid
+        eval_func=eval_func
         )
 
     # store results and plot for quick lookup
