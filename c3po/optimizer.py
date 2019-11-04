@@ -23,7 +23,6 @@ class Optimizer:
         self.simulate_noise = False
         self.random_samples = False
         self.batch_size = 1
-        self.shai_fid = False
 
     def save_history(self, filename):
         datafile = open(filename, 'wb')
@@ -94,7 +93,7 @@ class Optimizer:
         values = []
         for i in range(len(x0)):
             scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = bounds[i].T[0]
+            offset = min(bounds[i].T)
             tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
             tmp = scale * tmp + offset
             values.append(tmp)
@@ -109,34 +108,37 @@ class Optimizer:
             goal = self.eval_func(current_params, self.opt_map)
 
         grad = t.gradient(goal, current_params)
-        self.gradients[str(x)] = grad.numpy().flatten()
-        # print(goal)
-        # print(goal.numpy())
-        self.optimizer_logs[self.optim_name].append(
-            [current_params, float(goal.numpy())]
-        )
+        scale = np.diff(self.bounds)
+        gradients = grad.numpy().flatten() * scale.T
+        self.gradients[str(x)] = gradients
+        self.optim_status['params'] = list(zip(
+            self.opt_map, current_params.numpy()
+        ))
+        self.optim_status['goal'] = float(goal.numpy())
+        self.optim_status['gradient'] = gradients.tolist()
         return float(goal.numpy())
 
     def goal_run_n(self, x):
         learn_from = self.learn_from
         with tf.GradientTape() as t:
-            exp_params = tf.constant(
+            current_params = tf.constant(
                 self.to_bound_phys_scale(x, self.bounds)
             )
-            t.watch(exp_params)
+            t.watch(current_params)
             goal = 0
-            batch_size = self.batch_size
 
             if self.random_samples:
-                measurements = random.sample(learn_from, batch_size)
+                measurements = random.sample(learn_from, self.batch_size)
             else:
-                measurements = learn_from[-batch_size::]
+                n = int(len(learn_from) / self.batch_size)
+                measurements = learn_from[::n]
+            batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
                 seq = m[1]
                 fid = m[2]
                 this_goal = self.eval_func(
-                    exp_params,
+                    current_params,
                     self.exp_opt_map,
                     gateset_params,
                     self.gateset_opt_map,
@@ -144,42 +146,35 @@ class Optimizer:
                     fid
                 )
                 self.logfile.write(
-                    f"  Simulation:  {abs(float(this_goal.numpy())-fid):8.5f}"
+                    f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
                 )
                 self.logfile.write(
                     f"  Experiment: {fid:8.5f}"
                 )
                 self.logfile.write(
-                    f"  Error: {float(this_goal.numpy()):8.5f}\n"
+                    f"  Diff: {float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                self.optimizer_logs['per_point_error'].append(
-                    float(this_goal.numpy())
-                )
-                goal += this_goal
+                goal += this_goal ** 2
 
             goal = tf.sqrt(goal / batch_size)
-            self.goal.append(goal)
+            self.logfile.write(
+                f"\nFinished batch with RMS: {float(goal.numpy())}\n"
+            )
 
-            if self.shai_fid:
-                goal = np.log10(np.sqrt(goal / batch_size))
-
-        grad = t.gradient(goal, exp_params)
-        self.gradients[str(x)] = grad.numpy().flatten()
-        self.optimizer_logs[self.optim_name].append(
-            [exp_params, float(goal.numpy())]
-        )
+        grad = t.gradient(goal, current_params)
+        scale = np.diff(self.bounds)
+        gradients = grad.numpy().flatten() * scale.T
+        self.gradients[str(x)] = gradients
         self.optim_status['params'] = list(zip(
-            self.exp_opt_map, exp_params.numpy()
+            self.exp_opt_map, current_params.numpy()
         ))
         self.optim_status['goal'] = float(goal.numpy())
-        self.optim_status['gradient'] = list(grad.numpy())
+        self.optim_status['gradient'] = gradients.tolist()
         return goal.numpy()
 
     def goal_gradient_run(self, x):
-        grad = self.gradients[str(x)]
-        scale = np.diff(self.bounds)
-        return grad * scale.T
+        return self.gradients[str(x)]
 
     def cmaes(self, values, bounds, settings={}):
         # TODO: rewrite from dict to list input
@@ -203,9 +198,9 @@ class Optimizer:
                 solutions.append(goal)
                 # self.plot_progress()
             es.tell(
-                    samples,
-                    solutions
-                    )
+                samples,
+                solutions
+            )
             es.logger.add()
             es.disp()
 
@@ -216,19 +211,22 @@ class Optimizer:
         self.results[self.optim_name] = res
         return values_opt
 
-    def lbfgs(self, values, bounds, goal, grad, settings={}):
+    def lbfgs(self, values, bounds, goal, grad):
         x0 = self.to_scale_one(values, bounds)
+        self.optim_status['params'] = list(zip(
+            self.opt_map, values
+        ))
+        self.log_parameters(x0)
         res = minimize(
             goal,
             x0,
             jac=grad,
             method='L-BFGS-B',
-            callback=self.log_parameters
+            callback=self.log_parameters,
+            options={'disp': True}
         )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
-        res.x = values_opt
-        self.results[self.optim_name] = res
         return values_opt
 
     def optimize_controls(
@@ -238,7 +236,6 @@ class Optimizer:
         opt,
         calib_name,
         eval_func,
-        settings={},
         callback=None
     ):
         """
@@ -262,9 +259,9 @@ class Optimizer:
         self.opt_map = opt_map
         self.optim_name = calib_name
 
-        self.goal = []
-
+        self.optim_status = {}
         self.callback = callback
+        self.iteration = 1
         # TODO Make sure values and bounds are already np.arrays
         values = np.array(values)
         self.param_shape = values.shape
@@ -275,24 +272,34 @@ class Optimizer:
             bounds = bounds.reshape(bounds.T.shape)
         self.bounds = bounds
         self.eval_func = eval_func
-
-        self.optimizer_logs[self.optim_name] = []
-
-        if opt == 'cmaes':
-            values_opt = self.cmaes(
-                values,
-                bounds,
-                settings
+        self.log_setup()
+        start_time = time.time()
+        with open(self.log_filename, 'w') as self.logfile:
+            self.logfile.write(
+                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
+            self.logfile.flush()
+            if opt == 'cmaes':
+                values_opt = self.cmaes(
+                    values,
+                    bounds
+                )
 
-        elif opt == 'lbfgs':
-            values_opt = self.lbfgs(
-                values,
-                bounds,
-                self.goal_run,
-                self.goal_gradient_run,
-                settings=settings
+            elif opt == 'lbfgs':
+                values_opt = self.lbfgs(
+                    values,
+                    bounds,
+                    self.goal_run,
+                    self.goal_gradient_run
+                )
+            end_time = time.time()
+            self.logfile.write(
+                f"Finished at {time.asctime(time.localtime())}\n"
             )
+            self.logfile.write(
+                f"Total runtime:{end_time-start_time}"
+            )
+            self.logfile.flush()
         controls.set_parameters(values_opt, opt_map)
         # TODO decide if gateset object should have history and implement
         # TODO save while setting if you pass a save name
@@ -315,9 +322,6 @@ class Optimizer:
         self.eval_func = eval_func
 
         self.optim_name = optim_name
-        self.optimizer_logs[self.optim_name] = []
-        self.optimizer_logs['per_point_error'] = []
-        self.goal = []
         self.optim_status = {}
         self.iteration = 0
 
@@ -339,8 +343,9 @@ class Optimizer:
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
             self.logfile.write(
-                f"Total runtime:{end_time-start_time}"
+                f"Total runtime: {end_time-start_time}"
             )
+            self.logfile.flush()
         exp.set_parameters(params_opt, self.exp_opt_map)
 
     def log_setup(self):
@@ -352,12 +357,11 @@ class Optimizer:
         )
         os.makedirs(pwd)
         self.log_filename = pwd + '/' + self.optim_name + ".log"
-        print(f"Saving to:\n {self.log_filename}\n")
+        print(f"Saving to:\n{self.log_filename}\n")
 
     def log_parameters(self, x):
-        self.logfile.write("\n")
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
+        self.logfile.write(f"\nStarting iteration {self.iteration}\n")
         self.iteration += 1
-        self.logfile.write(f"Starting iteration {self.iteration}\n")
         self.logfile.flush()

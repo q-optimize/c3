@@ -46,24 +46,6 @@ class Generator:
         self.signal = gen_signal
         return gen_signal
 
-    def plot_signals(self, gateset: GateSet):
-        for chan in self.signal.keys():
-            signal = self.signal[chan]
-
-            """ Plotting instruction functions """
-            plt.rcParams['figure.dpi'] = 100
-
-            ts = signal["ts"]
-            values = signal["values"]
-
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts.numpy(), values.numpy())
-            ax.set_xlabel('Time [ns]')
-            plt.title(instruction.name)
-            plt.grid()
-            plt.show(block=False)
-
 
 class Device(C3obj):
     """Device that is part of the stack generating the instruction signals."""

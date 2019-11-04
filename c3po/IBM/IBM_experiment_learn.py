@@ -67,7 +67,7 @@ def match_ORBIT(
     overlap = tf.matmul(bra_0, ket_actual)
     fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
     diff = fid_sim - fid
-    return diff * diff
+    return diff
 
 
 # IBM OTHER PARAMS
@@ -83,10 +83,17 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
+<<<<<<< HEAD
+#    ('Q1', 'freq'),
+#    ('Q1', 'anhar'),
+#    ('Q1', 't1'),
+#    ('Q1', 't2star'),
+=======
     ('Q1', 'freq'),
     ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
+>>>>>>> 1322374077a5d509dcb47176c0f9ea4899a8433f
     ('v_to_hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()
@@ -110,8 +117,8 @@ with open('learn_from.pickle', 'rb+') as file:
 opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
-opt.random_samples = True
-opt.batch_size = 10
+opt.random_samples = False
+opt.batch_size = 14
 opt.learn_from = learn_from
 opt.learn_model(
     exp,
