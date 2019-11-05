@@ -212,7 +212,16 @@ def tf_log10(x):
 
 def tf_abs(x):
     """Rewritten so that is has a gradient."""
-    return tf.sqrt(tf.math.conj(x)*x)
+    return tf.reshape(
+                tf.cast(
+                    tf.sqrt(tf.math.conj(x)*x),
+                    dtype=tf.float64),
+                shape=[1])
+
+
+def tf_ave(x: list):
+    """Take average of a list of values in tensorflow."""
+    return tf.add_n(x)/len(x)
 
 
 def Id_like(A):
