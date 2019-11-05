@@ -12,7 +12,22 @@ import c3po.generator as generator
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
+    """
+    Define the atomic gates.
+
+    Parameters
+    ----------
+    t_final : type
+        Total simulation time == longest possible gate time.
+    v_hz_conversion : type
+        Constant relating control voltage to energy in Hertz.
+    qubit_freq : type
+        Qubit frequency. Determines the carrier frequency.
+    qubit_anhar : type
+        Qubit anharmonicity. DRAG is used if this is given.
+
+    """
     gauss_params = {
         'amp': np.pi / v_hz_conversion,
         't_final': t_final,
@@ -22,9 +37,13 @@ def create_gates(t_final, v_hz_conversion, qubit_freq):
     gauss_bounds = {
         'amp': [0.01 * np.pi / v_hz_conversion, 1.5 * np.pi / v_hz_conversion],
         't_final': [7e-9, 12e-9],
-        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
+        'xy_angle': [-1 * np.pi / 2, 1 * np.pi / 2],
         'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
     }
+    if qubit_anhar is not None:
+        gauss_params['delta'] = 0.3
+        gauss_bounds['delta'] = [0.05, 1]
+
     gauss_env = control.Envelope(
         name="gauss",
         desc="Gaussian comp 1 of signal 1",
@@ -85,14 +104,14 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
         freq=qubit_freq,
         anhar=qubit_anhar,
         hilbert_dim=qubit_lvls
-        )
+    )
     drive = component.Drive(
         name="D1",
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
         connected=["Q1"],
         hamiltonian=drive_ham
-        )
+    )
     chip_elements = [q1, drive]
     model = Mdl(chip_elements)
     return model
@@ -109,6 +128,6 @@ def create_generator(sim_res, awg_res, v_hz_conversion):
         "awg": awg,
         "mixer": mixer,
         "v_to_hz": v_to_hz
-        }
+    }
     gen = generator.Generator(devices)
     return gen

@@ -16,37 +16,17 @@ class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
     def __init__(self):
-        self.optimizer_logs = {}
-        self.parameter_history = {}
         self.results = {}
         self.gradients = {}
         self.simulate_noise = False
         self.random_samples = False
         self.batch_size = 1
 
-    def save_history(self, filename):
-        datafile = open(filename, 'wb')
-        pickle.dump(self.optimizer_logs, datafile)
-        datafile.close()
-        pass
-
-    def load_history(self, filename):
-        file = open(filename, 'rb')
-        self.optimizer_logs = pickle.load(file)
-        file.close()
-        pass
-
-    def set_session(self, sess):
-        self.sess = sess
-
-    def set_log_writer(self, writer):
-        self.log_writer = writer
-
     def to_scale_one(self, values, bounds):
         """
         Return a vector of scale 1 that plays well with optimizers.
 
-        If theinput is higher dimension, it also linearizes.
+        If the input is higher dimension, it also linearizes.
 
         Parameters
         ----------
@@ -65,7 +45,6 @@ class Optimizer:
         for i in range(len(values)):
             scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
             offset = bounds[i].T[0]
-
             tmp = (values[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
@@ -353,7 +332,7 @@ class Optimizer:
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         pwd = data_path + time.strftime(
-            "%Y%m%d%H%M%S", time.localtime()
+            "%Y_%m_%d_%H_%M_%S", time.localtime()
         )
         os.makedirs(pwd)
         self.log_filename = pwd + '/' + self.optim_name + ".log"

@@ -277,18 +277,18 @@ class AWG(Device):
     """AWG device, transforms digital input to analog signal."""
 
     def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            ):
+        self,
+        name: str = " ",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             resolution=resolution
-            )
+        )
 
         self.options = ""
         # TODO move the options pwc & drag to the instruction object
@@ -394,25 +394,3 @@ class AWG(Device):
 
     def get_Q(self):
         return self.amp_tot * self.signal['quadrature']
-
-    def plot_IQ_components(self):
-        """Plot instruction functions."""
-        ts = self.ts
-        inphase = self.get_I()
-        quadrature = self.get_Q()
-
-        if not hasattr(self, 'fig') or not hasattr(self, 'axs'):
-            self.prepare_plot()
-        fig = self.fig
-        ax = self.axs
-
-        ax.clear()
-        ax.plot(ts/1e-9, inphase/1e-3)
-        ax.plot(ts/1e-9, quadrature/1e-3)
-        ax.grid()
-        ax.legend(['I', 'Q'])
-        ax.set_xlabel('Time [ns]')
-        ax.set_ylabel('Amplitude [mV]')
-        plt.show()
-        fig.canvas.draw()
-        fig.canvas.flush_events()
