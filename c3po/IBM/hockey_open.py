@@ -1,7 +1,7 @@
 """Script to get optimization data."""
 
 import os
-import shelve
+# import shelve
 import pickle
 from datetime import datetime
 
@@ -21,7 +21,7 @@ from IBM_1q_chip import create_chip_model, create_generator, create_gates
 # Script parameters
 lindbladian = True
 IBM_angles = False
-search_fid = 'unit'  # 'state' 'unit' 'EPC'
+search_fid = 'orbit'  # 'state' 'unit' 'orbit'
 pulse_type = 'gauss'  # 'gauss' 'drag' 'pwc'
 sim_res = 3e11  # 300GHz
 awg_res = 1.2e9  # 1.2GHz
@@ -30,7 +30,7 @@ sample_numbers = np.arange(3, 25, 1)
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -3155137343 * 2 * np.pi
+qubit_anhar = -3155137343 * 2 * np.pi / 3
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1e9 * 0.31
@@ -47,7 +47,7 @@ savefile = specs_str + '.pickle'
 newpath = base_dir + dir_name
 if not os.path.exists(newpath):
     os.makedirs(newpath)
-data = shelve.open('{}{}'.format(newpath, datafile), 'c')
+# data = shelve.open('{}{}'.format(newpath, datafile), 'c')
 os.system('cp hockey_open.py {}config.py'.format(newpath))
 
 # Define states & unitaries
@@ -109,28 +109,26 @@ for sample_num in sample_numbers:
     if pulse_type == 'gauss':
         gateset_opt_map = [
             [('X90p', 'd1', 'gauss', 'amp')],
-            [('X90p', 'd1', 'gauss', 'freq_offset')]
+            [('X90p', 'd1', 'gauss', 'freq_offset')],
+            [('X90p', 'd1', 'gauss', 'xy_angle')]
         ]
     if pulse_type == 'drag':
         gateset_opt_map = [
                     [('X90p', 'd1', 'gauss', 'amp')],
                     [('X90p', 'd1', 'gauss', 'freq_offset')],
+                    [('X90p', 'd1', 'gauss', 'xy_angle')],
                     [('X90p', 'd1', 'gauss', 'delta')]
         ]
 
-    def state_transfer_infid(pulse_values: list, opt_map: list):
-        sim.gateset.set_parameters(pulse_values, opt_map)
-        signal = gen.generate_signals(gates.instructions["X90p"])
-        U = sim.propagation(signal)
+    def state_transfer_infid(U_dict: dict):
+        U = U_dict['X90p']
         ket_actual = tf.matmul(U, ket_0)
         overlap = tf_abs(tf.matmul(bra_yp, ket_actual))
         infid = 1 - overlap
         return infid
 
-    def unitary_infid(pulse_values: list, opt_map: list):
-        sim.gateset.set_parameters(pulse_values, opt_map)
-        signal = gen.generate_signals(gates.instructions["X90p"])
-        U = sim.propagation(signal)
+    def unitary_infid(U_dict: dict):
+        U = U_dict['X90p']
         unit_fid = tf_abs(
                     tf.linalg.trace(
                         tf.matmul(U, tf.linalg.adjoint(X90p))
@@ -139,9 +137,9 @@ for sample_num in sample_numbers:
         infid = 1 - unit_fid
         return infid
 
-    def orbit_infid(pulse_values: list, opt_map: list):
+    def orbit_infid(U_dict: dict):
         seqs = single_length_RB(RB_number=25, RB_length=20)
-        U_seqs = sim.evaluate_sequence(pulse_values, gateset_opt_map, seqs)
+        U_seqs = sim.evaluate_sequence(U_dict, seqs)
         infids = []
         for U in U_seqs:
             ket_actual = tf.matmul(U, ket_0)
@@ -151,21 +149,22 @@ for sample_num in sample_numbers:
 
     opt = Opt()
     if search_fid == 'state':
-        eval_func = state_transfer_infid
+        fid_func = state_transfer_infid
     elif search_fid == 'unit':
-        eval_func = unitary_infid
+        fid_func = unitary_infid
     elif search_fid == 'orbit':
-        eval_func = orbit_infid
+        fid_func = orbit_infid
+
     opt.optimize_controls(
-        controls=gates,
+        simulator=sim,
         opt_map=gateset_opt_map,
         opt='lbfgs',
-        calib_name='openloop',
-        eval_func=eval_func
+        opt_name='openloop',
+        fid_func=fid_func
         )
 
     # store results and plot for quick lookup
-    data['opt{}'.format(int(sample_num))] = opt
+    # data['opt{}'.format(int(sample_num))] = opt
     overlap_inf.append(opt.results['openloop'].fun)
     best_params.append(opt.results['openloop'].x)
     times.append(t_final)
