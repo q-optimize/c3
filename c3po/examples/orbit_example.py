@@ -23,7 +23,7 @@ awg_res = 1e9  # 1.2GHz
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
-gates = create_gates(t_final, v_hz_conversion, qubit_freq)
+gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
 
 # Simulation class and fidelity function
 exp = Exp(model, gen)

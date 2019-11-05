@@ -12,18 +12,20 @@ import c3po.generator as generator
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     gauss_params = {
-        'amp': np.pi / v_hz_conversion,
+        'amp': 0.75 * np.pi / v_hz_conversion,
         't_final': t_final,
         'xy_angle': 0.0,
-        'freq_offset': 0e6 * 2 * np.pi
+        'freq_offset': 0e6 * 2 * np.pi,
+        'delta': 1 / qubit_anhar
     }
     gauss_bounds = {
         'amp': [0.01 * np.pi / v_hz_conversion, 1.5 * np.pi / v_hz_conversion],
-        't_final': [7e-9, 12e-9],
+        't_final': [1e-9, 30e-9],
         'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
+        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi],
+        'delta': [10/qubit_anhar, 0.1/qubit_anhar]
     }
     gauss_env = control.Envelope(
         name="gauss",
