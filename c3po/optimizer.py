@@ -16,31 +16,10 @@ class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
     def __init__(self):
-        self.optimizer_logs = {}
-        self.parameter_history = {}
         self.results = {}
         self.gradients = {}
         self.simulate_noise = False
         self.random_samples = False
-        self.batch_size = 1
-
-    def save_history(self, filename):
-        datafile = open(filename, 'wb')
-        pickle.dump(self.optimizer_logs, datafile)
-        datafile.close()
-        pass
-
-    def load_history(self, filename):
-        file = open(filename, 'rb')
-        self.optimizer_logs = pickle.load(file)
-        file.close()
-        pass
-
-    def set_session(self, sess):
-        self.sess = sess
-
-    def set_log_writer(self, writer):
-        self.log_writer = writer
 
     def to_scale_one(self, values, bounds):
         """
@@ -105,7 +84,8 @@ class Optimizer:
                 self.to_bound_phys_scale(x, self.bounds)
             )
             t.watch(current_params)
-            goal = self.eval_func(current_params, self.opt_map)
+            U_dict = self.sim.get_gates(current_params, self.opt_map)
+            goal = self.fid_func(U_dict)
 
         grad = t.gradient(goal, current_params)
         scale = np.diff(self.bounds)
@@ -227,51 +207,60 @@ class Optimizer:
         )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
+        res.x = values_opt
+        self.results[self.optim_name] = res
         return values_opt
 
     def optimize_controls(
         self,
-        controls,
+        sim,
         opt_map,
         opt,
-        calib_name,
-        eval_func,
-        callback=None
+        optim_name,
+        fid_func
     ):
         """
-        Apply a search algorightm to your parameters given a fidelity.
+        Apply a search algorightm to your gateset given a fidelity function.
 
         Parameters
         ----------
-        controls : class GateSet
-            control Class carrying all relevant information
+        simulator : class Simulator
+            simulator class carrying all relevant information:
+            - experiment object with model and generator
+            - gateset object with pulse information for each gate
 
         opt_map : list
+            Specifies which parameters will be optimized
 
-        opt : type
+        opt : str
             Specification of the optimizer to be used, i.e. cmaes, powell, ...
+
+        calib_name : str
+
+        fid_func : function
+            Takes the dictionary of gates and outputs a fidelity value of which
+            we want to find the minimum
 
         settings : dict
             Special settings for the desired optimizer
 
         """
-        values, bounds = controls.get_parameters(opt_map)
-        self.opt_map = opt_map
-        self.optim_name = calib_name
 
-        self.optim_status = {}
-        self.callback = callback
-        self.iteration = 1
-        # TODO Make sure values and bounds are already np.arrays
-        values = np.array(values)
+        values, bounds = sim.gateset.get_parameters(opt_map)
         self.param_shape = values.shape
-        bounds = np.array(bounds)
+        self.bounds = bounds
+        self.sim = sim
+        self.opt_map = opt_map
+        self.optim_name = optim_name
+        self.fid_func = fid_func
+        self.optim_status = {}
+        self.iteration = 1
+
         # TODO fix this horrible mess and make the shape of bounds general for
         # PWC and carrier based controls
         if len(self.param_shape) > 1:
             bounds = bounds.reshape(bounds.T.shape)
-        self.bounds = bounds
-        self.eval_func = eval_func
+
         self.log_setup()
         start_time = time.time()
         with open(self.log_filename, 'w') as self.logfile:
@@ -282,13 +271,13 @@ class Optimizer:
             if opt == 'cmaes':
                 values_opt = self.cmaes(
                     values,
-                    bounds
+                    self.bounds
                 )
 
             elif opt == 'lbfgs':
                 values_opt = self.lbfgs(
                     values,
-                    bounds,
+                    self.bounds,
                     self.goal_run,
                     self.goal_gradient_run
                 )
@@ -300,11 +289,11 @@ class Optimizer:
                 f"Total runtime:{end_time-start_time}"
             )
             self.logfile.flush()
-        controls.set_parameters(values_opt, opt_map)
+
+        sim.gateset.set_parameters(values_opt, opt_map)
         # TODO decide if gateset object should have history and implement
         # TODO save while setting if you pass a save name
         # pseudocode: controls.save_params_to_history(calib_name)
-        self.parameter_history[calib_name] = values_opt
 
     def learn_model(
         self,
