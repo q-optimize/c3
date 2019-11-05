@@ -3,12 +3,15 @@
 import numpy as np
 import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
+from c3po.utils import log_setup
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
 from c3po.tf_utils import tf_abs, tf_ave
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
+
+logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 6e9 * 2 * np.pi
@@ -24,8 +27,10 @@ awg_res = 1e9  # 1.2GHz
 
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
-gen = create_generator(sim_res, awg_res, v_hz_conversion)
+gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
 gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
+
+gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
 exp = Exp(model, gen)
@@ -64,11 +69,12 @@ def pop_leak(U_dict: dict):
     return overlap
 
 # Optimizer object
-opt = Opt()
+opt = Opt(data_path=logdir)
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],
-    [('X90p', 'd1', 'gauss', 'xy_angle')]
+    [('X90p', 'd1', 'gauss', 'xy_angle')],
+    [('X90p', 'd1', 'gauss', 'delta')]
 ]
 opt.optimize_controls(
     sim=sim,
