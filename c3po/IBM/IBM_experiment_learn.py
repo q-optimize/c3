@@ -8,9 +8,12 @@ import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
+from c3po.utils import log_setup
 from c3po.tf_utils import tf_matmul_list as tf_matmul_list
 from c3po.tf_utils import tf_abs as tf_abs
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
+
+logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
@@ -45,7 +48,13 @@ model = create_chip_model(
 )
 gen = create_generator(sim_res, awg_res, v_hz_conversion)
 gen.devices['awg'].options = 'drag'
-gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar, awg_res)
+gates = create_gates(
+    t_final,
+    v_hz_conversion,
+    qubit_freq,
+    qubit_anhar,
+    awg_res
+)
 
 exp = Exp(model, gen)
 sim = Sim(exp, gates)

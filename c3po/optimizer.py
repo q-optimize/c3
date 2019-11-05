@@ -15,12 +15,13 @@ import cma.evolution_strategy as cmaes
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
-    def __init__(self):
+    def __init__(self, data_path):
         self.results = {}
         self.gradients = {}
         self.simulate_noise = False
         self.random_samples = False
         self.batch_size = 1
+        self.data_path = data_path
 
     def to_scale_one(self, values, bounds):
         """
@@ -251,9 +252,10 @@ class Optimizer:
             bounds = bounds.reshape(bounds.T.shape)
         self.bounds = bounds
         self.eval_func = eval_func
-        self.log_setup()
+        self.logfile_name = self.data_path + self.optim_name + '.log'
+        print(f"Saving as at:\n {self.logfile_name}")
         start_time = time.time()
-        with open(self.log_filename, 'w') as self.logfile:
+        with open(self.logfile_name, 'w') as self.logfile:
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
@@ -283,7 +285,6 @@ class Optimizer:
         # TODO decide if gateset object should have history and implement
         # TODO save while setting if you pass a save name
         # pseudocode: controls.save_params_to_history(calib_name)
-        self.parameter_history[calib_name] = values_opt
 
     def learn_model(
         self,
@@ -301,11 +302,13 @@ class Optimizer:
         self.eval_func = eval_func
 
         self.optim_name = optim_name
+        self.logfile_name = self.data_path + self.optim_name + '.log'
+        print(f"Saving as at:\n {self.logfile_name}")
         self.optim_status = {}
         self.iteration = 0
 
         self.log_setup()
-        with open(self.log_filename, 'w') as self.logfile:
+        with open(self.logfile_name, 'w') as self.logfile:
             start_time = time.time()
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
@@ -326,17 +329,6 @@ class Optimizer:
             )
             self.logfile.flush()
         exp.set_parameters(params_opt, self.exp_opt_map)
-
-    def log_setup(self):
-        data_path = "/tmp/c3logs/"
-        if not os.path.isdir(data_path):
-            os.makedirs(data_path)
-        pwd = data_path + time.strftime(
-            "%Y_%m_%d_%H_%M_%S", time.localtime()
-        )
-        os.makedirs(pwd)
-        self.log_filename = pwd + '/' + self.optim_name + ".log"
-        print(f"Saving to:\n{self.log_filename}\n")
 
     def log_parameters(self, x):
         self.logfile.write(json.dumps(self.optim_status))

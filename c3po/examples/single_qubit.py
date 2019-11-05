@@ -118,9 +118,9 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
 
 
 # Devices and generator
-def create_generator(sim_res, awg_res, v_hz_conversion):
+def create_generator(sim_res, awg_res, v_hz_conversion, logdir):
     lo = generator.LO(resolution=sim_res)
-    awg = generator.AWG(resolution=awg_res)
+    awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()
     v_to_hz = generator.Volts_to_Hertz(V_to_Hz=v_hz_conversion)
     devices = {

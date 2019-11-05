@@ -2,6 +2,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib.widgets import Slider
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
 # rc('font',**{'family':'serif','serif':['Palatino']})
@@ -22,7 +23,7 @@ def plot_logs(logfilename):
                 for param in point['params']:
                     unit = ''
                     p_name = ''
-                    for desc in param[0]:
+                    for desc in param[0][0]:
                         p_name += ' ' + desc
                     if desc == 'freq_offset':
                         p_val = param[1] / 1e6 / 2 / np.pi
@@ -62,3 +63,27 @@ def plot_logs(logfilename):
         plt.title("Goal")
         plt.grid()
         plt.semilogy(goal_function)
+
+
+def plot_awg(logfilename):
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+    point = json.loads(log[-1])
+    fig, ax = plt.subplots()
+    plt.subplots_adjust(left=0.25, bottom=0.25)
+    l1, = plt.plot(point['inphase'], lw=2)
+    l2, = plt.plot(point['quadrature'], lw=2)
+    # plt.legend(['inphase', 'quadrature'])
+    # plt.grid()
+    axit = plt.axes([0.25, 0.1, 0.65, 0.03])
+    s = Slider(axit, 'Iterations', 0, len(log), valinit=len(log))
+
+    def update(val):
+        it = int(s.val)
+        point = json.loads(log[it])
+        l1.set_ydata(point['inphase'])
+        l2.set_ydata(point['quadrature'])
+        ax.autoscale()
+        fig.canvas.draw_idle()
+    s.on_changed(update)
+    plt.show()

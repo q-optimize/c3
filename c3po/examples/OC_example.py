@@ -3,10 +3,13 @@
 import numpy as np
 import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
+from c3po.utils import log_setup
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
 from single_qubit import create_chip_model, create_generator, create_gates
+
+logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 6e9 * 2 * np.pi
@@ -22,7 +25,7 @@ awg_res = 1e9  # 1.2GHz
 
 # Create system
 model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
-gen = create_generator(sim_res, awg_res, v_hz_conversion)
+gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
 gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
 
 gen.devices['awg'].options = 'drag'
@@ -53,7 +56,7 @@ def evaluate_signals(pulse_values: list, opt_map: list):
 
 
 # Optimizer object
-opt = Opt()
+opt = Opt(data_path=logdir)
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],

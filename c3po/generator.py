@@ -1,11 +1,12 @@
 """Singal generation stack."""
 
 import types
+import json
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from c3po.component import C3obj
-from c3po.control import Instruction, GateSet, Envelope, Carrier
+from c3po.control import Instruction, Envelope, Carrier
 
 
 class Generator:
@@ -282,6 +283,7 @@ class AWG(Device):
         desc: str = " ",
         comment: str = " ",
         resolution: np.float64 = 0.0,
+        logdir: str = '/tmp/'
     ):
         super().__init__(
             name=name,
@@ -291,6 +293,7 @@ class AWG(Device):
         )
 
         self.options = ""
+        self.logfile_name = logdir + "awg.log"
         # TODO move the options pwc & drag to the instruction object
         self.signal = {}
         self.amp_tot_sq = None
@@ -386,6 +389,7 @@ class AWG(Device):
         self.amp_tot = norm
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
+        self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/sotre params scaled or not
 
@@ -394,3 +398,12 @@ class AWG(Device):
 
     def get_Q(self):
         return self.amp_tot * self.signal['quadrature']
+
+    def log_shapes(self):
+        with open(self.logfile_name, 'a') as self.logfile:
+            signal = {}
+            for key in self.signal:
+                signal[key] = self.signal[key].numpy().tolist()
+            self.logfile.write(json.dumps(signal))
+            self.logfile.write("\n")
+            self.logfile.flush()
