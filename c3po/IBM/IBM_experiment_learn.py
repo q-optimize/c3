@@ -17,7 +17,7 @@ logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -3155137343 * 2 * np.pi
+qubit_anhar = -315513734 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1e9 * 0.31
@@ -116,7 +116,7 @@ gateset_opt_map = [
 ]
 with open('learn_from.pickle', 'rb+') as file:
     learn_from = pickle.load(file)
-opt = Opt()
+opt = Opt(data_path=logdir)
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
 opt.random_samples = False

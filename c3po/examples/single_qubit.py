@@ -40,9 +40,6 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
         'xy_angle': [-1 * np.pi / 2, 1 * np.pi / 2],
         'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
     }
-    if qubit_anhar is not None:
-        gauss_params['delta'] = 0.3
-        gauss_bounds['delta'] = [0.05, 1]
 
     gauss_env = control.Envelope(
         name="gauss",

@@ -307,7 +307,6 @@ class Optimizer:
         self.optim_status = {}
         self.iteration = 0
 
-        self.log_setup()
         with open(self.logfile_name, 'w') as self.logfile:
             start_time = time.time()
             self.logfile.write(
@@ -317,8 +316,7 @@ class Optimizer:
                 values,
                 bounds,
                 self.goal_run_n,
-                self.goal_gradient_run,
-                settings=settings
+                self.goal_gradient_run
             )
             end_time = time.time()
             self.logfile.write(
