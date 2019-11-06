@@ -80,6 +80,6 @@ opt.optimize_controls(
     sim=sim,
     opt_map=opt_map,
     opt='lbfgs',
-    optim_name='openloop',
+    opt_name='openloop',
     fid_func=state_transfer_infid
     )

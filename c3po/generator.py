@@ -326,7 +326,7 @@ class AWG(Device):
                         inphase = comp.params['inphase']
                         quadrature = comp.params['quadrature']
 
-            elif (self.options == 'drag'):
+            elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:
                     comp = channel[key]
                     if isinstance(comp, Envelope):
@@ -336,7 +336,9 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        delta = comp.params['delta'] * dt
+                        delta = comp.params['delta']
+                        if (self.options == 'IBM_drag'):
+                            delta = delta * dt
                         # TODO Deal with the scale of delta
 
                         with tf.GradientTape() as t:
@@ -400,10 +402,10 @@ class AWG(Device):
         return self.amp_tot * self.signal['quadrature']
 
     def log_shapes(self):
-        with open(self.logfile_name, 'a') as self.logfile:
+        with open(self.logfile_name, 'a') as logfile:
             signal = {}
             for key in self.signal:
                 signal[key] = self.signal[key].numpy().tolist()
-            self.logfile.write(json.dumps(signal))
-            self.logfile.write("\n")
-            self.logfile.flush()
+            logfile.write(json.dumps(signal))
+            logfile.write("\n")
+            logfile.flush()

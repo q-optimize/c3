@@ -189,7 +189,7 @@ class Optimizer:
         x_opt = res[0]
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
         # cmaes res is tuple, tread carefully. res[0] = values_opt
-        self.results[self.optim_name] = res
+        self.results[self.opt_name] = res
         return values_opt
 
     def lbfgs(self, values, bounds, goal, grad):
@@ -209,7 +209,7 @@ class Optimizer:
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
         res.x = values_opt
-        self.results[self.optim_name] = res
+        self.results[self.opt_name] = res
         return values_opt
 
     def optimize_controls(
@@ -217,7 +217,7 @@ class Optimizer:
         sim,
         opt_map,
         opt,
-        optim_name,
+        opt_name,
         fid_func
     ):
         """
@@ -252,7 +252,7 @@ class Optimizer:
         self.bounds = bounds
         self.sim = sim
         self.opt_map = opt_map
-        self.optim_name = optim_name
+        self.opt_name = opt_name
         self.fid_func = fid_func
         self.optim_status = {}
         self.iteration = 1
@@ -262,7 +262,7 @@ class Optimizer:
         if len(self.param_shape) > 1:
             bounds = bounds.reshape(bounds.T.shape)
 
-        self.logfile_name = self.data_path + self.optim_name + '.log'
+        self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as at:\n {self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'w') as self.logfile:
@@ -301,7 +301,7 @@ class Optimizer:
         self,
         exp,
         eval_func,
-        optim_name='learn_model',
+        opt_name='learn_model',
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
@@ -312,8 +312,8 @@ class Optimizer:
         self.param_shape = values.shape
         self.eval_func = eval_func
 
-        self.optim_name = optim_name
-        self.logfile_name = self.data_path + self.optim_name + '.log'
+        self.opt_name = opt_name
+        self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as at:\n {self.logfile_name}")
         self.optim_status = {}
         self.iteration = 0

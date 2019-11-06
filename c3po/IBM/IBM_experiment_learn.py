@@ -17,7 +17,7 @@ logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -3155137343 * 2 * np.pi
+qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1e9 * 0.31
