@@ -67,7 +67,7 @@ class GateSet:
             value, bound = gate_instr.get_parameter_value_bounds(par_id)
             values.append(value)
             bounds.append(bound)
-        return values, bounds
+        return np.array(values), np.array(bounds)
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""

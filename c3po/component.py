@@ -82,23 +82,23 @@ class Qubit(PhysicalComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 4,
-            freq: np.float64 = 0.0,
-            anhar: np.float64 = 0.0,
-            t1: np.float64 = 0.0,
-            t2star: np.float64 = 0.0,
-            temp: np.float64 = 0.0
-            ):
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 4,
+        freq: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim
-            )
+        )
         self.values['freq'] = freq
         if hilbert_dim > 2:
             self.values['anhar'] = anhar

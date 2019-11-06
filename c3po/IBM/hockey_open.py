@@ -1,15 +1,14 @@
 """Script to get optimization data."""
 
 import os
-import shelve
 import pickle
 from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
+from c3po.utils import log_setup
 from c3po.tf_utils import tf_abs, tf_ave
 from c3po.qt_utils import basis, xy_basis, perfect_gate, single_length_RB
-# import matplotlib.pyplot as plt
 
 from scipy.linalg import expm
 import c3po.hamiltonians as hamiltonians
@@ -19,24 +18,26 @@ from c3po.experiment import Experiment as Exp
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
 # Script parameters
-lindbladian = True
+lindbladian = False
 IBM_angles = False
-search_fid = 'state'  # 'state' 'unit' 'EPC'
+search_fid = 'unit'  # 'state' 'unit' 'orbit'
 pulse_type = 'gauss'  # 'gauss' 'drag' 'pwc'
-sim_res = 3e11  # 300GHz
-awg_res = 1.2e9  # 1.2GHz
+sim_res = 3e11
+awg_res = 2.4e9
 awg_sample = 1 / awg_res
-sample_numbers = np.arange(3, 25, 1)
+sample_numbers = np.arange(4, 20, 1)
+logdir = log_setup("/tmp/c3logs/")
+start_amp = 2
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -3155137343 * 2 * np.pi
+qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 1e9 * 0.31
-t1 = 30e-6
-t2star = 30e-6
-temp = 70e-3
+v_hz_conversion = 1e9
+t1 = None  # 30e-6
+t2star = None  # 30e-6
+temp = None  # 70e-3
 
 # File and directory names name
 base_dir = '/home/usersFWM/froy/Documents/PHD/'
@@ -47,7 +48,6 @@ savefile = specs_str + '.pickle'
 newpath = base_dir + dir_name
 if not os.path.exists(newpath):
     os.makedirs(newpath)
-data = shelve.open('{}{}'.format(newpath, datafile), 'c')
 os.system('cp hockey_open.py {}config.py'.format(newpath))
 
 # Define states & unitaries
@@ -60,8 +60,6 @@ X90p = tf.constant(perfect_gate(qubit_lvls, 'X90p'), dtype=tf.complex128)
 overlap_inf = []
 best_params = []
 times = []
-# fig, ax = plt.subplots()
-# fig.show()
 for sample_num in sample_numbers:
     print("#: ", sample_num)
     # Update experiment time
@@ -75,15 +73,15 @@ for sample_num in sample_numbers:
                               t1,
                               t2star,
                               temp)
-    gen = create_generator(sim_res, awg_res, v_hz_conversion)
+    gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
     if pulse_type == 'drag':
-        gen.devices['awg'].options = 'drag'
+        gen.devices['awg'].options = 'IBM_drag'
     elif pulse_type == 'pwc':
         gen.devices['awg'].options = 'pwc'
     gates = create_gates(t_final,
                          qubit_freq,
                          qubit_anhar,
-                         amp=10/sample_num,
+                         amp=start_amp,
                          IBM_angles=IBM_angles
                          )
     exp = Exp(model, gen)
@@ -118,30 +116,26 @@ for sample_num in sample_numbers:
                     [('X90p', 'd1', 'gauss', 'delta')]
         ]
 
-    def state_transfer_infid(pulse_values: list, opt_map: list):
-        sim.gateset.set_parameters(pulse_values, opt_map)
-        signal = gen.generate_signals(gates.instructions["X90p"])
-        U = sim.propagation(signal)
+    def state_transfer_infid(U_dict: dict):
+        U = U_dict['X90p']
         ket_actual = tf.matmul(U, ket_0)
         overlap = tf_abs(tf.matmul(bra_yp, ket_actual))
         infid = 1 - overlap
         return infid
 
-    def unitary_infid(pulse_values: list, opt_map: list):
-        sim.gateset.set_parameters(pulse_values, opt_map)
-        signal = gen.generate_signals(gates.instructions["X90p"])
-        U = sim.propagation(signal)
+    def unitary_infid(U_dict: dict):
+        U = U_dict['X90p']
         unit_fid = tf_abs(
-                    tf.trace(
-                        tf.matmul(U, X90p)
+                    tf.linalg.trace(
+                        tf.matmul(U, tf.linalg.adjoint(X90p))
                         ) / 2
                     )**2
         infid = 1 - unit_fid
         return infid
 
-    def orbit_infid(pulse_values: list, opt_map: list):
+    def orbit_infid(U_dict: dict):
         seqs = single_length_RB(RB_number=25, RB_length=20)
-        U_seqs = sim.evaluate_sequence(pulse_values, gateset_opt_map, seqs)
+        U_seqs = sim.evaluate_sequences(U_dict, seqs)
         infids = []
         for U in U_seqs:
             ket_actual = tf.matmul(U, ket_0)
@@ -149,21 +143,26 @@ for sample_num in sample_numbers:
             infids.append(1 - overlap)
         return tf_ave(infids)
 
-    opt = Opt()
+    opt = Opt(data_path=logdir)
+    if search_fid == 'state':
+        fid_func = state_transfer_infid
+    elif search_fid == 'unit':
+        fid_func = unitary_infid
+    elif search_fid == 'orbit':
+        fid_func = orbit_infid
+
     opt.optimize_controls(
-        controls=gates,
+        sim=sim,
         opt_map=gateset_opt_map,
         opt='lbfgs',
-        calib_name='openloop',
-        eval_func=state_transfer_infid
+        opt_name='openloop',
+        fid_func=fid_func
         )
 
-    # store results and plot for quick lookup
-    data['opt{}'.format(int(sample_num))] = opt
+    # store results
     overlap_inf.append(opt.results['openloop'].fun)
     best_params.append(opt.results['openloop'].x)
     times.append(t_final)
-    # ax.plot(times, overlap_inf)
     print('times :', times)
     print('infid :', overlap_inf)
     # Save data

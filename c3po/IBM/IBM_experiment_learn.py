@@ -8,16 +8,19 @@ import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-# from c3po.tf_utils import tf_matmul_list as tf_matmul_list
-# from c3po.tf_utils import tf_abs as tf_abs
+from c3po.utils import log_setup
+from c3po.tf_utils import tf_matmul_list as tf_matmul_list
+from c3po.tf_utils import tf_abs as tf_abs
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
+
+logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -3155137343 * 2 * np.pi
+qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conv = 1e9 * 0.31
+v_hz_conversion = 1e9 * 0.31
 t_final = 15e-9
 t1 = 30e-6
 t2star = 25e-6
@@ -43,9 +46,15 @@ model = create_chip_model(
     t2star,
     temp
 )
-gen = create_generator(sim_res, awg_res, v_hz_conv)
+gen = create_generator(sim_res, awg_res, v_hz_conversion)
 gen.devices['awg'].options = 'drag'
-gates = create_gates(t_final, v_hz_conv, qubit_freq, qubit_anhar, awg_res)
+gates = create_gates(
+    t_final,
+    v_hz_conversion,
+    qubit_freq,
+    qubit_anhar,
+    awg_res
+)
 
 exp = Exp(model, gen)
 sim = Sim(exp, gates)
@@ -67,7 +76,7 @@ def match_ORBIT(
     overlap = tf.matmul(bra_0, ket_actual)
     fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
     diff = fid_sim - fid
-    return diff * diff
+    return diff
 
 
 # IBM OTHER PARAMS
@@ -83,10 +92,10 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
-    ('Q1', 'freq'),
-    ('Q1', 'anhar'),
-    # ('Q1', 't1'),
-    # ('Q1', 't2star'),
+#    ('Q1', 'freq'),
+#    ('Q1', 'anhar'),
+#    ('Q1', 't1'),
+#    ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz')
 ]
 # exp_opt_map = exp.list_parameters()
@@ -110,8 +119,8 @@ with open('learn_from.pickle', 'rb+') as file:
 opt = Opt()
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
-opt.random_samples = True
-opt.batch_size = 10
+opt.random_samples = False
+opt.batch_size = 14
 opt.learn_from = learn_from
 opt.learn_model(
     exp,

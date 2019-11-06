@@ -20,8 +20,8 @@ Z = np.array([[1, 0],
 
 def rotation(phase, xyz):
     """General Rotation."""
-    rot = np.cos(phase/2) * Id
-    - 1j * np.sin(phase/2) * (xyz[0] * X + xyz[1] * Y + xyz[2] * Z)
+    rot = np.cos(phase/2) * Id - \
+        1j * np.sin(phase/2) * (xyz[0] * X + xyz[1] * Y + xyz[2] * Z)
     return rot
 
 
@@ -87,7 +87,7 @@ def perfect_gate(lvls: int, gate_str: str):
         print("\'X90p\',\'X90m\',\'Xp\',\'Y90p\',\
                \'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
         return None
-    zeros = np.zeros([lvls-2, 1])
+    zeros = np.zeros([lvls-2,lvls-2])
     gate = scipy_block_diag(gate, zeros)
     return gate
 
