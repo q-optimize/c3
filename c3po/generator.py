@@ -240,6 +240,46 @@ class Transfer(Device):
         self.signal = self.transfer_fuction(filter_signal)
         return self.signal
 
+class Response(Device):
+    """make the AWG signal physical (including rise time)"""
+
+    def __init__(self,  name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            rise_time: np.float64 = 0.0,
+        ):
+            super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            )
+            self.rise_time = rise_time
+            self.signal = None
+
+    def convolve(self,data1, data2):
+        convolution = tf.zeros(0, dtype=tf.float64)
+        data1 = tf.concat([tf.zeros(len(data2), dtype=tf.float64), data1, tf.zeros(len(data2), dtype=tf.float64)], 0)
+        for p in range(len(data1) - 2 * len(data2)):
+            convolution = tf.concat([convolution,
+                                     tf.reshape(tf.math.reduce_sum(tf.math.multiply(data1[p:p + len(data2)], data2)),
+                                                shape=[1])], 0)
+        return convolution
+
+    def gaussian(self,width, amp, sigma):
+        """Gaussian pulse centered about the number of width."""
+        xvals = tf.range(start=0, limit=width, dtype=tf.float64)
+        cen = tf.cast(float(width - 1) / 2, dtype=tf.float64)
+        amp = tf.cast(amp, dtype=tf.float64)
+        sigma = tf.cast(sigma, dtype=tf.float64)
+        gauss = amp * tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
+        offset = amp * tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
+        # The third term in the return gets rid of abrupt step at end
+        return gauss - offset
+
+    def process(self,data, risetime):
+        risefun = self.gaussian(risetime, 1.0, risetime / 4)
+        return self.convolve(data, risefun)
+
 
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
