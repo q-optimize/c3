@@ -1,11 +1,12 @@
 """Singal generation stack."""
 
 import types
+import json
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from c3po.component import C3obj
-from c3po.control import Instruction, GateSet, Envelope, Carrier
+from c3po.control import Instruction, Envelope, Carrier
 
 
 class Generator:
@@ -45,24 +46,6 @@ class Generator:
 
         self.signal = gen_signal
         return gen_signal
-
-    def plot_signals(self, gateset: GateSet):
-        for chan in self.signal.keys():
-            signal = self.signal[chan]
-
-            """ Plotting instruction functions """
-            plt.rcParams['figure.dpi'] = 100
-
-            ts = signal["ts"]
-            values = signal["values"]
-
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            ax.plot(ts.numpy(), values.numpy())
-            ax.set_xlabel('Time [ns]')
-            plt.title(instruction.name)
-            plt.grid()
-            plt.show(block=False)
 
 
 class Device(C3obj):
@@ -213,6 +196,46 @@ class Transfer(Device):
         self.signal = self.transfer_fuction(filter_signal)
         return self.signal
 
+class Response(Device):
+    """make the AWG signal physical (including rise time)"""
+
+    def __init__(self,  name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            rise_time: np.float64 = 0.0,
+        ):
+            super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            )
+            self.rise_time = rise_time
+            self.signal = None
+
+    def convolve(self,data1, data2):
+        convolution = tf.zeros(0, dtype=tf.float64)
+        data1 = tf.concat([tf.zeros(len(data2), dtype=tf.float64), data1, tf.zeros(len(data2), dtype=tf.float64)], 0)
+        for p in range(len(data1) - 2 * len(data2)):
+            convolution = tf.concat([convolution,
+                                     tf.reshape(tf.math.reduce_sum(tf.math.multiply(data1[p:p + len(data2)], data2)),
+                                                shape=[1])], 0)
+        return convolution
+
+    def gaussian(self,width, amp, sigma):
+        """Gaussian pulse centered about the number of width."""
+        xvals = tf.range(start=0, limit=width, dtype=tf.float64)
+        cen = tf.cast(float(width - 1) / 2, dtype=tf.float64)
+        amp = tf.cast(amp, dtype=tf.float64)
+        sigma = tf.cast(sigma, dtype=tf.float64)
+        gauss = amp * tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
+        offset = amp * tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
+        # The third term in the return gets rid of abrupt step at end
+        return gauss - offset
+
+    def process(self,data, risetime):
+        risefun = self.gaussian(risetime, 1.0, risetime / 4)
+        return self.convolve(data, risefun)
+
 
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
@@ -295,20 +318,22 @@ class AWG(Device):
     """AWG device, transforms digital input to analog signal."""
 
     def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            ):
+        self,
+        name: str = " ",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        logdir: str = '/tmp/'
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             resolution=resolution
-            )
+        )
 
         self.options = ""
+        self.logfile_name = logdir + "awg.log"
         # TODO move the options pwc & drag to the instruction object
         self.signal = {}
         self.amp_tot_sq = None
@@ -341,7 +366,7 @@ class AWG(Device):
                         inphase = comp.params['inphase']
                         quadrature = comp.params['quadrature']
 
-            elif (self.options == 'drag'):
+            elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:
                     comp = channel[key]
                     if isinstance(comp, Envelope):
@@ -351,7 +376,9 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        delta = comp.params['delta'] * dt
+                        delta = comp.params['delta']
+                        if (self.options == 'IBM_drag'):
+                            delta = delta * dt
                         # TODO Deal with the scale of delta
 
                         with tf.GradientTape() as t:
@@ -404,6 +431,7 @@ class AWG(Device):
         self.amp_tot = norm
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
+        self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/sotre params scaled or not
 
@@ -413,24 +441,11 @@ class AWG(Device):
     def get_Q(self):
         return self.amp_tot * self.signal['quadrature']
 
-    def plot_IQ_components(self):
-        """Plot instruction functions."""
-        ts = self.ts
-        inphase = self.get_I()
-        quadrature = self.get_Q()
-
-        if not hasattr(self, 'fig') or not hasattr(self, 'axs'):
-            self.prepare_plot()
-        fig = self.fig
-        ax = self.axs
-
-        ax.clear()
-        ax.plot(ts/1e-9, inphase/1e-3)
-        ax.plot(ts/1e-9, quadrature/1e-3)
-        ax.grid()
-        ax.legend(['I', 'Q'])
-        ax.set_xlabel('Time [ns]')
-        ax.set_ylabel('Amplitude [mV]')
-        plt.show()
-        fig.canvas.draw()
-        fig.canvas.flush_events()
+    def log_shapes(self):
+        with open(self.logfile_name, 'a') as logfile:
+            signal = {}
+            for key in self.signal:
+                signal[key] = self.signal[key].numpy().tolist()
+            logfile.write(json.dumps(signal))
+            logfile.write("\n")
+            logfile.flush()
