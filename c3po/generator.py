@@ -32,6 +32,7 @@ class Generator:
             # TODO make mixer optional and have a signal chain (eg Flux tuning)
             mixer = self.devices["mixer"]
             v_to_hz = self.devices["v_to_hz"]
+            dig_to_an = self.devices["dig_to_an"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -39,6 +40,8 @@ class Generator:
                 channel = instr.comps[chan]
                 lo_signal = lo.create_signal(channel, t_start, t_end)
                 awg_signal = awg.create_IQ(channel, t_start, t_end)
+                # flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
+                # filtered_signal = filter.filer(awg_signal)
                 signal = mixer.combine(lo_signal, awg_signal)
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
@@ -145,6 +148,47 @@ class Volts_to_Hertz(Device):
         """Transform signal from value of V to Hz."""
         self.signal = mixed_signal * self.params['V_to_Hz']
         return self.signal
+
+
+class digital_to_analog(Device):
+    """Take the values at the awg resolution to the simulation resolution."""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+        )
+
+    def resample(self, awg_signal, t_start, t_end):
+        """Resample the awg values to higher resolution."""
+
+        ts = self.create_ts(t_start, t_end, centered=True)
+        old_dim = awg_signal["inphase"].shape[0]
+        new_dim = ts.shape[0]
+        inphase = tf.reshape(
+                    tf.image.resize(
+                        tf.reshape(
+                            awg_signal["inphase"],
+                            shape=[1, old_dim, 1]),
+                        size=[1, new_dim],
+                        method='nearest'),
+                    shape=[new_dim])
+        quadrature = tf.reshape(
+                        tf.image.resize(
+                            tf.reshape(
+                                awg_signal["quadrature"],
+                                shape=[1, old_dim, 1]),
+                            size=[1, new_dim],
+                            method='nearest'),
+                        shape=[new_dim])
+        return {"inphase": inphase, "quadrature": quadrature}
 
 
 class Filter(Device):
