@@ -21,7 +21,7 @@ qubit_freq = 5.1173e9 * 2 * np.pi
 qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 1e9 * 10
+v_hz_conversion = 1e9 * 0.31
 t_final = 15e-9
 t1 = 30e-6
 t2star = 25e-6
@@ -34,7 +34,8 @@ ket_0 = tf.constant(qubit_g, tf.complex128)
 bra_0 = tf.constant(qubit_g.T, tf.complex128)
 
 # Simulation variables
-sim_res = 120e9  #
+# TODO FIND PROPER RESOLUTION
+sim_res = 60e9  #
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
@@ -49,13 +50,7 @@ model = create_chip_model(
 )
 gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
 # gen.devices['awg'].options = 'IBM_drag'
-gates = create_gates(
-    t_final,
-    v_hz_conversion,
-    qubit_freq,
-    qubit_anhar,
-    awg_res
-)
+gates = create_gates(t_final, qubit_freq, qubit_anhar)
 
 exp = Exp(model, gen)
 sim = Sim(exp, gates)
@@ -94,8 +89,8 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
-    ('Q1', 'freq'),
-    ('Q1', 'anhar'),
+    # ('Q1', 'freq'),
+    # ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz')
@@ -118,16 +113,16 @@ gateset_opt_map = [
 ]
 with open('learn_from.pickle', 'rb+') as file:
     learn_from = pickle.load(file)
-# opt = Opt(data_path=logdir)
-# opt.gateset_opt_map = gateset_opt_map
-# opt.exp_opt_map = exp_opt_map
-# opt.random_samples = False
-# opt.batch_size = 1
-# opt.learn_from = learn_from
-# opt.learn_model(
-#     exp,
-#     eval_func=match_ORBIT
-# )
+opt = Opt(data_path=logdir)
+opt.gateset_opt_map = gateset_opt_map
+opt.exp_opt_map = exp_opt_map
+opt.random_samples = False
+opt.batch_size = 1
+opt.learn_from = learn_from
+opt.learn_model(
+    exp,
+    eval_func=match_ORBIT
+)
 
 # gate_dict = sim.get_gates(learn_from[1895][0], gateset_opt_map)
 # fid = learn_from[1895][2]
@@ -142,15 +137,15 @@ with open('learn_from.pickle', 'rb+') as file:
 # print('1-|overlap| i.e. population in 1: ', float(fid_sim.numpy()))
 # print('population in 1 in the experiment: ', fid)
 
-# for gt in gates.instructions.keys():
-gt = 'X90p'
-params = [0.675, 0, 0]
-gates.set_parameters(params, gateset_opt_map)
-signal = gen.generate_signals(gates.instructions[gt])
-y90p = sim.propagation(signal)
-plt.figure()
-plt.plot(signal['d1']['ts'], signal['d1']['values'], 'x-')
-plt.show()
-sim.plot_dynamics(ket_0)
-
-gates.instructions['X90p'].comps['d1']['gauss'].params
+# # for gt in gates.instructions.keys():
+# gt = 'X90p'
+# params = [0.675, 0, 0]
+# gates.set_parameters(params, gateset_opt_map)
+# signal = gen.generate_signals(gates.instructions[gt])
+# y90p = sim.propagation(signal)
+# plt.figure()
+# plt.plot(signal['d1']['ts'], signal['d1']['values'], 'x-')
+# plt.show()
+# sim.plot_dynamics(ket_0)
+# gates.instructions['X90p'].comps['d1']['gauss'].params
+# gates.instructions['X90p'].comps['d1']['carrier'].params

@@ -44,25 +44,25 @@ class Generator:
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 conv_signal = resp.process(flat_signal)
                 signal = mixer.combine(lo_signal, conv_signal)
-                plt.figure()
-                plt.plot(awg.ts, awg_signal['inphase'], 'x-',
-                         awg.ts, awg_signal['quadrature'], 'x-')
-                plt.title("AWG")
-                plt.show()
-                plt.figure()
-                plt.plot(lo_signal['ts'], flat_signal['inphase'], 'x-',
-                         lo_signal['ts'], flat_signal['quadrature'], 'x-')
-                plt.title("AWG interp")
-                plt.show()
-                plt.figure()
-                plt.plot(lo_signal['ts'], conv_signal['inphase'], 'x-',
-                         lo_signal['ts'], conv_signal['quadrature'], 'x-')
-                plt.title("convolved")
-                plt.show()
-                plt.figure()
-                plt.plot(lo_signal['ts'], signal, 'x-')
-                plt.title("Multiplex")
-                plt.show()
+                # plt.figure()
+                # plt.plot(awg.ts, awg_signal['inphase'], 'x-',
+                #          awg.ts, awg_signal['quadrature'], 'x-')
+                # plt.title("AWG")
+                # plt.show()
+                # plt.figure()
+                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'x-',
+                #          lo_signal['ts'], flat_signal['quadrature'], 'x-')
+                # plt.title("AWG interp")
+                # plt.show()
+                # plt.figure()
+                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'x-',
+                #          lo_signal['ts'], conv_signal['quadrature'], 'x-')
+                # plt.title("convolved")
+                # plt.show()
+                # plt.figure()
+                # plt.plot(lo_signal['ts'], signal, 'x-')
+                # plt.title("Multiplex")
+                # plt.show()
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']

@@ -28,7 +28,7 @@ t2star = None,  # 30e-6
 temp = None,  # 70e-3
 
 # Simulation variables
-sim_res = 3e11  # 600GHz
+sim_res = 300e9  # 300GHz
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
