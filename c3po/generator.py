@@ -33,6 +33,7 @@ class Generator:
             mixer = self.devices["mixer"]
             v_to_hz = self.devices["v_to_hz"]
             dig_to_an = self.devices["dig_to_an"]
+            resp = self.devices["resp"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -40,9 +41,9 @@ class Generator:
                 channel = instr.comps[chan]
                 lo_signal = lo.create_signal(channel, t_start, t_end)
                 awg_signal = awg.create_IQ(channel, t_start, t_end)
-                # flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
-                # filtered_signal = filter.filer(awg_signal)
-                signal = mixer.combine(lo_signal, awg_signal)
+                flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
+                conv_signal = resp.process(flat_signal)
+                signal = mixer.combine(lo_signal, conv_signal)
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
@@ -140,6 +141,7 @@ class Volts_to_Hertz(Device):
             name=name,
             desc=desc,
             comment=comment,
+            resolution=resolution
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
@@ -150,7 +152,7 @@ class Volts_to_Hertz(Device):
         return self.signal
 
 
-class digital_to_analog(Device):
+class Digital_to_Analog(Device):
     """Take the values at the awg resolution to the simulation resolution."""
 
     def __init__(
@@ -164,11 +166,11 @@ class digital_to_analog(Device):
             name=name,
             desc=desc,
             comment=comment,
+            resolution=resolution
         )
 
     def resample(self, awg_signal, t_start, t_end):
         """Resample the awg values to higher resolution."""
-
         ts = self.create_ts(t_start, t_end, centered=True)
         old_dim = awg_signal["inphase"].shape[0]
         new_dim = ts.shape[0]
@@ -206,6 +208,7 @@ class Filter(Device):
             name=name,
             desc=desc,
             comment=comment,
+            resolution=resolution
         )
         self.filter_fuction = filter_fuction
         self.signal = None
@@ -231,6 +234,7 @@ class Transfer(Device):
             name=name,
             desc=desc,
             comment=comment,
+            resolution=resolution
         )
         self.transfer_fuction = transfer_fuction
         self.signal = None
@@ -240,45 +244,67 @@ class Transfer(Device):
         self.signal = self.transfer_fuction(filter_signal)
         return self.signal
 
-class Response(Device):
-    """make the AWG signal physical (including rise time)"""
 
-    def __init__(self,  name: str = " ",
+# TODO real AWG has 16bits plus noise
+class Response(Device):
+    """Make the AWG signal physical by including rise time."""
+
+    def __init__(
+            self,
+            name: str = " ",
             desc: str = " ",
             comment: str = " ",
+            resolution: np.float64 = 0.0,
             rise_time: np.float64 = 0.0,
-        ):
-            super().__init__(
+    ):
+        super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            )
-            self.rise_time = rise_time
-            self.signal = None
+            resolution=resolution
+        )
+        self.rise_time = rise_time
+        self.signal = None
 
-    def convolve(self,data1, data2):
+    def convolve(self, signal: list, resp_shape: list):
         convolution = tf.zeros(0, dtype=tf.float64)
-        data1 = tf.concat([tf.zeros(len(data2), dtype=tf.float64), data1, tf.zeros(len(data2), dtype=tf.float64)], 0)
-        for p in range(len(data1) - 2 * len(data2)):
-            convolution = tf.concat([convolution,
-                                     tf.reshape(tf.math.reduce_sum(tf.math.multiply(data1[p:p + len(data2)], data2)),
-                                                shape=[1])], 0)
+        signal = tf.concat(
+                    [tf.zeros(len(resp_shape), dtype=tf.float64),
+                     signal,
+                     tf.zeros(len(resp_shape), dtype=tf.float64)],
+                0)
+        for p in range(len(signal) - 2 * len(resp_shape)):
+            convolution = tf.concat(
+                [convolution,
+                 tf.reshape(
+                    tf.math.reduce_sum(
+                        tf.math.multiply(
+                         signal[p:p + len(resp_shape)],
+                         resp_shape)
+                    ), shape=[1])
+                 ],
+                0)
         return convolution
 
-    def gaussian(self,width, amp, sigma):
+    def gaussian(self, width, sigma):
         """Gaussian pulse centered about the number of width."""
         xvals = tf.range(start=0, limit=width, dtype=tf.float64)
         cen = tf.cast(float(width - 1) / 2, dtype=tf.float64)
-        amp = tf.cast(amp, dtype=tf.float64)
         sigma = tf.cast(sigma, dtype=tf.float64)
-        gauss = amp * tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
-        offset = amp * tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
+        gauss = tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
+        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # The third term in the return gets rid of abrupt step at end
         return gauss - offset
 
-    def process(self,data, risetime):
-        risefun = self.gaussian(risetime, 1.0, risetime / 4)
-        return self.convolve(data, risefun)
+    def process(self, iq_signal):
+        width = np.floor(self.rise_time * self.resolution)
+        # TODO make sure ratio of risetime and resolution is an integer
+        risefun = self.gaussian(width, width/4)
+        inphase = self.convolve(iq_signal['inphase'],
+                                risefun/tf.reduce_sum(risefun))
+        quadrature = self.convolve(iq_signal['quadrature'],
+                                   risefun/tf.reduce_sum(risefun))
+        return {"inphase": inphase, "quadrature": quadrature}
 
 
 class Mixer(Device):
@@ -288,12 +314,14 @@ class Mixer(Device):
             self,
             name: str = " ",
             desc: str = " ",
-            comment: str = " "
+            comment: str = " ",
+            resolution: np.float64 = 0.0
     ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
+            resolution=resolution
         )
 
         self.signal = None
@@ -301,26 +329,8 @@ class Mixer(Device):
     def combine(self, lo_signal, awg_signal):
         """Combine signal from AWG and LO."""
         cos, sin = lo_signal["values"]
-        ts = lo_signal['ts']
-        old_dim = awg_signal["inphase"].shape[0]
-        new_dim = ts.shape[0]
-        inphase = tf.reshape(
-                    tf.image.resize(
-                        tf.reshape(
-                            awg_signal["inphase"],
-                            shape=[1, old_dim, 1]),
-                        size=[1, new_dim],
-                        method='nearest'),
-                    shape=[new_dim])
-        self.inphase = inphase
-        quadrature = tf.reshape(
-                        tf.image.resize(
-                            tf.reshape(
-                                awg_signal["quadrature"],
-                                shape=[1, old_dim, 1]),
-                            size=[1, new_dim],
-                            method='nearest'),
-                        shape=[new_dim])
+        inphase = awg_signal["inphase"]
+        quadrature = awg_signal["quadrature"]
         self.signal = (inphase * cos + quadrature * sin)
         return self.signal
 
@@ -384,6 +394,7 @@ class AWG(Device):
 
 # TODO create DC function
 
+    # TODO make AWG take offset from the previous point
     def create_IQ(self, channel: dict, t_start: float, t_end: float):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.

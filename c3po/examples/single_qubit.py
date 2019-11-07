@@ -7,8 +7,12 @@ import copy
 
 import c3po.component as component
 from c3po.model import Model as Mdl
+from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
+
+# Limit graphics memory to 1GB
+tf_limit_gpu_memory(1024)
 
 
 # Gates
@@ -123,11 +127,16 @@ def create_generator(sim_res, awg_res, v_hz_conversion, logdir):
     awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()
     v_to_hz = generator.Volts_to_Hertz(V_to_Hz=v_hz_conversion)
+    dig_to_an = generator.Digital_to_Analog(resolution=sim_res)
+    resp = generator.Response(rise_time=0.1e-9, resolution=sim_res)
+    # TODO Add devices by their names
     devices = {
         "lo": lo,
         "awg": awg,
         "mixer": mixer,
-        "v_to_hz": v_to_hz
+        "v_to_hz": v_to_hz,
+        "dig_to_an": dig_to_an,
+        "resp": resp
     }
     gen = generator.Generator(devices)
     return gen
