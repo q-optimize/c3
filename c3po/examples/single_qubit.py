@@ -16,7 +16,7 @@ tf_limit_gpu_memory(1024)
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     """
     Define the atomic gates.
 
@@ -100,7 +100,9 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
 
 
 # Chip and model
-def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
+def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
+                      t1=None, t2star=None, temp=None
+                      ):
     q1 = component.Qubit(
         name="Q1",
         desc="Qubit 1",
@@ -118,6 +120,14 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
     )
     chip_elements = [q1, drive]
     model = Mdl(chip_elements)
+    if t1:
+        q1.values['t1'] = t1
+    if t2star:
+        q1.values['t2star'] = t2star
+    if temp:
+        q1.values['temp'] = temp
+    if t1 or t2star:
+        model.initialise_lindbladian()
     return model
 
 

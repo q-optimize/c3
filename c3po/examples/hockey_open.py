@@ -7,7 +7,7 @@ from datetime import datetime
 import numpy as np
 import tensorflow as tf
 from c3po.utils import log_setup
-from c3po.tf_utils import tf_abs, tf_ave
+from c3po.tf_utils import tf_abs, tf_ave, tf_super
 from c3po.qt_utils import basis, xy_basis, perfect_gate, single_length_RB
 
 from scipy.linalg import expm
@@ -18,7 +18,8 @@ from c3po.experiment import Experiment as Exp
 from single_qubit import create_chip_model, create_generator, create_gates
 
 # Script parameters
-lindbladian = False
+lindbladian = True
+VZ = True
 IBM_angles = False
 search_fid = 'unit'  # 'state' 'unit' 'orbit'
 pulse_type = 'drag'  # 'gauss' 'drag' 'pwc'
@@ -34,6 +35,9 @@ qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1
+t1 = 30e-6
+t2star = 25e-6
+temp = 70e-3
 
 # File and directory names name
 base_dir = '/home/usersFWM/froy/Documents/PHD/'
@@ -51,18 +55,24 @@ ket_0 = tf.constant(basis(qubit_lvls, 0), dtype=tf.complex128)
 bra_0 = tf.constant(basis(qubit_lvls, 0).T, dtype=tf.complex128)
 bra_yp = tf.constant(xy_basis(qubit_lvls, 'yp').T, dtype=tf.complex128)
 X90p = tf.constant(perfect_gate(qubit_lvls, 'X90p'), dtype=tf.complex128)
+if lindbladian:
+    X90p = tf_super(X90p)
 
 # Iter over different length pulses for CREATING DATA
 overlap_inf = []
 best_params = []
 times = []
 for sample_num in sample_numbers:
-    print("#: ", sample_num)
+    print(": ", sample_num)
     # Update experiment time
     t_final = sample_num*awg_sample
 
     # Create system
-    model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
+    if not lindbladian:
+        model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
+    elif lindbladian:
+        model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
+                                  t1=t1, t2star=t2star, temp=temp)
     gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
     if pulse_type == 'drag':
         gen.devices['awg'].options = 'drag'
@@ -71,22 +81,10 @@ for sample_num in sample_numbers:
     gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
     exp = Exp(model, gen)
     sim = Sim(exp, gates)
-    a_q = model.ann_opers[0]
-    sim.VZ = expm(1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final)
-
-    # # check
-    # signal = gen.generate_signals(gates.instructions["Y90m"])
-    # U = sim.propagation(signal)
-    # # sim.plot_dynamics(ket_0)
-    # ket_final = np.matmul(U, ket_0)
-    # # print('final ket')
-    # # print(ket_final)
-    # overlap = tf.matmul(bra_xp, ket_final)
-    # print('overlap')
-    # print(overlap)
-    # over_fid = tf.cast(tf.math.conj(overlap)*overlap, tf.float64)
-    # print('overlap fidelity')
-    # print(over_fid)
+    sim.lindbladian = lindbladian
+    if VZ:
+        a_q = model.ann_opers[0]
+        sim.VZ = expm(1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final)
 
     # optimizer
     if pulse_type == 'gauss':
@@ -112,11 +110,20 @@ for sample_num in sample_numbers:
 
     def unitary_infid(U_dict: dict):
         U = U_dict['X90p']
-        unit_fid = tf_abs(
-                    tf.linalg.trace(
-                        tf.matmul(U, tf.linalg.adjoint(X90p))
-                        ) / 2
-                    )**2
+        if not lindbladian:
+            unit_fid = tf_abs(
+                        tf.linalg.trace(
+                            tf.matmul(U, tf.linalg.adjoint(X90p))
+                            ) / 2
+                        )**2
+        elif lindbladian:
+            unit_fid = tf_abs(
+                        tf.sqrt(
+                            tf.linalg.trace(
+                                tf.matmul(U, tf.linalg.adjoint(X90p))
+                                )
+                            ) / 2
+                        )**2
         infid = 1 - unit_fid
         return infid
 
