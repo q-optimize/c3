@@ -19,17 +19,16 @@ class Simulator():
     def __init__(self,
                  exp: Experiment,
                  gateset: GateSet
-                 # controls: GateSet
                  ):
         self.exp = exp
         self.gateset = gateset
         self.unitaries = {}
+        self.lindbladian = False
 
     def get_gates(
         self,
         gateset_values: list,
-        gateset_opt_map: list,
-        lindbladian: bool = False
+        gateset_opt_map: list
     ):
         gates = {}
         self.gateset.set_parameters(gateset_values, gateset_opt_map)
@@ -39,7 +38,7 @@ class Simulator():
             signal = self.exp.generator.generate_signals(
                 self.gateset.instructions[gate]
             )
-            U = self.propagation(signal, lindbladian)
+            U = self.propagation(signal)
             gates[gate] = U
             self.unitaries = gates
         return gates
@@ -47,8 +46,7 @@ class Simulator():
     def evaluate_sequences(
         self,
         U_dict: dict,
-        sequences: list,
-        lindbladian: bool = False
+        sequences: list
     ):
         gates = U_dict
         # TODO deal with the case where you only evaluate one sequence
@@ -61,8 +59,7 @@ class Simulator():
         return U
 
     def propagation(self,
-                    signal: dict,
-                    lindbladian: bool = False
+                    signal: dict
                     ):
         signals = []
         # This sorting ensures that signals and hks are matched
@@ -75,7 +72,7 @@ class Simulator():
 
         dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
         h0, hks = self.exp.model.get_Hamiltonians()
-        if lindbladian:
+        if self.lindbladian:
             col_ops = self.exp.model.get_lindbladian()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
@@ -84,7 +81,7 @@ class Simulator():
         self.ts = ts
         U = tf_matmul_list(dUs)
         if hasattr(self, 'VZ'):
-            if lindbladian:
+            if self.lindbladian:
                 U = tf.matmul(tf_super(self.VZ), U)
             else:
                 U = tf.matmul(self.VZ, U)
@@ -92,16 +89,15 @@ class Simulator():
         return U
 
     def plot_dynamics(self,
-                      psi_init,
-                      lindbladian: bool = False
+                      psi_init
                       ):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
-        pop_t = self.populations(psi_t, dv=lindbladian)
+        pop_t = self.populations(psi_t)
         for du in dUs:
             psi_t = np.matmul(du.numpy(), psi_t)
-            pops = self.populations(psi_t, dv=lindbladian)
+            pops = self.populations(psi_t)
             pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
@@ -113,9 +109,8 @@ class Simulator():
         axs.set_ylabel('Population')
         fig.show()
 
-    @staticmethod
-    def populations(state, dv=False):
-        if dv:
+    def populations(self, state):
+        if self.lindbladian:
             dim = int(np.sqrt(len(state)))
             indeces = [n * dim + n for n in range(dim)]
             return np.abs(state[indeces])
