@@ -41,6 +41,7 @@ class Optimizer:
             Numpy array of pulse parameters, rescaled to values within [-1, 1]
 
         """
+        # TODO Give warning when outside bounds
         x0 = []
         values = values.flatten()
         for i in range(len(values)):
@@ -112,7 +113,7 @@ class Optimizer:
                 measurements = random.sample(learn_from, self.batch_size)
             else:
                 n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::-n]
+                measurements = learn_from[::n]
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
