@@ -65,7 +65,7 @@ def plot_logs(logfilename):
         plt.semilogy(goal_function)
 
 
-def plot_awg(logfilename):
+def plot_envelope_history(logfilename):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     point = json.loads(log[-1])
@@ -86,4 +86,14 @@ def plot_awg(logfilename):
         ax.autoscale()
         fig.canvas.draw_idle()
     s.on_changed(update)
+    plt.show()
+
+
+def plot_awg(logfilename):
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+    point = json.loads(log[-1])
+    fig, ax = plt.subplots()
+    l1, = plt.plot(point['inphase'], lw=2)
+    l2, = plt.plot(point['quadrature'], lw=2)
     plt.show()

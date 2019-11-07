@@ -15,29 +15,25 @@ import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from IBM_1q_chip import create_chip_model, create_generator, create_gates
+from single_qubit import create_chip_model, create_generator, create_gates
 
 # Script parameters
 lindbladian = False
 IBM_angles = False
 search_fid = 'unit'  # 'state' 'unit' 'orbit'
-pulse_type = 'gauss'  # 'gauss' 'drag' 'pwc'
+pulse_type = 'drag'  # 'gauss' 'drag' 'pwc'
 sim_res = 3e11
 awg_res = 2.4e9
 awg_sample = 1 / awg_res
 sample_numbers = np.arange(4, 20, 1)
 logdir = log_setup("/tmp/c3logs/")
-start_amp = 2
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
 qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 1e9
-t1 = None  # 30e-6
-t2star = None  # 30e-6
-temp = None  # 70e-3
+v_hz_conversion = 1
 
 # File and directory names name
 base_dir = '/home/usersFWM/froy/Documents/PHD/'
@@ -66,24 +62,13 @@ for sample_num in sample_numbers:
     t_final = sample_num*awg_sample
 
     # Create system
-    model = create_chip_model(qubit_freq,
-                              qubit_anhar,
-                              qubit_lvls,
-                              drive_ham,
-                              t1,
-                              t2star,
-                              temp)
+    model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
     gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
     if pulse_type == 'drag':
-        gen.devices['awg'].options = 'IBM_drag'
+        gen.devices['awg'].options = 'drag'
     elif pulse_type == 'pwc':
         gen.devices['awg'].options = 'pwc'
-    gates = create_gates(t_final,
-                         qubit_freq,
-                         qubit_anhar,
-                         amp=start_amp,
-                         IBM_angles=IBM_angles
-                         )
+    gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
     exp = Exp(model, gen)
     sim = Sim(exp, gates)
     a_q = model.ann_opers[0]
@@ -107,13 +92,15 @@ for sample_num in sample_numbers:
     if pulse_type == 'gauss':
         gateset_opt_map = [
             [('X90p', 'd1', 'gauss', 'amp')],
-            [('X90p', 'd1', 'gauss', 'freq_offset')]
+            [('X90p', 'd1', 'gauss', 'freq_offset')],
+            [('X90p', 'd1', 'gauss', 'xy_angle')]
         ]
     if pulse_type == 'drag':
         gateset_opt_map = [
                     [('X90p', 'd1', 'gauss', 'amp')],
                     [('X90p', 'd1', 'gauss', 'freq_offset')],
-                    [('X90p', 'd1', 'gauss', 'delta')]
+                    [('X90p', 'd1', 'gauss', 'delta')],
+                    [('X90p', 'd1', 'gauss', 'xy_angle')]
         ]
 
     def state_transfer_infid(U_dict: dict):

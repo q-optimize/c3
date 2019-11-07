@@ -40,11 +40,6 @@ class Simulator():
                 self.gateset.instructions[gate]
             )
             U = self.propagation(signal, lindbladian)
-            if hasattr(self, 'VZ'):
-                if lindbladian:
-                    U = tf.matmul(tf_super(self.VZ), U)
-                else:
-                    U = tf.matmul(self.VZ, U)
             gates[gate] = U
             self.unitaries = gates
         return gates
