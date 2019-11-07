@@ -45,7 +45,7 @@ class Optimizer:
         values = values.flatten()
         for i in range(len(values)):
             scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = bounds[i].T[0]
+            offset = min(bounds[i].T)
             tmp = (values[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
@@ -112,7 +112,7 @@ class Optimizer:
                 measurements = random.sample(learn_from, self.batch_size)
             else:
                 n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::n]
+                measurements = learn_from[::-n]
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
@@ -125,6 +125,9 @@ class Optimizer:
                     self.gateset_opt_map,
                     seq,
                     fid
+                )
+                self.logfile.write(
+                    f"\n  Sequence:  {seq}\n"
                 )
                 self.logfile.write(
                     f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
@@ -140,7 +143,7 @@ class Optimizer:
 
             goal = tf.sqrt(goal / batch_size)
             self.logfile.write(
-                f"\nFinished batch with RMS: {float(goal.numpy())}\n"
+                f"Finished batch with RMS: {float(goal.numpy())}\n"
             )
 
         grad = t.gradient(goal, current_params)
@@ -195,7 +198,7 @@ class Optimizer:
     def lbfgs(self, values, bounds, goal, grad):
         x0 = self.to_scale_one(values, bounds)
         self.optim_status['params'] = list(zip(
-            self.opt_map, values
+            self.exp_opt_map, values
         ))
         self.log_parameters(x0)
         res = minimize(

@@ -17,7 +17,7 @@ logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -315513734 * 2 * np.pi
+qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 1e9 * 0.31
@@ -33,7 +33,7 @@ ket_0 = tf.constant(qubit_g, tf.complex128)
 bra_0 = tf.constant(qubit_g.T, tf.complex128)
 
 # Simulation variables
-sim_res = 60e9  # 600GHz
+sim_res = 60e9  # 60GHz
 awg_res = 1.2e9  # 1.2GHz
 
 # Create system
@@ -71,8 +71,9 @@ def match_ORBIT(
     fid: np.float64
 ):
     exp.set_parameters(exp_params, exp_opt_map)
-    U = sim.evaluate_sequence(gateset_values, gateset_opt_map, seq)
-    ket_actual = tf.matmul(U, ket_0)
+    U_dict = sim.get_gates(gateset_values, gateset_opt_map)
+    U = sim.evaluate_sequences(U_dict, [seq])
+    ket_actual = tf.matmul(U[0], ket_0)
     overlap = tf.matmul(bra_0, ket_actual)
     fid_sim = (1 - tf.cast(tf.linalg.adjoint(overlap) * overlap, tf.float64))
     diff = fid_sim - fid
@@ -82,7 +83,7 @@ def match_ORBIT(
 # IBM OTHER PARAMS
 # phase for gates = 0.0
 # X90p xyangle = 0.0399 (radians)
-# Y90p xyangle = 1.601
+# Y90p xyangle = 1.-315513734601
 # Y90m xyangle = 4.7537
 # X90m xyangle = 3.160
 # width = 18 length in terms of number of AWG samples
@@ -92,8 +93,8 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
-#    ('Q1', 'freq'),
-#    ('Q1', 'anhar'),
+    ('Q1', 'freq'),
+    ('Q1', 'anhar'),
 #    ('Q1', 't1'),
 #    ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz')
@@ -120,7 +121,7 @@ opt = Opt(data_path=logdir)
 opt.gateset_opt_map = gateset_opt_map
 opt.exp_opt_map = exp_opt_map
 opt.random_samples = False
-opt.batch_size = 14
+opt.batch_size = 1
 opt.learn_from = learn_from
 opt.learn_model(
     exp,

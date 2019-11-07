@@ -23,7 +23,7 @@ def plot_logs(logfilename):
                 for param in point['params']:
                     unit = ''
                     p_name = ''
-                    for desc in param[0][0]:
+                    for desc in param[0]:
                         p_name += ' ' + desc
                     if desc == 'freq_offset':
                         p_val = param[1] / 1e6 / 2 / np.pi

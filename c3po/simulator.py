@@ -51,17 +51,11 @@ class Simulator():
 
     def evaluate_sequences(
         self,
-        gateset_values: list,
-        gateset_opt_map: list,
+        U_dict: dict,
         sequences: list,
         lindbladian: bool = False
     ):
-        gates = self.get_gates(
-            gateset_values,
-            gateset_opt_map,
-            lindbladian
-        )
-
+        gates = U_dict
         # TODO deal with the case where you only evaluate one sequence
         U = []
         for sequence in sequences:
