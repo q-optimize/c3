@@ -161,7 +161,7 @@ def create_generator(sim_res, awg_res, v_hz_conversion, logdir):
     mixer = generator.Mixer(name='mixer')
     v_to_hz = generator.Volts_to_Hertz(name='v_to_hz', V_to_Hz=v_hz_conversion)
     dig_to_an = generator.Digital_to_Analog(resolution=sim_res)
-    resp = generator.Response(rise_time=0.5e-9, resolution=sim_res)
+    resp = generator.Response(rise_time=0.3e-9, resolution=sim_res)
 
     # TODO Add devices by their names
     devices = {
