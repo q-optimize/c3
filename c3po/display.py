@@ -47,14 +47,15 @@ def plot_logs(logfilename):
                     parameters[p_name].append(p_val)
                     units[p_name] = unit
     n_params = len(parameters.keys())
+    its = range(1, len(goal_function) + 1)
     if n_params > 0:
         nrows = np.ceil(np.sqrt(n_params + 1))
-        ncols = np.ceil(n_params / nrows)
-        plt.figure(figsize=(6 * nrows, 5 * ncols))
+        ncols = np.ceil((n_params + 1) / nrows)
+        plt.figure(figsize=(6 * ncols, 5 * nrows))
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
-            plt.plot(parameters[key])
+            plt.plot(its, parameters[key])
             plt.grid()
             plt.title(key.replace('_', '\_'))
             plt.ylabel(units[key])
@@ -62,7 +63,7 @@ def plot_logs(logfilename):
         plt.subplot(nrows, ncols, ii)
         plt.title("Goal")
         plt.grid()
-        plt.semilogy(goal_function)
+        plt.semilogy(its, goal_function)
 
 
 def plot_envelope_history(logfilename):

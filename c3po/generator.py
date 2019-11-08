@@ -19,7 +19,10 @@ class Generator:
     ):
         # TODO consider making the dict into a list of devices
         # TODO check that you get at least 1 set of LO, AWG and mixer.
-        self.devices = devices
+        self.devices = {}
+        for dev in devices:
+            self.devices[dev.name] = dev
+
         self.resolution = resolution
         # TODO add line knowledge (mapping of which devices are connected)
 
@@ -282,7 +285,7 @@ class Response(Device):
             comment=comment,
             resolution=resolution
         )
-        self.rise_time = rise_time
+        self.params['rise_time'] = rise_time
         self.signal = None
 
     def convolve(self, signal: list, resp_shape: list):
@@ -305,24 +308,26 @@ class Response(Device):
                 0)
         return convolution
 
-    def gaussian(self, width, sigma):
-        """Gaussian pulse centered about the number of width."""
-        xvals = tf.range(start=0, limit=width, dtype=tf.float64)
-        cen = tf.cast(float(width - 1) / 2, dtype=tf.float64)
-        sigma = tf.cast(sigma, dtype=tf.float64)
-        gauss = tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
-        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
-        # The third term in the return gets rid of abrupt step at end
-        return gauss - offset
-
     def process(self, iq_signal):
-        width = np.floor(self.rise_time * self.resolution)
+        n_ts = int(self.params['rise_time'] * self.resolution)
+        ts = tf.linspace(tf.constant(
+            0.0, dtype=tf.float64),
+            self.params['rise_time'],
+            n_ts
+        )
+        cen = tf.cast(
+            (self.params['rise_time'] - 1 / self.resolution) / 2,
+            tf.float64
+        )
+        sigma = self.params['rise_time'] / 4
+        gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
+        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
-        risefun = self.gaussian(width, width/4)
+        risefun = gauss - offset
         inphase = self.convolve(iq_signal['inphase'],
-                                risefun/tf.reduce_sum(risefun))
+                                risefun / tf.reduce_sum(risefun))
         quadrature = self.convolve(iq_signal['quadrature'],
-                                   risefun/tf.reduce_sum(risefun))
+                                   risefun / tf.reduce_sum(risefun))
         return {"inphase": inphase, "quadrature": quadrature}
 
 

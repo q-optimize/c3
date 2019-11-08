@@ -113,7 +113,7 @@ class Optimizer:
                 measurements = random.sample(learn_from, self.batch_size)
             else:
                 n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::n]
+                measurements = learn_from[::-n]
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
@@ -146,6 +146,7 @@ class Optimizer:
             self.logfile.write(
                 f"Finished batch with RMS: {float(goal.numpy())}\n"
             )
+            self.logfile.flush()
 
         grad = t.gradient(goal, current_params)
         scale = np.diff(self.bounds)
@@ -230,7 +231,7 @@ class Optimizer:
         Parameters
         ----------
         simulator : class Simulator
-            simulator class carrying all relevant information:
+            simulator class carrying all relevant informatioFn:
             - experiment object with model and generator
             - gateset object with pulse information for each gate
 
@@ -267,7 +268,7 @@ class Optimizer:
             bounds = bounds.reshape(bounds.T.shape)
 
         self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as at:\n {self.logfile_name}")
+        print(f"Saving as:\n {self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'w') as self.logfile:
             self.logfile.write(
@@ -318,7 +319,7 @@ class Optimizer:
 
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as at:\n {self.logfile_name}")
+        print(f"Saving as:\n {self.logfile_name}")
         self.optim_status = {}
         self.iteration = 0
 

@@ -14,7 +14,7 @@ from c3po.tf_utils import tf_matmul_list as tf_matmul_list
 from c3po.tf_utils import tf_abs as tf_abs
 from IBM_1q_chip import create_chip_model, create_generator, create_gates
 
-logdir = log_setup("/tmp/c3logs/")
+logdir = log_setup("/localdisk/c3logs/")
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
@@ -89,11 +89,12 @@ def match_ORBIT(
 # 30 iterations
 
 exp_opt_map = [
-    # ('Q1', 'freq'),
-    # ('Q1', 'anhar'),
+    ('Q1', 'freq'),
+    ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
-    ('v_to_hz', 'V_to_Hz')
+    ('v_to_hz', 'V_to_Hz'),
+    ('resp', 'rise_time')
 ]
 # exp_opt_map = exp.list_parameters()
 
