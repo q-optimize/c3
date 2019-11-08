@@ -40,6 +40,9 @@ def plot_logs(logfilename):
                     elif desc == 'V_to_Hz':
                         p_val = param[1] / 1e6
                         unit = '[MHz/V]'
+                    elif desc == 'rise_time':
+                        p_val = param[1] / 1e-9
+                        unit = '[ns]'
                     else:
                         p_val = param[1]
                     if not(p_name in parameters.keys()):
