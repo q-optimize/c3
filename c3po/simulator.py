@@ -122,39 +122,42 @@ class Simulator():
     def RB(self,
            psi_init,
            U_dict,
-           min_lenght: int = 5,
-           max_lenght: int = 100,
+           min_length: int = 5,
+           max_length: int = 100,
            num_lengths: int = 20,
-           seq_reps: int = 30,
+           num_seqs: int = 30,
            plot_all=True,
-           superoper=False,
            progress=True,
            logspace=False
            ):
         print('performing RB experiment')
         if logspace:
-            lengths = np.logspace(
-                            np.log10(min_lenght),
-                            np.log10(max_lenght),
+            lengths = np.rint(
+                        np.logspace(
+                            np.log10(min_length),
+                            np.log10(max_length),
                             num=num_lengths
                             )
+                        ).astype(int)
         else:
-            lengths = np.linspace(
-                            min_lenght,
-                            max_lenght,
+            lengths = np.rint(
+                        np.linspace(
+                            min_length,
+                            max_length,
                             num=num_lengths
                             )
+                        ).astype(int)
         surv_prob = []
         for L in lengths:
             if progress:
                 print(L)
-            seqs = single_length_RB(seq_reps, L)
+            seqs = single_length_RB(num_seqs, L)
             Us = self.evaluate_sequences(U_dict, seqs)
             pop0s = []
             for U in Us:
                 pops = self.populations(tf.matmul(U, psi_init))
-                pop0s.append(pops[0])
-                surv_prob.append(pop0s)
+                pop0s.append(float(pops[0]))
+            surv_prob.append(pop0s)
 
         def RB_fit(len, r, A, B):
             return A * r**(len) + B
@@ -177,21 +180,25 @@ class Simulator():
                 print(message)
                 print('increasing RB length.')
                 if logspace:
-                    new_lengths = np.logspace(
-                                    np.log10(max_lenght+min_lenght),
-                                    np.log10(max_lenght*2),
+                    new_lengths = np.rint(
+                                np.logspace(
+                                    np.log10(max_length + min_length),
+                                    np.log10(max_length * 2),
                                     num=num_lengths
                                     )
+                                ).astype(int)
                 else:
-                    lengths = np.linspace(
-                                    min_lenght,
-                                    max_lenght,
+                    new_lengths = np.rint(
+                                np.linspace(
+                                    max_length + min_length,
+                                    max_length*2,
                                     num=num_lengths
                                     )
+                                ).astype(int)
                 for L in new_lengths:
                     if progress:
                         print(L)
-                    seqs = single_length_RB(seq_reps, L)
+                    seqs = single_length_RB(num_seqs, L)
                     Us = self.evaluate_sequences(U_dict, seqs)
                     pop0s = []
                     for U in Us:
@@ -206,7 +213,8 @@ class Simulator():
             ax.plot(lengths,
                     surv_prob,
                     marker='o',
-                    color='red')
+                    color='red',
+                    linestyle='None')
         ax.errorbar(lengths,
                     means,
                     yerr=stds,
@@ -216,7 +224,7 @@ class Simulator():
         fitted = RB_fit(lengths, r, A, B)
         ax.plot(lengths, fitted)
         plt.text(0.1, 0.1,
-                 'r= %.4f, A=%.3f, B=%.3f'.format(r, A, B),
+                 'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
                  size=16,
                  transform=ax.transAxes)
         plt.title('RB results')
