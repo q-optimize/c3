@@ -3,14 +3,16 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
 from c3po.experiment import Experiment
 from c3po.control import GateSet
 
-from c3po.tf_utils import tf_propagation as tf_propagation
-from c3po.tf_utils import tf_propagation_lind as tf_propagation_lind
-from c3po.tf_utils import tf_matmul_list as tf_matmul_list
-from c3po.tf_utils import tf_super as tf_super
+from c3po.tf_utils import tf_propagation
+from c3po.tf_utils import tf_propagation_lind
+from c3po.tf_utils import tf_matmul_list
+from c3po.tf_utils import tf_super
+from c3po.qt_utils import single_length_RB
 
 
 class Simulator():
@@ -116,3 +118,111 @@ class Simulator():
             return np.abs(state[indeces])
         else:
             return np.abs(state)**2
+
+    def RB(self,
+           psi_init,
+           U_dict,
+           min_lenght: int = 5,
+           max_lenght: int = 100,
+           num_lengths: int = 20,
+           seq_reps: int = 30,
+           plot_all=True,
+           superoper=False,
+           progress=True,
+           logspace=False
+           ):
+        print('performing RB experiment')
+        if logspace:
+            lengths = np.logspace(
+                            np.log10(min_lenght),
+                            np.log10(max_lenght),
+                            num=num_lengths
+                            )
+        else:
+            lengths = np.linspace(
+                            min_lenght,
+                            max_lenght,
+                            num=num_lengths
+                            )
+        surv_prob = []
+        for L in lengths:
+            if progress:
+                print(L)
+            seqs = single_length_RB(seq_reps, L)
+            Us = self.evaluate_sequences(U_dict, seqs)
+            pop0s = []
+            for U in Us:
+                pops = self.populations(tf.matmul(U, psi_init))
+                pop0s.append(pops[0])
+                surv_prob.append(pop0s)
+
+        def RB_fit(len, r, A, B):
+            return A * r**(len) + B
+        bounds = (0, 1)
+        init_guess = [0.9, 0.5, 0.5]
+        fitted = False
+        while not fitted:
+            try:
+                means = np.mean(surv_prob, axis=1)
+                stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
+                solution, cov = curve_fit(RB_fit,
+                                          lengths,
+                                          means,
+                                          sigma=stds,
+                                          bounds=bounds,
+                                          p0=init_guess)
+                r, A, B = solution
+                fitted = True
+            except Exception as message:
+                print(message)
+                print('increasing RB length.')
+                if logspace:
+                    new_lengths = np.logspace(
+                                    np.log10(max_lenght+min_lenght),
+                                    np.log10(max_lenght*2),
+                                    num=num_lengths
+                                    )
+                else:
+                    lengths = np.linspace(
+                                    min_lenght,
+                                    max_lenght,
+                                    num=num_lengths
+                                    )
+                for L in new_lengths:
+                    if progress:
+                        print(L)
+                    seqs = single_length_RB(seq_reps, L)
+                    Us = self.evaluate_sequences(U_dict, seqs)
+                    pop0s = []
+                    for U in Us:
+                        pops = self.populations(tf.matmul(U, psi_init))
+                        pop0s.append(pops[0])
+                        surv_prob.append(pop0s)
+                lengths = np.append(lengths, new_lengths)
+
+        # PLOT
+        fig, ax = plt.subplots()
+        if plot_all:
+            ax.plot(lengths,
+                    surv_prob,
+                    marker='o',
+                    color='red')
+        ax.errorbar(lengths,
+                    means,
+                    yerr=stds,
+                    color='blue',
+                    marker='x',
+                    linestyle='None')
+        fitted = RB_fit(lengths, r, A, B)
+        ax.plot(lengths, fitted)
+        plt.text(0.1, 0.1,
+                 'r= %.4f, A=%.3f, B=%.3f'.format(r, A, B),
+                 size=16,
+                 transform=ax.transAxes)
+        plt.title('RB results')
+        plt.ylabel('Population in 0')
+        plt.xlabel('# Cliffords')
+        plt.ylim(0, 1)
+        plt.xlim(0, lengths[-1])
+        plt.show()
+        return r, A, B
