@@ -15,19 +15,20 @@ import c3po.hamiltonians as hamiltonians
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from single_qubit import create_chip_model, create_generator, create_gates
+from single_qubit import create_chip_model, create_generator, create_gates, create_pwc_gates
 
 # Script parameters
 lindbladian = True
 VZ = True
 IBM_angles = False
 search_fid = 'unit'  # 'state' 'unit' 'orbit'
-pulse_type = 'drag'  # 'gauss' 'drag' 'pwc'
+pulse_type = 'pwc'  # 'gauss' 'drag' 'pwc'
 sim_res = 3e11
 awg_res = 2.4e9
 awg_sample = 1 / awg_res
 sample_numbers = np.arange(4, 20, 1)
 logdir = log_setup("/tmp/c3logs/")
+amp_limit = 3e9
 
 # System
 qubit_freq = 5.1173e9 * 2 * np.pi
@@ -49,6 +50,9 @@ newpath = base_dir + dir_name
 if not os.path.exists(newpath):
     os.makedirs(newpath)
 os.system('cp hockey_open.py {}config.py'.format(newpath))
+if pulse_type == 'pwc':
+    with open('best_drag_awg.pickle', 'rb') as file:
+        awg_values = pickle.load(file)
 
 # Define states & unitaries
 ket_0 = tf.constant(basis(qubit_lvls, 0), dtype=tf.complex128)
@@ -62,6 +66,7 @@ if lindbladian:
 overlap_inf = []
 best_params = []
 times = []
+indx = 0
 for sample_num in sample_numbers:
     print(": ", sample_num)
     # Update experiment time
@@ -73,12 +78,22 @@ for sample_num in sample_numbers:
     elif lindbladian:
         model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
                                   t1=t1, t2star=t2star, temp=temp)
+
     gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
+
     if pulse_type == 'drag':
         gen.devices['awg'].options = 'drag'
     elif pulse_type == 'pwc':
         gen.devices['awg'].options = 'pwc'
-    gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
+
+    if not pulse_type == 'pwc':
+        gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
+    else:
+        iq = awg_values[indx]
+        indx = indx + 1
+        inphase = iq['inphase']
+        quadrature = iq['quadrature']
+        gates = create_pwc_gates(t_final, qubit_freq, inphase, quadrature, amp_limit)
     exp = Exp(model, gen)
     sim = Sim(exp, gates)
     sim.lindbladian = lindbladian
@@ -99,6 +114,11 @@ for sample_num in sample_numbers:
                     [('X90p', 'd1', 'gauss', 'freq_offset')],
                     [('X90p', 'd1', 'gauss', 'delta')],
                     [('X90p', 'd1', 'gauss', 'xy_angle')]
+        ]
+    if pulse_type == 'pwc':
+        gateset_opt_map = [
+                    [('X90p', 'd1', 'pwc', 'inphase')],
+                    [('X90p', 'd1', 'pwc', 'quadrature')],
         ]
 
     def state_transfer_infid(U_dict: dict):
