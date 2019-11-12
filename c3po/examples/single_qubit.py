@@ -98,6 +98,70 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     # gates.add_instruction(Y90p)
     return gates
 
+def create_pwc_gates(t_final, qubit_freq, inphase, quadrature, amp_limit):
+
+    pwc_params = {
+        'inphase': inphase,
+        'quadrature': quadrature
+    }
+
+    pwc_bounds = {
+        'inphase': [-amp_limit, amp_limit] * len(inphase),
+        'quadrature': [-amp_limit, amp_limit] * len(quadrature)
+        }
+
+    pwc_env = control.Envelope(
+        name="pwc",
+        desc="PWC comp 1 of signal 1",
+        shape=envelopes.pwc,
+        params=pwc_params,
+        bounds=pwc_bounds,
+    )
+
+    carrier_parameters = {
+        'freq': qubit_freq
+    }
+    carrier_bounds = {
+        'freq': [4e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+    }
+    carr = control.Carrier(
+        name="carrier",
+        desc="Frequency of the local oscillator",
+        params=carrier_parameters,
+        bounds=carrier_bounds
+    )
+    X90p = control.Instruction(
+        name="X90p",
+        t_start=0.0,
+        t_end=t_final,
+        channels=["d1"]
+    )
+    X90p.add_component(pwc_env, "d1")
+    X90p.add_component(carr, "d1")
+
+    gates = control.GateSet()
+    gates.add_instruction(X90p)
+
+    # Y90p = copy.deepcopy(X90p)
+    # Y90p.name = "Y90p"
+    # Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
+    # Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+    #
+    # X90m = copy.deepcopy(X90p)
+    # X90m.name = "X90m"
+    # X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
+    # X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+    #
+    # Y90m = copy.deepcopy(X90p)
+    # Y90m.name = "Y90m"
+    # Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
+    # Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+    #
+    # gates.add_instruction(X90m)
+    # gates.add_instruction(Y90m)
+    # gates.add_instruction(Y90p)
+    return gates
+
 
 # Chip and model
 def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
