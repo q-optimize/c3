@@ -423,8 +423,21 @@ class AWG(Device):
                     comp = channel[key]
                     if isinstance(comp, Envelope):
                         norm = 1
-                        inphase = comp.params['inphase']
-                        quadrature = comp.params['quadrature']
+                        inphase = tf.constant(comp.params['inphase'],
+                                              dtype=tf.float64)
+                        quadrature = tf.constant(comp.params['quadrature'],
+                                                 dtype=tf.float64)
+                        xy_angle = tf.constant(comp.params['xy_angle'],
+                                               dtype=tf.float64)
+                        phase = - xy_angle
+                        inphase_comps.append(
+                            inphase * tf.cos(phase)
+                            + quadrature * tf.sin(phase)
+                        )
+                        quadrature_comps.append(
+                            quadrature * tf.cos(phase)
+                            - inphase * tf.sin(phase)
+                        )
 
             elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:

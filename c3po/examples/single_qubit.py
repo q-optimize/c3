@@ -16,7 +16,7 @@ tf_limit_gpu_memory(1024)
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
+def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     """
     Define the atomic gates.
 
@@ -78,29 +78,97 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar=None):
     gates = control.GateSet()
     gates.add_instruction(X90p)
 
-    # Y90p = copy.deepcopy(X90p)
-    # Y90p.name = "Y90p"
-    # Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
-    # Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
-    #
-    # X90m = copy.deepcopy(X90p)
-    # X90m.name = "X90m"
-    # X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
-    # X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
-    #
-    # Y90m = copy.deepcopy(X90p)
-    # Y90m.name = "Y90m"
-    # Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
-    # Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
-    #
-    # gates.add_instruction(X90m)
-    # gates.add_instruction(Y90m)
-    # gates.add_instruction(Y90p)
+    Y90p = copy.deepcopy(X90p)
+    Y90p.name = "Y90p"
+    Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
+    Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+
+    X90m = copy.deepcopy(X90p)
+    X90m.name = "X90m"
+    X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
+    X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+
+    Y90m = copy.deepcopy(X90p)
+    Y90m.name = "Y90m"
+    Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
+    Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+
+    gates.add_instruction(X90m)
+    gates.add_instruction(Y90m)
+    gates.add_instruction(Y90p)
+    return gates
+
+def create_pwc_gates(t_final, qubit_freq, inphase, quadrature, amp_limit):
+
+    pwc_params = {
+        'inphase': inphase,
+        'quadrature': quadrature,
+        'xy_angle': 0.0,
+    }
+
+    pwc_bounds = {
+        'inphase': [-amp_limit, amp_limit] * len(inphase),
+        'quadrature': [-amp_limit, amp_limit] * len(quadrature),
+        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2]
+        }
+
+    pwc_env = control.Envelope(
+        name="pwc",
+        desc="PWC comp 1 of signal 1",
+        shape=envelopes.pwc,
+        params=pwc_params,
+        bounds=pwc_bounds,
+    )
+
+    carrier_parameters = {
+        'freq': qubit_freq
+    }
+    carrier_bounds = {
+        'freq': [4e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+    }
+    carr = control.Carrier(
+        name="carrier",
+        desc="Frequency of the local oscillator",
+        params=carrier_parameters,
+        bounds=carrier_bounds
+    )
+    X90p = control.Instruction(
+        name="X90p",
+        t_start=0.0,
+        t_end=t_final,
+        channels=["d1"]
+    )
+    X90p.add_component(pwc_env, "d1")
+    X90p.add_component(carr, "d1")
+
+    gates = control.GateSet()
+    gates.add_instruction(X90p)
+
+    Y90p = copy.deepcopy(X90p)
+    Y90p.name = "Y90p"
+    Y90p.comps['d1']['pwc'].params['xy_angle'] = np.pi / 2
+    Y90p.comps['d1']['pwc'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+
+    X90m = copy.deepcopy(X90p)
+    X90m.name = "X90m"
+    X90m.comps['d1']['pwc'].params['xy_angle'] = np.pi
+    X90m.comps['d1']['pwc'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+
+    Y90m = copy.deepcopy(X90p)
+    Y90m.name = "Y90m"
+    Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
+    Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+
+    gates.add_instruction(X90m)
+    gates.add_instruction(Y90m)
+    gates.add_instruction(Y90p)
     return gates
 
 
 # Chip and model
-def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
+def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
+                      t1=None, t2star=None, temp=None
+                      ):
     q1 = component.Qubit(
         name="Q1",
         desc="Qubit 1",
@@ -118,6 +186,14 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham):
     )
     chip_elements = [q1, drive]
     model = Mdl(chip_elements)
+    if t1:
+        q1.values['t1'] = t1
+    if t2star:
+        q1.values['t2star'] = t2star
+    if temp:
+        q1.values['temp'] = temp
+    if t1 or t2star:
+        model.initialise_lindbladian()
     return model
 
 

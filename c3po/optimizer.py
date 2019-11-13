@@ -94,7 +94,7 @@ class Optimizer:
         gradients = grad.numpy().flatten() * scale.T
         self.gradients[str(x)] = gradients
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy()
+            self.opt_map, current_params.numpy().tolist()
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -278,7 +278,7 @@ class Optimizer:
         # TODO fix this horrible mess and make the shape of bounds general for
         # PWC and carrier based controls
         if len(self.param_shape) > 1:
-            bounds = bounds.reshape(bounds.T.shape)
+            self.bounds = bounds.reshape(bounds.T.shape)
 
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
