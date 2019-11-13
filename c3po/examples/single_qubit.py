@@ -130,13 +130,6 @@ def create_generator(sim_res, awg_res, v_hz_conversion, logdir):
     dig_to_an = generator.Digital_to_Analog(resolution=sim_res)
     resp = generator.Response(rise_time=0.1e-9, resolution=sim_res)
     # TODO Add devices by their names
-    devices = {
-        "lo": lo,
-        "awg": awg,
-        "mixer": mixer,
-        "v_to_hz": v_to_hz,
-        "dig_to_an": dig_to_an,
-        "resp": resp
-    }
+    devices = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     gen = generator.Generator(devices)
     return gen

@@ -35,7 +35,7 @@ class Generator:
             # TODO make mixer optional and have a signal chain (eg Flux tuning)
             mixer = self.devices["mixer"]
             v_to_hz = self.devices["v_to_hz"]
-            dig_to_an = self.devices["dig_to_an"]
+            dig_to_an = self.devices["dac"]
             resp = self.devices["resp"]
             t_start = instr.t_start
             t_end = instr.t_end
@@ -47,25 +47,6 @@ class Generator:
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 conv_signal = resp.process(flat_signal)
                 signal = mixer.combine(lo_signal, conv_signal)
-                # plt.figure()
-                # plt.plot(awg.ts, awg_signal['inphase'], 'x-',
-                #          awg.ts, awg_signal['quadrature'], 'x-')
-                # plt.title("AWG")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'x-',
-                #          lo_signal['ts'], flat_signal['quadrature'], 'x-')
-                # plt.title("AWG interp")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'x-',
-                #          lo_signal['ts'], conv_signal['quadrature'], 'x-')
-                # plt.title("convolved")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], signal, 'x-')
-                # plt.title("Multiplex")
-                # plt.show()
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
@@ -109,11 +90,11 @@ class Device(C3obj):
         # return self.slice_num
 
     def create_ts(
-            self,
-            t_start: np.float64,
-            t_end: np.float64,
-            centered: bool = True
-            ):
+        self,
+        t_start: np.float64,
+        t_end: np.float64,
+        centered: bool = True
+    ):
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
@@ -153,7 +134,7 @@ class Volts_to_Hertz(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "v_to_hz",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -179,7 +160,7 @@ class Digital_to_Analog(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "dac",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -220,7 +201,7 @@ class Filter(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "FLTR",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -273,7 +254,7 @@ class Response(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "resp",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -336,7 +317,7 @@ class Mixer(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "mixer",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0
@@ -364,7 +345,7 @@ class LO(Device):
 
     def __init__(
         self,
-        name: str = " ",
+        name: str = "lo",
         desc: str = " ",
         comment: str = " ",
         resolution: np.float64 = 0.0
@@ -397,7 +378,7 @@ class AWG(Device):
 
     def __init__(
         self,
-        name: str = " ",
+        name: str = "awg",
         desc: str = " ",
         comment: str = " ",
         resolution: np.float64 = 0.0,

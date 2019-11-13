@@ -73,7 +73,7 @@ class Simulator():
             ts = out["ts"]
             signals.append(out["values"])
 
-        dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
+        dt = ts[1].numpy() - ts[0].numpy()
         h0, hks = self.exp.model.get_Hamiltonians()
         if lindbladian:
             col_ops = self.exp.model.get_lindbladian()
