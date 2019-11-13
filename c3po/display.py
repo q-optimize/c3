@@ -62,10 +62,12 @@ def plot_OC_logs(logfilename):
             plt.grid()
             plt.title(key.replace('_', '\_'))
             plt.ylabel(units[key])
+            plt.xlabel("Iteration")
             ii += 1
         plt.subplot(nrows, ncols, ii)
         plt.title("Goal")
         plt.grid()
+        plt.xlabel("Iteration")
         plt.semilogy(its, goal_function)
 
 
