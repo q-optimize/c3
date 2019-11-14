@@ -14,7 +14,7 @@ class Generator:
 
     def __init__(
             self,
-            devices: dict,
+            devices: list,
             resolution: np.float64 = 0.0
     ):
         # TODO consider making the dict into a list of devices

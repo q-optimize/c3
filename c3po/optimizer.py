@@ -1,8 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
-import pickle
 import random
-import os
 import time
 import json
 import numpy as np
@@ -265,7 +263,6 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-
         values, bounds = sim.gateset.get_parameters(opt_map)
         self.param_shape = values.shape
         self.bounds = bounds
@@ -293,7 +290,7 @@ class Optimizer:
                 values_opt = self.cmaes(
                     values,
                     self.bounds,
-                    opt_settings
+                    settings
                 )
 
             elif opt == 'lbfgs':

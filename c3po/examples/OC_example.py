@@ -8,7 +8,7 @@ from scipy.linalg import expm
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from c3po.tf_utils import tf_abs, tf_ave
+from c3po.tf_utils import tf_abs
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
 
@@ -31,7 +31,7 @@ model = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
 gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
 
-#gen.devices['awg'].options = 'drag'
+# gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
 exp = Exp(model, gen)
@@ -55,6 +55,7 @@ def state_transfer_infid(U_dict: dict):
     infid = 1 - overlap
     return infid
 
+
 def unitary_infid(U_dict: dict):
     U = U_dict['X90p']
     unit_fid = tf_abs(
@@ -65,11 +66,13 @@ def unitary_infid(U_dict: dict):
     infid = 1 - unit_fid
     return infid
 
+
 def pop_leak(U_dict: dict):
     U = U_dict['X90p']
     ket_actual = tf.matmul(U, ket_0)
     overlap = tf_abs(tf.matmul(bra_2, ket_actual))
     return overlap
+
 
 # Optimizer object
 opt = Opt(data_path=logdir)
