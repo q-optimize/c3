@@ -107,13 +107,28 @@ def tf_measure_operator(M, U):
 
 
 @tf.function
-def tf_expm(A):
+def tf_expm(A, terms):
+    """
+    Matrix exponential by the series method.
+
+    Parameters
+    ----------
+    A : tf.tensor
+        Matrix to be exponentiated.
+    terms : int
+        Number of terms in the series.
+
+    Returns
+    -------
+    tf.tensor
+        expm(A)
+
+    """
     r = tf.eye(int(A.shape[0]), dtype=A.dtype)
     A_powers = A
     r += A
 
-    # TODO dynamically calculate the number of steps required
-    for ii in range(2, 24):
+    for ii in range(2, terms):
         A_powers = tf.matmul(A_powers, A)
         r += A_powers / np.math.factorial(ii)
     return r
@@ -121,10 +136,32 @@ def tf_expm(A):
 
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
+    """
+    Compute H(t) = H_0 + \\sum_k c_k H_k and its matrix exponential
+    exp(i H(t) dt).
+
+    Parameters
+    ----------
+    h0 : tf.tensor
+        Drift Hamiltonian.
+    hks : list of tf.tensor
+        List of control Hamiltonians.
+    cflds_t : array of tf.float
+        Vector of control field values at time t.
+    dt : float
+        Length of one time slice.
+
+    Returns
+    -------
+    tf.tensor
+        dU = exp(i H(t) dt)
+
+    """
     h = h0
     for ii in range(len(hks)):
         h += cflds_t[ii] * hks[ii]
-    return tf_expm(-1j * h * dt)
+    terms = int(2e12 * dt)  # Eyeball number of terms in expm
+    return tf_expm(-1j * h * dt, terms)
 
 
 # @tf.function
@@ -150,15 +187,35 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return tf_expm(lind_op * dt)
 
 
-def tf_propagation(h0, hks, cflds, dt, history=False):
-    with tf.name_scope('Propagation'):
-        dUs = []
-        for ii in range(len(cflds[0])):
-            cf_t = []
-            for fields in cflds:
-                cf_t.append(tf.cast(fields[ii], tf.complex128))
-            dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-        return dUs
+def tf_propagation(h0, hks, cflds, dt):
+    """
+    Calculate the time evolution of a system controlled by time-dependent
+    fields.
+
+    Parameters
+    ----------
+    h0 : tf.tensor
+        Drift Hamiltonian.
+    hks : list of tf.tensor
+        List of control Hamiltonians.
+    cflds : list
+        List of control fields, one per control Hamiltonian.
+    dt : float
+        Length of one time slice.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
+    dUs = []
+    for ii in range(len(cflds[0])):
+        cf_t = []
+        for fields in cflds:
+            cf_t.append(tf.cast(fields[ii], tf.complex128))
+        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+    return dUs
 
 
 def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
@@ -194,12 +251,16 @@ def tf_matmul_list(dUs):
 
 
 def tf_matmul_n(tensor_list):
+    """
+    Multiply a list of tensors as binary tree.
+
+    """
     ln = len(tensor_list)
     if (ln == 1):
         return tensor_list[0]
     else:
-        left_half = tensor_list[0:int(ln/2)]
-        right_half = tensor_list[int(ln/2):ln]
+        left_half = tensor_list[0:int(ln / 2)]
+        right_half = tensor_list[int(ln / 2):ln]
         return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
 
 
@@ -283,17 +344,3 @@ def tf_dmket_fid(rho, psi):
     return tf.sqrt(
             tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
             )
-
-
-def tf_interp_sin(y_lo, x_lo, x_hi):
-    x_left = x_lo[0]
-    dx = x_lo[1]-x_lo[0]
-    n = int(x_hi.shape[0] / x_lo.shape[0])
-    y_hi = []
-    for xi in range(1, x_lo.shape[0]):
-        x_right = x_lo[xi]
-        x = tf.linspace(x_left, x_right, n)
-        y = (y_lo[xi-1] + (y_lo[xi] - y_lo[xi-1]) * tf.sin(np.pi/dx*x))
-        y_hi = tf.concat(y_hi, y)
-        x_left = x_right
-    return y_hi

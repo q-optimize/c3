@@ -85,4 +85,4 @@ opt.optimize_controls(
     opt='lbfgs',
     opt_name='openloop',
     fid_func=unitary_infid
-    )
+)

@@ -19,7 +19,10 @@ class Generator:
     ):
         # TODO consider making the dict into a list of devices
         # TODO check that you get at least 1 set of LO, AWG and mixer.
-        self.devices = devices
+        self.devices = {}
+        for dev in devices:
+            self.devices[dev.name] = dev
+
         self.resolution = resolution
         # TODO add line knowledge (mapping of which devices are connected)
 
@@ -32,7 +35,7 @@ class Generator:
             # TODO make mixer optional and have a signal chain (eg Flux tuning)
             mixer = self.devices["mixer"]
             v_to_hz = self.devices["v_to_hz"]
-            dig_to_an = self.devices["dig_to_an"]
+            dig_to_an = self.devices["dac"]
             resp = self.devices["resp"]
             t_start = instr.t_start
             t_end = instr.t_end
@@ -44,25 +47,6 @@ class Generator:
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 conv_signal = resp.process(flat_signal)
                 signal = mixer.combine(lo_signal, conv_signal)
-                # plt.figure()
-                # plt.plot(awg.ts, awg_signal['inphase'], 'x-',
-                #          awg.ts, awg_signal['quadrature'], 'x-')
-                # plt.title("AWG")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'x-',
-                #          lo_signal['ts'], flat_signal['quadrature'], 'x-')
-                # plt.title("AWG interp")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'x-',
-                #          lo_signal['ts'], conv_signal['quadrature'], 'x-')
-                # plt.title("convolved")
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], signal, 'x-')
-                # plt.title("Multiplex")
-                # plt.show()
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
@@ -106,11 +90,11 @@ class Device(C3obj):
         # return self.slice_num
 
     def create_ts(
-            self,
-            t_start: np.float64,
-            t_end: np.float64,
-            centered: bool = True
-            ):
+        self,
+        t_start: np.float64,
+        t_end: np.float64,
+        centered: bool = True
+    ):
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
@@ -150,7 +134,7 @@ class Volts_to_Hertz(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "v_to_hz",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -176,7 +160,7 @@ class Digital_to_Analog(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "dac",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -217,7 +201,7 @@ class Filter(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "FLTR",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -270,7 +254,7 @@ class Response(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "resp",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -282,7 +266,7 @@ class Response(Device):
             comment=comment,
             resolution=resolution
         )
-        self.rise_time = rise_time
+        self.params['rise_time'] = rise_time
         self.signal = None
 
     def convolve(self, signal: list, resp_shape: list):
@@ -305,24 +289,26 @@ class Response(Device):
                 0)
         return convolution
 
-    def gaussian(self, width, sigma):
-        """Gaussian pulse centered about the number of width."""
-        xvals = tf.range(start=0, limit=width, dtype=tf.float64)
-        cen = tf.cast(float(width - 1) / 2, dtype=tf.float64)
-        sigma = tf.cast(sigma, dtype=tf.float64)
-        gauss = tf.exp(-(xvals - cen) ** 2 / (2 * sigma * sigma))
-        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
-        # The third term in the return gets rid of abrupt step at end
-        return gauss - offset
-
     def process(self, iq_signal):
-        width = np.floor(self.rise_time * self.resolution)
+        n_ts = int(self.params['rise_time'] * self.resolution)
+        ts = tf.linspace(tf.constant(
+            0.0, dtype=tf.float64),
+            self.params['rise_time'],
+            n_ts
+        )
+        cen = tf.cast(
+            (self.params['rise_time'] - 1 / self.resolution) / 2,
+            tf.float64
+        )
+        sigma = self.params['rise_time'] / 4
+        gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
+        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
-        risefun = self.gaussian(width, width/4)
+        risefun = gauss - offset
         inphase = self.convolve(iq_signal['inphase'],
-                                risefun/tf.reduce_sum(risefun))
+                                risefun / tf.reduce_sum(risefun))
         quadrature = self.convolve(iq_signal['quadrature'],
-                                   risefun/tf.reduce_sum(risefun))
+                                   risefun / tf.reduce_sum(risefun))
         self.signal = {}
         self.signal['inphase'] = inphase
         self.signal['quadrature'] = quadrature
@@ -334,7 +320,7 @@ class Mixer(Device):
 
     def __init__(
             self,
-            name: str = " ",
+            name: str = "mixer",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0
@@ -362,7 +348,7 @@ class LO(Device):
 
     def __init__(
         self,
-        name: str = " ",
+        name: str = "lo",
         desc: str = " ",
         comment: str = " ",
         resolution: np.float64 = 0.0
@@ -395,7 +381,7 @@ class AWG(Device):
 
     def __init__(
         self,
-        name: str = " ",
+        name: str = "awg",
         desc: str = " ",
         comment: str = " ",
         resolution: np.float64 = 0.0,
