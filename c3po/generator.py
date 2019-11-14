@@ -323,7 +323,10 @@ class Response(Device):
                                 risefun/tf.reduce_sum(risefun))
         quadrature = self.convolve(iq_signal['quadrature'],
                                    risefun/tf.reduce_sum(risefun))
-        return {"inphase": inphase, "quadrature": quadrature}
+        self.signal = {}
+        self.signal['inphase'] = inphase
+        self.signal['quadrature'] = quadrature
+        return self.signal
 
 
 class Mixer(Device):
@@ -453,6 +456,10 @@ class AWG(Device):
                             - inphase * tf.sin(phase)
                         )
 
+                norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
+                inphase = tf.add_n(inphase_comps, name="inphase")
+                quadrature = tf.add_n(quadrature_comps, name="quadrature")
+
             elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:
                     comp = channel[key]
@@ -486,6 +493,9 @@ class AWG(Device):
                             amp * (
                                 env * tf.sin(phase)
                                 - denv * delta * tf.cos(phase)
+                                # TODO check sign of drag component
+                                # denv * delta * tf.cos(phase)
+                                # - env * tf.sin(phase)
                             )
                         )
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))

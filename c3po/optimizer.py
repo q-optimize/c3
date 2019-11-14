@@ -196,7 +196,7 @@ class Optimizer:
         self.results[self.opt_name] = res
         return values_opt
 
-    def lbfgs(self, values, bounds, goal, grad):
+    def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
         if hasattr(self, 'exp_opt_map'):
             self.optim_status['params'] = list(zip(
@@ -207,13 +207,14 @@ class Optimizer:
                 self.opt_map, values.tolist()
             ))
         self.log_parameters(x0)
+        options['disp'] = True
         res = minimize(
             goal,
             x0,
             jac=grad,
             method='L-BFGS-B',
             callback=self.log_parameters,
-            options={'disp': True}
+            options=options
         )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -227,7 +228,8 @@ class Optimizer:
         opt_map,
         opt,
         opt_name,
-        fid_func
+        fid_func,
+        settings={}
     ):
         """
         Apply a search algorightm to your gateset given a fidelity function.
@@ -290,7 +292,8 @@ class Optimizer:
                     values,
                     self.bounds,
                     self.goal_run,
-                    self.goal_gradient_run
+                    self.goal_gradient_run,
+                    options=settings
                 )
             end_time = time.time()
             self.logfile.write(
