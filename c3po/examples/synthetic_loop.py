@@ -197,4 +197,4 @@ c3_openloop()
 c3_calibration()
 logfilename = logdir + "calibration.log"
 # sampling = 'from_end'  'even', 'random' , 'from_start'
-c3_learn_model(logfilename, sampling='even', batch_size=7)
+c3_learn_model(logfilename, sampling='even', batch_size=14)

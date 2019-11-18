@@ -2,6 +2,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
@@ -86,13 +87,20 @@ def plot_calibration(logfilename="/tmp/c3logs/recent/calibration.log"):
             batch += 1
 
     plt.figure()
-    plt.title("Goal")
+    plt.title("Calibration")
+    means = []
     for ii in range(len(goal_function)):
+        means.append(np.mean(np.array(goal_function[ii])))
         for pt in goal_function[ii]:
-            plt.scatter(ii, pt, color='b')
+            plt.scatter(ii+1, pt, color='tab:blue')
     ax = plt.gca()
     ax.set_yscale('log')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid()
+    plt.plot(range(1, len(goal_function)+1), means, color="tab:red")
+    plt.axis('tight')
+    plt.ylabel('Goal function')
+    plt.xlabel('Iterations')
 
 
 def plot_learning(logfilename="/tmp/c3logs/recent/learn_model.log"):
