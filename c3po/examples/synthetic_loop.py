@@ -28,7 +28,7 @@ qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 2e9 * np.pi
-t_final = 15e-9
+t_final = 25e-9
 
 # Define the ground state
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -128,7 +128,7 @@ opt = Opt(data_path=logdir)
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],
-    # [('X90p', 'd1', 'gauss', 'xy_angle')],
+    [('X90p', 'd1', 'gauss', 'xy_angle')],
     # [('X90p', 'd1', 'gauss', 'delta')]
 ]
 
@@ -141,40 +141,51 @@ exp_opt_map = [
     ('resp', 'rise_time')
 ]
 
-opt.optimize_controls(
-    sim=sim_wrong,
-    opt_map=opt_map,
-    opt='lbfgs',
-    opt_name='openloop',
-    fid_func=unitary_infid
-)
 
-opt.simulate_noise = True
+def c3_openloop():
+    opt.optimize_controls(
+        sim=sim_wrong,
+        opt_map=opt_map,
+        opt='lbfgs',
+        opt_name='openloop',
+        fid_func=unitary_infid
+    )
 
-opt.optimize_controls(
-    sim=sim_right,
-    opt_map=opt_map,
-    opt='cmaes',
-    opt_settings={'maxiter': 5},
-    opt_name='calibration',
-    fid_func=unitary_infid
-)
 
+def c3_calibration(simulate_noise=True):
+    opt.simulate_noise = simulate_noise
+    opt.optimize_controls(
+        sim=sim_right,
+        opt_map=opt_map,
+        opt='cmaes',
+        opt_settings={'maxiter': 5},
+        opt_name='calibration',
+        fid_func=unitary_infid
+    )
+
+
+def c3_learn_model(logfilename):
+    learn_from = []
+    with open(logfilename, "r") as calibration_log:
+        log = calibration_log.readlines()
+    for line in log:
+        line_dict = json.loads(line)
+        learn_from.append([line_dict['params'], 'X90p', line_dict['goal']])
+
+    opt = Opt(data_path=logdir)
+    opt.gateset_opt_map = opt_map
+    opt.exp_opt_map = exp_opt_map
+    opt.sampling = sampling
+    opt.batch_size = batch_size
+    opt.learn_from = learn_from
+    opt.learn_model(
+        exp_wrong,
+        eval_func=match_ORBIT
+    )
+
+
+# Run the stuff
+c3_openloop()
+c3_calibration()
 logfilename = logdir + "calibration.log"
-learn_from = []
-with open(logfilename, "r") as calibration_log:
-    log = calibration_log.readlines()
-for line in log:
-    line_dict = json.loads(line)
-    learn_from.append([line_dict['params'], 'X90p', line_dict['goal']])
-
-opt = Opt(data_path=logdir)
-opt.gateset_opt_map = opt_map
-opt.exp_opt_map = exp_opt_map
-opt.sampling = sampling
-opt.batch_size = batch_size
-opt.learn_from = learn_from
-opt.learn_model(
-    exp_wrong,
-    eval_func=match_ORBIT
-)
+c3_learn_model(logfilename)
