@@ -85,9 +85,9 @@ class Simulator():
             signals.append(out["values"])
 
         dt = tf.cast(ts[1] - ts[0], tf.complex128, name="dt")
-        h0, hks = self.exp.model.get_Hamiltonians()
+        h0, hks = self.exp.get_Hamiltonians()
         if lindbladian:
-            col_ops = self.exp.model.get_lindbladian()
+            col_ops = self.exp.get_lindbladian()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)

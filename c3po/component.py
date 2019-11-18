@@ -191,8 +191,8 @@ class Coupling(LineComponent):
             comment=comment,
             connected=connected
             )
+        self.values={}
         self.values['strength'] = strength
-
 
 class Drive(LineComponent):
     """
