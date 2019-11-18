@@ -177,6 +177,8 @@ class Optimizer:
         x0 = self.to_scale_one(values, bounds)
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
         while not es.stop():
+            self.logfile.write(f"Batch {self.iteration}\n")
+            self.logfile.flush()
             samples = es.ask()
             solutions = []
             for sample in samples:
@@ -193,6 +195,7 @@ class Optimizer:
                 )
                 self.logfile.write("\n")
                 self.logfile.flush()
+            self.iteration += 1
             es.tell(
                 samples,
                 solutions
@@ -281,7 +284,7 @@ class Optimizer:
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         start_time = time.time()
-        with open(self.logfile_name, 'w') as self.logfile:
+        with open(self.logfile_name, 'a') as self.logfile:
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
@@ -336,7 +339,7 @@ class Optimizer:
         self.optim_status = {}
         self.iteration = 0
 
-        with open(self.logfile_name, 'w') as self.logfile:
+        with open(self.logfile_name, 'a') as self.logfile:
             start_time = time.time()
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
@@ -345,7 +348,8 @@ class Optimizer:
                 values,
                 bounds,
                 self.goal_run_n,
-                self.goal_gradient_run
+                self.goal_gradient_run,
+                options=settings
             )
             end_time = time.time()
             self.logfile.write(

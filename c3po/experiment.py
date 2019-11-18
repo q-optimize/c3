@@ -54,7 +54,7 @@ class Experiment:
         for list in values:
             values_flat.extend(list)
         values_new = [values_flat[indx] for indx in par_indx]
-        bounds = np.kron(np.array([[0.9], [1.1]]), np.array(values_new)).T
+        bounds = np.kron(np.array([[0.7], [1.3]]), np.array(values_new)).T
         return values_new, bounds
 
     def set_parameters(self, values: list, opt_map: list):

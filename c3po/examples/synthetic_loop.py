@@ -28,7 +28,7 @@ qubit_anhar = -315.513734e6 * 2 * np.pi
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = 2e9 * np.pi
-t_final = 25e-9
+t_final = 10e-9
 
 # Define the ground state
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -37,39 +37,43 @@ ket_0 = tf.constant(qubit_g, tf.complex128)
 bra_0 = tf.constant(qubit_g.T, tf.complex128)
 
 # Simulation variables
-sim_res = 3e10
+sim_res = 60e9
 awg_res = 1.2e9
-
-# Learning variables
-sampling = 'from_end'  # 'even', 'random' , 'from_start'
-batch_size = 7
 
 # Create system
 model_wrong = create_chip_model(
-    0.98 * qubit_freq, 1.4 * qubit_anhar, qubit_lvls, drive_ham
+    0.98 * qubit_freq, 1.2 * qubit_anhar, qubit_lvls, drive_ham
 )
 model_right = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen_wrong = create_generator(
     sim_res, awg_res, 0.8 * v_hz_conversion, logdir=logdir
 )
 gen_right = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
-gates = create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar)
+gates = create_gates(
+    t_final,
+    0.8 * v_hz_conversion,
+    0.98 * qubit_freq,
+    1.4 * qubit_anhar
+)
 
 # gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
-exp_wrong = Exp(model_wrong, gen_wrong)
+exp_wrong = Exp(
+    model_wrong,
+    gen_wrong
+)
 sim_wrong = Sim(exp_wrong, gates)
 a_q = model_wrong.ann_opers[0]
 sim_wrong.VZ = expm(
-    1.0j * np.matmul(a_q.T.conj(), a_q) * 0.95 * qubit_freq * t_final
+    1.0j * np.matmul(a_q.T.conj(), a_q) * 0.98 * qubit_freq * t_final
 )
 
 exp_right = Exp(model_right, gen_right)
 sim_right = Sim(exp_right, gates)
 a_q = model_right.ann_opers[0]
 sim_right.VZ = expm(
-    1.0j * np.matmul(a_q.T.conj(), a_q) * 0.95 * qubit_freq * t_final
+    1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final
 )
 
 # Define states
@@ -158,23 +162,27 @@ def c3_calibration(simulate_noise=True):
         sim=sim_right,
         opt_map=opt_map,
         opt='cmaes',
-        opt_settings={'maxiter': 5},
+        settings={},
+        # settings={'maxiter': 5},
         opt_name='calibration',
         fid_func=unitary_infid
     )
 
 
-def c3_learn_model(logfilename):
+def c3_learn_model(logfilename, sampling='even', batch_size=1):
     learn_from = []
     with open(logfilename, "r") as calibration_log:
         log = calibration_log.readlines()
     for line in log:
-        line_dict = json.loads(line)
-        learn_from.append([line_dict['params'], 'X90p', line_dict['goal']])
+        if line[0] == "{":
+            line_dict = json.loads(line)
+            learn_from.append(
+                [line_dict['params'], ['X90p'], line_dict['goal']]
+            )
 
     opt = Opt(data_path=logdir)
     opt.gateset_opt_map = opt_map
-    opt.exp_opt_map = exp_opt_map
+    opt.opt_map = exp_opt_map
     opt.sampling = sampling
     opt.batch_size = batch_size
     opt.learn_from = learn_from
@@ -188,4 +196,5 @@ def c3_learn_model(logfilename):
 c3_openloop()
 c3_calibration()
 logfilename = logdir + "calibration.log"
-c3_learn_model(logfilename)
+# sampling = 'from_end'  'even', 'random' , 'from_start'
+c3_learn_model(logfilename, sampling='even', batch_size=7)
