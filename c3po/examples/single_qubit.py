@@ -16,7 +16,12 @@ tf_limit_gpu_memory(1024)
 
 
 # Gates
-def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
+def create_gates(t_final,
+                 v_hz_conversion,
+                 qubit_freq,
+                 qubit_anhar,
+                 all_gates=True
+                 ):
     """
     Define the atomic gates.
 
@@ -78,27 +83,35 @@ def create_gates(t_final, v_hz_conversion, qubit_freq, qubit_anhar):
     gates = control.GateSet()
     gates.add_instruction(X90p)
 
-    Y90p = copy.deepcopy(X90p)
-    Y90p.name = "Y90p"
-    Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
-    Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+    if all_gates:
+        Y90p = copy.deepcopy(X90p)
+        Y90p.name = "Y90p"
+        Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
+        Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
-    X90m = copy.deepcopy(X90p)
-    X90m.name = "X90m"
-    X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
-    X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m = copy.deepcopy(X90p)
+        X90m.name = "X90m"
+        X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
+        X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
-    Y90m = copy.deepcopy(X90p)
-    Y90m.name = "Y90m"
-    Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
-    Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m = copy.deepcopy(X90p)
+        Y90m.name = "Y90m"
+        Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
+        Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
 
-    gates.add_instruction(X90m)
-    gates.add_instruction(Y90m)
-    gates.add_instruction(Y90p)
+        gates.add_instruction(X90m)
+        gates.add_instruction(Y90m)
+        gates.add_instruction(Y90p)
     return gates
 
-def create_pwc_gates(t_final, qubit_freq, inphase, quadrature, amp_limit):
+
+def create_pwc_gates(t_final,
+                     qubit_freq,
+                     inphase,
+                     quadrature,
+                     amp_limit,
+                     all_gates=True
+                     ):
 
     pwc_params = {
         'inphase': inphase,
@@ -144,24 +157,25 @@ def create_pwc_gates(t_final, qubit_freq, inphase, quadrature, amp_limit):
     gates = control.GateSet()
     gates.add_instruction(X90p)
 
-    Y90p = copy.deepcopy(X90p)
-    Y90p.name = "Y90p"
-    Y90p.comps['d1']['pwc'].params['xy_angle'] = np.pi / 2
-    Y90p.comps['d1']['pwc'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+    if all_gates:
+        Y90p = copy.deepcopy(X90p)
+        Y90p.name = "Y90p"
+        Y90p.comps['d1']['pwc'].params['xy_angle'] = np.pi / 2
+        Y90p.comps['d1']['pwc'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
-    X90m = copy.deepcopy(X90p)
-    X90m.name = "X90m"
-    X90m.comps['d1']['pwc'].params['xy_angle'] = np.pi
-    X90m.comps['d1']['pwc'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m = copy.deepcopy(X90p)
+        X90m.name = "X90m"
+        X90m.comps['d1']['pwc'].params['xy_angle'] = np.pi
+        X90m.comps['d1']['pwc'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
-    Y90m = copy.deepcopy(X90p)
-    Y90m.name = "Y90m"
-    Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
-    Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m = copy.deepcopy(X90p)
+        Y90m.name = "Y90m"
+        Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
+        Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
 
-    gates.add_instruction(X90m)
-    gates.add_instruction(Y90m)
-    gates.add_instruction(Y90p)
+        gates.add_instruction(X90m)
+        gates.add_instruction(Y90m)
+        gates.add_instruction(Y90p)
     return gates
 
 
@@ -198,13 +212,17 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
 
 
 # Devices and generator
-def create_generator(sim_res, awg_res, v_hz_conversion, logdir):
+def create_generator(sim_res,
+                     awg_res,
+                     v_hz_conversion,
+                     logdir,
+                     rise_time=0.3e-9):
     lo = generator.LO(resolution=sim_res)
     awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()
     v_to_hz = generator.Volts_to_Hertz(V_to_Hz=v_hz_conversion)
     dig_to_an = generator.Digital_to_Analog(resolution=sim_res)
-    resp = generator.Response(rise_time=0.1e-9, resolution=sim_res)
+    resp = generator.Response(rise_time=rise_time, resolution=sim_res)
     # TODO Add devices by their names
     devices = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     gen = generator.Generator(devices)

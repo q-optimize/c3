@@ -1,8 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
-import pickle
 import random
-import os
 import time
 import json
 import numpy as np
@@ -209,19 +207,20 @@ class Optimizer:
         self.results[self.opt_name] = res
         return values_opt
 
-    def lbfgs(self, values, bounds, goal, grad):
+    def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
         self.optim_status['params'] = list(zip(
             self.opt_map, values
         ))
         self.log_parameters(x0)
+        options['disp'] = True
         res = minimize(
             goal,
             x0,
             jac=grad,
             method='L-BFGS-B',
             callback=self.log_parameters,
-            options={'disp': True}
+            options=options
         )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -236,7 +235,7 @@ class Optimizer:
         opt,
         opt_name,
         fid_func,
-        opt_settings={}
+        settings={}
     ):
         """
         Apply a search algorightm to your gateset given a fidelity function.
@@ -264,7 +263,6 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-
         values, bounds = sim.gateset.get_parameters(opt_map)
         self.param_shape = values.shape
         self.bounds = bounds
@@ -292,7 +290,7 @@ class Optimizer:
                 values_opt = self.cmaes(
                     values,
                     self.bounds,
-                    opt_settings
+                    settings
                 )
 
             elif opt == 'lbfgs':
@@ -300,7 +298,8 @@ class Optimizer:
                     values,
                     self.bounds,
                     self.goal_run,
-                    self.goal_gradient_run
+                    self.goal_gradient_run,
+                    options=settings
                 )
             end_time = time.time()
             self.logfile.write(

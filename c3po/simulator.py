@@ -203,8 +203,8 @@ class Simulator():
                     pop0s = []
                     for U in Us:
                         pops = self.populations(tf.matmul(U, psi_init))
-                        pop0s.append(pops[0])
-                        surv_prob.append(pop0s)
+                        pop0s.append(float(pops[0]))
+                    surv_prob.append(pop0s)
                 lengths = np.append(lengths, new_lengths)
 
         # PLOT
