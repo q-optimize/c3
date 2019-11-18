@@ -15,7 +15,13 @@ def no_drive(t, params):
 
 def pwc(t, params):
     """Piecewise constant pulse."""
+    # TODO make pwc return actual values like other envelopes
     return params
+
+
+def rect(t, params):
+    """Rectangular pulse."""
+    return params['amp']
 
 
 def flattop_risefall(t, params):

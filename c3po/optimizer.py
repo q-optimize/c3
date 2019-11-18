@@ -1,8 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
-import pickle
 import random
-import os
 import time
 import json
 import numpy as np
@@ -19,7 +17,7 @@ class Optimizer:
         self.results = {}
         self.gradients = {}
         self.simulate_noise = False
-        self.random_samples = False
+        self.sampling = False
         self.batch_size = 1
         self.data_path = data_path
 
@@ -41,11 +39,12 @@ class Optimizer:
             Numpy array of pulse parameters, rescaled to values within [-1, 1]
 
         """
+        # TODO Give warning when outside bounds
         x0 = []
         values = values.flatten()
         for i in range(len(values)):
             scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = bounds[i].T[0]
+            offset = min(bounds[i].T)
             tmp = (values[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
@@ -93,7 +92,7 @@ class Optimizer:
         gradients = grad.numpy().flatten() * scale.T
         self.gradients[str(x)] = gradients
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy()
+            self.opt_map, current_params.numpy().tolist()
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -108,11 +107,15 @@ class Optimizer:
             t.watch(current_params)
             goal = 0
 
-            if self.random_samples:
+            if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
-            else:
+            elif self.sampling == 'even':
                 n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::n]
+                measurements = learn_from[-n:]
+            elif self.sampling == 'from_start':
+                measurements = learn_from[:self.batch_size]
+            elif self.sampling == 'from_end':
+                measurements = learn_from[-self.batch_size:]
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
@@ -120,11 +123,14 @@ class Optimizer:
                 fid = m[2]
                 this_goal = self.eval_func(
                     current_params,
-                    self.exp_opt_map,
+                    self.opt_map,
                     gateset_params,
                     self.gateset_opt_map,
                     seq,
                     fid
+                )
+                self.logfile.write(
+                    f"\n  Sequence:  {seq}\n"
                 )
                 self.logfile.write(
                     f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
@@ -140,15 +146,16 @@ class Optimizer:
 
             goal = tf.sqrt(goal / batch_size)
             self.logfile.write(
-                f"\nFinished batch with RMS: {float(goal.numpy())}\n"
+                f"Finished batch with RMS: {float(goal.numpy())}\n"
             )
+            self.logfile.flush()
 
         grad = t.gradient(goal, current_params)
         scale = np.diff(self.bounds)
         gradients = grad.numpy().flatten() * scale.T
         self.gradients[str(x)] = gradients
         self.optim_status['params'] = list(zip(
-            self.exp_opt_map, current_params.numpy()
+            self.opt_map, current_params.numpy()
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -177,7 +184,15 @@ class Optimizer:
                 if self.simulate_noise:
                     goal = (1 + 0.03 * np.random.randn()) * goal
                 solutions.append(goal)
-                # self.plot_progress()
+                self.logfile.write(
+                    json.dumps({
+                        'params': self.to_bound_phys_scale(
+                            sample, bounds
+                        ).tolist(),
+                        'goal': goal})
+                )
+                self.logfile.write("\n")
+                self.logfile.flush()
             es.tell(
                 samples,
                 solutions
@@ -192,19 +207,20 @@ class Optimizer:
         self.results[self.opt_name] = res
         return values_opt
 
-    def lbfgs(self, values, bounds, goal, grad):
+    def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
         self.optim_status['params'] = list(zip(
             self.opt_map, values
         ))
         self.log_parameters(x0)
+        options['disp'] = True
         res = minimize(
             goal,
             x0,
             jac=grad,
             method='L-BFGS-B',
             callback=self.log_parameters,
-            options={'disp': True}
+            options=options
         )
 
         values_opt = self.to_bound_phys_scale(res.x, bounds)
@@ -218,7 +234,8 @@ class Optimizer:
         opt_map,
         opt,
         opt_name,
-        fid_func
+        fid_func,
+        settings={}
     ):
         """
         Apply a search algorightm to your gateset given a fidelity function.
@@ -226,7 +243,7 @@ class Optimizer:
         Parameters
         ----------
         simulator : class Simulator
-            simulator class carrying all relevant information:
+            simulator class carrying all relevant informatioFn:
             - experiment object with model and generator
             - gateset object with pulse information for each gate
 
@@ -246,7 +263,6 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-
         values, bounds = sim.gateset.get_parameters(opt_map)
         self.param_shape = values.shape
         self.bounds = bounds
@@ -260,10 +276,10 @@ class Optimizer:
         # TODO fix this horrible mess and make the shape of bounds general for
         # PWC and carrier based controls
         if len(self.param_shape) > 1:
-            bounds = bounds.reshape(bounds.T.shape)
+            self.bounds = bounds.reshape(bounds.T.shape)
 
         self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as at:\n {self.logfile_name}")
+        print(f"Saving as:\n{self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'w') as self.logfile:
             self.logfile.write(
@@ -273,7 +289,8 @@ class Optimizer:
             if opt == 'cmaes':
                 values_opt = self.cmaes(
                     values,
-                    self.bounds
+                    self.bounds,
+                    settings
                 )
 
             elif opt == 'lbfgs':
@@ -281,7 +298,8 @@ class Optimizer:
                     values,
                     self.bounds,
                     self.goal_run,
-                    self.goal_gradient_run
+                    self.goal_gradient_run,
+                    options=settings
                 )
             end_time = time.time()
             self.logfile.write(
@@ -305,7 +323,7 @@ class Optimizer:
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        values, bounds = exp.get_parameters(self.exp_opt_map)
+        values, bounds = exp.get_parameters(self.opt_map)
         bounds = np.array(bounds)
         self.bounds = bounds
         values = np.array(values)
@@ -314,11 +332,10 @@ class Optimizer:
 
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as at:\n {self.logfile_name}")
+        print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
         self.iteration = 0
 
-        self.log_setup()
         with open(self.logfile_name, 'w') as self.logfile:
             start_time = time.time()
             self.logfile.write(
@@ -328,8 +345,7 @@ class Optimizer:
                 values,
                 bounds,
                 self.goal_run_n,
-                self.goal_gradient_run,
-                settings=settings
+                self.goal_gradient_run
             )
             end_time = time.time()
             self.logfile.write(
@@ -339,7 +355,7 @@ class Optimizer:
                 f"Total runtime: {end_time-start_time}"
             )
             self.logfile.flush()
-        exp.set_parameters(params_opt, self.exp_opt_map)
+        exp.set_parameters(params_opt, self.opt_map)
 
     def log_parameters(self, x):
         self.logfile.write(json.dumps(self.optim_status))
