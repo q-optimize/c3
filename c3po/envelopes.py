@@ -21,7 +21,7 @@ def pwc(t, params):
 
 def rect(t, params):
     """Rectangular pulse."""
-    return params['amp']
+    return 1.0
 
 
 def flattop_risefall(t, params):
