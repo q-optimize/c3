@@ -9,7 +9,7 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
-def plot_OC_logs(logfilename):
+def plot_OC_logs(logfilename="/tmp/c3logs/recent/openloop.log"):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -71,22 +71,31 @@ def plot_OC_logs(logfilename):
         plt.semilogy(its, goal_function)
 
 
-def plot_calibration(logfilename):
+def plot_calibration(logfilename="/tmp/c3logs/recent/calibration.log"):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
+    batch = -1
     for line in log:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
-                goal_function.append(point['goal'])
+                goal_function[batch].append(point['goal'])
+        elif line[0] == "B":
+            goal_function.append([])
+            batch += 1
+
     plt.figure()
     plt.title("Goal")
+    for ii in range(len(goal_function)):
+        for pt in goal_function[ii]:
+            plt.scatter(ii, pt, color='b')
+    ax = plt.gca()
+    ax.set_yscale('log')
     plt.grid()
-    plt.semilogy(goal_function)
 
 
-def plot_learning(logfilename):
+def plot_learning(logfilename="/tmp/c3logs/recent/learn_model.log"):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -170,7 +179,7 @@ def plot_envelope_history(logfilename):
     plt.show()
 
 
-def plot_awg(logfilename):
+def plot_awg(logfilename="/tmp/c3logs/recent/awg.log"):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     point = json.loads(log[-1])
