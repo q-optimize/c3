@@ -160,11 +160,12 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
         h += cflds_t[ii] * hks[ii]
-    terms = int(2e12 * dt)  # Eyeball number of terms in expm
-    return tf_expm(-1j * h * dt, terms)
+    terms = max(24, int(2e12 * dt)) # Eyeball number of terms in expm
+    dU = tf_expm(-1j * h * dt, terms)
+    return dU
 
 
-# @tf.function
+@tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
@@ -184,7 +185,10 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    return tf_expm(lind_op * dt)
+    terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
+    # TODO test eyeballing of the number of terms in the taylor expansion
+    dU = tf_expm(lind_op * dt, terms)
+    return dU
 
 
 def tf_propagation(h0, hks, cflds, dt):
