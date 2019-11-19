@@ -165,6 +165,8 @@ class Simulator():
         init_guess = [0.9, 0.5, 0.5]
         fitted = False
         while not fitted:
+            print('lengths shape', lengths.shape)
+            print('surv_prob shape', np.array(surv_prob).shape)
             try:
                 means = np.mean(surv_prob, axis=1)
                 stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
@@ -183,7 +185,7 @@ class Simulator():
                     new_lengths = np.rint(
                                 np.logspace(
                                     np.log10(max_length + min_length),
-                                    np.log10(max_length * 2),
+                                    np.log10(max_length) * 2,
                                     num=num_lengths
                                     )
                                 ).astype(int)
@@ -207,30 +209,31 @@ class Simulator():
                     surv_prob.append(pop0s)
                 lengths = np.append(lengths, new_lengths)
 
-        # PLOT
-        fig, ax = plt.subplots()
-        if plot_all:
-            ax.plot(lengths,
-                    surv_prob,
-                    marker='o',
-                    color='red',
-                    linestyle='None')
-        ax.errorbar(lengths,
-                    means,
-                    yerr=stds,
-                    color='blue',
-                    marker='x',
-                    linestyle='None')
+            # PLOT inside the while loop
+            fig, ax = plt.subplots()
+            if plot_all:
+                ax.plot(lengths,
+                        surv_prob,
+                        marker='o',
+                        color='red',
+                        linestyle='None')
+            ax.errorbar(lengths,
+                        means,
+                        yerr=stds,
+                        color='blue',
+                        marker='x',
+                        linestyle='None')
+            plt.title('RB results')
+            plt.ylabel('Population in 0')
+            plt.xlabel('# Cliffords')
+            plt.ylim(0, 1)
+            plt.xlim(0, lengths[-1])
+            plt.show()
+        # put the fitted line only once fit parameters have been found
         fitted = RB_fit(lengths, r, A, B)
         ax.plot(lengths, fitted)
         plt.text(0.1, 0.1,
                  'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
                  size=16,
                  transform=ax.transAxes)
-        plt.title('RB results')
-        plt.ylabel('Population in 0')
-        plt.xlabel('# Cliffords')
-        plt.ylim(0, 1)
-        plt.xlim(0, lengths[-1])
-        plt.show()
         return r, A, B
