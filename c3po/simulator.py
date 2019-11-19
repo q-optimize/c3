@@ -185,7 +185,7 @@ class Simulator():
                     new_lengths = np.rint(
                                 np.logspace(
                                     np.log10(max_length + min_length),
-                                    np.log10(max_length) * 2,
+                                    np.log10(max_length * 2),
                                     num=num_lengths
                                     )
                                 ).astype(int)
@@ -197,6 +197,7 @@ class Simulator():
                                     num=num_lengths
                                     )
                                 ).astype(int)
+                max_length = max_length * 2
                 for L in new_lengths:
                     if progress:
                         print(L)
