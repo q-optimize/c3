@@ -162,6 +162,7 @@ class LineComponent(C3obj):
             comment=comment
             )
         self.connected = connected
+        self.values = {}
 
 
 class Coupling(LineComponent):
@@ -183,7 +184,8 @@ class Coupling(LineComponent):
             desc: str = " ",
             comment: str = " ",
             connected: list = [],
-            strength: np.float64 = 0.0
+            strength: np.float64 = 0.0,
+            hamiltonian: types.FunctionType = None,
             ):
         super().__init__(
             name=name,
@@ -191,6 +193,7 @@ class Coupling(LineComponent):
             comment=comment,
             connected=connected
             )
+        self.hamiltonian = hamiltonian
         self.values['strength'] = strength
 
 
