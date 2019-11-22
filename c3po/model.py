@@ -58,6 +58,7 @@ class Model:
 
         # Construct array with dimension of elements (only qubits & resonators)
         self.dims = []
+        # TODO store also total dimension of the hilbert space
         self.names = []
 
         for element in chip_elements:

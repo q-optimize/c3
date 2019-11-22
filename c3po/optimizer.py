@@ -210,6 +210,7 @@ class Optimizer:
         self.results[self.opt_name] = res
         return values_opt
 
+# TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
         self.optim_status['params'] = list(zip(
