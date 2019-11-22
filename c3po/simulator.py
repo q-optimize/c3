@@ -10,11 +10,12 @@ from c3po.control import GateSet
 
 from c3po.tf_utils import tf_propagation
 from c3po.tf_utils import tf_propagation_lind
-from c3po.tf_utils import tf_matmul_list
+from c3po.tf_utils import tf_matmul_left, tf_matmul_right
 from c3po.tf_utils import tf_super
 from c3po.qt_utils import single_length_RB
 
 
+# TODO resctucture so that sim,mdl,gen,meas,gateset are all in one class (exp?)
 class Simulator():
     """Simulator object."""
 
@@ -50,6 +51,11 @@ class Simulator():
         U_dict: dict,
         sequences: list
     ):
+        """
+        Sequences are assumed to be given in the correct order (left to right).
+            e.g.
+            ['X90p','Y90p'] --> U = X90p x Y90p
+        """
         gates = U_dict
         # TODO deal with the case where you only evaluate one sequence
         U = []
@@ -57,7 +63,7 @@ class Simulator():
             Us = []
             for gate in sequence:
                 Us.append(gates[gate])
-            U.append(tf_matmul_list(Us))
+            U.append(tf_matmul_right(Us))
         return U
 
     def propagation(self,
@@ -81,7 +87,7 @@ class Simulator():
             dUs = tf_propagation(h0, hks, signals, dt)
         self.dUs = dUs
         self.ts = ts
-        U = tf_matmul_list(dUs)
+        U = tf_matmul_left(dUs)
         if hasattr(self, 'VZ'):
             if self.lindbladian:
                 U = tf.matmul(tf_super(self.VZ), U)

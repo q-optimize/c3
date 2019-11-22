@@ -233,7 +233,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
         return dUs
 
 
-def tf_matmul_list(dUs):
+def tf_matmul_left(dUs):
     """
     Multiplies a list of matrices from the left.
 
@@ -253,12 +253,33 @@ def tf_matmul_list(dUs):
         U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
     return U
 
+def tf_matmul_right(dUs):
+    """
+    Multiplies a list of matrices from the right.
+
+    Parameters
+    ----------
+    dUs : type
+        Description of parameter `dUs`.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
+    U = dUs[0]
+    for ii in range(1, len(dUs)):
+        U = tf.matmul(U, dUs[ii], name="timestep_" + str(ii))
+    return U
+
 
 def tf_matmul_n(tensor_list):
     """
     Multiply a list of tensors as binary tree.
 
     """
+    # TODO does it multiply from the left
     ln = len(tensor_list)
     if (ln == 1):
         return tensor_list[0]
@@ -296,6 +317,18 @@ def Id_like(A):
     return tf.eye(dim, dtype=tf.complex128)
 
 
+def tf_kron(A, B):
+    """Kronecker product of 2 matrices."""
+    # TODO make kronecker product general to different dimensions
+    dims = tf.shape(A)*tf.shape(B)
+    tensordot = tf.tensordot(A, B, axes=0)
+    reshaped = tf.reshape(
+                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+                dims
+                )
+    return reshaped
+
+# TODO migrate all superoper functions to using tf_kron
 @tf.function
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
@@ -322,7 +355,7 @@ def tf_spost(A):
     return reshaped
 
 
-@tf.function
+
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -331,6 +364,17 @@ def tf_super(A):
     )
     return superA
 
+
+def super_to_choi(A):
+    sqrt_shape = int(np.sqrt(A.shape[0]))
+    A_choi = tf.reshape(
+                tf.transpose(
+                    tf.reshape(A, [sqrt_shape] * 4),
+                    perm=[3,1,2,0]
+                    ),
+                A.shape
+    )
+    return A_choi
 
 @tf.function
 # TODO needs fixing
