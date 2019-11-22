@@ -5,7 +5,7 @@ import json
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.component import C3obj
+from c3po.component import C3obj, Quantity
 from c3po.control import Instruction, Envelope, Carrier
 
 
@@ -153,7 +153,7 @@ class Volts_to_Hertz(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            V_to_Hz: np.float64 = 1.0
+            V_to_Hz: Quantity = None
     ):
         super().__init__(
             name=name,
@@ -166,7 +166,7 @@ class Volts_to_Hertz(Device):
 
     def transform(self, mixed_signal):
         """Transform signal from value of V to Hz."""
-        self.signal = mixed_signal * self.params['V_to_Hz']
+        self.signal = mixed_signal * self.params['V_to_Hz'].get_value()
         return self.signal
 
 
@@ -273,7 +273,7 @@ class Response(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            rise_time: np.float64 = 0.0,
+            rise_time: Quantity = None,
     ):
         super().__init__(
             name=name,
@@ -290,7 +290,7 @@ class Response(Device):
                     [tf.zeros(len(resp_shape), dtype=tf.float64),
                      signal,
                      tf.zeros(len(resp_shape), dtype=tf.float64)],
-                0)
+                    0)
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
                 [convolution,
@@ -305,17 +305,17 @@ class Response(Device):
         return convolution
 
     def process(self, iq_signal):
-        n_ts = int(self.params['rise_time'] * self.resolution)
+        n_ts = int(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(tf.constant(
             0.0, dtype=tf.float64),
-            self.params['rise_time'],
+            self.params['rise_time'].get_value(),
             n_ts
         )
         cen = tf.cast(
-            (self.params['rise_time'] - 1 / self.resolution) / 2,
+            (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
             tf.float64
         )
-        sigma = self.params['rise_time'] / 4
+        sigma = self.params['rise_time'].get_value() / 4
         gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
         offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
@@ -346,7 +346,6 @@ class Mixer(Device):
             comment=comment,
             resolution=resolution
         )
-
         self.signal = None
 
     def combine(self, lo_signal, awg_signal):
@@ -383,7 +382,7 @@ class LO(Device):
         for c in channel:
             comp = channel[c]
             if isinstance(comp, Carrier):
-                omega_lo = comp.params['freq']
+                omega_lo = comp.params['freq'].get_value()
                 self.signal["values"] = (
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
@@ -466,12 +465,12 @@ class AWG(Device):
                     comp = channel[key]
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp']
+                        amp = comp.params['amp'].get_value()
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle']
-                        freq_offset = comp.params['freq_offset']
-                        delta = comp.params['delta']
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
+                        delta = comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
                         # TODO Deal with the scale of delta
@@ -509,12 +508,12 @@ class AWG(Device):
                     # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp']
+                        amp = comp.params['amp'].get_value()
 
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle']
-                        freq_offset = comp.params['freq_offset']
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
                         phase = - xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)

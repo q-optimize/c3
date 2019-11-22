@@ -53,21 +53,18 @@ class GateSet:
             Example:
             opt_params = (
                 [0,           0,           0,             0],    # Values
-                [[0, 0],      [0, 0],      [0, 0],        [0.0]] # Bounds
                 )
 
         """
         values = []
-        bounds = []
 
         for id in opt_map:
             gate = id[0][0]
             par_id = id[0][1:4]
             gate_instr = self.instructions[gate]
-            value, bound = gate_instr.get_parameter_value_bounds(par_id)
+            value = gate_instr.get_parameter_value(par_id)
             values.append(value)
-            bounds.append(bound)
-        return np.array(values), np.array(bounds)
+        return values
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""
@@ -102,7 +99,6 @@ class InstructionComponent(C3obj):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             ):
         super().__init__(
             name=name,
@@ -110,10 +106,6 @@ class InstructionComponent(C3obj):
             comment=comment
             )
         self.params = params
-        self.bounds = bounds
-        # check that the parameters and bounds have the same key
-        if params.keys() != bounds.keys():
-            raise ValueError('params and bounds must have same keys')
 
 
 class Envelope(InstructionComponent):
@@ -133,7 +125,6 @@ class Envelope(InstructionComponent):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             shape: types.FunctionType = None,
             ):
         super().__init__(
@@ -141,7 +132,6 @@ class Envelope(InstructionComponent):
             desc=desc,
             comment=comment,
             params=params,
-            bounds=bounds,
             )
         self.shape = shape
         if 'amp' not in params:
@@ -163,14 +153,12 @@ class Carrier(InstructionComponent):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             params=params,
-            bounds=bounds,
             )
 
 
@@ -228,24 +216,18 @@ class Instruction(C3obj):
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
 
-    def get_parameter_value_bounds(self, par_id: tuple):
+    def get_parameter_value(self, par_id: tuple):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
-        value = self.comps[chan][comp].params[param]
-        bounds = self.comps[chan][comp].bounds[param]
-        return value, bounds
+        value = self.comps[chan][comp].params[param].tf_get_value()
+        return value
 
+    # TODO Consider putting this code directly in the gateset object
     def set_parameter_value(self, par_id: tuple, value):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
-        self.comps[chan][comp].params[param] = value
-
-    def set_parameter_bounds(self, par_id: tuple, bounds):
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].bounds[param] = bounds
+        self.comps[chan][comp].params[param].tf_set_value(value)

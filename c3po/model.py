@@ -94,7 +94,8 @@ class Model:
                         dtype=tf.complex128
                     )
                 )
-                self.params.append(element.values['freq'])
+                # TODO change all .values to .params or viceversa
+                self.params.append(element.values['freq'].get_value())
                 self.params_desc.append((element.name, 'freq'))
 
                 if isinstance(element, Qubit) and element.hilbert_dim > 2:
@@ -104,7 +105,7 @@ class Model:
                             dtype=tf.complex128
                         )
                     )
-                    self.params.append(element.values['anhar'])
+                    self.params.append(element.values['anhar'].get_value())
                     self.params_desc.append((element.name, 'anhar'))
 
             elif isinstance(element, Coupling):
@@ -119,7 +120,7 @@ class Model:
                         dtype=tf.complex128
                     )
                 )
-                self.params.append(element.values['strength'])
+                self.params.append(element.values['strength'].get_value())
                 self.params_desc.append((element.name, 'strength'))
 
             elif isinstance(element, Drive):
@@ -160,16 +161,16 @@ class Model:
                             return gamma * L1
 
                         self.collapse_ops.append(L1)
-                        self.cops_params.append(vals['t1'])
+                        self.cops_params.append(vals['t1'].get_value())
                         self.cops_params_desc.append((element.name, 't1'))
                         self.cops_params_fcts.append(t1)
 
                     else:
                         L2 = ann_oper.T.conj()
                         dim = element.hilbert_dim
-                        omega_q = vals['freq']
+                        omega_q = vals['freq'].get_value()
                         if 'anhar' in vals:
-                            anhar = vals['anhar']
+                            anhar = vals['anhar'].get_value()
                         else:
                             anhar = 0
                         freq_diff = np.array(
@@ -188,7 +189,9 @@ class Model:
                             return gamma * (L1 + L2 @ det_bal_mat)
 
                         self.collapse_ops.append(L2)
-                        self.cops_params.append([vals['t1'], vals['temp']])
+                        self.cops_params.append(
+                            [vals['t1'].get_value(), vals['temp'].get_value()]
+                        )
                         self.cops_params_desc.append(
                             [element.name, 't1 & temp']
                         )
@@ -204,7 +207,7 @@ class Model:
                         return gamma * L_dep
 
                     self.collapse_ops.append(L_dep)
-                    self.cops_params.append(vals['t2star'])
+                    self.cops_params.append(vals['t2star'].get_value())
                     self.cops_params_desc.append((element.name, 't2star'))
                     self.cops_params_fcts.append(t2star)
 

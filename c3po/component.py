@@ -2,6 +2,104 @@
 
 import types
 import numpy as np
+import tensorflow as tf
+
+
+class Quantity:
+    """
+    Represents any parameter used in the model or the pulse speficiation.
+
+    Parameters
+    ----------
+    value: np.array(np.float64) or np.float64
+        value of the quantity
+    min: np.array(np.float64) or np.float64
+        minimun values this quantity is allowed to take
+    max: np.array(np.float64) or np.float64
+        maximum values this quantity is allowed to take
+    symbol: str
+        latex representation
+    unit: str
+        physical unit
+
+    """
+
+    def __init__(
+        self,
+        # TODO how to specify two options for type
+        value,
+        min,
+        max,
+        symbol: str = '\\alpha',
+        unit: str = 'a.u.'
+    ):
+        min = np.array(min)
+        max = np.array(max)
+        self.offset = min
+        self.scale = np.array(np.abs(max - min))
+        self.set_value(value)
+        self.symbol = symbol
+        self.unit = unit
+
+    # TODO Define binary operations nicely so that we use value. Return is
+    # always numpy!
+    # def __add__(self, other):
+    #     min = np.min(self.offset, other.offset)
+    #     max = np.max(self.scale + self.offset, other.scale + other.offset)
+    #     return Quantity(
+    #         self.value + other.value, min, max, self.symbol, self.unit
+    #         )
+    #
+    # def __sub__(self, other):
+    #     min = np.min(self.offset, other.offset)
+    #     max = np.max(self.scale + self.offset, other.scale + other.offset)
+    #     return Quantity(
+    #         self.value - other.value, min, max, self.symbol, self.unit
+    #         )
+    #
+    # def __mul__(self, other):
+    #     min = np.min(self.offset, other.offset)
+    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
+    #     return Quantity(
+    #         self.value - other.value, min, max, self.symbol, self.unit
+    #         )
+    #
+    # def __pow__(self, other):
+    #     min = np.min(self.offset, other.offset)
+    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
+    #     return Quantity(
+    #         self.value - other.value, min, max, self.symbol, self.unit
+    #         )
+    #
+    # def __truediv__(self, other):
+    #     min = np.min(self.offset, other.offset)
+    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
+    #     return Quantity(
+    #         self.value - other.value, min, max, self.symbol, self.unit
+    #         )
+
+    def get_value(self):
+        tmp = np.arccos(np.cos((self.value + 1) * np.pi / 2)) / np.pi
+        return self.scale * tmp + self.offset
+
+    def set_value(self, val):
+        # setting can be numpyish
+        tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
+        if np.any(tmp < -1) or np.any(tmp > 1):
+            raise Exception('Value out of bounds')
+            # TODO if we want we can extend bounds when force flag is given
+        else:
+            self.value = tmp
+
+    def tf_get_value(self):
+        # getting needs to be tensorflowy
+        tmp = tf.acos(tf.cos((self.value + 1) * np.pi / 2)) / np.pi
+        return self.scale * tmp + self.offset
+
+    def tf_set_value(self, val):
+        self.value = val
+
+    # TODO find good name for physical_bounded vs order1_unbounded
 
 
 class C3obj:

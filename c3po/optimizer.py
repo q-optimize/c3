@@ -78,21 +78,19 @@ class Optimizer:
             values.append(tmp)
         return np.array(values).reshape(self.param_shape)
 
-    def goal_run(self, x):
+    def goal_run(self, x_in):
         with tf.GradientTape() as t:
-            current_params = tf.constant(
-                self.to_bound_phys_scale(x, self.bounds)
-            )
-            t.watch(current_params)
-            U_dict = self.sim.get_gates(current_params, self.opt_map)
+            x = tf.constant(x_in)
+            t.watch(x)
+            self.sim.gateset.set_parameters(x, self.opt_map)
+            U_dict = self.sim.get_gates()
             goal = self.fid_func(U_dict)
 
-        grad = t.gradient(goal, current_params)
-        scale = np.diff(self.bounds)
-        gradients = grad.numpy().flatten() * scale.T
+        grad = t.gradient(goal, x)
+        gradients = grad.numpy().flatten()
         self.gradients[str(x)] = gradients
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy().tolist()
+            self.opt_map, self.sim.gateset.get_parameters(self.opt_map)
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -211,10 +209,9 @@ class Optimizer:
         return values_opt
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
-    def lbfgs(self, values, bounds, goal, grad, options):
-        x0 = self.to_scale_one(values, bounds)
+    def lbfgs(self, x0, goal, grad, options):
         self.optim_status['params'] = list(zip(
-            self.opt_map, values.tolist()
+            self.opt_map, 'hell'
         ))
         self.log_parameters(x0)
         options['disp'] = True
@@ -227,8 +224,8 @@ class Optimizer:
             options=options
         )
 
-        values_opt = self.to_bound_phys_scale(res.x, bounds)
-        res.x = values_opt
+        values_opt = self.sim.gateset.get_parameters(self.opt_map)
+        # res.x = values_opt
         self.results[self.opt_name] = res
         return values_opt
 
@@ -267,9 +264,8 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
-        values, bounds = sim.gateset.get_parameters(opt_map)
-        self.param_shape = values.shape
-        self.bounds = bounds
+        x0 = sim.gateset.get_parameters(opt_map)
+
         self.sim = sim
         self.opt_map = opt_map
         self.opt_name = opt_name
@@ -277,10 +273,7 @@ class Optimizer:
         self.optim_status = {}
         self.iteration = 1
 
-        # TODO fix this horrible mess and make the shape of bounds general for
-        # PWC and carrier based controls
-        if len(self.param_shape) > 1:
-            self.bounds = bounds.reshape(bounds.T.shape)
+        # TODO log physical values, not tf values
 
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
@@ -292,15 +285,13 @@ class Optimizer:
             self.logfile.flush()
             if opt == 'cmaes':
                 values_opt = self.cmaes(
-                    values,
-                    self.bounds,
+                    x0,
                     settings
                 )
 
             elif opt == 'lbfgs':
                 values_opt = self.lbfgs(
-                    values,
-                    self.bounds,
+                    x0,
                     self.goal_run,
                     self.goal_gradient_run,
                     options=settings
@@ -327,13 +318,9 @@ class Optimizer:
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        values, bounds = exp.get_parameters(self.opt_map)
-        bounds = np.array(bounds)
-        self.bounds = bounds
-        values = np.array(values)
-        self.param_shape = values.shape
-        self.eval_func = eval_func
+        values = exp.get_parameters(self.opt_map)
 
+        self.eval_func = eval_func
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")

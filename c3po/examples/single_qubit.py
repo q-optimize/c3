@@ -7,6 +7,7 @@ import copy
 
 import c3po.component as component
 from c3po.model import Model as Mdl
+from c3po.component import Quantity as Qty
 from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
@@ -38,43 +39,55 @@ def create_gates(t_final,
 
     """
     gauss_params = {
-        'amp': 0.5 * np.pi / v_hz_conversion,
+        'amp': Qty(
+            value=0.5 * np.pi / v_hz_conversion.get_value(),
+            min=0.0 * np.pi / v_hz_conversion.get_value(),
+            max=1.5 * np.pi / v_hz_conversion.get_value(),
+            unit='V'
+        ),
         't_final': t_final,
-        'xy_angle': 0.0,
-        'freq_offset': 0e6 * 2 * np.pi,
-        'delta': 1 / qubit_anhar
+        'xy_angle': Qty(
+            value=0.0,
+            min=-1 * np.pi/2,
+            max=1 * np.pi/2,
+            unit='rad'
+        ),
+        'freq_offset': Qty(
+            value=0e6 * 2 * np.pi,
+            min=-100 * 1e6 * 2 * np.pi,
+            max=100 * 1e6 * 2 * np.pi,
+            unit='Hz'
+        ),
+        'delta': Qty(
+            value=0.5 / qubit_anhar.get_value(),
+            min=1.5 / qubit_anhar.get_value(),
+            max=0.1 / qubit_anhar.get_value(),
+            unit='1/Hz(s)'
+        ),
     }
-    gauss_bounds = {
-        'amp': [0.01 * np.pi / v_hz_conversion, 1.5 * np.pi / v_hz_conversion],
-        't_final': [1e-9, 30e-9],
-        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi],
-        'delta': [10/qubit_anhar, 0.1/qubit_anhar]
-    }
-
     gauss_env = control.Envelope(
         name="gauss",
         desc="Gaussian comp 1 of signal 1",
         params=gauss_params,
-        bounds=gauss_bounds,
         shape=envelopes.gaussian
     )
     carrier_parameters = {
-        'freq': qubit_freq
-    }
-    carrier_bounds = {
-        'freq': [4e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+        'freq': Qty(
+            value=qubit_freq.get_value(),
+            min=5e9 * 2 * np.pi,
+            max=5.5e9 * 2 * np.pi,
+            unit='Hz'
+        )
     }
     carr = control.Carrier(
         name="carrier",
         desc="Frequency of the local oscillator",
-        params=carrier_parameters,
-        bounds=carrier_bounds
+        params=carrier_parameters
     )
     X90p = control.Instruction(
         name="X90p",
         t_start=0.0,
-        t_end=t_final,
+        t_end=t_final.get_value(),
         channels=["d1"]
     )
     X90p.add_component(gauss_env, "d1")
@@ -86,19 +99,30 @@ def create_gates(t_final,
     if all_gates:
         Y90p = copy.deepcopy(X90p)
         Y90p.name = "Y90p"
-        Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
-        Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+        Y90p.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=np.pi / 2,
+            min=0 * np.pi/2,
+            max=2 * np.pi/2,
+            unit='rad'
+        )
 
         X90m = copy.deepcopy(X90p)
         X90m.name = "X90m"
-        X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
-        X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=np.pi,
+            min=1 * np.pi/2,
+            max=3 * np.pi/2,
+            unit='rad'
+        )
 
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
-        Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
-
+        Y90m.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=-np.pi/2,
+            min=-2 * np.pi/2,
+            max=0 * np.pi/2,
+            unit='rad'
+        )
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
         gates.add_instruction(Y90p)
@@ -289,7 +313,7 @@ def create_generator(sim_res,
                      awg_res,
                      v_hz_conversion,
                      logdir,
-                     rise_time=0.3e-9):
+                     rise_time=None):
     lo = generator.LO(resolution=sim_res)
     awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()

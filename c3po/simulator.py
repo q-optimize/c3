@@ -30,11 +30,8 @@ class Simulator():
 
     def get_gates(
         self,
-        gateset_values: list,
-        gateset_opt_map: list
     ):
         gates = {}
-        self.gateset.set_parameters(gateset_values, gateset_opt_map)
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():

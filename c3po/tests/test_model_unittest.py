@@ -7,6 +7,47 @@ import c3po.generator as generator
 from c3po.model import Model as mdl
 
 
+class TestQuantity(unittest.TestCase):
+    def setUp(self):
+        self.max_val = 10e9 * 2 * np.pi
+        self.min_val = 2e9 * 2 * np.pi
+        self.qty = component.Quantity(
+            value=5e9 * 2 * np.pi,
+            min=self.min_val,
+            max=self.max_val,
+        )
+
+    def test_val(self):
+        self.assertEqual(
+            self.qty.get_value(), 5e9 * 2 * np.pi
+        )
+
+    def test_set(self):
+        self.qty.set_value(3e9 * 2 * np.pi)
+        self.assertEqual(
+            self.qty.get_value(), 3e9 * 2 * np.pi
+        )
+
+    def test_limits(self):
+        self.qty.value = -1
+        self.assertAlmostEqual(
+            self.qty.get_value(), self.min_val
+        )
+        self.qty.value = 1
+        self.assertAlmostEqual(
+            self.qty.get_value(), self.max_val
+        )
+
+    def test_binding(self):
+        self.qty.value = 2
+        self.assertLessEqual(
+            self.qty.get_value(), self.max_val
+        )
+        self.assertGreaterEqual(
+            self.qty.get_value(), self.min_val
+        )
+
+
 class TestModel(unittest.TestCase):
     def test_qubit(self):
         q1 = component.Qubit(
