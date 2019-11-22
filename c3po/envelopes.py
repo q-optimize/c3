@@ -19,6 +19,40 @@ def pwc(t, params):
     return params
 
 
+def fourier_sin(t, params):
+    """Fourier basis of the pulse constant pulse (sin)."""
+    amps = tf.reshape(
+                tf.cast(params['amps'], dtype=tf.float64),
+                [params['amps'].shape[0], 1]
+           )
+    freqs = tf.reshape(
+                tf.cast(params['freqs'], dtype=tf.float64),
+                [params['freqs'].shape[0], 1]
+           )
+    t = tf.reshape(
+                tf.cast(t, dtype=tf.float64),
+                [1, t.shape[0]]
+           )
+    return tf.reduce_sum(amps * tf.sin(freqs * t), 0)
+
+
+def fourier_cos(t, params):
+    """Fourier basis of the pulse constant pulse (cos)."""
+    amps = tf.reshape(
+                tf.cast(params['amps'], dtype=tf.float64),
+                [params['amps'].shape[0], 1]
+           )
+    freqs = tf.reshape(
+                tf.cast(params['freqs'], dtype=tf.float64),
+                [params['freqs'].shape[0], 1]
+           )
+    t = tf.reshape(
+                tf.cast(t, dtype=tf.float64),
+                [1, t.shape[0]]
+           )
+    return tf.reduce_sum(amps * tf.cos(freqs * t), 0)
+
+
 def rect(t, params):
     """Rectangular pulse."""
     return 1.0

@@ -36,7 +36,8 @@ class Generator:
             mixer = self.devices["mixer"]
             v_to_hz = self.devices["v_to_hz"]
             dig_to_an = self.devices["dac"]
-            resp = self.devices["resp"]
+            if "resp" in self.devices:
+                resp = self.devices["resp"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -45,12 +46,26 @@ class Generator:
                 lo_signal = lo.create_signal(channel, t_start, t_end)
                 awg_signal = awg.create_IQ(channel, t_start, t_end)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
-                conv_signal = resp.process(flat_signal)
+                if "resp" in self.devices:
+                    conv_signal = resp.process(flat_signal)
+                else:
+                    conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
                 signal = v_to_hz.transform(signal)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
-
+                # plt.figure()
+                # plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
+                # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
+                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
+                # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
+                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
+                # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
+                # plt.show()
+                # plt.figure()
+                # plt.plot(lo_signal['ts'], signal, '-')
+                # plt.title("Multiplex")
+                # plt.show()
         self.signal = gen_signal
         return gen_signal
 
@@ -491,6 +506,7 @@ class AWG(Device):
             else:
                 for key in channel:
                     comp = channel[key]
+                    # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp']
@@ -525,6 +541,7 @@ class AWG(Device):
         return self.amp_tot * self.signal['quadrature']
 
     def log_shapes(self):
+        # TODO log shapes in the generator instead
         with open(self.logfile_name, 'a') as logfile:
             signal = {}
             for key in self.signal:
