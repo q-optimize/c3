@@ -474,7 +474,6 @@ class AWG(Device):
                         delta = comp.params['delta']
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
-                        # TODO Deal with the scale of delta
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
@@ -492,11 +491,8 @@ class AWG(Device):
                         )
                         quadrature_comps.append(
                             amp * (
-                                env * tf.sin(phase)
-                                - denv * delta * tf.cos(phase)
-                                # TODO check sign of drag component
-                                # denv * delta * tf.cos(phase)
-                                # - env * tf.sin(phase)
+                                denv * delta * tf.cos(phase)
+                                - env * tf.sin(phase)
                             )
                         )
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -520,7 +516,7 @@ class AWG(Device):
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
                         )
                         quadrature_comps.append(
-                            amp * comp.get_shape_values(ts) * tf.sin(phase)
+                            - amp * comp.get_shape_values(ts) * tf.sin(phase)
                         )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
