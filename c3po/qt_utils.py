@@ -62,7 +62,7 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
-def perfect_gate(lvls: int, gate_str: str, proj: bool = True):
+def perfect_gate(lvls: int, gate_str: str, proj: str = 'wzeros'):
     if gate_str == 'Id':
         gate = Id
     elif gate_str == 'X90p':
@@ -88,10 +88,12 @@ def perfect_gate(lvls: int, gate_str: str, proj: bool = True):
         print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
               "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
         return None
-    if proj:
+    if proj == 'compsub':
+        pass
+    elif proj == 'wzeros':
         zeros = np.zeros([lvls - 2, lvls - 2])
         gate = scipy_block_diag(gate, zeros)
-    else:
+    elif proj == 'fulluni':
         identity = np.eye(lvls - 2)
         gate = scipy_block_diag(gate, identity)
     return gate
@@ -123,38 +125,39 @@ def inverseC(sequence):
         if abs(2 - abs(trace)) < 0.0001:
             return i
 
-# C1 = I
-# C2 = X90p @ X90p
-# C3 = Y90p @ Y90p
-# C4 = Z90p @ Z90p
-# C5 = X90p
-# C6 = Y90p
-# C7 = Z90p
-# C8 = X90m
-# C9 = Y90m
-# C10 = Z90m
-# C11 = Z90p @ X90p
-# C12 = Z90p @ Z90p @ X90m
-# C13 = Z90p @ X
-# C14 = Z90m @ X
-# C15 = Z90p @ X90p
-# C16 = Z90p @ X90m
-# C17 = X90p @ Z90m
-# C18 = Z90p @ Z90p @ Y90m
-# C19 = Z90p @ Y90m
-# C20 = Z90m @ Y90p
-# C21 = Z90p @ Z90p @ Y90p #Hadamard
-# C22 = Z90m @ X90p
-# C23 = Z90p @ Y90p
-# C24 = Z90m @ X90m
 
-def perfect_cliffords(lvls: int):
+C1 = X90p @ X90m
+C2 = Y90p @ X90p
+C3 = X90m @ Y90m
+C4 = Y90p @ X90p @ X90p
+C5 = X90m
+C6 = X90p @ Y90m @ X90m
+C7 = X90p @ X90p
+C8 = Y90m @ X90m
+C9 = X90p @ Y90m
+C10 = Y90m
+C11 = X90p
+C12 = X90p @ Y90p @ X90p
+C13 = Y90p @ Y90p
+C14 = Y90m @ X90p
+C15 = X90p @ Y90p
+C16 = Y90m @ X90p @ X90p
+C17 = X90p @ Y90p @ Y90p
+C18 = X90p @ Y90m @ X90p
+C19 = X90p @ X90p @ Y90p @ Y90p
+C20 = Y90p @ X90m
+C21 = X90m @ Y90p
+C22 = Y90p
+C23 = X90m @ Y90p @ Y90p
+C24 = X90p @ Y90p @ X90m
+
+
+def perfect_cliffords(lvls: int, proj: str = 'fulluni'):
     # TODO make perfect clifford more general by making it take a decomposition
-    identity = np.eye(lvls - 2)
-    x90p = scipy_block_diag(X90p, identity)
-    y90p = scipy_block_diag(Y90p, identity)
-    x90m = scipy_block_diag(X90m, identity)
-    y90m = scipy_block_diag(Y90m, identity)
+    x90p = perfect_gate(lvls, 'X90p', proj)
+    y90p = perfect_gate(lvls, 'Y90p', proj)
+    x90m = perfect_gate(lvls, 'X90m', proj)
+    y90m = perfect_gate(lvls, 'Y90m', proj)
 
     C1 = x90p @ x90m
     C2 = y90p @ x90p
