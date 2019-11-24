@@ -46,26 +46,6 @@ class Simulator():
             self.unitaries = gates
         return gates
 
-    def evaluate_sequences(
-        self,
-        U_dict: dict,
-        sequences: list
-    ):
-        """
-        Sequences are assumed to be given in the correct order (left to right).
-            e.g.
-            ['X90p','Y90p'] --> U = X90p x Y90p
-        """
-        gates = U_dict
-        # TODO deal with the case where you only evaluate one sequence
-        U = []
-        for sequence in sequences:
-            Us = []
-            for gate in sequence:
-                Us.append(gates[gate])
-            U.append(tf_matmul_right(Us))
-        return U
-
     def propagation(self,
                     signal: dict
                     ):
