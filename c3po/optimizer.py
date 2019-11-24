@@ -9,6 +9,7 @@ import tensorflow as tf
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
 
+# TODO make callback fucntions take U_dict
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
@@ -87,6 +88,7 @@ class Optimizer:
             U_dict = self.sim.get_gates(current_params, self.opt_map)
             goal = self.fid_func(U_dict)
 
+        self.U_dict = U_dict
         grad = t.gradient(goal, current_params)
         scale = np.diff(self.bounds)
         gradients = grad.numpy().flatten() * scale.T
@@ -239,7 +241,8 @@ class Optimizer:
         opt,
         opt_name,
         fid_func,
-        settings={}
+        settings={},
+        other_funcs={}
     ):
         """
         Apply a search algorightm to your gateset given a fidelity function.
@@ -265,6 +268,9 @@ class Optimizer:
 
         settings : dict
             Special settings for the desired optimizer
+
+        other_funcs : dict of functions
+            All functions that will be calculated from U_dict and stored
 
         """
         values, bounds = sim.gateset.get_parameters(opt_map)
