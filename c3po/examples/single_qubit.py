@@ -10,9 +10,11 @@ from c3po.model import Model as Mdl
 from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
+import c3po.fidelities as fidelities
+
 
 # Limit graphics memory to 1GB
-# tf_limit_gpu_memory(1024)
+tf_limit_gpu_memory(512)
 
 
 # Gates
@@ -300,3 +302,123 @@ def create_generator(sim_res,
     devices = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     gen = generator.Generator(devices)
     return gen
+
+
+# Fidelity fucntions
+def create_fcts(lindbladian):
+    # Define infidelity functions (search fucntions)
+    if not lindbladian:
+
+        def unit_compsub_X90p(U_dict):
+            return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+        def unit_compsub_Y90p(U_dict):
+            return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
+        def unit_compsub_X90m(U_dict):
+            return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
+        def unit_compsub_Y90m(U_dict):
+            return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
+
+        def unit_fulluni_X90p(U_dict):
+            return fidelities.unitary_infid(U_dict, 'X90p', proj=False)
+        def unit_fulluni_Y90p(U_dict):
+            return fidelities.unitary_infid(U_dict, 'Y90p', proj=False)
+        def unit_fulluni_X90m(U_dict):
+            return fidelities.unitary_infid(U_dict, 'X90m', proj=False)
+        def unit_fulluni_Y90m(U_dict):
+            return fidelities.unitary_infid(U_dict, 'Y90m', proj=False)
+
+        def avfid_compsub_X90p(U_dict):
+            return fidelities.average_infid(U_dict, 'X90p', proj=True)
+        def avfid_compsub_Y90p(U_dict):
+            return fidelities.average_infid(U_dict, 'Y90p', proj=True)
+        def avfid_compsub_X90m(U_dict):
+            return fidelities.average_infid(U_dict, 'X90m', proj=True)
+        def avfid_compsub_Y90m(U_dict):
+            return fidelities.average_infid(U_dict, 'Y90m', proj=True)
+
+        def avfid_fulluni_X90p(U_dict):
+            return fidelities.average_infid(U_dict, 'X90p', proj=False)
+        def avfid_fulluni_Y90p(U_dict):
+            return fidelities.average_infid(U_dict, 'Y90p', proj=False)
+        def avfid_fulluni_X90m(U_dict):
+            return fidelities.average_infid(U_dict, 'X90m', proj=False)
+        def avfid_fulluni_Y90m(U_dict):
+            return fidelities.average_infid(U_dict, 'Y90m', proj=False)
+
+        def epc_ana_compsub(U_dict):
+            return fidelities.epc_analytical(U_dict, proj=True)
+
+        def epc_ana_fulluni(U_dict):
+            return fidelities.epc_analytical(U_dict, proj=False)
+
+    elif lindbladian:
+
+        def unit_compsub_X90p(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+        def unit_compsub_Y90p(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', proj=True)
+        def unit_compsub_X90m(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m', proj=True)
+        def unit_compsub_Y90m(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m', proj=True)
+
+        def unit_fulluni_X90p(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=False)
+        def unit_fulluni_Y90p(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', proj=False)
+        def unit_fulluni_X90m(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m', proj=False)
+        def unit_fulluni_Y90m(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m', proj=False)
+
+        def avfid_compsub_X90p(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+        def avfid_compsub_Y90p(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90p', proj=True)
+        def avfid_compsub_X90m(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'X90m', proj=True)
+        def avfid_compsub_Y90m(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90m', proj=True)
+
+        def avfid_fulluni_X90p(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=False)
+        def avfid_fulluni_Y90p(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90p', proj=False)
+        def avfid_fulluni_X90m(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'X90m', proj=False)
+        def avfid_fulluni_Y90m(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90m', proj=False)
+
+        def epc_ana_compsub(U_dict):
+            return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
+
+        def epc_ana_fulluni(U_dict):
+            return fidelities.lindbladian_epc_analytical(U_dict, proj=False)
+
+    fcts_list = [
+        unit_compsub_X90p,
+        unit_compsub_Y90p,
+        unit_compsub_X90m,
+        unit_compsub_Y90m,
+        unit_fulluni_X90p,
+        unit_fulluni_Y90p,
+        unit_fulluni_X90m,
+        unit_fulluni_Y90m,
+        avfid_compsub_X90p,
+        avfid_compsub_Y90p,
+        avfid_compsub_X90m,
+        avfid_compsub_Y90m,
+        avfid_fulluni_X90p,
+        avfid_fulluni_Y90p,
+        avfid_fulluni_X90m,
+        avfid_fulluni_Y90m,
+        epc_ana_compsub,
+        epc_ana_fulluni
+    ]
+
+    fcts_dict = {}
+    for fct in fcts_list:
+        name = fct.__name__
+        fcts_dict[name] = fct
+
+    return fcts_dict
