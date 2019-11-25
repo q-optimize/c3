@@ -356,8 +356,9 @@ def tf_unitary_overlap(A, B):
     return overlap
 
 
-def tf_superoper_unitary_overlap(A, B):
-    lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
+def tf_superoper_unitary_overlap(A, B, lvls=None):
+    if lvls is None:
+        lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     overlap = tf_abs(
                 tf.sqrt(
                     tf.linalg.trace(
@@ -370,7 +371,7 @@ def tf_superoper_unitary_overlap(A, B):
 
 def tf_average_fidelity(A, B):
     lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(tf.linalg.adjoiont(A), B)
+    Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     # get to choi decomposition
     lambda_super = tf_super(Lambda)
     lambda_choi = super_to_choi(lambda_super)
@@ -379,11 +380,11 @@ def tf_average_fidelity(A, B):
     return ave_fid
 
 
-def tf_superoper_average_fidelity(A, B, lvls = None):
+def tf_superoper_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    lambda_super = tf.matmul(tf.linalg.adjoiont(A), B)
+    lambda_super = tf.matmul(tf.linalg.adjoint(A), B)
     # get to choi decomposition
     lambda_choi = super_to_choi(lambda_super)
     # get only 00 element and measure fidelity

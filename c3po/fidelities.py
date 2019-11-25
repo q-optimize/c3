@@ -1,20 +1,20 @@
 """Libraray of fidelity functions."""
 # TODO think of how to use the fidelity functions in a cleaner way
 
-
+import numpy as np
 import tensorflow as tf
 from c3po.tf_utils import tf_ave, tf_super, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, evaluate_sequences, \
     tf_average_fidelity, tf_superoper_average_fidelity
 from c3po.qt_utils import basis, perfect_gate, perfect_cliffords, \
-    clifford_decomp
+    cliffords_decomp
 
 
 def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict['X90p']
     if proj:
         U = U[0:2, 0:2]
-    lvls = tf.cast(U.shape[0], U.dtype)
+    lvls = U.shape[0]
     U_ideal = tf.constant(
                 perfect_gate(lvls, gate, proj),
                 dtype=tf.complex128
@@ -33,7 +33,7 @@ def unitary_infid(U_dict: dict, gate: str, proj: bool):
     if proj:
         U = U[0:2, 0:2]
         projection = 'compsub'
-    lvls = tf.cast(U.shape[0], U.dtype)
+    lvls = U.shape[0]
     U_ideal = tf.constant(
                 perfect_gate(lvls, gate, projection),
                 dtype=tf.complex128
@@ -47,7 +47,7 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, proj: bool):
     # to select the right section of the superoper
     U = U_dict[gate]
     projection = 'fulluni'
-    lvls = tf.sqrt(tf.cast(U.shape[0], U.dtype))
+    lvls = int(np.sqrt(U.shape[0]))
     fid_lvls = lvls
     if proj:
         projection = 'wzeros'
@@ -68,7 +68,7 @@ def average_infid(U_dict: dict, gate: str, proj: bool):
     if proj:
         U = U[0:2, 0:2]
         projection = 'compsub'
-    lvls = tf.cast(U.shape[0], U.dtype)
+    lvls = U.shape[0]
     U_ideal = tf.constant(
                 perfect_gate(lvls, gate, projection),
                 dtype=tf.complex128
@@ -80,22 +80,24 @@ def average_infid(U_dict: dict, gate: str, proj: bool):
 def lindbladian_average_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict[gate]
     projection = 'fulluni'
-    lvls = tf.sqrt(tf.cast(U.shape[0], U.dtype))
+    lvls = int(np.sqrt(U.shape[0]))
     fid_lvls = lvls
     if proj:
         projection = 'wzeros'
         fid_lvls = 2
-    U_ideal = tf.constant(
-                perfect_gate(lvls, gate, projection),
-                dtype=tf.complex128
-                )
+    U_ideal = tf_super(
+               tf.constant(
+                    perfect_gate(lvls, gate, projection),
+                    dtype=tf.complex128
+                    )
+               )
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
 def epc_analytical(U_dict: dict, proj: bool):
-    real_cliffords = evaluate_sequences(U_dict, clifford_decomp)
-    lvls = tf.cast(real_cliffords[0].shape[0], real_cliffords[0].dtype)
+    real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+    lvls = real_cliffords[0].shape[0]
     projection = 'fulluni'
     if proj:
         projection = 'compsub'
@@ -114,8 +116,8 @@ def epc_analytical(U_dict: dict, proj: bool):
 
 
 def lindbladian_epc_analytical(U_dict: dict, proj: bool):
-    real_cliffords = evaluate_sequences(U_dict, clifford_decomp)
-    lvls = tf.cast(real_cliffords[0].shape[0], real_cliffords[0].dtype)
+    real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+    lvls = int(np.sqrt(real_cliffords[0].shape[0]))
     projection = 'fulluni'
     fid_lvls = lvls
     if proj:
@@ -125,7 +127,12 @@ def lindbladian_epc_analytical(U_dict: dict, proj: bool):
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
-        C_ideal = ideal_cliffords[C_indx]
+        C_ideal = tf_super(
+                   tf.constant(
+                        ideal_cliffords[C_indx],
+                        dtype=tf.complex128
+                        )
+                   )
         ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=fid_lvls)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
