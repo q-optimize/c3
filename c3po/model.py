@@ -95,7 +95,7 @@ class Model:
                     )
                 )
                 # TODO change all .values to .params or viceversa
-                self.params.append(element.values['freq'].get_value())
+                self.params.append(element.values['freq'])
                 self.params_desc.append((element.name, 'freq'))
 
                 if isinstance(element, Qubit) and element.hilbert_dim > 2:
@@ -105,7 +105,7 @@ class Model:
                             dtype=tf.complex128
                         )
                     )
-                    self.params.append(element.values['anhar'].get_value())
+                    self.params.append(element.values['anhar'])
                     self.params_desc.append((element.name, 'anhar'))
 
             elif isinstance(element, Coupling):
@@ -120,7 +120,7 @@ class Model:
                         dtype=tf.complex128
                     )
                 )
-                self.params.append(element.values['strength'].get_value())
+                self.params.append(element.values['strength'])
                 self.params_desc.append((element.name, 'strength'))
 
             elif isinstance(element, Drive):
@@ -161,7 +161,7 @@ class Model:
                             return gamma * L1
 
                         self.collapse_ops.append(L1)
-                        self.cops_params.append(vals['t1'].get_value())
+                        self.cops_params.append(vals['t1'])
                         self.cops_params_desc.append((element.name, 't1'))
                         self.cops_params_fcts.append(t1)
 
@@ -207,7 +207,7 @@ class Model:
                         return gamma * L_dep
 
                     self.collapse_ops.append(L_dep)
-                    self.cops_params.append(vals['t2star'].get_value())
+                    self.cops_params.append(vals['t2star'])
                     self.cops_params_desc.append((element.name, 't2star'))
                     self.cops_params_fcts.append(t2star)
 
@@ -235,23 +235,28 @@ class Model:
 
         drift_H = tf.zeros_like(self.drift_Hs[0])
         for ii in range(self.n_params):
-            drift_H += \
-                tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
+            drift_H += tf.cast(
+                params[ii].tf_get_value(), tf.complex128
+            ) * self.drift_Hs[ii]
 
         return drift_H, self.control_Hs
 
     def get_parameters(self):
         values = []
-        values.extend(self.params)
+        for par in self.params:
+            values.append(float(par))
         if hasattr(self, 'collapse_ops'):
-            values.extend(self.cops_params)
+            for par in self.cops_params:
+                values.append(float(par))
         return values
 
     def set_parameters(self, values):
         ln = len(self.params)
-        self.params = values[:ln]
+        for ii in range(0, ln):
+            self.params[ii].tf_set_value(values[ii])
         if hasattr(self, 'collapse_ops'):
-            self.cops_params = values[ln:]
+            for ii in range(ln, len(values)):
+                self.cops_params.tf_set_value(values[ii])
         return values
 
     def list_parameters(self):

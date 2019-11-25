@@ -20,13 +20,13 @@ qubit_freq = Qty(
     value=5.1173e9 * 2 * np.pi,
     min=5.1e9 * 2 * np.pi,
     max=5.14e9 * 2 * np.pi,
-    unit='Hz'
+    unit='rad'
 )
 qubit_anhar = Qty(
     value=-315.513734e6 * 2 * np.pi,
     min=-330e6 * 2 * np.pi,
     max=-300e6 * 2 * np.pi,
-    unit='Hz'
+    unit='rad'
 )
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
@@ -34,7 +34,7 @@ v_hz_conversion = Qty(
     value=1,
     min=0.5,
     max=1.5,
-    unit='Hz/V'
+    unit='rad/V'
 )
 t_final = Qty(
     value=10e-9,

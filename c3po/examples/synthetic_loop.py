@@ -13,6 +13,7 @@ import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
 from c3po.utils import log_setup
 from scipy.linalg import expm
+from c3po.component import Quantity as Qty
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
@@ -23,12 +24,60 @@ from single_qubit import create_chip_model, create_generator, create_gates
 logdir = log_setup("/tmp/c3logs/")
 
 # System
-qubit_freq = 5.1173e9 * 2 * np.pi
-qubit_anhar = -315.513734e6 * 2 * np.pi
+qubit_freq = Qty(
+    value=5.1173e9 * 2 * np.pi,
+    min=5.1e9 * 2 * np.pi,
+    max=5.14e9 * 2 * np.pi,
+    unit='rad'
+)
+qubit_anhar = Qty(
+    value=-315.513734e6 * 2 * np.pi,
+    min=-330e6 * 2 * np.pi,
+    max=-300e6 * 2 * np.pi,
+    unit='rad'
+)
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion = 2e9 * np.pi
-t_final = 10e-9
+v_hz_conversion = Qty(
+    value=1,
+    min=0.5,
+    max=1.5,
+    unit='rad/V'
+)
+
+qubit_freq_wrong = Qty(
+    value=5.1e9 * 2 * np.pi,
+    min=5.1e9 * 2 * np.pi,
+    max=5.14e9 * 2 * np.pi,
+    unit='rad'
+)
+qubit_anhar_wrong = Qty(
+    value=-325.513734e6 * 2 * np.pi,
+    min=-330e6 * 2 * np.pi,
+    max=-300e6 * 2 * np.pi,
+    unit='rad'
+)
+qubit_lvls = 4
+drive_ham = hamiltonians.x_drive
+v_hz_conversion_wrong = Qty(
+    value=0.7,
+    min=0.5,
+    max=1.5,
+    unit='rad/V'
+)
+
+t_final = Qty(
+    value=10e-9,
+    min=5e-9,
+    max=15e-9,
+    unit='s'
+)
+rise_time = Qty(
+    value=0.1e-9,
+    min=0.0e-9,
+    max=0.2e-9,
+    unit='s'
+)
 
 # Define the ground state
 qubit_g = np.zeros([qubit_lvls, 1])
@@ -42,18 +91,23 @@ awg_res = 1.2e9
 
 # Create system
 model_wrong = create_chip_model(
-    0.98 * qubit_freq, 1.2 * qubit_anhar, qubit_lvls, drive_ham
+    qubit_freq_wrong, qubit_anhar_wrong, qubit_lvls, drive_ham
 )
-model_right = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
+model_right = create_chip_model(
+    qubit_freq, qubit_anhar, qubit_lvls, drive_ham
+)
 gen_wrong = create_generator(
-    sim_res, awg_res, 0.8 * v_hz_conversion, logdir=logdir
+    sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
+    rise_time=rise_time
 )
-gen_right = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
+gen_right = create_generator(
+    sim_res, awg_res, v_hz_conversion, logdir=logdir, rise_time=rise_time
+)
 gates = create_gates(
-    t_final,
-    0.8 * v_hz_conversion,
-    0.98 * qubit_freq,
-    1.4 * qubit_anhar
+    t_final=t_final,
+    v_hz_conversion=v_hz_conversion_wrong,
+    qubit_freq=qubit_freq_wrong,
+    qubit_anhar=qubit_anhar_wrong
 )
 
 # gen.devices['awg'].options = 'drag'
@@ -66,14 +120,14 @@ exp_wrong = Exp(
 sim_wrong = Sim(exp_wrong, gates)
 a_q = model_wrong.ann_opers[0]
 sim_wrong.VZ = expm(
-    1.0j * np.matmul(a_q.T.conj(), a_q) * 0.98 * qubit_freq * t_final
+    1.0j * np.matmul(a_q.T.conj(), a_q) * (qubit_freq_wrong * t_final)
 )
 
 exp_right = Exp(model_right, gen_right)
 sim_right = Sim(exp_right, gates)
 a_q = model_right.ann_opers[0]
 sim_right.VZ = expm(
-    1.0j * np.matmul(a_q.T.conj(), a_q) * qubit_freq * t_final
+    1.0j * np.matmul(a_q.T.conj(), a_q) * (qubit_freq * t_final)
 )
 
 # Define states
@@ -118,7 +172,7 @@ def match_ORBIT(
     fid: np.float64
 ):
     exp_wrong.set_parameters(exp_params, exp_opt_map)
-    U_dict = sim_wrong.get_gates(gateset_values, gateset_opt_map)
+    U_dict = sim_wrong.get_gates()
     U = sim_wrong.evaluate_sequences(U_dict, [seq])
     ket_actual = tf.matmul(U[0], ket_0)
     overlap = tf.matmul(bra_0, ket_actual)
@@ -142,7 +196,7 @@ exp_opt_map = [
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz'),
-    ('resp', 'rise_time')
+    # ('resp', 'rise_time')
 ]
 
 
@@ -186,15 +240,16 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
     opt.sampling = sampling
     opt.batch_size = batch_size
     opt.learn_from = learn_from
+    opt.sim = sim_wrong
     opt.learn_model(
         exp_wrong,
         eval_func=match_ORBIT
     )
 
 
-# Run the stuff
-c3_openloop()
-c3_calibration()
-logfilename = logdir + "calibration.log"
-# sampling = 'from_end'  'even', 'random' , 'from_start'
-c3_learn_model(logfilename, sampling='even', batch_size=7)
+# # Run the stuff
+# c3_openloop()
+# c3_calibration()
+# logfilename = logdir + "calibration.log"
+# # sampling = 'from_end'  'even', 'random' , 'from_start'
+# c3_learn_model(logfilename, sampling='even', batch_size=7)

@@ -1,5 +1,6 @@
 import time
 import os
+import numpy as np
 
 
 def log_setup(data_path):
@@ -14,3 +15,16 @@ def log_setup(data_path):
         os.remove(recent)
     os.symlink(pwd, recent)
     return pwd + '/'
+
+
+def num3str(val):
+    big_units = ['', 'K', 'M', 'G', 'T', 'P']
+    small_units = ['m', 'mu', 'n', 'p', 'f']
+    tmp = np.log10(val)
+    idx = int(tmp // 3)
+    if tmp < 0:
+        prefix = small_units[idx]
+    else:
+        prefix = big_units[idx]
+
+    return f"{10 ** (tmp % 3):.3f}" + prefix

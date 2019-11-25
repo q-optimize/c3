@@ -38,8 +38,10 @@ class Experiment:
             par_indx.append(par_list.index(par_id))
         return par_indx
 
-    def get_parameters(self, opt_map: list):
+    def get_parameters(self, opt_map=None):
         """Return list of values and bounds of parameters in opt_map."""
+        if opt_map is None:
+            opt_map = self.list_parameters()
         values = []
         values.append(self.model.get_parameters())
         devices = self.generator.devices
@@ -54,12 +56,11 @@ class Experiment:
         for list in values:
             values_flat.extend(list)
         values_new = [values_flat[indx] for indx in par_indx]
-        bounds = np.kron(np.array([[0.7], [1.3]]), np.array(values_new)).T
-        return values_new, bounds
+        return values_new
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""
-        pars, _ = self.get_parameters(self.list_parameters())
+        pars = self.get_parameters()
         par_indx = self.parameter_indeces(opt_map)
         indx = 0
         for par_ii in par_indx:
@@ -73,7 +74,7 @@ class Experiment:
         indx = 0
         for par in opt_map:
             if par[0] in devs.keys():
-                devs[par[0]].params[par[1]] = values[indx]
+                devs[par[0]].params[par[1]].tf_set_value(values[indx])
             indx += 1
 
 

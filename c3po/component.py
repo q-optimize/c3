@@ -3,11 +3,13 @@
 import types
 import numpy as np
 import tensorflow as tf
+from c3po.utils import num3str
 
 
 class Quantity:
     """
-    Represents any parameter used in the model or the pulse speficiation.
+    Represents any parameter used in the model or the pulse speficiation. For
+    arithmetic operations just the numeric value is used.
 
     Parameters
     ----------
@@ -33,50 +35,50 @@ class Quantity:
         symbol: str = '\\alpha',
         unit: str = 'a.u.'
     ):
-        min = np.array(min)
-        max = np.array(max)
+        min = np.min([min, max])
+        max = np.max([min, max])
         self.offset = min
         self.scale = np.array(np.abs(max - min))
         self.set_value(value)
         self.symbol = symbol
         self.unit = unit
 
-    # TODO Define binary operations nicely so that we use value. Return is
-    # always numpy!
-    # def __add__(self, other):
-    #     min = np.min(self.offset, other.offset)
-    #     max = np.max(self.scale + self.offset, other.scale + other.offset)
-    #     return Quantity(
-    #         self.value + other.value, min, max, self.symbol, self.unit
-    #         )
-    #
-    # def __sub__(self, other):
-    #     min = np.min(self.offset, other.offset)
-    #     max = np.max(self.scale + self.offset, other.scale + other.offset)
-    #     return Quantity(
-    #         self.value - other.value, min, max, self.symbol, self.unit
-    #         )
-    #
-    # def __mul__(self, other):
-    #     min = np.min(self.offset, other.offset)
-    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
-    #     return Quantity(
-    #         self.value - other.value, min, max, self.symbol, self.unit
-    #         )
-    #
-    # def __pow__(self, other):
-    #     min = np.min(self.offset, other.offset)
-    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
-    #     return Quantity(
-    #         self.value - other.value, min, max, self.symbol, self.unit
-    #         )
-    #
-    # def __truediv__(self, other):
-    #     min = np.min(self.offset, other.offset)
-    #     max = np.min(self.scale + self.offset, other.scale + other.offset)
-    #     return Quantity(
-    #         self.value - other.value, min, max, self.symbol, self.unit
-    #         )
+    def __add__(self, other):
+        return self.get_value() + other
+
+    def __radd__(self, other):
+        return self.get_value() + other
+
+    def __sub__(self, other):
+        return self.get_value() - other
+
+    def __rsub__(self, other):
+        return other - self.get_value()
+
+    def __mul__(self, other):
+        return self.get_value() * other
+
+    def __rmul__(self, other):
+        return self.get_value() * other
+
+    def __pow__(self, other):
+        return self.get_value() ** other
+
+    def __rpow__(self, other):
+        return other ** self.get_value()
+
+    def __truediv__(self, other):
+        return self.get_value() / other
+
+    def __rtruediv__(self, other):
+        return other / self.get_value()
+
+    def __str__(self):
+        val = self.get_value()
+        return num3str(val) + self.unit
+
+    def __float__(self):
+        return self.get_value()
 
     def get_value(self):
         tmp = np.arccos(np.cos((self.value + 1) * np.pi / 2)) / np.pi
@@ -100,6 +102,7 @@ class Quantity:
         self.value = val
 
     # TODO find good name for physical_bounded vs order1_unbounded
+    # TODO At some point make self.value private
 
 
 class C3obj:

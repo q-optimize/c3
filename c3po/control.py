@@ -22,7 +22,7 @@ class GateSet:
                         par_list.append([(gate, chan, comp, par)])
         return par_list
 
-    def get_parameters(self, opt_map: list):
+    def get_parameters(self, opt_map=None):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -57,7 +57,8 @@ class GateSet:
 
         """
         values = []
-
+        if opt_map is None:
+            opt_map = self.list_parameters()
         for id in opt_map:
             gate = id[0][0]
             par_id = id[0][1:4]
@@ -216,12 +217,16 @@ class Instruction(C3obj):
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
 
+    # TODO There's a number of get_parameter functions in different places
+    # that do similar things. Think about this.
     def get_parameter_value(self, par_id: tuple):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
-        value = self.comps[chan][comp].params[param].tf_get_value()
+        # The parameter can be a c3po.Quanity or a float, this cast makes it
+        # work in both cases.
+        value = float(self.comps[chan][comp].params[param])
         return value
 
     # TODO Consider putting this code directly in the gateset object

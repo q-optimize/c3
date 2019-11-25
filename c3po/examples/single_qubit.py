@@ -40,9 +40,9 @@ def create_gates(t_final,
     """
     gauss_params = {
         'amp': Qty(
-            value=0.5 * np.pi / v_hz_conversion.get_value(),
-            min=0.0 * np.pi / v_hz_conversion.get_value(),
-            max=1.5 * np.pi / v_hz_conversion.get_value(),
+            value=0.5 * np.pi / v_hz_conversion,
+            min=0.0 * np.pi / v_hz_conversion,
+            max=1.5 * np.pi / v_hz_conversion,
             unit='V'
         ),
         't_final': t_final,
@@ -59,9 +59,9 @@ def create_gates(t_final,
             unit='Hz'
         ),
         'delta': Qty(
-            value=0.5 / qubit_anhar.get_value(),
-            min=1.5 / qubit_anhar.get_value(),
-            max=0.1 / qubit_anhar.get_value(),
+            value=0.5 / qubit_anhar,
+            min=1.5 / qubit_anhar,
+            max=0.1 / qubit_anhar,
             unit='1/Hz(s)'
         ),
     }
@@ -73,7 +73,7 @@ def create_gates(t_final,
     )
     carrier_parameters = {
         'freq': Qty(
-            value=qubit_freq.get_value(),
+            value=qubit_freq,
             min=5e9 * 2 * np.pi,
             max=5.5e9 * 2 * np.pi,
             unit='Hz'
@@ -309,11 +309,9 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
 
 
 # Devices and generator
-def create_generator(sim_res,
-                     awg_res,
-                     v_hz_conversion,
-                     logdir,
-                     rise_time=None):
+def create_generator(
+    sim_res, awg_res, v_hz_conversion, logdir, rise_time=None
+):
     lo = generator.LO(resolution=sim_res)
     awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()

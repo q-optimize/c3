@@ -14,71 +14,23 @@ class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
     def __init__(self, data_path):
-        self.results = {}
         self.gradients = {}
         self.simulate_noise = False
         self.sampling = False
         self.batch_size = 1
         self.data_path = data_path
 
-    def to_scale_one(self, values, bounds):
-        """
-        Return a vector of scale 1 that plays well with optimizers.
-
-        If the input is higher dimension, it also linearizes.
-
-        Parameters
-        ----------
-        values : array/str
-            Array of parameter in physical units. Can also be the name of an
-            array already stored in this Gate instance.
-
-        Returns
-        -------
-        array
-            Numpy array of pulse parameters, rescaled to values within [-1, 1]
-
-        """
-        # TODO Give warning when outside bounds
-        x0 = []
-        values = values.flatten()
-        for i in range(len(values)):
-            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = min(bounds[i].T)
-            tmp = (values[i] - offset) / scale
-            tmp = 2 * tmp - 1
-            x0.append(tmp)
-
-        return x0
-
-    def to_bound_phys_scale(self, x0, bounds):
-        """
-        Transform an optimizer vector back to physical scale & original shape.
-
-        Parameters
-        ----------
-        one : array
-            Array of pulse parameters in scale 1
-
-        bounds: array
-            Array of control parameter bounds
-
-        Returns
-        -------
-        array
-            control parameters, compatible with bounds in physical units.
-
-        """
-        values = []
-        for i in range(len(x0)):
-            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = min(bounds[i].T)
-            tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
-            tmp = scale * tmp + offset
-            values.append(tmp)
-        return np.array(values).reshape(self.param_shape)
-
     def goal_run(self, x_in):
+        self.sim.gateset.set_parameters(x_in, self.opt_map)
+        U_dict = self.sim.get_gates()
+        goal = self.fid_func(U_dict)
+        self.optim_status['params'] = list(zip(
+            self.opt_map, self.sim.gateset.get_parameters(self.opt_map)
+        ))
+        self.optim_status['goal'] = float(goal.numpy())
+        return float(goal.numpy())
+
+    def goal_run_with_grad(self, x_in):
         with tf.GradientTape() as t:
             x = tf.constant(x_in)
             t.watch(x)
@@ -88,7 +40,7 @@ class Optimizer:
 
         grad = t.gradient(goal, x)
         gradients = grad.numpy().flatten()
-        self.gradients[str(x)] = gradients
+        self.gradients[str(x_in)] = gradients
         self.optim_status['params'] = list(zip(
             self.opt_map, self.sim.gateset.get_parameters(self.opt_map)
         ))
@@ -96,15 +48,12 @@ class Optimizer:
         self.optim_status['gradient'] = gradients.tolist()
         return float(goal.numpy())
 
-    def goal_run_n(self, x):
+    def goal_run_n(self, x_in):
         learn_from = self.learn_from
         with tf.GradientTape() as t:
-            current_params = tf.constant(
-                self.to_bound_phys_scale(x, self.bounds)
-            )
+            current_params = tf.constant(x_in)
             t.watch(current_params)
             goal = 0
-
             if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
             elif self.sampling == 'even':
@@ -149,9 +98,8 @@ class Optimizer:
             self.logfile.flush()
 
         grad = t.gradient(goal, current_params)
-        scale = np.diff(self.bounds)
-        gradients = grad.numpy().flatten() * scale.T
-        self.gradients[str(x)] = gradients
+        gradients = grad.numpy().flatten()
+        self.gradients[str(x_in)] = gradients
         self.optim_status['params'] = list(zip(
             self.opt_map, current_params.numpy()
         ))
@@ -159,20 +107,11 @@ class Optimizer:
         self.optim_status['gradient'] = gradients.tolist()
         return goal.numpy()
 
-    def goal_gradient_run(self, x):
+    def lookup_gradient(self, x):
         return self.gradients[str(x)]
 
     def cmaes(self, values, bounds, settings={}):
-        # TODO: rewrite from dict to list input
-        if settings:
-            if 'CMA_stds' in settings.keys():
-                scale_bounds = []
-                for i in range(len(bounds)):
-                    scale = np.abs(bounds[i][0] - bounds[i][1])
-                    scale_bounds.append(settings['CMA_stds'][i] / scale)
-                settings['CMA_stds'] = scale_bounds
-
-        x0 = self.to_scale_one(values, bounds)
+        x0 = values
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
         while not es.stop():
             self.logfile.write(f"Batch {self.iteration}\n")
@@ -186,9 +125,7 @@ class Optimizer:
                 solutions.append(goal)
                 self.logfile.write(
                     json.dumps({
-                        'params': self.to_bound_phys_scale(
-                            sample, bounds
-                        ).tolist(),
+                        'params': sample.tolist(),
                         'goal': goal})
                 )
                 self.logfile.write("\n")
@@ -203,19 +140,17 @@ class Optimizer:
 
         res = es.result + (es.stop(), es, es.logger)
         x_opt = res[0]
-        values_opt = self.to_bound_phys_scale(x_opt, bounds)
-        # cmaes res is tuple, tread carefully. res[0] = values_opt
-        self.results[self.opt_name] = res
+        values_opt = x_opt
         return values_opt
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, grad, options):
         self.optim_status['params'] = list(zip(
-            self.opt_map, 'hell'
+            self.opt_map, x0
         ))
         self.log_parameters(x0)
         options['disp'] = True
-        res = minimize(
+        minimize(
             goal,
             x0,
             jac=grad,
@@ -225,8 +160,6 @@ class Optimizer:
         )
 
         values_opt = self.sim.gateset.get_parameters(self.opt_map)
-        # res.x = values_opt
-        self.results[self.opt_name] = res
         return values_opt
 
     def optimize_controls(
@@ -264,6 +197,7 @@ class Optimizer:
             Special settings for the desired optimizer
 
         """
+        # TODO Separate gateset from the simulation here.
         x0 = sim.gateset.get_parameters(opt_map)
 
         self.sim = sim
@@ -292,8 +226,8 @@ class Optimizer:
             elif opt == 'lbfgs':
                 values_opt = self.lbfgs(
                     x0,
-                    self.goal_run,
-                    self.goal_gradient_run,
+                    self.goal_run_with_grad,
+                    self.lookup_gradient,
                     options=settings
                 )
             end_time = time.time()
@@ -318,8 +252,9 @@ class Optimizer:
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        values = exp.get_parameters(self.opt_map)
+        x0 = exp.get_parameters(self.opt_map)
 
+        self.exp = exp
         self.eval_func = eval_func
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
@@ -333,10 +268,9 @@ class Optimizer:
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
             params_opt = self.lbfgs(
-                values,
-                bounds,
+                x0,
                 self.goal_run_n,
-                self.goal_gradient_run,
+                self.lookup_gradient,
                 options=settings
             )
             end_time = time.time()
