@@ -7,14 +7,14 @@ import copy
 
 import c3po.component as component
 from c3po.model import Model as Mdl
-from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
+from c3po.tf_utils import tf_limit_gpu_memory
 
 import c3po.generator as generator
 import c3po.fidelities as fidelities
 
 
-# Limit graphics memory to 1GB
-tf_limit_gpu_memory(512)
+# Limit graphics memory
+tf_limit_gpu_memory(100)  # to 100 MB
 
 
 # Gates
@@ -302,6 +302,94 @@ def create_generator(sim_res,
     devices = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     gen = generator.Generator(devices)
     return gen
+
+
+def create_opt_map(pulse_type: bool, xy_angle: bool):
+
+    # Relation functions between variables
+    def add_pih(x):
+        return x + 0.5 * np.pi
+
+    def add_pi(x):
+        return x + 1.0 * np.pi
+
+    def add_mpih(x):
+        return x - 0.5 * np.pi
+
+    # Parameters to optimize
+    if pulse_type == 'gauss':
+        gateset_opt_map = [
+            [('X90p', 'd1', 'gauss', 'amp'),
+             ('Y90p', 'd1', 'gauss', 'amp'),
+             ('X90m', 'd1', 'gauss', 'amp'),
+             ('Y90m', 'd1', 'gauss', 'amp')],
+            [('X90p', 'd1', 'gauss', 'freq_offset'),
+             ('Y90p', 'd1', 'gauss', 'freq_offset'),
+             ('X90m', 'd1', 'gauss', 'freq_offset'),
+             ('Y90m', 'd1', 'gauss', 'freq_offset')]
+        ]
+        if xy_angle:
+            gateset_opt_map.append(
+                [('X90p', 'd1', 'gauss', 'xy_angle'),
+                 ('Y90p', 'd1', 'gauss', 'xy_angle', add_pih),
+                 ('X90m', 'd1', 'gauss', 'xy_angle', add_pi),
+                 ('Y90m', 'd1', 'gauss', 'xy_angle', add_mpih)]
+            )
+    elif pulse_type == 'drag':
+        gateset_opt_map = [
+            [('X90p', 'd1', 'gauss', 'amp'),
+             ('Y90p', 'd1', 'gauss', 'amp'),
+             ('X90m', 'd1', 'gauss', 'amp'),
+             ('Y90m', 'd1', 'gauss', 'amp')],
+            [('X90p', 'd1', 'gauss', 'freq_offset'),
+             ('Y90p', 'd1', 'gauss', 'freq_offset'),
+             ('X90m', 'd1', 'gauss', 'freq_offset'),
+             ('Y90m', 'd1', 'gauss', 'freq_offset')],
+            [('X90p', 'd1', 'gauss', 'delta'),
+             ('Y90p', 'd1', 'gauss', 'delta'),
+             ('X90m', 'd1', 'gauss', 'delta'),
+             ('Y90m', 'd1', 'gauss', 'delta')]
+        ]
+        if xy_angle:
+            gateset_opt_map.append(
+                [('X90p', 'd1', 'gauss', 'xy_angle'),
+                 ('Y90p', 'd1', 'gauss', 'xy_angle', add_pih),
+                 ('X90m', 'd1', 'gauss', 'xy_angle', add_pi),
+                 ('Y90m', 'd1', 'gauss', 'xy_angle', add_mpih)]
+            )
+    elif pulse_type == 'pwc':
+        gateset_opt_map = [
+            [('X90p', 'd1', 'pwc', 'inphase'),
+             ('Y90p', 'd1', 'pwc', 'inphase'),
+             ('X90m', 'd1', 'pwc', 'inphase'),
+             ('Y90m', 'd1', 'pwc', 'inphase')],
+            [('X90p', 'd1', 'pwc', 'quadrature'),
+             ('Y90p', 'd1', 'pwc', 'quadrature'),
+             ('X90m', 'd1', 'pwc', 'quadrature'),
+             ('Y90m', 'd1', 'pwc', 'quadrature')]
+        ]
+        if xy_angle:
+            gateset_opt_map.append(
+                [('X90p', 'd1', 'pwc', 'xy_angle'),
+                 ('Y90p', 'd1', 'pwc', 'xy_angle', add_pih),
+                 ('X90m', 'd1', 'pwc', 'xy_angle', add_pi),
+                 ('Y90m', 'd1', 'pwc', 'xy_angle', add_mpih)]
+            )
+    elif pulse_type == 'rect':
+        gateset_opt_map = [
+            [('X90p', 'd1', 'rect', 'amp'),
+             ('Y90p', 'd1', 'rect', 'amp'),
+             ('X90m', 'd1', 'rect', 'amp'),
+             ('Y90m', 'd1', 'rect', 'amp')]
+        ]
+        if xy_angle:
+            gateset_opt_map.append(
+                [('X90p', 'd1', 'rect', 'xy_angle'),
+                 ('Y90p', 'd1', 'rect', 'xy_angle', add_pih),
+                 ('X90m', 'd1', 'rect', 'xy_angle', add_pi),
+                 ('Y90m', 'd1', 'rect', 'xy_angle', add_mpih)]
+            )
+    return gateset_opt_map
 
 
 # Fidelity fucntions
