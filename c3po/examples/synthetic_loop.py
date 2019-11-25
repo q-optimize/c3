@@ -42,18 +42,18 @@ awg_res = 1.2e9
 
 # Create system
 model_wrong = create_chip_model(
-    0.98 * qubit_freq, 1.2 * qubit_anhar, qubit_lvls, drive_ham
+    0.98 * qubit_freq, 1.02 * qubit_anhar, qubit_lvls, drive_ham
 )
 model_right = create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham)
 gen_wrong = create_generator(
-    sim_res, awg_res, 0.8 * v_hz_conversion, logdir=logdir
+    sim_res, awg_res, 0.98 * v_hz_conversion, logdir=logdir
 )
 gen_right = create_generator(sim_res, awg_res, v_hz_conversion, logdir=logdir)
 gates = create_gates(
     t_final,
-    0.8 * v_hz_conversion,
+    0.98 * v_hz_conversion,
     0.98 * qubit_freq,
-    1.4 * qubit_anhar
+    1.02 * qubit_anhar
 )
 
 # gen.devices['awg'].options = 'drag'
@@ -109,7 +109,7 @@ def pop_leak(U_dict: dict):
     return overlap
 
 
-def match_ORBIT(
+def match_calib(
     exp_params: list,
     exp_opt_map: list,
     gateset_values: list,
@@ -119,10 +119,7 @@ def match_ORBIT(
 ):
     exp_wrong.set_parameters(exp_params, exp_opt_map)
     U_dict = sim_wrong.get_gates(gateset_values, gateset_opt_map)
-    U = sim_wrong.evaluate_sequences(U_dict, [seq])
-    ket_actual = tf.matmul(U[0], ket_0)
-    overlap = tf.matmul(bra_0, ket_actual)
-    fid_sim = 1 - tf_abs(overlap)
+    fid_sim = unitary_infid(U_dict)
     diff = fid_sim - fid
     return diff
 
@@ -138,11 +135,11 @@ opt_map = [
 
 exp_opt_map = [
     ('Q1', 'freq'),
-    ('Q1', 'anhar'),
+    # ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz'),
-    ('resp', 'rise_time')
+    # ('resp', 'rise_time')
 ]
 
 
@@ -162,8 +159,8 @@ def c3_calibration(simulate_noise=True):
         sim=sim_right,
         opt_map=opt_map,
         opt='cmaes',
-        settings={},
-        # settings={'maxiter': 5},
+        # settings={},
+        settings={'ftarget': 1e-2},
         opt_name='calibration',
         fid_func=unitary_infid
     )
@@ -188,13 +185,14 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
     opt.learn_from = learn_from
     opt.learn_model(
         exp_wrong,
-        eval_func=match_ORBIT
+        eval_func=match_calib
     )
 
 
 # Run the stuff
-c3_openloop()
+with tf.device('/CPU:0'):
+    c3_openloop()
 c3_calibration()
 logfilename = logdir + "calibration.log"
 # sampling = 'from_end'  'even', 'random' , 'from_start'
-c3_learn_model(logfilename, sampling='even', batch_size=14)
+c3_learn_model(logfilename, sampling='even', batch_size=10)
