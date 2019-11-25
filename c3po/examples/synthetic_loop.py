@@ -163,7 +163,7 @@ def pop_leak(U_dict: dict):
     return overlap
 
 
-def match_ORBIT(
+def match_calib(
     exp_params: list,
     exp_opt_map: list,
     gateset_values: list,
@@ -172,11 +172,8 @@ def match_ORBIT(
     fid: np.float64
 ):
     exp_wrong.set_parameters(exp_params, exp_opt_map)
-    U_dict = sim_wrong.get_gates()
-    U = sim_wrong.evaluate_sequences(U_dict, [seq])
-    ket_actual = tf.matmul(U[0], ket_0)
-    overlap = tf.matmul(bra_0, ket_actual)
-    fid_sim = 1 - tf_abs(overlap)
+    U_dict = sim_wrong.get_gates(gateset_values, gateset_opt_map)
+    fid_sim = unitary_infid(U_dict)
     diff = fid_sim - fid
     return diff
 
@@ -192,7 +189,7 @@ opt_map = [
 
 exp_opt_map = [
     ('Q1', 'freq'),
-    ('Q1', 'anhar'),
+    # ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
     ('v_to_hz', 'V_to_Hz'),
@@ -216,8 +213,8 @@ def c3_calibration(simulate_noise=True):
         sim=sim_right,
         opt_map=opt_map,
         opt='cmaes',
-        settings={},
-        # settings={'maxiter': 5},
+        # settings={},
+        settings={'ftarget': 1e-2},
         opt_name='calibration',
         fid_func=unitary_infid
     )
@@ -243,13 +240,14 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
     opt.sim = sim_wrong
     opt.learn_model(
         exp_wrong,
-        eval_func=match_ORBIT
+        eval_func=match_calib
     )
 
 
-# # Run the stuff
-# c3_openloop()
-# c3_calibration()
-# logfilename = logdir + "calibration.log"
-# # sampling = 'from_end'  'even', 'random' , 'from_start'
-# c3_learn_model(logfilename, sampling='even', batch_size=7)
+# Run the stuff
+with tf.device('/CPU:0'):
+    c3_openloop()
+c3_calibration()
+logfilename = logdir + "calibration.log"
+# sampling = 'from_end'  'even', 'random' , 'from_start'
+c3_learn_model(logfilename, sampling='even', batch_size=10)
