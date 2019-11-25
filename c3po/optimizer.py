@@ -93,8 +93,11 @@ class Optimizer:
         scale = np.diff(self.bounds)
         gradients = grad.numpy().flatten() * scale.T
         self.gradients[str(x)] = gradients
+        # TODO fix error when JSONing fucntion types
+        # this hack only gets the first on each cluster of params
+        opt_map = [params[0] for params in self.opt_map]
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy().tolist()
+            opt_map, current_params.numpy().tolist()
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -156,8 +159,11 @@ class Optimizer:
         scale = np.diff(self.bounds)
         gradients = grad.numpy().flatten() * scale.T
         self.gradients[str(x)] = gradients
+        # TODO fix error when JSONing fucntion types
+        # this hack only gets the first on each cluster of params
+        opt_map = [params[0] for params in self.opt_map]
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy()
+            opt_map, current_params.numpy().tolist()
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -215,8 +221,11 @@ class Optimizer:
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
+        # TODO fix error when JSONing fucntion types
+        # this hack only gets the first on each cluster of params
+        opt_map = [params[0] for params in self.opt_map]
         self.optim_status['params'] = list(zip(
-            self.opt_map, values.tolist()
+            opt_map, values.tolist()
         ))
         self.log_parameters(x0)
         options['disp'] = True

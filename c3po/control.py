@@ -77,8 +77,12 @@ class GateSet:
             for id in ids:
                 gate = id[0]
                 par_id = id[1:4]
+                val = values[indx]
+                if len(id) == 5:
+                    fct = id[4]
+                    val = fct(val)
                 gate_instr = self.instructions[gate]
-                gate_instr.set_parameter_value(par_id, values[indx])
+                gate_instr.set_parameter_value(par_id, val)
 
 
 class InstructionComponent(C3obj):
