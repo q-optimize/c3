@@ -179,6 +179,79 @@ def create_pwc_gates(t_final,
     return gates
 
 
+def create_rect_gates(t_final,
+                     qubit_freq,
+                     amp,
+                     amp_limit,
+                     all_gates=True
+                     ):
+
+    rect_params = {
+        'amp': amp,
+        'xy_angle': 0.0,
+        'freq_offset': 0e6 * 2 * np.pi
+    }
+
+    rect_bounds = {
+        'amp': [-amp_limit, amp_limit],
+        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
+        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi]
+        }
+
+    rect_env = control.Envelope(
+        name="rect",
+        desc="Rectangular comp 1 of signal 1",
+        shape=envelopes.rect,
+        params=rect_params,
+        bounds=rect_bounds,
+    )
+
+    carrier_parameters = {
+        'freq': qubit_freq
+    }
+    carrier_bounds = {
+        'freq': [4e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+    }
+    carr = control.Carrier(
+        name="carrier",
+        desc="Frequency of the local oscillator",
+        params=carrier_parameters,
+        bounds=carrier_bounds
+    )
+    X90p = control.Instruction(
+        name="X90p",
+        t_start=0.0,
+        t_end=t_final,
+        channels=["d1"]
+    )
+    X90p.add_component(rect_env, "d1")
+    X90p.add_component(carr, "d1")
+
+    gates = control.GateSet()
+    gates.add_instruction(X90p)
+
+    if all_gates:
+        Y90p = copy.deepcopy(X90p)
+        Y90p.name = "Y90p"
+        Y90p.comps['d1']['rect'].params['xy_angle'] = np.pi / 2
+        Y90p.comps['d1']['rect'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+
+        X90m = copy.deepcopy(X90p)
+        X90m.name = "X90m"
+        X90m.comps['d1']['rect'].params['xy_angle'] = np.pi
+        X90m.comps['d1']['rect'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+
+        Y90m = copy.deepcopy(X90p)
+        Y90m.name = "Y90m"
+        Y90m.comps['d1']['rect'].params['xy_angle'] = - np.pi / 2
+        Y90m.comps['d1']['rect'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+
+        gates.add_instruction(X90m)
+        gates.add_instruction(Y90m)
+        gates.add_instruction(Y90p)
+    return gates
+
+
 # Chip and model
 def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
                       t1=None, t2star=None, temp=None

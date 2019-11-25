@@ -210,10 +210,11 @@ class Optimizer:
         self.results[self.opt_name] = res
         return values_opt
 
+# TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, values, bounds, goal, grad, options):
         x0 = self.to_scale_one(values, bounds)
         self.optim_status['params'] = list(zip(
-            self.opt_map, values
+            self.opt_map, values.tolist()
         ))
         self.log_parameters(x0)
         options['disp'] = True
@@ -362,6 +363,8 @@ class Optimizer:
         exp.set_parameters(params_opt, self.opt_map)
 
     def log_parameters(self, x):
+        # FIXME why does log take an x parameter and doesn't use it?
+        # If because callback requires it, we could print them or store them.
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
         self.logfile.write(f"\nStarting iteration {self.iteration}\n")

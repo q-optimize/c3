@@ -144,6 +144,10 @@ class Envelope(InstructionComponent):
             bounds=bounds,
             )
         self.shape = shape
+        if 'amp' not in params:
+            params['amp'] = 1.0
+        if 'freq_offset' not in params:
+            params['freq_offset'] = 0.0
 
     def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times."""
@@ -219,6 +223,7 @@ class Instruction(C3obj):
         self.comps = {}
         for chan in channels:
             self.comps[chan] = {}
+        # TODO remove redundancy of channels in instruction
 
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp

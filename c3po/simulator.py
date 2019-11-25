@@ -10,11 +10,12 @@ from c3po.control import GateSet
 
 from c3po.tf_utils import tf_propagation
 from c3po.tf_utils import tf_propagation_lind
-from c3po.tf_utils import tf_matmul_list
+from c3po.tf_utils import tf_matmul_left, tf_matmul_right
 from c3po.tf_utils import tf_super
 from c3po.qt_utils import single_length_RB
 
 
+# TODO resctucture so that sim,mdl,gen,meas,gateset are all in one class (exp?)
 class Simulator():
     """Simulator object."""
 
@@ -50,6 +51,11 @@ class Simulator():
         U_dict: dict,
         sequences: list
     ):
+        """
+        Sequences are assumed to be given in the correct order (left to right).
+            e.g.
+            ['X90p','Y90p'] --> U = X90p x Y90p
+        """
         gates = U_dict
         # TODO deal with the case where you only evaluate one sequence
         U = []
@@ -57,7 +63,7 @@ class Simulator():
             Us = []
             for gate in sequence:
                 Us.append(gates[gate])
-            U.append(tf_matmul_list(Us))
+            U.append(tf_matmul_right(Us))
         return U
 
     def propagation(self,
@@ -81,7 +87,7 @@ class Simulator():
             dUs = tf_propagation(h0, hks, signals, dt)
         self.dUs = dUs
         self.ts = ts
-        U = tf_matmul_list(dUs)
+        U = tf_matmul_left(dUs)
         if hasattr(self, 'VZ'):
             if self.lindbladian:
                 U = tf.matmul(tf_super(self.VZ), U)
@@ -165,6 +171,8 @@ class Simulator():
         init_guess = [0.9, 0.5, 0.5]
         fitted = False
         while not fitted:
+            print('lengths shape', lengths.shape)
+            print('surv_prob shape', np.array(surv_prob).shape)
             try:
                 means = np.mean(surv_prob, axis=1)
                 stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
@@ -195,6 +203,7 @@ class Simulator():
                                     num=num_lengths
                                     )
                                 ).astype(int)
+                max_length = max_length * 2
                 for L in new_lengths:
                     if progress:
                         print(L)
@@ -207,30 +216,31 @@ class Simulator():
                     surv_prob.append(pop0s)
                 lengths = np.append(lengths, new_lengths)
 
-        # PLOT
-        fig, ax = plt.subplots()
-        if plot_all:
-            ax.plot(lengths,
-                    surv_prob,
-                    marker='o',
-                    color='red',
-                    linestyle='None')
-        ax.errorbar(lengths,
-                    means,
-                    yerr=stds,
-                    color='blue',
-                    marker='x',
-                    linestyle='None')
+            # PLOT inside the while loop
+            fig, ax = plt.subplots()
+            if plot_all:
+                ax.plot(lengths,
+                        surv_prob,
+                        marker='o',
+                        color='red',
+                        linestyle='None')
+            ax.errorbar(lengths,
+                        means,
+                        yerr=stds,
+                        color='blue',
+                        marker='x',
+                        linestyle='None')
+            plt.title('RB results')
+            plt.ylabel('Population in 0')
+            plt.xlabel('# Cliffords')
+            plt.ylim(0, 1)
+            plt.xlim(0, lengths[-1])
+            plt.show()
+        # put the fitted line only once fit parameters have been found
         fitted = RB_fit(lengths, r, A, B)
         ax.plot(lengths, fitted)
         plt.text(0.1, 0.1,
                  'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
                  size=16,
                  transform=ax.transAxes)
-        plt.title('RB results')
-        plt.ylabel('Population in 0')
-        plt.xlabel('# Cliffords')
-        plt.ylim(0, 1)
-        plt.xlim(0, lengths[-1])
-        plt.show()
         return r, A, B
