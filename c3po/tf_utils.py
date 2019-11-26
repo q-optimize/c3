@@ -363,8 +363,8 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
                 tf.sqrt(
                     tf.linalg.trace(
                         tf.matmul(A, tf.linalg.adjoint(B))
-                        ) / lvls
-                    )
+                        )
+                    ) / lvls
                 )**2
     return overlap
 
