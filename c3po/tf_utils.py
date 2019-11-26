@@ -154,13 +154,13 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     Returns
     -------
     tf.tensor
-        dU = exp(i H(t) dt)
+        dU = exp(-i H(t) dt)
 
     """
     h = h0
     for ii in range(len(hks)):
         h += cflds_t[ii] * hks[ii]
-    terms = max(24, int(2e12 * dt)) # Eyeball number of terms in expm
+    terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     dU = tf_expm(-1j * h * dt, terms)
     return dU
 
@@ -214,12 +214,57 @@ def tf_propagation(h0, hks, cflds, dt):
 
     """
     dUs = []
-    for ii in range(len(cflds[0])):
+    for ii in range(cflds[0].shape[0]):
         cf_t = []
         for fields in cflds:
             cf_t.append(tf.cast(fields[ii], tf.complex128))
         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
     return dUs
+
+# EXPERIMENTAL PROPAGATION BELOW
+
+# def tf_propagation(h0, hks, cflds, dt):
+#     """
+#     Calculate the time evolution of a system controlled by time-dependent
+#     fields.
+#
+#     Parameters
+#     ----------
+#     h0 : tf.tensor
+#         Drift Hamiltonian.
+#     hks : list of tf.tensor
+#         List of control Hamiltonians.
+#     cflds : list
+#         List of control fields, one per control Hamiltonian.
+#     dt : float
+#         Length of one time slice.
+#
+#     Returns
+#     -------
+#     type
+#         Description of returned object.
+#
+#     """
+#     dUs = []
+#     batch_size = 4
+#     for ii in range(cflds[0].shape[0]//batch_size):
+#         dUs.extend(
+#             tf_propagation_batch(h0, hks, cflds, dt, ii)
+#         )
+#     return dUs
+#
+#
+# @tf.function
+# def tf_propagation_batch(h0, hks, cflds, dt, left):
+#     """
+#     """
+#     dUs = []
+#     for ii in range(left, left+4):
+#         cf_t = []
+#         for fields in cflds:
+#             cf_t.append(tf.cast(fields[ii], tf.complex128))
+#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+#     return dUs
 
 
 def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
@@ -252,6 +297,7 @@ def tf_matmul_left(dUs):
     for ii in range(1, len(dUs)):
         U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
     return U
+
 
 def tf_matmul_right(dUs):
     """

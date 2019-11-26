@@ -21,7 +21,11 @@ from c3po.tf_utils import tf_abs, tf_ave
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
 
-logdir = log_setup("/tmp/c3logs/")
+# logdir = log_setup("/tmp/c3logs/")
+logdir = "/tmp/c3logs/2019_11_26_T_18_56_18/"
+
+tf.config.threading.set_intra_op_parallelism_threads(24)
+tf.config.threading.set_inter_op_parallelism_threads(24)
 
 # System
 qubit_freq = Qty(
@@ -45,13 +49,13 @@ v_hz_conversion = Qty(
     unit='rad/V'
 )
 
-qubit_freq_wrong = Qty(
+qubit_freq = Qty(
     value=5.11e9 * 2 * np.pi,
     min=5.1e9 * 2 * np.pi,
     max=5.14e9 * 2 * np.pi,
     unit='rad'
 )
-qubit_anhar_wrong = Qty(
+qubit_anhar = Qty(
     value=-325.513734e6 * 2 * np.pi,
     min=-330e6 * 2 * np.pi,
     max=-300e6 * 2 * np.pi,
@@ -59,7 +63,7 @@ qubit_anhar_wrong = Qty(
 )
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion_wrong = Qty(
+v_hz_conversion = Qty(
     value=0.95,
     min=0.9,
     max=1.1,
@@ -90,43 +94,26 @@ sim_res = 60e9
 awg_res = 1.2e9
 
 # Create system
-model_wrong = create_chip_model(
-    qubit_freq_wrong, qubit_anhar_wrong, qubit_lvls, drive_ham
-)
-model_right = create_chip_model(
+model = create_chip_model(
     qubit_freq, qubit_anhar, qubit_lvls, drive_ham
 )
-gen_wrong = create_generator(
-    sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
-    rise_time=rise_time
-)
-gen_right = create_generator(
+gen = create_generator(
     sim_res, awg_res, v_hz_conversion, logdir=logdir, rise_time=rise_time
 )
 gates = create_gates(
     t_final=t_final,
-    v_hz_conversion=v_hz_conversion_wrong,
-    qubit_freq=qubit_freq_wrong,
-    qubit_anhar=qubit_anhar_wrong
+    v_hz_conversion=v_hz_conversion,
+    qubit_freq=qubit_freq,
+    qubit_anhar=qubit_anhar
 )
 
 # gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
-exp_wrong = Exp(
-    model_wrong,
-    gen_wrong
-)
-sim_wrong = Sim(exp_wrong, gates)
-a_q = model_wrong.ann_opers[0]
-sim_wrong.VZ = expm(
-    1.0j * np.matmul(a_q.T.conj(), a_q) * (qubit_freq_wrong * t_final)
-)
-
-exp_right = Exp(model_right, gen_right)
-sim_right = Sim(exp_right, gates)
-a_q = model_right.ann_opers[0]
-sim_right.VZ = expm(
+exp = Exp(model, gen)
+sim = Sim(exp, gates)
+a_q = model.ann_opers[0]
+sim.VZ = expm(
     1.0j * np.matmul(a_q.T.conj(), a_q) * (qubit_freq * t_final)
 )
 
@@ -171,9 +158,9 @@ def match_calib(
     seq: list,
     fid: np.float64
 ):
-    exp_wrong.set_parameters(exp_params, exp_opt_map)
-    sim_wrong.gateset.set_parameters(gateset_values, gateset_opt_map)
-    U_dict = sim_wrong.get_gates()
+    exp.set_parameters(exp_params, exp_opt_map)
+    sim.gateset.set_parameters(gateset_values, gateset_opt_map)
+    U_dict = sim.get_gates()
     fid_sim = unitary_infid(U_dict)
     diff = fid_sim - fid
     return diff
@@ -200,7 +187,7 @@ exp_opt_map = [
 
 def c3_openloop():
     opt.optimize_controls(
-        sim=sim_wrong,
+        sim=sim,
         opt_map=opt_map,
         opt='lbfgs',
         opt_name='openloop',
@@ -211,11 +198,10 @@ def c3_openloop():
 def c3_calibration(simulate_noise=True):
     opt.simulate_noise = simulate_noise
     opt.optimize_controls(
-        sim=sim_right,
+        sim=sim,
         opt_map=opt_map,
         opt='cmaes',
-        # settings={},
-        settings={'ftarget': 1e-2},
+        settings={'CMA_stds': [0.01, 0.01, 0.01]},
         opt_name='calibration',
         fid_func=unitary_infid
     )
@@ -231,15 +217,13 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
             learn_from.append(
                 [line_dict['params'], ['X90p'], line_dict['goal']]
             )
-    opt = Opt(data_path=logdir)
     opt.gateset_opt_map = opt_map
     opt.opt_map = exp_opt_map
     opt.sampling = sampling
     opt.batch_size = batch_size
     opt.learn_from = learn_from
-    opt.sim = sim_wrong
     opt.learn_model(
-        exp_wrong,
+        exp,
         eval_func=match_calib
     )
 
@@ -247,7 +231,7 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
 # # Run the stuff
 with tf.device('/CPU:0'):
     c3_openloop()
-    c3_calibration()
+    c3_calibration(simulate_noise=False)
     logfilename = logdir + "calibration.log"
     # sampling = 'from_end'  'even', 'random' , 'from_start'
     c3_learn_model(logfilename, sampling='even', batch_size=10)

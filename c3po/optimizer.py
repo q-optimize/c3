@@ -21,7 +21,7 @@ class Optimizer:
         self.data_path = data_path
 
     def goal_run(self, x_in):
-        self.sim.gateset.set_parameters(x_in, self.opt_map)
+        self.sim.gateset.set_parameters(x_in, self.opt_map, scaled=True)
         U_dict = self.sim.get_gates()
         goal = self.fid_func(U_dict)
         self.optim_status['params'] = list(zip(
@@ -34,7 +34,7 @@ class Optimizer:
         with tf.GradientTape() as t:
             x = tf.constant(x_in)
             t.watch(x)
-            self.sim.gateset.set_parameters(x, self.opt_map)
+            self.sim.gateset.set_parameters(x, self.opt_map, scaled=True)
             U_dict = self.sim.get_gates()
             goal = self.fid_func(U_dict)
 
@@ -58,7 +58,7 @@ class Optimizer:
                 measurements = random.sample(learn_from, self.batch_size)
             elif self.sampling == 'even':
                 n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[-n:]
+                measurements = learn_from[::n]
             elif self.sampling == 'from_start':
                 measurements = learn_from[:self.batch_size]
             elif self.sampling == 'from_end':
@@ -110,8 +110,7 @@ class Optimizer:
     def lookup_gradient(self, x):
         return self.gradients[str(x)]
 
-    def cmaes(self, values, bounds, settings={}):
-        x0 = values
+    def cmaes(self, x0, settings={}):
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
         while not es.stop():
             self.logfile.write(f"Batch {self.iteration}\n")
@@ -125,7 +124,9 @@ class Optimizer:
                 solutions.append(goal)
                 self.logfile.write(
                     json.dumps({
-                        'params': sample.tolist(),
+                        'params': self.sim.gateset.get_parameters(
+                                self.opt_map
+                                ),
                         'goal': goal})
                 )
                 self.logfile.write("\n")
@@ -139,28 +140,19 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
-        x_opt = res[0]
-        values_opt = x_opt
-        return values_opt
+        self.sim.gateset.set_parameters(res[0], self.opt_map, scaled=True)
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
-    def lbfgs(self, x0, goal, grad, options):
-        self.optim_status['params'] = list(zip(
-            self.opt_map, x0
-        ))
-        self.log_parameters(x0)
+    def lbfgs(self, x0, goal, options):
         options['disp'] = True
         minimize(
             goal,
             x0,
-            jac=grad,
+            jac=self.lookup_gradient,
             method='L-BFGS-B',
             callback=self.log_parameters,
             options=options
         )
-
-        values_opt = self.sim.gateset.get_parameters(self.opt_map)
-        return values_opt
 
     def optimize_controls(
         self,
@@ -198,8 +190,7 @@ class Optimizer:
 
         """
         # TODO Separate gateset from the simulation here.
-        x0 = sim.gateset.get_parameters(opt_map)
-
+        x0 = sim.gateset.get_parameters(opt_map, scaled=True)
         self.sim = sim
         self.opt_map = opt_map
         self.opt_name = opt_name
@@ -218,16 +209,15 @@ class Optimizer:
             )
             self.logfile.flush()
             if opt == 'cmaes':
-                values_opt = self.cmaes(
+                self.cmaes(
                     x0,
                     settings
                 )
 
             elif opt == 'lbfgs':
-                values_opt = self.lbfgs(
+                self.lbfgs(
                     x0,
                     self.goal_run_with_grad,
-                    self.lookup_gradient,
                     options=settings
                 )
             end_time = time.time()
@@ -239,7 +229,6 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        sim.gateset.set_parameters(values_opt, opt_map)
         # TODO decide if gateset object should have history and implement
         # TODO save while setting if you pass a save name
         # pseudocode: controls.save_params_to_history(calib_name)
@@ -270,7 +259,6 @@ class Optimizer:
             params_opt = self.lbfgs(
                 x0,
                 self.goal_run_n,
-                self.lookup_gradient,
                 options=settings
             )
             end_time = time.time()

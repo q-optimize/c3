@@ -81,8 +81,7 @@ class Quantity:
         return self.get_value()
 
     def get_value(self):
-        tmp = np.arccos(np.cos((self.value + 1) * np.pi / 2)) / np.pi
-        return self.scale * tmp + self.offset
+        return self.scale * (float(self.value) + 1) / 2 + self.offset
 
     def set_value(self, val):
         # setting can be numpyish
@@ -91,15 +90,17 @@ class Quantity:
             raise Exception('Value out of bounds')
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tmp
+            self.value = tf.constant(tmp, dtype=tf.float64)
 
     def tf_get_value(self):
         # getting needs to be tensorflowy
-        tmp = tf.acos(tf.cos((self.value + 1) * np.pi / 2)) / np.pi
-        return self.scale * tmp + self.offset
+        return tf.cast(
+            self.scale * (self.value + 1) / 2 + self.offset,
+            tf.float64
+        )
 
     def tf_set_value(self, val):
-        self.value = val
+        self.value = tf.acos(tf.cos((val + 1) * np.pi / 2)) / np.pi * 2 - 1
 
     # TODO find good name for physical_bounded vs order1_unbounded
     # TODO At some point make self.value private

@@ -22,7 +22,7 @@ class GateSet:
                         par_list.append([(gate, chan, comp, par)])
         return par_list
 
-    def get_parameters(self, opt_map=None):
+    def get_parameters(self, opt_map=None, scaled=False):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -63,11 +63,14 @@ class GateSet:
             gate = id[0][0]
             par_id = id[0][1:4]
             gate_instr = self.instructions[gate]
-            value = gate_instr.get_parameter_value(par_id)
+            if scaled:
+                value = gate_instr.get_parameter_value_scaled(par_id)
+            else:
+                value = gate_instr.get_parameter_value(par_id)
             values.append(value)
         return values
 
-    def set_parameters(self, values: list, opt_map: list):
+    def set_parameters(self, values: list, opt_map: list, scaled=False):
         """Set the values in the original instruction class."""
         # TODO catch key errors
         for indx in range(len(opt_map)):
@@ -76,7 +79,14 @@ class GateSet:
                 gate = id[0]
                 par_id = id[1:4]
                 gate_instr = self.instructions[gate]
-                gate_instr.set_parameter_value(par_id, values[indx])
+                if scaled:
+                    gate_instr.set_parameter_value_scaled(
+                        par_id, values[indx]
+                    )
+                else:
+                    gate_instr.set_parameter_value(
+                        par_id, values[indx]
+                    )
 
 
 class InstructionComponent(C3obj):
@@ -219,6 +229,16 @@ class Instruction(C3obj):
 
     # TODO There's a number of get_parameter functions in different places
     # that do similar things. Think about this.
+    def get_parameter_value_scaled(self, par_id: tuple):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        # The parameter can be a c3po.Quanity or a float, this cast makes it
+        # work in both cases.
+        value = self.comps[chan][comp].params[param].value
+        return value
+
     def get_parameter_value(self, par_id: tuple):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
@@ -230,9 +250,16 @@ class Instruction(C3obj):
         return value
 
     # TODO Consider putting this code directly in the gateset object
-    def set_parameter_value(self, par_id: tuple, value):
+    def set_parameter_value_scaled(self, par_id: tuple, value):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
         self.comps[chan][comp].params[param].tf_set_value(value)
+
+    def set_parameter_value(self, par_id: tuple, value):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        self.comps[chan][comp].params[param].set_value(value)
