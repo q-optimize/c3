@@ -471,7 +471,7 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        delta = comp.params['delta']
+                        delta = - comp.params['delta']
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
 
@@ -482,7 +482,7 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
-                        phase = - xy_angle - freq_offset * ts
+                        phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
@@ -511,7 +511,7 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle']
                         freq_offset = comp.params['freq_offset']
-                        phase = - xy_angle - freq_offset * ts
+                        phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
                         )
