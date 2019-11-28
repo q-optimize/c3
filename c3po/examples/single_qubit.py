@@ -56,13 +56,13 @@ def create_gates(t_final,
             value=0e6 * 2 * np.pi,
             min=-100 * 1e6 * 2 * np.pi,
             max=100 * 1e6 * 2 * np.pi,
-            unit='Hz'
+            unit='Hz 2pi'
         ),
         'delta': Qty(
             value=0.5 / qubit_anhar,
             min=1.5 / qubit_anhar,
             max=0.1 / qubit_anhar,
-            unit='1/Hz(s)'
+            unit='s'
         ),
     }
     gauss_env = control.Envelope(
@@ -76,7 +76,7 @@ def create_gates(t_final,
             value=qubit_freq,
             min=5e9 * 2 * np.pi,
             max=5.5e9 * 2 * np.pi,
-            unit='Hz'
+            unit='Hz 2pi'
         )
     }
     carr = control.Carrier(

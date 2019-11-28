@@ -75,6 +75,8 @@ class Quantity:
 
     def __str__(self):
         val = self.get_value()
+        if self.unit == "Hz 2pi":
+            val = val / 2 / np.pi
         return num3str(val) + self.unit
 
     def __float__(self):

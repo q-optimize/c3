@@ -124,10 +124,13 @@ class Device(C3obj):
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
-    def get_parameters(self):
+    def get_parameters(self, scaled=False):
         params = []
         for key in sorted(self.params.keys()):
-            params.append(float(self.params[key]))
+            if scaled:
+                params.append(self.params[key].value)
+            else:
+                params.append(float(self.params[key]))
         return params
 
     def set_parameters(self, values):

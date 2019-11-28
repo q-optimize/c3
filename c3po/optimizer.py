@@ -15,7 +15,7 @@ class Optimizer:
 
     def __init__(self, data_path):
         self.gradients = {}
-        self.simulate_noise = False
+        self.noise_level = 0
         self.sampling = False
         self.batch_size = 1
         self.data_path = data_path
@@ -101,7 +101,7 @@ class Optimizer:
         gradients = grad.numpy().flatten()
         self.gradients[str(x_in)] = gradients
         self.optim_status['params'] = list(zip(
-            self.opt_map, current_params.numpy()
+            self.opt_map, self.exp.get_parameters(self.opt_map)
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -119,8 +119,7 @@ class Optimizer:
             solutions = []
             for sample in samples:
                 goal = float(self.goal_run(sample))
-                if self.simulate_noise:
-                    goal = (1 + 0.03 * np.random.randn()) * goal
+                goal = (1 + self.noise_level * np.random.randn()) * goal
                 solutions.append(goal)
                 self.logfile.write(
                     json.dumps({
@@ -241,7 +240,7 @@ class Optimizer:
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        x0 = exp.get_parameters(self.opt_map)
+        x0 = exp.get_parameters(self.opt_map, scaled=True)
 
         self.exp = exp
         self.eval_func = eval_func
@@ -256,7 +255,7 @@ class Optimizer:
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
-            params_opt = self.lbfgs(
+            self.lbfgs(
                 x0,
                 self.goal_run_n,
                 options=settings
@@ -269,7 +268,6 @@ class Optimizer:
                 f"Total runtime: {end_time-start_time}"
             )
             self.logfile.flush()
-        exp.set_parameters(params_opt, self.opt_map)
 
     def log_parameters(self, x):
         # FIXME why does log take an x parameter and doesn't use it?

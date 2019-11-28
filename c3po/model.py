@@ -241,13 +241,19 @@ class Model:
 
         return drift_H, self.control_Hs
 
-    def get_parameters(self):
+    def get_parameters(self, scaled=False):
         values = []
         for par in self.params:
-            values.append(float(par))
+            if scaled:
+                values.append(par.value)
+            else:
+                values.append(float(par))
         if hasattr(self, 'collapse_ops'):
             for par in self.cops_params:
-                values.append(float(par))
+                if scaled:
+                    values.append(par.value)
+                else:
+                    values.append(float(par))
         return values
 
     def set_parameters(self, values):

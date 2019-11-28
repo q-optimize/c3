@@ -38,15 +38,15 @@ class Experiment:
             par_indx.append(par_list.index(par_id))
         return par_indx
 
-    def get_parameters(self, opt_map=None):
+    def get_parameters(self, opt_map=None, scaled=False):
         """Return list of values and bounds of parameters in opt_map."""
         if opt_map is None:
             opt_map = self.list_parameters()
         values = []
-        values.append(self.model.get_parameters())
+        values.append(self.model.get_parameters(scaled))
         devices = self.generator.devices
         for key in devices:
-            pars = devices[key].get_parameters()
+            pars = devices[key].get_parameters(scaled)
             if not (pars == []):
                 values.append(pars)
         # TODO Deal with bounds correctly

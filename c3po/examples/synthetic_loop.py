@@ -28,13 +28,13 @@ qubit_freq = Qty(
     value=5.1173e9 * 2 * np.pi,
     min=5.1e9 * 2 * np.pi,
     max=5.14e9 * 2 * np.pi,
-    unit='rad'
+    unit='Hz 2pi'
 )
 qubit_anhar = Qty(
     value=-315.513734e6 * 2 * np.pi,
     min=-330e6 * 2 * np.pi,
     max=-300e6 * 2 * np.pi,
-    unit='rad'
+    unit='Hz 2pi'
 )
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
@@ -46,16 +46,16 @@ v_hz_conversion = Qty(
 )
 
 qubit_freq_wrong = Qty(
-    value=5.11e9 * 2 * np.pi,
+    value=5.12e9 * 2 * np.pi,
     min=5.1e9 * 2 * np.pi,
-    max=5.14e9 * 2 * np.pi,
-    unit='rad'
+    max=5.25e9 * 2 * np.pi,
+    unit='Hz 2pi'
 )
 qubit_anhar_wrong = Qty(
     value=-325.513734e6 * 2 * np.pi,
     min=-330e6 * 2 * np.pi,
     max=-300e6 * 2 * np.pi,
-    unit='rad'
+    unit='Hz 2pi'
 )
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
@@ -107,7 +107,8 @@ gates = create_gates(
     t_final=t_final,
     v_hz_conversion=v_hz_conversion_wrong,
     qubit_freq=qubit_freq_wrong,
-    qubit_anhar=qubit_anhar_wrong
+    qubit_anhar=qubit_anhar_wrong,
+    all_gates=False
 )
 
 # gen.devices['awg'].options = 'drag'
@@ -180,7 +181,6 @@ def match_calib(
 
 
 # Optimizer object
-opt = Opt(data_path=logdir)
 opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],
@@ -199,6 +199,7 @@ exp_opt_map = [
 
 
 def c3_openloop():
+    opt = Opt(data_path=logdir)
     opt.optimize_controls(
         sim=sim_wrong,
         opt_map=opt_map,
@@ -208,14 +209,15 @@ def c3_openloop():
     )
 
 
-def c3_calibration(simulate_noise=True):
-    opt.simulate_noise = simulate_noise
+def c3_calibration(noise_level=0):
+    opt = Opt(data_path=logdir)
+    opt.noise_level = noise_level
     opt.optimize_controls(
         sim=sim_right,
         opt_map=opt_map,
         opt='cmaes',
         # settings={},
-        settings={'ftarget': 1e-2},
+        settings={'ftarget': 1e-4},
         opt_name='calibration',
         fid_func=unitary_infid
     )
@@ -244,10 +246,10 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
     )
 
 
-# # Run the stuff
+# Run the stuff
 with tf.device('/CPU:0'):
     c3_openloop()
-    c3_calibration()
+    c3_calibration(noise_level=0.003)
     logfilename = logdir + "calibration.log"
     # sampling = 'from_end'  'even', 'random' , 'from_start'
-    c3_learn_model(logfilename, sampling='even', batch_size=10)
+    c3_learn_model(logfilename, sampling='even', batch_size=20)
