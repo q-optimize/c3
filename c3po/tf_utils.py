@@ -304,6 +304,14 @@ def super_to_choi(A):
     return A_choi
 
 
+def tf_psi_dm(psi_ket):
+    psi_bra = tf.transpose(psi_ket)
+    return psi_ket * psi_bra
+
+
+def tf_dm_vect(dm):
+    return tf.reshape(dm,shape=[dm.shape[0]**2, 1])
+
 # OVERLAP FUCNTIONS
 @tf.function
 def tf_measure_operator(M, U):

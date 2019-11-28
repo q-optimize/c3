@@ -99,9 +99,12 @@ class Simulator():
 
     def populations(self, state):
         if self.lindbladian:
+            diag = []
             dim = int(np.sqrt(len(state)))
             indeces = [n * dim + n for n in range(dim)]
-            return np.abs(state[indeces])
+            for indx in indeces:
+                diag.append(state[indx])
+            return np.abs(diag)
         else:
             return np.abs(state)**2
 

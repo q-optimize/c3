@@ -104,6 +104,24 @@ def create_gates(t_final,
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
         gates.add_instruction(Y90p)
+
+        # Include identity operation
+        no_drive_env = control.Envelope(
+            name="no_drive",
+            params=gauss_params,
+            bounds=gauss_bounds,
+            shape=envelopes.no_drive
+        )
+        Id = control.Instruction(
+            name="Id",
+            t_start=0.0,
+            t_end=t_final,
+            channels=["d1"]
+        )
+        Id.add_component(no_drive_env, "d1")
+        Id.add_component(carr, "d1")
+        gates.add_instruction(Id)
+
     return gates
 
 
@@ -393,8 +411,12 @@ def create_opt_map(pulse_type: bool, xy_angle: bool):
 
 
 # Fidelity fucntions
-def create_fcts(lindbladian):
-    # Define infidelity functions (search fucntions)
+def create_fcts(lindbladian, U_dict=True):
+    # Define infidelity functions (search fucntions)'
+
+    def store_U_dict(U_dict):
+        return U_dict
+
     if not lindbladian:
 
         def unit_compsub_X90p(U_dict):
@@ -438,6 +460,38 @@ def create_fcts(lindbladian):
 
         def epc_ana_fulluni(U_dict):
             return fidelities.epc_analytical(U_dict, proj=False)
+
+        # def pop0_X90p_0_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
+        # def pop0_X90p_1_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
+        # def pop0_X90p_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
+        # def pop0_X90p_3_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
+        #
+        # def pop0_Y90p_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
+        # def pop0_X90m_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
+        # def pop0_Y90m_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
+        #
+        # def pop0_X90p_0_compsub(U_dict):
+        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
+        # def pop0_X90p_1_compsub(U_dict):
+        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
+        # def pop0_X90p_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
+        # def pop0_X90p_3_compsub(U_dict):
+        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
+        #
+        # def pop0_Y90p_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
+        # def pop0_X90m_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
+        # def pop0_Y90m_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
 
     elif lindbladian:
 
@@ -483,6 +537,38 @@ def create_fcts(lindbladian):
         def epc_ana_fulluni(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=False)
 
+        # def pop0_X90p_0_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
+        # def pop0_X90p_1_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
+        # def pop0_X90p_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
+        # def pop0_X90p_3_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
+        #
+        # def pop0_Y90p_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
+        # def pop0_X90m_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
+        # def pop0_Y90m_2_fulluni(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
+        #
+        # def pop0_X90p_0_compsub(U_dict):
+        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
+        # def pop0_X90p_1_compsub(U_dict):
+        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
+        # def pop0_X90p_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
+        # def pop0_X90p_3_compsub(U_dict):
+        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
+        #
+        # def pop0_Y90p_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
+        # def pop0_X90m_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
+        # def pop0_Y90m_2_compsub(U_dict):
+        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
+
     fcts_list = [
         unit_compsub_X90p,
         unit_compsub_Y90p,
@@ -501,8 +587,25 @@ def create_fcts(lindbladian):
         avfid_fulluni_X90m,
         avfid_fulluni_Y90m,
         epc_ana_compsub,
-        epc_ana_fulluni
+        epc_ana_fulluni,
+        # pop0_X90p_0_fulluni,
+        # pop0_X90p_1_fulluni,
+        # pop0_X90p_2_fulluni,
+        # pop0_X90p_3_fulluni,
+        # pop0_Y90p_2_fulluni,
+        # pop0_X90m_2_fulluni,
+        # pop0_Y90m_2_fulluni,
+        # pop0_X90p_0_compsub,
+        # pop0_X90p_1_compsub,
+        # pop0_X90p_2_compsub,
+        # pop0_X90p_3_compsub,
+        # pop0_Y90p_2_compsub,
+        # pop0_X90m_2_compsub,
+        # pop0_Y90m_2_compsub,
     ]
+
+    if U_dict:
+        fcts_list.append(store_U_dict)
 
     fcts_dict = {}
     for fct in fcts_list:
