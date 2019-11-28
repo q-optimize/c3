@@ -325,7 +325,7 @@ class Optimizer:
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
             self.logfile.write(
-                f"Total runtime:{end_time-start_time}"
+                f"Total runtime:{end_time-start_time}\n\n"
             )
             self.logfile.flush()
 

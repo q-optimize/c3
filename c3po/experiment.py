@@ -38,8 +38,10 @@ class Experiment:
             par_indx.append(par_list.index(par_id))
         return par_indx
 
-    def get_parameters(self, opt_map: list):
+    def get_parameters(self, opt_map=None):
         """Return list of values and bounds of parameters in opt_map."""
+        if opt_map is None:
+            opt_map = self.list_parameters()
         values = []
         values.append(self.model.get_parameters())
         devices = self.generator.devices
@@ -54,7 +56,7 @@ class Experiment:
         for list in values:
             values_flat.extend(list)
         values_new = [values_flat[indx] for indx in par_indx]
-        bounds = np.kron(np.array([[0.7], [1.3]]), np.array(values_new)).T
+        bounds = np.kron(np.array([[0.9], [1.1]]), np.array(values_new)).T
         return values_new, bounds
 
     def set_parameters(self, values: list, opt_map: list):
