@@ -63,6 +63,12 @@ class Optimizer:
                 measurements = learn_from[:self.batch_size]
             elif self.sampling == 'from_end':
                 measurements = learn_from[-self.batch_size:]
+            else:
+                raise(
+                    """Unspecified sampling method.\n
+                    Select from 'from_end'  'even', 'random' , 'from_start'.
+                    Thank you."""
+                )
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
@@ -144,7 +150,7 @@ class Optimizer:
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
         options['disp'] = True
-        minimize(
+        res = minimize(
             goal,
             x0,
             jac=self.lookup_gradient,
@@ -152,6 +158,7 @@ class Optimizer:
             callback=self.log_parameters,
             options=options
         )
+        return res.x
 
     def optimize_controls(
         self,
@@ -203,9 +210,8 @@ class Optimizer:
         print(f"Saving as:\n{self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'a') as self.logfile:
-            self.logfile.write(
-                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
-            )
+            self.logfile.write("Starting optimization at")
+            self.logfile.write(f"{time.asctime(time.localtime())}\n\n")
             self.logfile.flush()
             if opt == 'cmaes':
                 self.cmaes(
@@ -214,10 +220,13 @@ class Optimizer:
                 )
 
             elif opt == 'lbfgs':
-                self.lbfgs(
+                x_best = self.lbfgs(
                     x0,
                     self.goal_run_with_grad,
                     options=settings
+                )
+                self.sim.gateset.set_parameters(
+                    x_best, self.opt_map, scaled=True
                 )
             end_time = time.time()
             self.logfile.write(
@@ -248,24 +257,25 @@ class Optimizer:
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
-        self.iteration = 0
+        self.iteration = 1
 
         with open(self.logfile_name, 'a') as self.logfile:
             start_time = time.time()
             self.logfile.write(
                 f"Starting optimization at {time.asctime(time.localtime())}\n\n"
             )
-            self.lbfgs(
+            x_best = self.lbfgs(
                 x0,
                 self.goal_run_n,
                 options=settings
             )
+            self.exp.set_parameters(x_best, self.opt_map, scaled=True)
             end_time = time.time()
             self.logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
             self.logfile.write(
-                f"Total runtime: {end_time-start_time}"
+                f"Total runtime: {end_time-start_time}\n\n"
             )
             self.logfile.flush()
 

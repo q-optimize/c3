@@ -73,7 +73,7 @@ def create_gates(t_final,
     )
     carrier_parameters = {
         'freq': Qty(
-            value=qubit_freq,
+            value=qubit_freq.get_value(),
             min=5e9 * 2 * np.pi,
             max=5.5e9 * 2 * np.pi,
             unit='Hz 2pi'

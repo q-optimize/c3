@@ -51,20 +51,9 @@ qubit_freq_wrong = Qty(
     max=5.14e9 * 2 * np.pi,
     unit='Hz 2pi'
 )
-qubit_anhar_wrong = Qty(
-    value=-325.513734e6 * 2 * np.pi,
-    min=-330e6 * 2 * np.pi,
-    max=-300e6 * 2 * np.pi,
-    unit='Hz 2pi'
-)
+
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
-v_hz_conversion_wrong = Qty(
-    value=1,
-    min=0.9,
-    max=1.1,
-    unit='rad/V'
-)
 
 t_final = Qty(
     value=10e-9,
@@ -91,13 +80,13 @@ awg_res = 1.2e9
 
 # Create system
 model_wrong = create_chip_model(
-    qubit_freq_wrong, qubit_anhar_wrong, qubit_lvls, drive_ham
+    qubit_freq_wrong, qubit_anhar, qubit_lvls, drive_ham
 )
 model_right = create_chip_model(
     qubit_freq, qubit_anhar, qubit_lvls, drive_ham
 )
 gen_wrong = create_generator(
-    sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
+    sim_res, awg_res, v_hz_conversion, logdir=logdir,
     rise_time=rise_time
 )
 gen_right = create_generator(
@@ -105,25 +94,24 @@ gen_right = create_generator(
 )
 gates = create_gates(
     t_final=t_final,
-    v_hz_conversion=v_hz_conversion_wrong,
+    v_hz_conversion=v_hz_conversion,
     qubit_freq=qubit_freq_wrong,
-    qubit_anhar=qubit_anhar_wrong,
-    all_gates=False
+    qubit_anhar=qubit_anhar
 )
 
 # gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
-exp_wrong = Exp(model_wrong, gen_wrong)
+exp_wrong = Exp(
+    model_wrong,
+    gen_wrong
+)
 sim_wrong = Sim(exp_wrong, gates)
-sim_wrong.use_VZ = True
 a_q = model_wrong.ann_opers[0]
 
 exp_right = Exp(model_right, gen_right)
 sim_right = Sim(exp_right, gates)
-sim_right.use_VZ = True
 a_q = model_right.ann_opers[0]
-
 
 # Define states
 # Define states & unitaries
@@ -192,95 +180,27 @@ exp_opt_map = [
 ]
 
 
-def c3_openloop():
-    opt = Opt(data_path=logdir)
-    opt.optimize_controls(
-        sim=sim_wrong,
-        opt_map=opt_map,
-        opt='lbfgs',
-        opt_name='openloop',
-        fid_func=unitary_infid
-    )
+params = gates.get_parameters(opt_map)
+print(f"Parameters:{params}")
+wrong_error = unitary_infid(sim_wrong.get_gates())
+print(f"Infidelity wrong model:{wrong_error}")
+right_error = unitary_infid(sim_right.get_gates())
+print(f"Infidelity right model:{right_error}")
 
-
-def c3_calibration(noise_level=0):
-    opt = Opt(data_path=logdir)
-    opt.noise_level = noise_level
-    opt.optimize_controls(
-        sim=sim_right,
-        opt_map=opt_map,
-        opt='cmaes',
-        # settings={},
-        settings={'ftarget': 1e-4},
-        opt_name='calibration',
-        fid_func=unitary_infid
-    )
-
-
-def c3_learn_model(logfilename, sampling='even', batch_size=1):
-    learn_from = []
-    with open(logfilename, "r") as calibration_log:
-        log = calibration_log.readlines()
-    for line in log:
-        if line[0] == "{":
-            line_dict = json.loads(line)
-            learn_from.append(
-                [line_dict['params'], ['X90p'], line_dict['goal']]
-            )
-    opt = Opt(data_path=logdir)
-    opt.gateset_opt_map = opt_map
-    opt.opt_map = exp_opt_map
-    opt.sampling = sampling
-    opt.batch_size = batch_size
-    opt.learn_from = learn_from
-    opt.sim = sim_wrong
-    settings = {'ftol': 1e-12}
-    opt.learn_model(
-        exp_wrong,
-        eval_func=match_calib,
-        settings=settings
-    )
-
-
-# Run the stuff
-# with tf.device('/CPU:0'):
-#     c3_openloop()
-#     c3_calibration(noise_level=0)
-#     logfilename = logdir + "calibration.log"
-#     # sampling = 'from_end'  'even', 'random' , 'from_start'
-# #     c3_learn_model(logfilename, sampling='even', batch_size=20)
-#
-
-c3_openloop()
-c3_calibration(noise_level=0)
 
 import matplotlib.pyplot as plt
 with tf.device("/CPU:0"):
-    learn_from = []
-    with open("/tmp/c3logs/recent/calibration.log", "r") as calibration_log:
-        log = calibration_log.readlines()
-    for line in log:
-        if line[0] == "{":
-            line_dict = json.loads(line)
-            learn_from.append(
-                [line_dict['params'], ['X90p'], line_dict['goal']]
-            )
-
     xrange = np.linspace(-0.14, -0.13, 21)
     errs = []
     for x in xrange:
         print(f"Doing {x}")
-        n = int(len(learn_from) / 20)
-        measurements = learn_from[::n]
-        diff = []
-        for mes in measurements:
-            diff.append(
-                match_calib(
-                    [x], exp_opt_map, mes[0], opt_map, mes[1], mes[2]
-                )
-            )
-        rms = np.sqrt(np.mean(np.square(diff)))
-        print(f"RMS: {rms}")
-        errs.append(rms)
+        diff = match_calib(
+            [x], exp_opt_map, params, opt_map, ['X90p'], right_error
+        )
+        print(f"Hidden Value:{float(qubit_freq_wrong.value)}")
+        print(f"Value:{qubit_freq_wrong}")
+        print(f"get_value():{qubit_freq_wrong.get_value()/np.pi/2e6}")
+        print(f"RMS: {diff}")
+        errs.append(diff)
 
 plt.plot(xrange, errs)

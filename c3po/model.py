@@ -2,6 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
+from scipy.linalg import expm
 from c3po.hamiltonians import resonator, duffing
 from c3po.component import Qubit, Resonator, Drive, Coupling
 from c3po.constants import kb, hbar
@@ -240,6 +241,28 @@ class Model:
             ) * self.drift_Hs[ii]
 
         return drift_H, self.control_Hs
+
+    def get_Virtual_Z(self, t_final):
+        anns = []
+        freqs = []
+        for name in self.names:
+            # TODO Effectively collect parameters of the virtual Z
+            if name[0] == 'q' or name[0] == 'Q':
+                ann_indx = self.names.index(name)
+                anns.append(self.ann_opers[ann_indx])
+                freq_indx = self.params_desc.index((name, 'freq'))
+                freqs.append(self.params[freq_indx])
+
+        VZ = expm(
+            1.0j * np.matmul(anns[0].T.conj(), anns[0]) * (freqs[0] * t_final)
+        )
+        for ii in range(1, len(anns)):
+            VZ = VZ * expm(
+                1.0j * np.matmul(
+                    anns[ii].T.conj(), anns[ii]
+                ) * (freqs[ii] * t_final)
+            )
+        return VZ
 
     def get_parameters(self, scaled=False):
         values = []

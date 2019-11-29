@@ -27,18 +27,24 @@ class Simulator():
         self.gateset = gateset
         self.unitaries = {}
         self.lindbladian = False
+        self.use_VZ = False
 
     def get_gates(
-        self,
+        self
     ):
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
-            signal = self.exp.generator.generate_signals(
-                self.gateset.instructions[gate]
-            )
+            instr = self.gateset.instructions[gate]
+            signal = self.exp.generator.generate_signals(instr)
             U = self.propagation(signal)
+            if self.use_VZ:
+                VZ = self.exp.model.get_Virtual_Z(instr.t_end - instr.t_start)
+                if self.lindbladian:
+                    U = tf.matmul(tf_super(VZ), U)
+                else:
+                    U = tf.matmul(VZ, U)
             gates[gate] = U
             self.unitaries = gates
         return gates
@@ -85,11 +91,6 @@ class Simulator():
         self.dUs = dUs
         self.ts = ts
         U = tf_matmul_left(dUs)
-        if hasattr(self, 'VZ'):
-            if self.lindbladian:
-                U = tf.matmul(tf_super(self.VZ), U)
-            else:
-                U = tf.matmul(self.VZ, U)
         self.U = U
         return U
 
