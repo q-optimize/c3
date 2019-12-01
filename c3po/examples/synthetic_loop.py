@@ -12,16 +12,16 @@ import numpy as np
 import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
 from c3po.utils import log_setup
-from scipy.linalg import expm
 from c3po.component import Quantity as Qty
 from c3po.simulator import Simulator as Sim
 from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
-from c3po.tf_utils import tf_abs, tf_ave
+from c3po.tf_utils import tf_abs
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
 
-logdir = log_setup("/tmp/c3logs/")
+run_name = "synthetic_rnd_smpl"
+logdir = log_setup("/tmp/c3logs/", run_name=run_name)
 
 # System
 qubit_freq = Qty(
@@ -46,9 +46,9 @@ v_hz_conversion = Qty(
 )
 
 qubit_freq_wrong = Qty(
-    value=5.12e9 * 2 * np.pi,
-    min=5.1e9 * 2 * np.pi,
-    max=5.14e9 * 2 * np.pi,
+    value=5.005e9 * 2 * np.pi,
+    min=5e9 * 2 * np.pi,
+    max=5.2e9 * 2 * np.pi,
     unit='Hz 2pi'
 )
 qubit_anhar_wrong = Qty(
@@ -60,7 +60,7 @@ qubit_anhar_wrong = Qty(
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion_wrong = Qty(
-    value=1,
+    value=0.95,
     min=0.9,
     max=1.1,
     unit='rad/V'
@@ -100,9 +100,11 @@ gen_wrong = create_generator(
     sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
     rise_time=rise_time
 )
+gen_wrong.devices['awg'].options = 'drag'
 gen_right = create_generator(
     sim_res, awg_res, v_hz_conversion, logdir=logdir, rise_time=rise_time
 )
+gen_right.devices['awg'].options = 'drag'
 gates = create_gates(
     t_final=t_final,
     v_hz_conversion=v_hz_conversion_wrong,
@@ -117,12 +119,10 @@ gates = create_gates(
 exp_wrong = Exp(model_wrong, gen_wrong)
 sim_wrong = Sim(exp_wrong, gates)
 sim_wrong.use_VZ = True
-a_q = model_wrong.ann_opers[0]
 
 exp_right = Exp(model_right, gen_right)
 sim_right = Sim(exp_right, gates)
 sim_right.use_VZ = True
-a_q = model_right.ann_opers[0]
 
 
 # Define states
@@ -179,15 +179,15 @@ opt_map = [
     [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],
     [('X90p', 'd1', 'gauss', 'xy_angle')],
-    # [('X90p', 'd1', 'gauss', 'delta')]
+    [('X90p', 'd1', 'gauss', 'delta')]
 ]
 
 exp_opt_map = [
     ('Q1', 'freq'),
-    # ('Q1', 'anhar'),
+    ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
-    # ('v_to_hz', 'V_to_Hz'),
+    ('v_to_hz', 'V_to_Hz'),
     # ('resp', 'rise_time')
 ]
 
@@ -243,44 +243,44 @@ def c3_learn_model(logfilename, sampling='even', batch_size=1):
 
 
 # Run the stuff
-# with tf.device('/CPU:0'):
-#     c3_openloop()
-#     c3_calibration(noise_level=0)
-#     logfilename = logdir + "calibration.log"
-#     # sampling = 'from_end'  'even', 'random' , 'from_start'
-# #     c3_learn_model(logfilename, sampling='even', batch_size=20)
+with tf.device('/CPU:0'):
+    c3_openloop()
+    c3_calibration(noise_level=0.003)
+    logfilename = logdir + "calibration.log"
+    #  sampling = 'from_end'  'even', 'random', 'from_start'
+    c3_learn_model(logfilename, sampling='random', batch_size=10)
 #
 
-c3_openloop()
-c3_calibration(noise_level=0)
-
-import matplotlib.pyplot as plt
-with tf.device("/CPU:0"):
-    learn_from = []
-    with open("/tmp/c3logs/recent/calibration.log", "r") as calibration_log:
-        log = calibration_log.readlines()
-    for line in log:
-        if line[0] == "{":
-            line_dict = json.loads(line)
-            learn_from.append(
-                [line_dict['params'], ['X90p'], line_dict['goal']]
-            )
-
-    xrange = np.linspace(-0.14, -0.13, 21)
-    errs = []
-    for x in xrange:
-        print(f"Doing {x}")
-        n = int(len(learn_from) / 20)
-        measurements = learn_from[::n]
-        diff = []
-        for mes in measurements:
-            diff.append(
-                match_calib(
-                    [x], exp_opt_map, mes[0], opt_map, mes[1], mes[2]
-                )
-            )
-        rms = np.sqrt(np.mean(np.square(diff)))
-        print(f"RMS: {rms}")
-        errs.append(rms)
-
-plt.plot(xrange, errs)
+# c3_openloop()
+# c3_calibration(noise_level=0)
+#
+# import matplotlib.pyplot as plt
+# with tf.device("/CPU:0"):
+#     learn_from = []
+#     with open("/tmp/c3logs/recent/calibration.log", "r") as calibration_log:
+#         log = calibration_log.readlines()
+#     for line in log:
+#         if line[0] == "{":
+#             line_dict = json.loads(line)
+#             learn_from.append(
+#                 [line_dict['params'], ['X90p'], line_dict['goal']]
+#             )
+#
+#     xrange = np.linspace(-0.14, -0.13, 21)
+#     errs = []
+#     for x in xrange:
+#         print(f"Doing {x}")
+#         n = int(len(learn_from) / 20)
+#         measurements = learn_from[::n]
+#         diff = []
+#         for mes in measurements:
+#             diff.append(
+#                 match_calib(
+#                     [x], exp_opt_map, mes[0], opt_map, mes[1], mes[2]
+#                 )
+#             )
+#         rms = np.sqrt(np.mean(np.square(diff)))
+#         print(f"RMS: {rms}")
+#         errs.append(rms)
+#
+# plt.plot(xrange, errs)

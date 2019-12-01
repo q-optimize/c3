@@ -94,7 +94,7 @@ def gaussian(t, params):
 def gaussian_nonorm(t, params):
     """Gaussian."""
     t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    sigma = params['sigma'].tf_get_value()
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     return gauss
 

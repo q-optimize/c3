@@ -114,7 +114,10 @@ class Optimizer:
         return goal.numpy()
 
     def lookup_gradient(self, x):
-        return self.gradients[str(x)]
+        key = str(x)
+        if not key in self.gradients.keys():
+            goal = self.goal_run_with_grad(x)
+        return self.gradients[key]
 
     def cmaes(self, x0, settings={}):
         es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
@@ -210,8 +213,9 @@ class Optimizer:
         print(f"Saving as:\n{self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'a') as self.logfile:
+            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
             self.logfile.write("Starting optimization at")
-            self.logfile.write(f"{time.asctime(time.localtime())}\n\n")
+            self.logfile.write(start_time_str)
             self.logfile.flush()
             if opt == 'cmaes':
                 self.cmaes(
@@ -229,6 +233,8 @@ class Optimizer:
                     x_best, self.opt_map, scaled=True
                 )
             end_time = time.time()
+            self.logfile.write("Started at ")
+            self.logfile.write(start_time_str)
             self.logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
@@ -261,15 +267,15 @@ class Optimizer:
 
         with open(self.logfile_name, 'a') as self.logfile:
             start_time = time.time()
-            self.logfile.write(
-                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
-            )
+            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
+            self.logfile.write("Starting optimization at ")
+            self.logfile.write(start_time_str)
             x_best = self.lbfgs(
                 x0,
                 self.goal_run_n,
                 options=settings
             )
-            self.exp.set_parameters(x_best, self.opt_map, scaled=True)
+            self.exp.set_parameters(x_best, self.opt_map)
             end_time = time.time()
             self.logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"

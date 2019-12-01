@@ -59,9 +59,9 @@ def create_gates(t_final,
             unit='Hz 2pi'
         ),
         'delta': Qty(
-            value=0.5 / qubit_anhar,
+            value=0.95 / qubit_anhar,
             min=1.5 / qubit_anhar,
-            max=0.1 / qubit_anhar,
+            max=0.5 / qubit_anhar,
             unit='s'
         ),
     }
