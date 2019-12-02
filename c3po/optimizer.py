@@ -115,8 +115,8 @@ class Optimizer:
 
     def lookup_gradient(self, x):
         key = str(x)
-        if not key in self.gradients.keys():
-            goal = self.goal_run_with_grad(x)
+        if key not in self.gradients.keys():
+            self.goal_run_with_grad(x)
         return self.gradients[key]
 
     def cmaes(self, x0, settings={}):

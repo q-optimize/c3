@@ -10,7 +10,8 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
-def plot_OC_logs(logfilename="/tmp/c3logs/recent/openloop.log"):
+def plot_OC_logs(logfolder="/tmp/c3logs/recent/"):
+    logfilename = logfolder + "openloop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -72,7 +73,8 @@ def plot_OC_logs(logfilename="/tmp/c3logs/recent/openloop.log"):
         plt.semilogy(its, goal_function)
 
 
-def plot_calibration(logfilename="/tmp/c3logs/recent/calibration.log"):
+def plot_calibration(logfolder="/tmp/c3logs/recent/"):
+    logfilename = logfolder + "calibration.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -103,7 +105,8 @@ def plot_calibration(logfilename="/tmp/c3logs/recent/calibration.log"):
     plt.xlabel('Iterations')
 
 
-def plot_learning(logfilename="/tmp/c3logs/recent/learn_model.log"):
+def plot_learning(logfolder="/tmp/c3logs/recent/"):
+    logfilename = logfolder + 'learn_model.log'
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -187,7 +190,8 @@ def plot_envelope_history(logfilename):
     plt.show()
 
 
-def plot_awg(logfilename="/tmp/c3logs/recent/awg.log"):
+def plot_awg(logfolder="/tmp/c3logs/recent/"):
+    logfilename = logfolder + "awg.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     point = json.loads(log[-1])
