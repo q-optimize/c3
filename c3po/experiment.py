@@ -77,6 +77,11 @@ class Experiment:
                 devs[par[0]].params[par[1]].tf_set_value(values[indx])
             indx += 1
 
+    def print_parameters(self, opt_map=None):
+        # TODO Nice printing for experiment parameters
+        if opt_map is None:
+            opt_map = self.list_parameters()
+
 
 class Measurement:
     """

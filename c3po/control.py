@@ -22,7 +22,7 @@ class GateSet:
                         par_list.append([(gate, chan, comp, par)])
         return par_list
 
-    def get_parameters(self, opt_map=None, scaled=False):
+    def get_parameters(self, opt_map=None, scaled=False, to_str=False):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -65,6 +65,8 @@ class GateSet:
             gate_instr = self.instructions[gate]
             if scaled:
                 value = gate_instr.get_parameter_value_scaled(par_id)
+            elif to_str:
+                value = str(gate_instr.get_parameter_qty(par_id))
             else:
                 value = gate_instr.get_parameter_value(par_id)
             values.append(value)
@@ -229,6 +231,7 @@ class Instruction(C3obj):
 
     # TODO There's a number of get_parameter functions in different places
     # that do similar things. Think about this.
+    # TODO Combine these get parameter functions
     def get_parameter_value_scaled(self, par_id: tuple):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
@@ -247,6 +250,16 @@ class Instruction(C3obj):
         # The parameter can be a c3po.Quanity or a float, this cast makes it
         # work in both cases.
         value = float(self.comps[chan][comp].params[param])
+        return value
+
+    def get_parameter_qty(self, par_id: tuple):
+        """par_id is a tuple with channel, component, parameter."""
+        chan = par_id[0]
+        comp = par_id[1]
+        param = par_id[2]
+        # The parameter can be a c3po.Quanity or a float, this cast makes it
+        # work in both cases.
+        value = self.comps[chan][comp].params[param]
         return value
 
     # TODO Consider putting this code directly in the gateset object

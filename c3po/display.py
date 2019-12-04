@@ -1,3 +1,4 @@
+import os
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,8 +11,10 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
-def plot_OC_logs(logfolder="/tmp/c3logs/recent/"):
+def plot_OC_logs(logfolder=""):
     logfilename = logfolder + "openloop.log"
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/openloop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -73,8 +76,10 @@ def plot_OC_logs(logfolder="/tmp/c3logs/recent/"):
         plt.semilogy(its, goal_function)
 
 
-def plot_calibration(logfolder="/tmp/c3logs/recent/"):
+def plot_calibration(logfolder=""):
     logfilename = logfolder + "calibration.log"
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/calibration.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -105,8 +110,10 @@ def plot_calibration(logfolder="/tmp/c3logs/recent/"):
     plt.xlabel('Iterations')
 
 
-def plot_learning(logfolder="/tmp/c3logs/recent/"):
+def plot_learning(logfolder=""):
     logfilename = logfolder + 'learn_model.log'
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/learn_from.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -190,8 +197,10 @@ def plot_envelope_history(logfilename):
     plt.show()
 
 
-def plot_awg(logfolder="/tmp/c3logs/recent/"):
+def plot_awg(logfolder=""):
     logfilename = logfolder + "awg.log"
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/awg.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     point = json.loads(log[-1])

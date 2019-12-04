@@ -4,6 +4,7 @@ import numpy as np
 
 
 def log_setup(data_path, run_name=None):
+    # TODO Add the name to fhe folder
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
     pwd = data_path + time.strftime(

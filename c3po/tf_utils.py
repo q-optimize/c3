@@ -124,13 +124,16 @@ def tf_expm(A, terms):
         expm(A)
 
     """
-    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
+    r = tf.eye(A.shape[0], dtype=A.dtype)
     A_powers = A
     r += A
 
-    for ii in range(2, terms):
+    ii = 2
+    # TODO Change condition to fixed accuracy.
+    while ii < terms:
         A_powers = tf.matmul(A_powers, A)
         r += A_powers / np.math.factorial(ii)
+        ii += 1
     return r
 
 
@@ -158,8 +161,10 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
 
     """
     h = h0
-    for ii in range(len(hks)):
+    ii = 0
+    while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
+        ii += 1
     terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     dU = tf_expm(-1j * h * dt, terms)
     return dU
@@ -191,6 +196,36 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
+# def tf_propagation(h0, hks, cflds, dt):
+#     """
+#     Calculate the time evolution of a system controlled by time-dependent
+#     fields.
+#
+#     Parameters
+#     ----------
+#     h0 : tf.tensor
+#         Drift Hamiltonian.
+#     hks : list of tf.tensor
+#         List of control Hamiltonians.
+#     cflds : list
+#         List of control fields, one per control Hamiltonian.
+#     dt : float
+#         Length of one time slice.
+#
+#     Returns
+#     -------
+#     type
+#         Description of returned object.
+#
+#     """
+#     dUs = []
+#     for ii in range(cflds[0].shape[0]):
+#         cf_t = []
+#         for fields in cflds:
+#             cf_t.append(tf.cast(fields[ii], tf.complex128))
+#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+#     return dUs
+
 def tf_propagation(h0, hks, cflds, dt):
     """
     Calculate the time evolution of a system controlled by time-dependent
@@ -213,15 +248,13 @@ def tf_propagation(h0, hks, cflds, dt):
         Description of returned object.
 
     """
-    dUs = []
-    for ii in range(cflds[0].shape[0]):
-        cf_t = []
-        for fields in cflds:
-            cf_t.append(tf.cast(fields[ii], tf.complex128))
-        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-    return dUs
+    def tf_time_slice(cf_t):
+        return tf_dU_of_t(h0, hks, cf_t, dt)
 
-# EXPERIMENTAL PROPAGATION BELOW
+    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
+    return tf.map_fn(tf_time_slice, cflds)
+
+# EXPERIMENTAL BATCH PROPAGATION BELOW
 
 # def tf_propagation(h0, hks, cflds, dt):
 #     """
@@ -401,7 +434,6 @@ def tf_spost(A):
     return reshaped
 
 
-
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -421,6 +453,7 @@ def super_to_choi(A):
                 A.shape
     )
     return A_choi
+
 
 @tf.function
 # TODO needs fixing

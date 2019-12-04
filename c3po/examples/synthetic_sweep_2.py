@@ -19,18 +19,18 @@ from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
 
 # This import registers the 3D projection, but is otherwise unused.
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
+from matplotlib import ticker, cm
+
+from progressbar import ProgressBar, Percentage, Bar, ETA
 
 logdir = log_setup("/tmp/c3logs/")
 
 # System
 qubit_freq = Qty(
     value=5.1173e9 * 2 * np.pi,
-    min=5.1e9 * 2 * np.pi,
-    max=5.14e9 * 2 * np.pi,
+    min=5e9 * 2 * np.pi,
+    max=5.5e9 * 2 * np.pi,
     unit='Hz 2pi'
 )
 qubit_anhar = Qty(
@@ -50,8 +50,8 @@ v_hz_conversion = Qty(
 
 qubit_freq_wrong = Qty(
     value=5.12e9 * 2 * np.pi,
-    min=5.1e9 * 2 * np.pi,
-    max=5.14e9 * 2 * np.pi,
+    min=5e9 * 2 * np.pi,
+    max=5.5e9 * 2 * np.pi,
     unit='Hz 2pi'
 )
 
@@ -165,18 +165,19 @@ def match_calib(
     return diff
 
 
-def infid_sim(params):
-    exp_wrong.set_parameters(params, exp_opt_map)
+def infid_sim(qubit_freq, drive_freq):
+    exp_wrong.set_parameters(qubit_freq, exp_opt_map)
+    sim_wrong.gateset.set_parameters(drive_freq, opt_map, scaled=True)
     U_dict = sim_wrong.get_gates()
     return unitary_infid(U_dict)
 
 
 # Optimizer object
 opt_map = [
-    [('X90p', 'd1', 'gauss', 'amp')],
+    # [('X90p', 'd1', 'gauss', 'amp')],
     [('X90p', 'd1', 'gauss', 'freq_offset')],
-    [('X90p', 'd1', 'gauss', 'xy_angle')],
-    # [('X90p', 'd1', 'gauss', 'delta')]
+    # [('X90p', 'd1', 'gauss', 'xy_angle')],
+    # # [('X90p', 'd1', 'gauss', 'delta')]
 ]
 
 exp_opt_map = [
@@ -184,33 +185,41 @@ exp_opt_map = [
     # ('Q1', 'anhar'),
     # ('Q1', 't1'),
     # ('Q1', 't2star'),
-    ('v_to_hz', 'V_to_Hz'),
+    # ('v_to_hz', 'V_to_Hz'),
     # ('resp', 'rise_time')
 ]
 
-
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-
-# Make data
+# Make data.
 X = np.arange(-1, 1, 0.1)
 Y = np.arange(-1, 1, 0.1)
 infid = np.zeros((X.shape[0], Y.shape[0]))
-for ii in range(X.shape[0]):
+widgets = [
+    'Sweep: ',
+    Percentage(),
+    ' ',
+    Bar(marker='=', left='[', right=']'),
+    ' ',
+    ETA()
+]
+pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+pbar.start()
+ii = 0
+for val in pbar(range(X.shape[0])):
     for jj in range(Y.shape[0]):
-        params = [X[ii], Y[jj]]
-        infid[ii][jj] = infid_sim(params)
+        infid[ii][jj] = infid_sim([X[ii]], [Y[jj]])
+    pbar.update(ii)
+    ii += 1
+pbar.finish()
 X, Y = np.meshgrid(X, Y)
-# Plot the surface.
-surf = ax.plot_surface(X, Y, infid, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
 
-# Customize the z axis.
-ax.set_zlim(-1.01, 1.01)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
 
-# Add a color bar which maps values to colors.
-fig.colorbar(surf, shrink=0.5, aspect=5)
+def plot():
+    fig = plt.figure()
+    ax = fig.gca()
 
-plt.show()
+    cs = ax.contourf(X, Y, infid, [1e0, 1e-1, 5e-2, 1e-2])
+    cbar = fig.colorbar(cs)
+    ax.xaxis.set_label_text('Drive freq')
+    ax.yaxis.set_label_text("Qubit freq")
+
+    plt.show()

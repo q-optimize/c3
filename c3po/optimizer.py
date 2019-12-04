@@ -1,5 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
+import os
 import random
 import time
 import json
@@ -81,6 +82,9 @@ class Optimizer:
                     self.gateset_opt_map,
                     seq,
                     fid
+                )
+                self.logfile.write(
+                    f"\n  Parameters:  {self.sim.gateset.get_parameters(to_str=True)}\n"
                 )
                 self.logfile.write(
                     f"\n  Sequence:  {seq}\n"

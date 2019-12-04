@@ -54,8 +54,8 @@ def create_gates(t_final,
         ),
         'freq_offset': Qty(
             value=0e6 * 2 * np.pi,
-            min=-100 * 1e6 * 2 * np.pi,
-            max=100 * 1e6 * 2 * np.pi,
+            min=-250 * 1e6 * 2 * np.pi,
+            max=250 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
@@ -73,7 +73,7 @@ def create_gates(t_final,
     )
     carrier_parameters = {
         'freq': Qty(
-            value=qubit_freq.get_value(),
+            value=5.25e9 * 2 * np.pi,
             min=5e9 * 2 * np.pi,
             max=5.5e9 * 2 * np.pi,
             unit='Hz 2pi'
