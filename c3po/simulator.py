@@ -8,6 +8,7 @@ from scipy.optimize import curve_fit
 from c3po.experiment import Experiment
 from c3po.control import GateSet
 
+from c3po.tf_utils import evaluate_sequences
 from c3po.tf_utils import tf_propagation
 from c3po.tf_utils import tf_propagation_lind
 from c3po.tf_utils import tf_matmul_left, tf_matmul_right
@@ -141,7 +142,7 @@ class Simulator():
             if progress:
                 print(L)
             seqs = single_length_RB(num_seqs, L)
-            Us = self.evaluate_sequences(U_dict, seqs)
+            Us = evaluate_sequences(U_dict, seqs)
             pop0s = []
             for U in Us:
                 pops = self.populations(tf.matmul(U, psi_init))
@@ -191,7 +192,7 @@ class Simulator():
                     if progress:
                         print(L)
                     seqs = single_length_RB(num_seqs, L)
-                    Us = self.evaluate_sequences(U_dict, seqs)
+                    Us = evaluate_sequences(U_dict, seqs)
                     pop0s = []
                     for U in Us:
                         pops = self.populations(tf.matmul(U, psi_init))
