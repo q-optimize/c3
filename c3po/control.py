@@ -152,6 +152,8 @@ class Envelope(InstructionComponent):
             params['amp'] = 1.0
         if 'freq_offset' not in params:
             params['freq_offset'] = 0.0
+        if 'xy_angle' not in params:
+            params['xy_angle'] = 0.0
 
     def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times."""

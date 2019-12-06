@@ -121,3 +121,21 @@ def y_drive(a):
     """
     a_dag = a.T.conj()
     return 1.0j * (a_dag - a)
+
+def z_drive(a):
+    """
+    Semiclassical drive.
+
+    Parameters
+    ----------
+    a : Tensor
+        Annihilator.
+
+    Returns
+    -------
+    Tensor
+        Number operator.
+
+    """
+    a_dag = a.T.conj()
+    return np.matmul(a_dag, a)

@@ -99,6 +99,16 @@ def perfect_gate(lvls: int, gate_str: str, proj: str = 'wzeros'):
     return gate
 
 
+def perfect_CZ(lvls: int, proj: str = 'wzeros'):
+    Id = perfect_gate(lvls, 'Id', proj=proj)
+    CZ = np.kron(Id,Id)
+    if proj == 'compsub':
+        CZ[3,3] = -1
+    elif proj == 'wzeros' or proj == 'fulluni':
+        CZ[lvls+1,lvls+1] = -1
+    return CZ
+
+
 def single_length_RB(RB_number, RB_length):
     """Given a length and number of repetitions it compiles RB sequences."""
     S = []
