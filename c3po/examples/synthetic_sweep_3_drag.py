@@ -25,7 +25,9 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 from progressbar import ProgressBar, Percentage, Bar, ETA
+from c3po.tf_utils import tf_limit_gpu_memory
 
+tf_limit_gpu_memory(50)
 logdir = log_setup("/tmp/c3logs/")
 with tf.device('/CPU:0'):
     # System
@@ -52,8 +54,8 @@ with tf.device('/CPU:0'):
 
     qubit_freq_wrong = Qty(
         value=5.12e9 * 2 * np.pi,
-        min=5.0e9 * 2 * np.pi,
-        max=5.35e9 * 2 * np.pi,
+        min=5.1e9 * 2 * np.pi,
+        max=5.14e9 * 2 * np.pi,
         unit='Hz 2pi'
     )
 
@@ -217,34 +219,66 @@ with tf.device('/CPU:0'):
     ]
 
     def gen_data(num):
-        fid = unitary_infid(sim_right.get_gates())
-        X = np.linspace(-1, 1, num)
-        Y = np.linspace(-1, 1, num)
-        diff = np.zeros((X.shape[0], Y.shape[0]))
-        widgets = [
-            'Sweep: ',
-            Percentage(),
-            ' ',
-            Bar(marker='=', left='[', right=']'),
-            ' ',
-            ETA()
-        ]
-        pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
-        pbar.start()
-        ii = 0
-        for val in pbar(range(X.shape[0])):
-            for jj in range(Y.shape[0]):
-                diff[ii][jj] = match_calib(
-                    [X[ii], Y[jj]], exp_opt_map, fid
-                )
-            pbar.update(ii)
-            ii += 1
-        pbar.finish()
-        X, Y = np.meshgrid(X, Y)
+        with tf.device('/CPU:0'):
+            fid = unitary_infid(sim_right.get_gates())
+            X = np.linspace(-1, 1, num)
+            Y = np.linspace(-1, 1, num)
+            diff = np.zeros((X.shape[0], Y.shape[0]))
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                for jj in range(Y.shape[0]):
+                    diff[ii][jj] = match_calib(
+                        [X[ii], Y[jj]], exp_opt_map, fid
+                    )
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            X, Y = np.meshgrid(X, Y)
         return X, Y, diff
+
+    def sweep_1d(num):
+        with tf.device('/CPU:0'):
+            fid = unitary_infid(sim_right.get_gates())
+            X = np.linspace(-1, 1, num)
+            diff = []
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                diff.append(
+                    match_calib(
+                        [X[ii], qubit_anhar.value], exp_opt_map, fid
+                    )
+                )
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            plt.figure()
+            plt.plot(X,diff)
+            plt.show()
+        return X, diff
 
     def plot(data):
         X, Y, Z = data
+        Z = Z.T
         fig = plt.figure()
         ax = fig.gca()
         cs = ax.pcolormesh(
