@@ -60,7 +60,7 @@ class Experiment:
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""
-        pars = self.get_parameters()
+        pars = self.get_parameters(scaled=True)
         par_indx = self.parameter_indeces(opt_map)
         indx = 0
         for par_ii in par_indx:

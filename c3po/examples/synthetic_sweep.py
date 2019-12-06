@@ -25,7 +25,9 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
 from progressbar import ProgressBar, Percentage, Bar, ETA
+from c3po.tf_utils import tf_limit_gpu_memory
 
+tf_limit_gpu_memory(50)
 logdir = log_setup("/tmp/c3logs/")
 
 # System
@@ -243,6 +245,7 @@ def gen_data(num):
 
 def plot(data):
     X, Y, Z = data
+    Z = Z.T
     fig = plt.figure()
     ax = fig.gca()
     cs = ax.contourf(
