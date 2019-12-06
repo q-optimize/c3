@@ -72,22 +72,26 @@ class Optimizer:
                     Thank you."""
                 )
             batch_size = len(measurements)
+            ipar = 1
             for m in measurements:
                 gateset_params = m[0]
                 self.sim.gateset.set_parameters(
                     gateset_params, self.gateset_opt_map
                 )
+                self.logfile.write(
+                    f"\n  Parameterset {ipar} of {batch_size}:  {self.sim.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
+                )
+                ipar += 1
                 U_dict = self.sim.get_gates()
+                iseq = 1
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
                     this_goal = self.eval_func(U_dict, seq, fid)
                     self.logfile.write(
-                        f"\n  Parameters:  {self.sim.gateset.get_parameters(to_str=True)}\n"
+                        f"\n  Sequence {iseq} of {len(seqs)}:\n  {seq}\n"
                     )
-                    self.logfile.write(
-                        f"\n  Sequence:  {seq}\n"
-                    )
+                    iseq += 1
                     self.logfile.write(
                         f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
                     )
