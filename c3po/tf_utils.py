@@ -107,7 +107,7 @@ def tf_measure_operator(M, U):
 
 
 @tf.function
-def tf_expm(A, terms):
+def tf_expm(A, terms=24):
     """
     Matrix exponential by the series method.
 

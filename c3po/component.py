@@ -91,7 +91,7 @@ class Quantity:
         # setting can be numpyish
         tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
         if np.any(tmp < -1) or np.any(tmp > 1):
-            raise Exception('Value out of bounds')
+            raise Exception(f"Value {val} out of bounds for quantity {self}.")
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)

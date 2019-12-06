@@ -267,7 +267,7 @@ class Instruction(C3obj):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
-        param = par_id[2]
+        param = par_id[2]        
         self.comps[chan][comp].params[param].tf_set_value(value)
 
     def set_parameter_value(self, par_id: tuple, value):
@@ -275,4 +275,8 @@ class Instruction(C3obj):
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
-        self.comps[chan][comp].params[param].set_value(value)
+        try:
+            self.comps[chan][comp].params[param].set_value(value)
+        except Exception:
+            print("Value out of bounds")
+            print(f"Trying to set {par_id} to value {value}")

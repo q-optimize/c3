@@ -87,9 +87,15 @@ class Optimizer:
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
+                    if fid > 0.25:  # We skip bad points
+                        self.logfile.write(
+                            f"\n  Skipped point with infidelity>0.25.\n"
+                        )
+                        iseq += 1
+                        continue
                     this_goal = self.eval_func(U_dict, seq, fid)
                     self.logfile.write(
-                        f"\n  Sequence {iseq} of {len(seqs)}:\n  {seq}\n"
+                        f"\n  Sequence {iseq} of {len(m[1])}:\n  {seq}\n"
                     )
                     iseq += 1
                     self.logfile.write(
@@ -104,7 +110,7 @@ class Optimizer:
                     self.logfile.flush()
                     goal += this_goal ** 2
 
-            goal = tf.sqrt(goal / batch_size)
+            goal = tf.sqrt(goal / batch_size / len(m[1]))
             self.logfile.write(
                 f"Finished batch with RMS: {float(goal.numpy())}\n"
             )

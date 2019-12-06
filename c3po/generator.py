@@ -43,15 +43,15 @@ class Generator:
             for chan in instr.comps:
                 gen_signal[chan] = {}
                 channel = instr.comps[chan]
-                lo_signal = lo.create_signal(channel, t_start, t_end)
-                awg_signal = awg.create_IQ(channel, t_start, t_end)
+                lo_signal, omega_lo = lo.create_signal(channel, t_start, t_end)
+                awg_signal, freq_offset = awg.create_IQ(channel, t_start, t_end)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 if "resp" in self.devices:
                     conv_signal = resp.process(flat_signal)
                 else:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
-                signal = v_to_hz.transform(signal)
+                signal = v_to_hz.transform(signal, omega_lo+freq_offset)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
                 # plt.figure()
@@ -156,7 +156,8 @@ class Volts_to_Hertz(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            V_to_Hz: Quantity = None
+            V_to_Hz: Quantity = None,
+            offset: Quantity = None
     ):
         super().__init__(
             name=name,
@@ -166,10 +167,17 @@ class Volts_to_Hertz(Device):
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
+        self.params['offset'] = offset
 
-    def transform(self, mixed_signal):
+    def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
-        self.signal = mixed_signal * self.params['V_to_Hz'].tf_get_value()
+        offset = self.params['offset'].tf_get_value()
+        v2hz = self.params['V_to_Hz'].tf_get_value()
+        if offset is None:
+            att = v2hz
+        else:
+            att = v2hz / (drive_frequency + offset)
+        self.signal = mixed_signal * att
         return self.signal
 
 
@@ -390,7 +398,7 @@ class LO(Device):
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
                 self.signal["ts"] = ts
-        return self.signal
+                return self.signal, omega_lo
 
 
 class AWG(Device):
@@ -533,7 +541,7 @@ class AWG(Device):
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
         self.log_shapes()
-        return {"inphase": inphase, "quadrature": quadrature}
+        return {"inphase": inphase, "quadrature": quadrature}, freq_offset
         # TODO decide when and where to return/sotre params scaled or not
 
     def get_I(self):
