@@ -80,6 +80,20 @@ with tf.device('/CPU:0'):
         unit='s'
     )
 
+    carrier_freq = Qty(
+        value=5.2e9 * 2 * np.pi,
+        min=5e9 * 2 * np.pi,
+        max=5.5e9 * 2 * np.pi,
+        unit='Hz 2pi'
+    )
+
+    freq_offset = Qty(
+        value=0e6 * 2 * np.pi,
+        min=-250 * 1e6 * 2 * np.pi,
+        max=250 * 1e6 * 2 * np.pi,
+        unit='Hz 2pi'
+    )
+
     # Define the ground state
     qubit_g = np.zeros([qubit_lvls, 1])
     qubit_g[0] = 1
@@ -111,8 +125,11 @@ with tf.device('/CPU:0'):
         v_hz_conversion=v_hz_conversion_wrong,
         qubit_freq=qubit_freq_wrong,
         qubit_anhar=qubit_anhar_wrong,
-        all_gates=False
+        all_gates=False,
+        freq_offset=freq_offset,
+        carrier_freq=carrier_freq
     )
+
 
     # gen.devices['awg'].options = 'drag'
 
@@ -155,16 +172,10 @@ with tf.device('/CPU:0'):
         return overlap
 
     def match_calib(
-        exp_params: list,
-        exp_opt_map: list,
-        gateset_values: list,
-        gateset_opt_map: list,
+        U_dict,
         seq: list,
         fid: np.float64
     ):
-        exp_wrong.set_parameters(exp_params, exp_opt_map)
-        sim_wrong.gateset.set_parameters(gateset_values, gateset_opt_map)
-        U_dict = sim_wrong.get_gates()
         fid_sim = unitary_infid(U_dict)
         diff = fid_sim - fid
         return diff
@@ -209,7 +220,7 @@ with tf.device('/CPU:0'):
             fid_func=unitary_infid
         )
 
-    def c3_learn_model(logfilename, sampling='even', batch_size=1):
+    def c3_learn_model(logfilename, sampling='even', batch_size=10):
         learn_from = []
         with open(logfilename, "r") as calibration_log:
             log = calibration_log.readlines()
@@ -217,7 +228,7 @@ with tf.device('/CPU:0'):
             if line[0] == "{":
                 line_dict = json.loads(line)
                 learn_from.append(
-                    [line_dict['params'], ['X90p'], line_dict['goal']]
+                    [line_dict['params'], [[['X90p'], line_dict['goal']]]]
                 )
         opt = Opt(data_path=logdir)
         opt.gateset_opt_map = opt_map
@@ -229,6 +240,7 @@ with tf.device('/CPU:0'):
         settings = {'ftol': 1e-12}
         opt.learn_model(
             exp_wrong,
+            sim_wrong,
             eval_func=match_calib,
             settings=settings
         )
