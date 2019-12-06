@@ -21,6 +21,8 @@ def create_gates(t_final,
                  v_hz_conversion,
                  qubit_freq,
                  qubit_anhar,
+                 freq_offset,
+                 carrier_freq,
                  all_gates=True
                  ):
     """
@@ -52,12 +54,7 @@ def create_gates(t_final,
             max=1 * np.pi/2,
             unit='rad'
         ),
-        'freq_offset': Qty(
-            value=0e6 * 2 * np.pi,
-            min=-250 * 1e6 * 2 * np.pi,
-            max=250 * 1e6 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
+        'freq_offset': freq_offset,
         'delta': Qty(
             value=0.95 / qubit_anhar,
             min=1.5 / qubit_anhar,
@@ -72,12 +69,7 @@ def create_gates(t_final,
         shape=envelopes.gaussian
     )
     carrier_parameters = {
-        'freq': Qty(
-            value=5.25e9 * 2 * np.pi,
-            min=5e9 * 2 * np.pi,
-            max=5.5e9 * 2 * np.pi,
-            unit='Hz 2pi'
-        )
+        'freq': carrier_freq
     }
     carr = control.Carrier(
         name="carrier",

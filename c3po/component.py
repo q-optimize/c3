@@ -82,8 +82,10 @@ class Quantity:
     def __float__(self):
         return self.get_value()
 
-    def get_value(self):
-        return self.scale * (float(self.value) + 1) / 2 + self.offset
+    def get_value(self, val=None):
+        if val is None:
+            val = float(self.value)
+        return self.scale * (val + 1) / 2 + self.offset
 
     def set_value(self, val):
         # setting can be numpyish

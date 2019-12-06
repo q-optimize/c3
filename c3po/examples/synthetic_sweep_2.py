@@ -7,6 +7,7 @@ model, simulating an experiment. Finally try to match the wrong model to the
 calibration data and recover the real one.
 """
 
+import pickle
 import numpy as np
 import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
@@ -48,10 +49,24 @@ v_hz_conversion = Qty(
     unit='rad/V'
 )
 
-qubit_freq_wrong = Qty(
+qubit_freq = Qty(
     value=5.12e9 * 2 * np.pi,
     min=5e9 * 2 * np.pi,
     max=5.5e9 * 2 * np.pi,
+    unit='Hz 2pi'
+)
+
+carrier_freq = Qty(
+    value=5.25e9 * 2 * np.pi,
+    min=5e9 * 2 * np.pi,
+    max=5.5e9 * 2 * np.pi,
+    unit='Hz 2pi'
+)
+
+freq_offset = Qty(
+    value=0e6 * 2 * np.pi,
+    min=-250 * 1e6 * 2 * np.pi,
+    max=250 * 1e6 * 2 * np.pi,
     unit='Hz 2pi'
 )
 
@@ -82,39 +97,32 @@ sim_res = 60e9
 awg_res = 1.2e9
 
 # Create system
-model_wrong = create_chip_model(
-    qubit_freq_wrong, qubit_anhar, qubit_lvls, drive_ham
-)
-model_right = create_chip_model(
+model = create_chip_model(
     qubit_freq, qubit_anhar, qubit_lvls, drive_ham
 )
-gen_wrong = create_generator(
+gen = create_generator(
     sim_res, awg_res, v_hz_conversion, logdir=logdir,
     rise_time=rise_time
-)
-gen_right = create_generator(
-    sim_res, awg_res, v_hz_conversion, logdir=logdir, rise_time=rise_time
 )
 gates = create_gates(
     t_final=t_final,
     v_hz_conversion=v_hz_conversion,
-    qubit_freq=qubit_freq_wrong,
-    qubit_anhar=qubit_anhar
+    qubit_freq=qubit_freq,
+    qubit_anhar=qubit_anhar,
+    freq_offset=freq_offset,
+    carrier_freq=carrier_freq
 )
 
 # gen.devices['awg'].options = 'drag'
 
 # Simulation class and fidelity function
-exp_wrong = Exp(
-    model_wrong,
-    gen_wrong
+exp = Exp(
+    model,
+    gen
 )
-sim_wrong = Sim(exp_wrong, gates)
-a_q = model_wrong.ann_opers[0]
-
-exp_right = Exp(model_right, gen_right)
-sim_right = Sim(exp_right, gates)
-a_q = model_right.ann_opers[0]
+sim = Sim(exp, gates)
+sim.use_VZ = True
+a_q = model.ann_opers[0]
 
 # Define states
 # Define states & unitaries
@@ -157,18 +165,18 @@ def match_calib(
     seq: list,
     fid: np.float64
 ):
-    exp_wrong.set_parameters(exp_params, exp_opt_map)
-    sim_wrong.gateset.set_parameters(gateset_values, gateset_opt_map)
-    U_dict = sim_wrong.get_gates()
+    exp.set_parameters(exp_params, exp_opt_map)
+    sim.gateset.set_parameters(gateset_values, gateset_opt_map)
+    U_dict = sim.get_gates()
     fid_sim = unitary_infid(U_dict)
     diff = fid_sim - fid
     return diff
 
 
 def infid_sim(qubit_freq, drive_freq):
-    exp_wrong.set_parameters(qubit_freq, exp_opt_map)
-    sim_wrong.gateset.set_parameters(drive_freq, opt_map, scaled=True)
-    U_dict = sim_wrong.get_gates()
+    exp.set_parameters(qubit_freq, exp_opt_map)
+    sim.gateset.set_parameters(drive_freq, opt_map, scaled=True)
+    U_dict = sim.get_gates()
     return unitary_infid(U_dict)
 
 
@@ -189,37 +197,55 @@ exp_opt_map = [
     # ('resp', 'rise_time')
 ]
 
+
 # Make data.
-X = np.arange(-1, 1, 0.1)
-Y = np.arange(-1, 1, 0.1)
-infid = np.zeros((X.shape[0], Y.shape[0]))
-widgets = [
-    'Sweep: ',
-    Percentage(),
-    ' ',
-    Bar(marker='=', left='[', right=']'),
-    ' ',
-    ETA()
-]
-pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
-pbar.start()
-ii = 0
-for val in pbar(range(X.shape[0])):
-    for jj in range(Y.shape[0]):
-        infid[ii][jj] = infid_sim([X[ii]], [Y[jj]])
-    pbar.update(ii)
-    ii += 1
-pbar.finish()
-X, Y = np.meshgrid(X, Y)
+def gen_data(step):
+    with tf.device('/CPU:0'):
+        X = np.arange(-1, 1, step)
+        Y = np.arange(-1, 1, step)
+        infid = np.zeros((X.shape[0], Y.shape[0]))
+        widgets = [
+            'Sweep: ',
+            Percentage(),
+            ' ',
+            Bar(marker='=', left='[', right=']'),
+            ' ',
+            ETA()
+        ]
+        pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+        pbar.start()
+        ii = 0
+        for val in pbar(range(X.shape[0])):
+            for jj in range(Y.shape[0]):
+                infid[ii][jj] = infid_sim([X[ii]], [Y[jj]])
+            pbar.update(ii)
+            ii += 1
+        pbar.finish()
+        X, Y = np.meshgrid(X, Y)
+        return X, Y, infid
 
 
-def plot():
+def read_data():
+    X = np.arange(-1, 1, 0.1)
+    Y = np.arange(-1, 1, 0.1)
+    X, Y = np.meshgrid(X, Y)
+    with open("2d_scan.pickle", 'rb') as file:
+        infid = pickle.load(file)
+    return X, Y, infid
+
+
+def plot(data):
+    X, Y, infid = data
     fig = plt.figure()
     ax = fig.gca()
-
-    cs = ax.contourf(X, Y, infid, [1e0, 1e-1, 5e-2, 1e-2])
+    cs = ax.contourf(
+        qubit_freq.get_value(X)/2e9/np.pi,
+        (carrier_freq.get_value() + freq_offset.get_value(Y))/2e9/np.pi,
+        infid
+    )
     cbar = fig.colorbar(cs)
-    ax.xaxis.set_label_text('Drive freq')
-    ax.yaxis.set_label_text("Qubit freq")
-
+    cbar.set_label('Unitary infidelity')
+    ax.xaxis.set_label_text("Qubit freq [GHz 2pi]")
+    ax.yaxis.set_label_text('Drive freq [GHz 2pi]')
+    plt.grid()
     plt.show()

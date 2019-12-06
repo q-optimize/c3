@@ -54,6 +54,7 @@ class Optimizer:
         with tf.GradientTape() as t:
             current_params = tf.constant(x_in)
             t.watch(current_params)
+            self.exp.set_parameters(current_params, self.opt_map)
             goal = 0
             if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
@@ -73,33 +74,31 @@ class Optimizer:
             batch_size = len(measurements)
             for m in measurements:
                 gateset_params = m[0]
-                seq = m[1]
-                fid = m[2]
-                this_goal = self.eval_func(
-                    current_params,
-                    self.opt_map,
-                    gateset_params,
-                    self.gateset_opt_map,
-                    seq,
-                    fid
+                self.sim.gateset.set_parameters(
+                    gateset_params, self.gateset_opt_map
                 )
-                self.logfile.write(
-                    f"\n  Parameters:  {self.sim.gateset.get_parameters(to_str=True)}\n"
-                )
-                self.logfile.write(
-                    f"\n  Sequence:  {seq}\n"
-                )
-                self.logfile.write(
-                    f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
-                )
-                self.logfile.write(
-                    f"  Experiment: {fid:8.5f}"
-                )
-                self.logfile.write(
-                    f"  Diff: {float(this_goal.numpy()):8.5f}\n"
-                )
-                self.logfile.flush()
-                goal += this_goal ** 2
+                U_dict = self.sim.get_gates()
+                for seqs in m[1]:
+                    seq = seqs[0]
+                    fid = seqs[1]
+                    this_goal = self.eval_func(U_dict, seq, fid)
+                    self.logfile.write(
+                        f"\n  Parameters:  {self.sim.gateset.get_parameters(to_str=True)}\n"
+                    )
+                    self.logfile.write(
+                        f"\n  Sequence:  {seq}\n"
+                    )
+                    self.logfile.write(
+                        f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Experiment: {fid:8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Diff: {float(this_goal.numpy()):8.5f}\n"
+                    )
+                    self.logfile.flush()
+                    goal += this_goal ** 2
 
             goal = tf.sqrt(goal / batch_size)
             self.logfile.write(
@@ -254,6 +253,7 @@ class Optimizer:
     def learn_model(
         self,
         exp,
+        sim,
         eval_func,
         opt_name='learn_model',
         settings={}
@@ -262,6 +262,7 @@ class Optimizer:
         x0 = exp.get_parameters(self.opt_map, scaled=True)
 
         self.exp = exp
+        self.sim = sim
         self.eval_func = eval_func
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'

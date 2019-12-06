@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 
+from progressbar import ProgressBar, Percentage, Bar, ETA
+
 logdir = log_setup("/tmp/c3logs/")
 
 # System
@@ -42,7 +44,7 @@ qubit_anhar = Qty(
 qubit_lvls = 4
 drive_ham = hamiltonians.x_drive
 v_hz_conversion = Qty(
-    value=1,
+    value=0.95,
     min=0.9,
     max=1.1,
     unit='rad/V'
@@ -53,6 +55,13 @@ qubit_freq_wrong = Qty(
     min=5.1e9 * 2 * np.pi,
     max=5.14e9 * 2 * np.pi,
     unit='Hz 2pi'
+)
+
+v_hz_conversion_wrong = Qty(
+    value=1,
+    min=0.9,
+    max=1.1,
+    unit='rad/V'
 )
 
 qubit_lvls = 4
@@ -69,6 +78,20 @@ rise_time = Qty(
     min=0.0e-9,
     max=0.2e-9,
     unit='s'
+)
+
+carrier_freq = Qty(
+    value=5.25e9 * 2 * np.pi,
+    min=5e9 * 2 * np.pi,
+    max=5.5e9 * 2 * np.pi,
+    unit='Hz 2pi'
+)
+
+freq_offset = Qty(
+    value=0e6 * 2 * np.pi,
+    min=-250 * 1e6 * 2 * np.pi,
+    max=250 * 1e6 * 2 * np.pi,
+    unit='Hz 2pi'
 )
 
 # Define the ground state
@@ -89,7 +112,7 @@ model_right = create_chip_model(
     qubit_freq, qubit_anhar, qubit_lvls, drive_ham
 )
 gen_wrong = create_generator(
-    sim_res, awg_res, v_hz_conversion, logdir=logdir,
+    sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
     rise_time=rise_time
 )
 gen_right = create_generator(
@@ -97,9 +120,11 @@ gen_right = create_generator(
 )
 gates = create_gates(
     t_final=t_final,
-    v_hz_conversion=v_hz_conversion,
-    qubit_freq=qubit_freq_wrong,
-    qubit_anhar=qubit_anhar
+    v_hz_conversion=v_hz_conversion_wrong,
+    qubit_freq=qubit_freq,
+    qubit_anhar=qubit_anhar,
+    freq_offset=freq_offset,
+    carrier_freq=carrier_freq
 )
 
 # gen.devices['awg'].options = 'drag'
@@ -110,10 +135,12 @@ exp_wrong = Exp(
     gen_wrong
 )
 sim_wrong = Sim(exp_wrong, gates)
+sim_wrong.use_VZ = True
 a_q = model_wrong.ann_opers[0]
 
 exp_right = Exp(model_right, gen_right)
 sim_right = Sim(exp_right, gates)
+sim_right.use_VZ = True
 a_q = model_right.ann_opers[0]
 
 # Define states
@@ -152,13 +179,9 @@ def pop_leak(U_dict: dict):
 def match_calib(
     exp_params: list,
     exp_opt_map: list,
-    gateset_values: list,
-    gateset_opt_map: list,
-    seq: list,
     fid: np.float64
 ):
     exp_wrong.set_parameters(exp_params, exp_opt_map)
-    sim_wrong.gateset.set_parameters(gateset_values, gateset_opt_map)
     U_dict = sim_wrong.get_gates()
     fid_sim = unitary_infid(U_dict)
     diff = fid_sim - fid
@@ -189,28 +212,56 @@ exp_opt_map = [
 ]
 
 
-fig = plt.figure()
-ax = fig.gca(projection='3d')
+def gen_data(num):
+    with tf.device('/CPU:0'):
+        fid = unitary_infid(sim_right.get_gates())
+        X = np.linspace(-0.5, -0.1, num)
+        Y = np.linspace(-0.75, -0.35, num)
+        diff = np.zeros((X.shape[0], Y.shape[0]))
+        widgets = [
+            'Sweep: ',
+            Percentage(),
+            ' ',
+            Bar(marker='=', left='[', right=']'),
+            ' ',
+            ETA()
+        ]
+        pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+        pbar.start()
+        ii = 0
+        for val in pbar(range(X.shape[0])):
+            for jj in range(Y.shape[0]):
+                diff[val][jj] = match_calib(
+                    [X[val], Y[jj]], exp_opt_map, fid
+                )
+            pbar.update(ii)
+            ii += 1
+        pbar.finish()
+        X, Y = np.meshgrid(X, Y)
+        return X, Y, diff
 
-# Make data
-X = np.arange(-1, 1, 0.1)
-Y = np.arange(-1, 1, 0.1)
-infid = np.zeros((X.shape[0], Y.shape[0]))
-for ii in range(X.shape[0]):
-    for jj in range(Y.shape[0]):
-        params = [X[ii], Y[jj]]
-        infid[ii][jj] = infid_sim(params)
-X, Y = np.meshgrid(X, Y)
-# Plot the surface.
-surf = ax.plot_surface(X, Y, infid, cmap=cm.coolwarm,
-                       linewidth=0, antialiased=False)
 
-# Customize the z axis.
-ax.set_zlim(-1.01, 1.01)
-ax.zaxis.set_major_locator(LinearLocator(10))
-ax.zaxis.set_major_formatter(FormatStrFormatter('%.02f'))
-
-# Add a color bar which maps values to colors.
-fig.colorbar(surf, shrink=0.5, aspect=5)
-
-plt.show()
+def plot(data):
+    X, Y, Z = data
+    fig = plt.figure()
+    ax = fig.gca()
+    cs = ax.contourf(
+        X,
+        Y,
+        np.abs(Z)
+    )
+    ax.plot(
+        [float(qubit_freq.value), float(qubit_freq.value)], [-1, 1],
+        color="tab:red"
+    )
+    ax.plot(
+        [-1, 1], [float(v_hz_conversion.value), float(v_hz_conversion.value)],
+        color="tab:red"
+    )
+    cbar = fig.colorbar(cs)
+    cbar.set_label('Difference in Unitary fidelity')
+    ax.xaxis.set_label_text("Qubit freq [GHz 2pi]")
+    ax.yaxis.set_label_text('V to Hz')
+    plt.title("Difference right/wrong model")
+    # plt.grid()
+    plt.show()
