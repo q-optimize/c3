@@ -6,6 +6,7 @@ from scipy.linalg import expm
 from c3po.hamiltonians import resonator, duffing
 from c3po.component import Qubit, Resonator, Drive, Coupling
 from c3po.constants import kb, hbar
+from c3po.tf_utils import tf_expm
 
 
 class Model:
@@ -253,15 +254,19 @@ class Model:
                 freq_indx = self.params_desc.index((name, 'freq'))
                 freqs.append(self.params[freq_indx])
 
-        VZ = expm(
-            1.0j * np.matmul(anns[0].T.conj(), anns[0]) * (freqs[0] * t_final)
+        # TODO make sure terms is right
+        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
+        num_oper = tf.constant(
+            np.matmul(anns[0].T.conj(), anns[0]),
+            dtype=tf.complex128
         )
+        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
         for ii in range(1, len(anns)):
-            VZ = VZ * expm(
-                1.0j * np.matmul(
-                    anns[ii].T.conj(), anns[ii]
-                ) * (freqs[ii] * t_final)
+            num_oper = tf.constant(
+                np.matmul(anns[ii].T.conj(), anns[ii]),
+                dtype=tf.complex128
             )
+            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
         return VZ
 
     def get_parameters(self, scaled=False):

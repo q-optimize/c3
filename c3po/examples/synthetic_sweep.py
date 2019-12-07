@@ -248,7 +248,7 @@ def plot(data):
     Z = Z.T
     fig = plt.figure()
     ax = fig.gca()
-    cs = ax.contourf(
+    cs = ax.pcolormesh(
         X,
         Y,
         np.abs(Z)
@@ -268,3 +268,33 @@ def plot(data):
     plt.title("Difference right/wrong model")
     # plt.grid()
     plt.show()
+
+def sweep_1d(num):
+    with tf.device('/CPU:0'):
+        fid = unitary_infid(sim_right.get_gates())
+        X = np.linspace(-1, 1, num)
+        diff = []
+        widgets = [
+            'Sweep: ',
+            Percentage(),
+            ' ',
+            Bar(marker='=', left='[', right=']'),
+            ' ',
+            ETA()
+        ]
+        pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+        pbar.start()
+        ii = 0
+        for val in pbar(range(X.shape[0])):
+            diff.append(
+                match_calib(
+                    [qubit_freq.value, X[ii]], exp_opt_map, fid
+                )
+            )
+            pbar.update(ii)
+            ii += 1
+        pbar.finish()
+        plt.figure()
+        plt.plot(X,diff,'x')
+        plt.show()
+    return X, diff
