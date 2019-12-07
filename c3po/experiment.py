@@ -60,9 +60,11 @@ class Experiment:
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""
+        # Load all current parameters
         pars = self.get_parameters(scaled=True)
         par_indx = self.parameter_indeces(opt_map)
         indx = 0
+        # Update the ones in opt_map
         for par_ii in par_indx:
             pars[par_ii] = values[indx]
             indx = indx + 1

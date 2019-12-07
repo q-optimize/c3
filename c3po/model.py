@@ -139,7 +139,6 @@ class Model:
                 self.control_Hs.append(h)
 
         self.n_params = len(self.params)
-        self.params = np.array(self.params)
 
     def initialise_lindbladian(self):
         """Construct Lindbladian (collapse) operators."""
@@ -158,9 +157,7 @@ class Model:
 
                     if 'temp' not in vals:
                         def t1(t1, L1):
-                            gamma = tf.cast(
-                                (0.5/t1.tf_get_value())**0.5, tf.complex128
-                            )
+                            gamma =(0.5/t1.tf_get_value())**0.5
                             return gamma * L1
 
                         self.collapse_ops.append(L1)
@@ -176,26 +173,20 @@ class Model:
                             anhar = vals['anhar'].tf_get_value()
                         else:
                             anhar = 0
+                        # TODO This breaks tensorflow for temp
                         freq_diff = np.array(
                          [(omega_q + n*anhar) for n in range(dim)]
                          )
 
                         def t1_temp(t1_temp, L2):
-                            gamma = tf.cast(
-                                (0.5/t1_temp[0])**0.5, tf.complex128
-                            )
-                            beta = tf.cast(
-                                    1 / (t1_temp[1] * kb),
-                                    tf.complex128)
+                            gamma = (0.5/t1_temp[0])**0.5
+                            beta = 1 / (t1_temp[1] * kb)
                             det_bal = tf.exp(-hbar*freq_diff*beta)
                             det_bal_mat = tf.linalg.tensor_diag(det_bal)
                             return gamma * (L1 + L2 @ det_bal_mat)
 
                         self.collapse_ops.append(L2)
-                        self.cops_params.append(
-                            [vals['t1'].tf_get_value(),
-                             vals['temp'].tf_get_value()]
-                        )
+                        self.cops_params.append([vals['t1'], vals['temp']])
                         self.cops_params_desc.append(
                             [element.name, 't1 & temp']
                         )
@@ -207,9 +198,7 @@ class Model:
                     L_dep = 2 * ann_oper.T.conj() @ ann_oper
 
                     def t2star(t2star, L_dep):
-                        gamma = tf.cast(
-                            (0.5/t2star.tf_get_value())**0.5, tf.complex128
-                        )
+                        gamma = (0.5/t2star.tf_get_value())**0.5
                         return gamma * L_dep
 
                     self.collapse_ops.append(L_dep)
@@ -218,7 +207,6 @@ class Model:
                     self.cops_params_fcts.append(t2star)
 
         self.cops_n_params = len(self.cops_params)
-        self.cops_params = np.array(self.cops_params)
 
     def get_lindbladian(self, cops_params=None):
         """Return Lindbladian operators and their prefactors."""
@@ -228,9 +216,10 @@ class Model:
         col_ops = []
         for ii in range(self.cops_n_params):
             col_ops.append(
-                self.cops_params_fcts[ii](
-                    self.cops_params[ii],
-                    self.collapse_ops[ii]
+                tf.cast(
+                    self.cops_params_fcts[ii](
+                        self.cops_params[ii],self.collapse_ops[ii]
+                    ), tf.complex128
                 )
             )
         return col_ops
@@ -291,7 +280,6 @@ class Model:
         if hasattr(self, 'collapse_ops'):
             for ii in range(ln, len(values)):
                 self.cops_params[ii-ln].tf_set_value(values[ii])
-        return values
 
     def list_parameters(self):
         par_list = []

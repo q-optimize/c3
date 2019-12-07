@@ -56,7 +56,7 @@ class Optimizer:
             current_params = tf.constant(x_in)
             t.watch(current_params)
             self.exp.set_parameters(current_params, self.opt_map)
-            goal = 0
+
             if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
             elif self.sampling == 'even':
@@ -74,6 +74,8 @@ class Optimizer:
                 )
             batch_size = len(measurements)
             ipar = 1
+            goal = 0
+            used_seqs = 0
             for m in measurements:
                 gateset_params = m[0]
                 self.sim.gateset.set_parameters(
@@ -85,7 +87,6 @@ class Optimizer:
                 ipar += 1
                 U_dict = self.sim.get_gates()
                 iseq = 1
-                used_seqs = 0
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
@@ -113,7 +114,7 @@ class Optimizer:
                     goal += this_goal ** 2
                     used_seqs += 1
 
-            goal = tf.sqrt(goal / batch_size / used_seqs)
+            goal = tf.sqrt(goal / used_seqs)
             self.logfile.write(
                 f"Finished batch with RMS: {float(goal.numpy())}\n"
             )
@@ -206,14 +207,16 @@ class Optimizer:
 
 
     def Adam(
-        self, loss_and_grad_func, p0, func_call_budget=10, alpha=0.1,
+        self, loss_and_grad_func, p0, fun_goal=0.03, alpha=0.1,
         beta1 = 0.9, beta2 = 0.999, eps_stable = 1e-8, stopping_func=None
     ):
 
         p = p0
         vs = []
         sqrs = []
-        for k_iter in range(func_call_budget):
+        loss = 1
+        k_iter = 0
+        while loss > fun_goal:
             loss, loss_grad = loss_and_grad_func(p)
 
             if stopping_func is not None:
@@ -225,8 +228,10 @@ class Optimizer:
             )
             p = new_p
             print(
-            f"\nAt iterate    {k_iter}    f=  {loss}    g=  {np.linalg.norm(loss_grad)}\n"
+            f"\nAt iterate    {k_iter}    f=  {loss:E}    g=  {np.linalg.norm(loss_grad):E}\n"
             )
+            self.log_parameters(p)
+            k_iter += 1
 
         return p
 
