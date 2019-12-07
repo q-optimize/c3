@@ -79,7 +79,7 @@ class Optimizer:
             for m in measurements:
                 gateset_params = m[0]
                 self.sim.gateset.set_parameters(
-                    gateset_params, self.gateset_opt_map
+                    gateset_params, self.gateset_opt_map, scaled=False
                 )
                 self.logfile.write(
                     f"\n  Parameterset {ipar} of {batch_size}:  {self.sim.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
@@ -137,7 +137,7 @@ class Optimizer:
         return self.gradients[key]
 
     def cmaes(self, x0, settings={}):
-        es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
+        es = cmaes.CMAEvolutionStrategy(x0, 0.2, settings)
         while not es.stop():
             self.logfile.write(f"Batch {self.iteration}\n")
             self.logfile.flush()
@@ -356,6 +356,50 @@ class Optimizer:
                 f"Total runtime: {end_time-start_time}\n\n"
             )
             self.logfile.flush()
+
+    def model_1d_sweep(
+        self,
+        exp,
+        sim,
+        eval_func,
+        opt_name='model_sweep',
+        num=50,
+    ):
+        from progressbar import ProgressBar, Percentage, Bar, ETA
+        import matplotlib.pyplot as plt
+
+        self.exp = exp
+        self.sim = sim
+        self.eval_func = eval_func
+        self.opt_name = opt_name
+        self.logfile_name = self.data_path + self.opt_name + '.log'
+        print(f"Saving as:\n{self.logfile_name}")
+        self.optim_status = {}
+        self.iteration = 1
+
+        with open(self.logfile_name, 'a') as self.logfile:
+            X = np.linspace(-1, 1, num)
+            rms = []
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                rms.append(self.goal_run_n([X[ii]]))
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            plt.figure()
+            plt.plot(X, rms, 'x')
+            plt.show()
+
 
     def log_parameters(self, x):
         # FIXME why does log take an x parameter and doesn't use it?

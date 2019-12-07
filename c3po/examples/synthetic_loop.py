@@ -19,7 +19,9 @@ from c3po.experiment import Experiment as Exp
 from c3po.tf_utils import tf_abs
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
+from c3po.tf_utils import tf_limit_gpu_memory
 
+tf_limit_gpu_memory(100)
 run_name = "synthetic_rnd_smpl"
 logdir = log_setup("/tmp/c3logs/", run_name=run_name)
 
@@ -47,9 +49,9 @@ with tf.device('/CPU:0'):
     )
 
     qubit_freq_wrong = Qty(
-        value=5.115e9 * 2 * np.pi,
-        min=5e9 * 2 * np.pi,
-        max=5.2e9 * 2 * np.pi,
+        value=5.12e9 * 2 * np.pi,
+        min=5.1e9 * 2 * np.pi,
+        max=5.14e9 * 2 * np.pi,
         unit='Hz 2pi'
     )
     qubit_anhar_wrong = Qty(
@@ -61,7 +63,7 @@ with tf.device('/CPU:0'):
     qubit_lvls = 4
     drive_ham = hamiltonians.x_drive
     v_hz_conversion_wrong = Qty(
-        value=1.05,
+        value=1,
         min=0.9,
         max=1.1,
         unit='rad/V'
@@ -81,7 +83,7 @@ with tf.device('/CPU:0'):
     )
 
     carrier_freq = Qty(
-        value=5.2e9 * 2 * np.pi,
+        value=5.1e9 * 2 * np.pi,
         min=5e9 * 2 * np.pi,
         max=5.5e9 * 2 * np.pi,
         unit='Hz 2pi'
@@ -193,7 +195,7 @@ with tf.device('/CPU:0'):
         # ('Q1', 'anhar'),
         # ('Q1', 't1'),
         # ('Q1', 't2star'),
-        ('v_to_hz', 'V_to_Hz'),
+        # ('v_to_hz', 'V_to_Hz'),
         # ('resp', 'rise_time')
     ]
 
@@ -245,6 +247,30 @@ with tf.device('/CPU:0'):
             settings=settings
         )
 
+    def model_1d_sweep(logfilename, sampling='even', batch_size=10, num=10):
+        learn_from = []
+        with open(logfilename, "r") as calibration_log:
+            log = calibration_log.readlines()
+        for line in log:
+            if line[0] == "{":
+                line_dict = json.loads(line)
+                learn_from.append(
+                    [line_dict['params'], [[['X90p'], line_dict['goal']]]]
+                )
+        opt = Opt(data_path=logdir)
+        opt.gateset_opt_map = opt_map
+        opt.opt_map = exp_opt_map
+        opt.sampling = sampling
+        opt.batch_size = batch_size
+        opt.learn_from = learn_from
+        opt.sim = sim_wrong
+        settings = {'ftol': 1e-8}
+        opt.model_1d_sweep(
+            exp_wrong,
+            sim_wrong,
+            eval_func=match_calib,
+            num=num
+        )
 
 # Run the stuff
     c3_openloop()
@@ -252,38 +278,3 @@ with tf.device('/CPU:0'):
     logfilename = logdir + "calibration.log"
     #  sampling = 'from_end'  'even', 'random', 'from_start'
     c3_learn_model(logfilename, sampling='random', batch_size=10)
-#
-
-# c3_openloop()
-# c3_calibration(noise_level=0)
-#
-# import matplotlib.pyplot as plt
-# with tf.device("/CPU:0"):
-#     learn_from = []
-#     with open("/tmp/c3logs/recent/calibration.log", "r") as calibration_log:
-#         log = calibration_log.readlines()
-#     for line in log:
-#         if line[0] == "{":
-#             line_dict = json.loads(line)
-#             learn_from.append(
-#                 [line_dict['params'], ['X90p'], line_dict['goal']]
-#             )
-#
-#     xrange = np.linspace(-0.14, -0.13, 21)
-#     errs = []
-#     for x in xrange:
-#         print(f"Doing {x}")
-#         n = int(len(learn_from) / 20)
-#         measurements = learn_from[::n]
-#         diff = []
-#         for mes in measurements:
-#             diff.append(
-#                 match_calib(
-#                     [x], exp_opt_map, mes[0], opt_map, mes[1], mes[2]
-#                 )
-#             )
-#         rms = np.sqrt(np.mean(np.square(diff)))
-#         print(f"RMS: {rms}")
-#         errs.append(rms)
-#
-# plt.plot(xrange, errs)

@@ -247,15 +247,20 @@ class Model:
                 freq_indx = self.params_desc.index((name, 'freq'))
                 freqs.append(self.params[freq_indx])
 
-        VZ = tf_expm(
-            1.0j * np.matmul(anns[0].T.conj(), anns[0]) * (freqs[0] * t_final)
-        )
+
+        # TODO make sure terms is right
+        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
+        num_oper = tf.constant(
+            np.matmul(anns[0].T.conj(), anns[0]),
+            dtype=tf.complex128
+	)
+        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
         for ii in range(1, len(anns)):
-            VZ = VZ * tf_expm(
-                1.0j * np.matmul(
-                    anns[ii].T.conj(), anns[ii]
-                ) * (freqs[ii] * t_final)
+            num_oper = tf.constant(
+                np.matmul(anns[ii].T.conj(), anns[ii]),
+                dtype=tf.complex128
             )
+            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
         return VZ
 
     def get_parameters(self, scaled=False):
