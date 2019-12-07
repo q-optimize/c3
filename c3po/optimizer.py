@@ -84,6 +84,7 @@ class Optimizer:
                 ipar += 1
                 U_dict = self.sim.get_gates()
                 iseq = 1
+                used_seqs = 0
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
@@ -109,8 +110,9 @@ class Optimizer:
                     )
                     self.logfile.flush()
                     goal += this_goal ** 2
+                    used_seqs += 1
 
-            goal = tf.sqrt(goal / batch_size / len(m[1]))
+            goal = tf.sqrt(goal / batch_size / len(used_seqs))
             self.logfile.write(
                 f"Finished batch with RMS: {float(goal.numpy())}\n"
             )

@@ -154,7 +154,10 @@ class Envelope(InstructionComponent):
 
     def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times."""
-        return self.shape(ts, self.params)
+        dt = ts[1] - ts[0]
+        offset = self.shape(ts[0]-dt, self. params)
+        # With the offset, we make sure the signal starts with amplitude 0.
+        return self.shape(ts, self.params) - offset
 
 
 class Carrier(InstructionComponent):
@@ -267,7 +270,7 @@ class Instruction(C3obj):
         """par_id is a tuple with channel, component, parameter."""
         chan = par_id[0]
         comp = par_id[1]
-        param = par_id[2]        
+        param = par_id[2]
         self.comps[chan][comp].params[param].tf_set_value(value)
 
     def set_parameter_value(self, par_id: tuple, value):
