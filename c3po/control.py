@@ -154,7 +154,10 @@ class Envelope(InstructionComponent):
 
     def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times."""
-        return self.shape(ts, self.params)
+        dt = ts[1] - ts[0]
+        offset = self.shape(ts[0]-dt, self. params)
+        # With the offset, we make sure the signal starts with amplitude 0.
+        return self.shape(ts, self.params) - offset
 
 
 class Carrier(InstructionComponent):
@@ -275,4 +278,8 @@ class Instruction(C3obj):
         chan = par_id[0]
         comp = par_id[1]
         param = par_id[2]
-        self.comps[chan][comp].params[param].set_value(value)
+        try:
+            self.comps[chan][comp].params[param].set_value(value)
+        except Exception:
+            print("Value out of bounds")
+            print(f"Trying to set {par_id} to value {value}")

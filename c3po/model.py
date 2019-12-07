@@ -151,7 +151,6 @@ class Model:
         for element in self.chip_elements:
             if isinstance(element, Qubit) or isinstance(element, Resonator):
                 vals = element.values
-
                 if 't1' in vals:
                     el_indx = self.names.index(element.name)
                     ann_oper = self.ann_opers[el_indx]
@@ -159,7 +158,9 @@ class Model:
 
                     if 'temp' not in vals:
                         def t1(t1, L1):
-                            gamma = tf.cast((0.5/t1)**0.5, tf.complex128)
+                            gamma = tf.cast(
+                                (0.5/t1.tf_get_value())**0.5, tf.complex128
+                            )
                             return gamma * L1
 
                         self.collapse_ops.append(L1)
@@ -170,9 +171,9 @@ class Model:
                     else:
                         L2 = ann_oper.T.conj()
                         dim = element.hilbert_dim
-                        omega_q = vals['freq'].get_value()
+                        omega_q = vals['freq'].tf_get_value()
                         if 'anhar' in vals:
-                            anhar = vals['anhar'].get_value()
+                            anhar = vals['anhar'].tf_get_value()
                         else:
                             anhar = 0
                         freq_diff = np.array(
@@ -192,7 +193,8 @@ class Model:
 
                         self.collapse_ops.append(L2)
                         self.cops_params.append(
-                            [vals['t1'].get_value(), vals['temp'].get_value()]
+                            [vals['t1'].tf_get_value(),
+                             vals['temp'].tf_get_value()]
                         )
                         self.cops_params_desc.append(
                             [element.name, 't1 & temp']
@@ -205,7 +207,9 @@ class Model:
                     L_dep = 2 * ann_oper.T.conj() @ ann_oper
 
                     def t2star(t2star, L_dep):
-                        gamma = tf.cast((0.5/t2star)**0.5, tf.complex128)
+                        gamma = tf.cast(
+                            (0.5/t2star.tf_get_value())**0.5, tf.complex128
+                        )
                         return gamma * L_dep
 
                     self.collapse_ops.append(L_dep)
@@ -254,12 +258,13 @@ class Model:
                 freq_indx = self.params_desc.index((name, 'freq'))
                 freqs.append(self.params[freq_indx])
 
+
         # TODO make sure terms is right
         # num_oper = np.matmul(anns[0].T.conj(), anns[0])
         num_oper = tf.constant(
             np.matmul(anns[0].T.conj(), anns[0]),
             dtype=tf.complex128
-        )
+	)
         VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
         for ii in range(1, len(anns)):
             num_oper = tf.constant(
@@ -290,7 +295,7 @@ class Model:
             self.params[ii].tf_set_value(values[ii])
         if hasattr(self, 'collapse_ops'):
             for ii in range(ln, len(values)):
-                self.cops_params.tf_set_value(values[ii])
+                self.cops_params[ii-ln].tf_set_value(values[ii])
         return values
 
     def list_parameters(self):
