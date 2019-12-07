@@ -20,6 +20,7 @@ class Optimizer:
         self.sampling = False
         self.batch_size = 1
         self.data_path = data_path
+        self.skip_bad_points = False  # The Millikan option
 
     def goal_run(self, x_in):
         self.sim.gateset.set_parameters(x_in, self.opt_map, scaled=True)
@@ -88,7 +89,7 @@ class Optimizer:
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
-                    if fid > 0.25:  # We skip bad points
+                    if (self.skip_bad_points and fid > 0.25):
                         self.logfile.write(
                             f"\n  Skipped point with infidelity>0.25.\n"
                         )
@@ -112,7 +113,7 @@ class Optimizer:
                     goal += this_goal ** 2
                     used_seqs += 1
 
-            goal = tf.sqrt(goal / batch_size / len(used_seqs))
+            goal = tf.sqrt(goal / batch_size / used_seqs)
             self.logfile.write(
                 f"Finished batch with RMS: {float(goal.numpy())}\n"
             )
@@ -126,7 +127,7 @@ class Optimizer:
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
-        return goal.numpy()
+        return float(goal.numpy()), gradients
 
     def lookup_gradient(self, x):
         key = str(x)
@@ -177,6 +178,57 @@ class Optimizer:
             options=options
         )
         return res.x
+
+    # Adam.
+    # Adapted from: https://gluon.mxnet.io/chapter06_optimization/adam-scratch.html
+
+    def Adam_update(
+        self, p, grad, vs, sqrs, k_iter, alpha=0.1, beta1 = 0.9, beta2 = 0.999,
+        eps_stable = 1e-8
+    ):
+        if k_iter == 0:
+            vs   = eps_stable * np.ones(len(p))
+            sqrs = eps_stable * np.ones(len(p))
+
+        for k in range(len(p)):
+            vs[k]   = beta1 * vs[k]    + (1 - beta1) * grad[k]
+            sqrs[k] = beta2 * sqrs[k]  + (1 - beta2) * np.square(grad[k])
+
+            v_bias_corr   = vs[k]   / (1 - beta1 ** (k_iter+1))
+            # Here we want to count from 1
+            sqr_bias_corr = sqrs[k] / (1 - beta2 ** (k_iter+1))
+            # but Python natively counts form 0
+
+            div  = v_bias_corr / (np.sqrt(sqr_bias_corr) + eps_stable)
+            p[k] = p[k] - alpha * div
+
+        return p, vs, sqrs
+
+
+    def Adam(
+        self, loss_and_grad_func, p0, func_call_budget=10, alpha=0.1,
+        beta1 = 0.9, beta2 = 0.999, eps_stable = 1e-8, stopping_func=None
+    ):
+
+        p = p0
+        vs = []
+        sqrs = []
+        for k_iter in range(func_call_budget):
+            loss, loss_grad = loss_and_grad_func(p)
+
+            if stopping_func is not None:
+                if stopping_func(k_iter, p, loss, loss_grad):
+                    return p
+
+            new_p, vs, sqrs = self.Adam_update(
+                p, loss_grad, vs, sqrs, k_iter, alpha, beta1, beta2, eps_stable
+            )
+            p = new_p
+            print(
+            f"\nAt iterate    {k_iter}    f=  {loss}    g=  {np.linalg.norm(loss_grad)}\n"
+            )
+
+        return p
 
     def optimize_controls(
         self,
@@ -272,7 +324,6 @@ class Optimizer:
     ):
         # TODO allow for specific data from optimizer to be used for learning
         x0 = exp.get_parameters(self.opt_map, scaled=True)
-
         self.exp = exp
         self.sim = sim
         self.eval_func = eval_func
@@ -287,10 +338,9 @@ class Optimizer:
             start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
             self.logfile.write("Starting optimization at ")
             self.logfile.write(start_time_str)
-            x_best = self.lbfgs(
-                x0,
+            x_best = self.Adam(
                 self.goal_run_n,
-                options=settings
+                x0
             )
             self.exp.set_parameters(x_best, self.opt_map)
             end_time = time.time()

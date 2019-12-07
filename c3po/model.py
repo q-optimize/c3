@@ -273,13 +273,13 @@ class Model:
         values = []
         for par in self.params:
             if scaled:
-                values.append(par.value)
+                values.append(float(par.value))
             else:
                 values.append(float(par))
         if hasattr(self, 'collapse_ops'):
             for par in self.cops_params:
                 if scaled:
-                    values.append(par.value)
+                    values.append(float(par.value))
                 else:
                     values.append(float(par))
         return values

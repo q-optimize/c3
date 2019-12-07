@@ -32,7 +32,7 @@ with tf.device('/CPU:0'):
         unit='Hz 2pi'
     )
     qubit_anhar = Qty(
-        value=-315.513734e6 * 2 * np.pi,
+        value=-315e6 * 2 * np.pi,
         min=-330e6 * 2 * np.pi,
         max=-300e6 * 2 * np.pi,
         unit='Hz 2pi'
@@ -53,7 +53,7 @@ with tf.device('/CPU:0'):
         unit='Hz 2pi'
     )
     qubit_anhar_wrong = Qty(
-        value=-320e6 * 2 * np.pi,
+        value=-315e6 * 2 * np.pi,
         min=-330e6 * 2 * np.pi,
         max=-300e6 * 2 * np.pi,
         unit='Hz 2pi'
