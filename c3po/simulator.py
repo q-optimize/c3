@@ -1,5 +1,6 @@
 """Simulator."""
 
+import os
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -113,7 +114,10 @@ class Simulator():
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        fig.show()
+        data_path = "/tmp/c3figs/"
+        if not os.path.isdir(data_path):
+            os.makedirs(data_path)
+        fig.savefig(data_path+'dynamics.png')
 
     def populations(self, state):
         if self.lindbladian:

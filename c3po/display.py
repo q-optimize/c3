@@ -141,6 +141,9 @@ def plot_learning(logfolder=""):
                     elif desc == 'anhar':
                         p_val = param[1] / 1e6 / 2 / np.pi
                         unit = '[MHz]'
+                    elif desc == 't1' or desc == 't2star':
+                        p_val = param[1] / 1e-6 / 2 / np.pi
+                        unit = '[\mu s]'
                     elif desc == 'V_to_Hz':
                         p_val = param[1] / 1e6
                         unit = '[MHz/V]'
@@ -158,7 +161,7 @@ def plot_learning(logfolder=""):
     if n_params > 0:
         nrows = np.ceil(np.sqrt(n_params + 1))
         ncols = np.ceil((n_params + 1) / nrows)
-        plt.figure(figsize=(6 * ncols, 5 * nrows))
+        plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
@@ -171,6 +174,8 @@ def plot_learning(logfolder=""):
         plt.title("Goal")
         plt.grid()
         plt.semilogy(its, goal_function)
+        plt.tight_layout()
+
 
 
 def plot_envelope_history(logfilename):

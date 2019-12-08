@@ -29,6 +29,8 @@ def num3str(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P']
     small_units = ['m', 'mu', 'n', 'p', 'f']
     sign = 1
+    if val == 0:
+        return "0"
     if val < 0:
         val = -val
         sign = -1

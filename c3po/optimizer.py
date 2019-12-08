@@ -128,7 +128,7 @@ class Optimizer:
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
-        return float(goal.numpy()), gradients
+        return float(goal.numpy())
 
     def lookup_gradient(self, x):
         key = str(x)
@@ -170,6 +170,9 @@ class Optimizer:
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
         options['disp'] = True
+        # Run the initial point explictly or it'll be ignored by callback
+        init_goal = goal(x0)
+        self.log_parameters(x0)
         res = minimize(
             goal,
             x0,
@@ -207,7 +210,7 @@ class Optimizer:
 
 
     def Adam(
-        self, loss_and_grad_func, p0, fun_goal=0.03, alpha=0.1,
+        self, p0, loss_and_grad_func, fun_goal=0.03, alpha=0.1,
         beta1 = 0.9, beta2 = 0.999, eps_stable = 1e-8, stopping_func=None
     ):
 
@@ -336,16 +339,17 @@ class Optimizer:
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
-        self.iteration = 1
+        self.iteration = 0
 
         with open(self.logfile_name, 'a') as self.logfile:
             start_time = time.time()
             start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
             self.logfile.write("Starting optimization at ")
             self.logfile.write(start_time_str)
-            x_best = self.Adam(
+            x_best = self.lbfgs(
+                x0,
                 self.goal_run_n,
-                x0
+                settings
             )
             self.exp.set_parameters(x_best, self.opt_map)
             end_time = time.time()

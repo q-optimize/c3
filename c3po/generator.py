@@ -69,6 +69,10 @@ class Generator:
         self.signal = gen_signal
         return gen_signal
 
+    def readout_signal(self, phase):
+        return self.devices["readout"].readout(phase)
+
+
 
 class Device(C3obj):
     """Device that is part of the stack generating the instruction signals."""
@@ -147,6 +151,34 @@ class Device(C3obj):
         return par_list
 
 
+class Readout(Device):
+    """Fake the readout process by multiplying a state phase with a factor."""
+
+    def __init__(
+            self,
+            name: str = "readout",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            factor: Quantity = None,
+            offset: Quantity = None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['factor'] = factor
+        self.params['offset'] = offset
+
+    def readout(self, phase):
+        offset = self.params['offset'].tf_get_value()
+        factor = self.params['factor'].tf_get_value()
+        return phase * factor + offset
+
+
 class Volts_to_Hertz(Device):
     """Upsacle the voltage signal to an amplitude to plug in the model."""
 
@@ -157,7 +189,7 @@ class Volts_to_Hertz(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             V_to_Hz: Quantity = None,
-            offset: Quantity = None
+            offset: Quantity = Quantity(value=0, min=-1, max=1)
     ):
         super().__init__(
             name=name,

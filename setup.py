@@ -11,6 +11,6 @@ setup(
         'matplotlib',
         'numpy',
         'scipy',
-        'tensorflow',
+        'tensorflow'
     ]
 )
