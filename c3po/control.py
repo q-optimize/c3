@@ -9,6 +9,9 @@ class GateSet:
     def __init__(self):
         self.instructions = {}
 
+    def write_config(self):
+        return list(self.instructions.keys())
+
     def add_instruction(self, instr):
         self.instructions[instr.name] = instr
 

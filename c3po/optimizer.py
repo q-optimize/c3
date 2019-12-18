@@ -1,11 +1,13 @@
 """Optimizer object, where the optimal control is done."""
 
-import os
 import random
 import time
 import json
+import copy
+import c3po
 import numpy as np
 import tensorflow as tf
+from platform import python_version
 
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
@@ -14,20 +16,52 @@ import cma.evolution_strategy as cmaes
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
-    def __init__(self, data_path):
+    def __init__(self, cfg=None):
+        # Set defaults
         self.gradients = {}
         self.noise_level = 0
         self.sampling = False
         self.batch_size = 1
-        self.data_path = data_path
         self.skip_bad_points = False  # The Millikan option
+        if cfg is not None:
+            self.load_config(cfg)
+
+    def write_config(self, filename):
+        cfg = {}
+        cfg['title'] = "Majestic C3 config file"
+        cfg['date'] = time.asctime(time.localtime())
+        cfg['python_version'] = python_version()
+        cfg['c3_version'] = c3po.__version__
+        cfg['optimizer'] = copy.deepcopy(self.__dict__)
+        for key in cfg['optimizer']:
+            if key == 'gateset':
+                cfg['optimizer'][key] = self.gateset.write_config()
+            elif key == 'sim':
+                cfg['optimizer'][key] = self.sim.write_config()
+            elif key == 'exp':
+                cfg['optimizer'][key] = self.exp.write_config()
+        with open(filename, "w") as cfg_file:
+            json.dump(cfg, cfg_file)
+
+    def load_config(self, filename):
+        with open(filename, "r") as cfg_file:
+            cfg = json.loads(cfg_file.read(1))
+        for key in cfg:
+            if key == 'gateset':
+                self.gateset.load_config(cfg[key])
+            elif key == 'sim':
+                self.sim.load_config(cfg[key])
+            elif key == 'exp':
+                self.exp.load_config(cfg[key])
+            else:
+                self.__dict__[key] = cfg[key]
 
     def goal_run(self, x_in):
-        self.sim.gateset.set_parameters(x_in, self.opt_map, scaled=True)
+        self.gateset.set_parameters(x_in, self.opt_map, scaled=True)
         U_dict = self.sim.get_gates()
         goal = self.fid_func(U_dict)
         self.optim_status['params'] = list(zip(
-            self.opt_map, self.sim.gateset.get_parameters(self.opt_map)
+            self.opt_map, self.gateset.get_parameters(self.opt_map)
         ))
         self.optim_status['goal'] = float(goal.numpy())
         return float(goal.numpy())
@@ -36,7 +70,7 @@ class Optimizer:
         with tf.GradientTape() as t:
             x = tf.constant(x_in)
             t.watch(x)
-            self.sim.gateset.set_parameters(x, self.opt_map, scaled=True)
+            self.gateset.set_parameters(x, self.opt_map, scaled=True)
             U_dict = self.sim.get_gates()
             goal = self.fid_func(U_dict)
 
@@ -44,7 +78,7 @@ class Optimizer:
         gradients = grad.numpy().flatten()
         self.gradients[str(x_in)] = gradients
         self.optim_status['params'] = list(zip(
-            self.opt_map, self.sim.gateset.get_parameters(self.opt_map)
+            self.opt_map, self.gateset.get_parameters(self.opt_map)
         ))
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
@@ -78,11 +112,11 @@ class Optimizer:
             used_seqs = 0
             for m in measurements:
                 gateset_params = m[0]
-                self.sim.gateset.set_parameters(
+                self.gateset.set_parameters(
                     gateset_params, self.gateset_opt_map, scaled=False
                 )
                 self.logfile.write(
-                    f"\n  Parameterset {ipar} of {batch_size}:  {self.sim.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
+                    f"\n  Parameterset {ipar} of {batch_size}:  {self.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
                 )
                 ipar += 1
                 U_dict = self.sim.get_gates()
@@ -149,7 +183,7 @@ class Optimizer:
                 solutions.append(goal)
                 self.logfile.write(
                     json.dumps({
-                        'params': self.sim.gateset.get_parameters(
+                        'params': self.gateset.get_parameters(
                                 self.opt_map
                                 ),
                         'goal': goal})
@@ -165,7 +199,7 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
-        self.sim.gateset.set_parameters(res[0], self.opt_map, scaled=True)
+        self.gateset.set_parameters(res[0], self.opt_map, scaled=True)
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
@@ -184,34 +218,34 @@ class Optimizer:
         return res.x
 
     # Adam.
-    # Adapted from: https://gluon.mxnet.io/chapter06_optimization/adam-scratch.html
+    # Adapted from:
+    # https://gluon.mxnet.io/chapter06_optimization/adam-scratch.html
 
     def Adam_update(
-        self, p, grad, vs, sqrs, k_iter, alpha=0.1, beta1 = 0.9, beta2 = 0.999,
-        eps_stable = 1e-8
+        self, p, grad, vs, sqrs, k_iter, alpha=0.1, beta1=0.9, beta2=0.999,
+        eps_stable=1e-8
     ):
         if k_iter == 0:
-            vs   = eps_stable * np.ones(len(p))
+            vs = eps_stable * np.ones(len(p))
             sqrs = eps_stable * np.ones(len(p))
 
         for k in range(len(p)):
-            vs[k]   = beta1 * vs[k]    + (1 - beta1) * grad[k]
-            sqrs[k] = beta2 * sqrs[k]  + (1 - beta2) * np.square(grad[k])
+            vs[k] = beta1 * vs[k] + (1 - beta1) * grad[k]
+            sqrs[k] = beta2 * sqrs[k] + (1 - beta2) * np.square(grad[k])
 
-            v_bias_corr   = vs[k]   / (1 - beta1 ** (k_iter+1))
+            v_bias_corr = vs[k] / (1 - beta1 ** (k_iter+1))
             # Here we want to count from 1
             sqr_bias_corr = sqrs[k] / (1 - beta2 ** (k_iter+1))
             # but Python natively counts form 0
 
-            div  = v_bias_corr / (np.sqrt(sqr_bias_corr) + eps_stable)
+            div = v_bias_corr / (np.sqrt(sqr_bias_corr) + eps_stable)
             p[k] = p[k] - alpha * div
 
         return p, vs, sqrs
 
-
     def Adam(
         self, p0, loss_and_grad_func, fun_goal=0.03, alpha=0.1,
-        beta1 = 0.9, beta2 = 0.999, eps_stable = 1e-8, stopping_func=None
+        beta1=0.9, beta2=0.999, eps_stable=1e-8, stopping_func=None
     ):
 
         p = p0
@@ -241,8 +275,8 @@ class Optimizer:
     def optimize_controls(
         self,
         sim,
+        gateset,
         opt_map,
-        opt,
         opt_name,
         fid_func,
         settings={}
@@ -260,7 +294,7 @@ class Optimizer:
         opt_map : list
             Specifies which parameters will be optimized
 
-        opt : str
+        algorithm : str
             Specification of the optimizer to be used, i.e. cmaes, powell, ...
 
         calib_name : str
@@ -274,8 +308,10 @@ class Optimizer:
 
         """
         # TODO Separate gateset from the simulation here.
-        x0 = sim.gateset.get_parameters(opt_map, scaled=True)
+        x0 = gateset.get_parameters(opt_map, scaled=True)
+        self.init_values = x0
         self.sim = sim
+        self.gateset = gateset
         self.opt_map = opt_map
         self.opt_name = opt_name
         self.fid_func = fid_func
@@ -292,19 +328,19 @@ class Optimizer:
             self.logfile.write("Starting optimization at")
             self.logfile.write(start_time_str)
             self.logfile.flush()
-            if opt == 'cmaes':
+            if self.algorithm == 'cmaes':
                 self.cmaes(
                     x0,
                     settings
                 )
 
-            elif opt == 'lbfgs':
+            elif self.algorithm == 'lbfgs':
                 x_best = self.lbfgs(
                     x0,
                     self.goal_run_with_grad,
                     options=settings
                 )
-                self.sim.gateset.set_parameters(
+                self.gateset.set_parameters(
                     x_best, self.opt_map, scaled=True
                 )
             end_time = time.time()
@@ -403,7 +439,6 @@ class Optimizer:
             plt.figure()
             plt.plot(X, rms, 'x')
             plt.show()
-
 
     def log_parameters(self, x):
         # FIXME why does log take an x parameter and doesn't use it?

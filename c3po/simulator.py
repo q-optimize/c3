@@ -30,6 +30,9 @@ class Simulator():
         self.lindbladian = False
         self.use_VZ = False
 
+    def write_config(self):
+        return 0
+
     def get_gates(
         self
     ):

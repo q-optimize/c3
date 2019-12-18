@@ -273,8 +273,8 @@ with tf.device('/CPU:0'):
         )
 
 # Run the stuff
-    c3_openloop()
-    c3_calibration(noise_level=0)
-    logfilename = logdir + "calibration.log"
-    #  sampling = 'from_end'  'even', 'random', 'from_start'
-    c3_learn_model(logfilename, sampling='random', batch_size=10)
+    # c3_openloop()
+    # c3_calibration(noise_level=0)
+    # logfilename = logdir + "calibration.log"
+    # #  sampling = 'from_end'  'even', 'random', 'from_start'
+    # c3_learn_model(logfilename, sampling='random', batch_size=10)

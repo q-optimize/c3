@@ -23,6 +23,9 @@ class Experiment:
         self.model = model
         self.generator = generator
 
+    def write_config(self):
+        return 0
+
     def list_parameters(self):
         par_list = []
         par_list.extend(self.model.list_parameters())
