@@ -143,7 +143,7 @@ def plot_learning(logfolder=""):
                         unit = '[MHz]'
                     elif desc == 't1' or desc == 't2star':
                         p_val = param[1] / 1e-6 / 2 / np.pi
-                        unit = '[$\mu$ s]'
+                        unit = '[$\\mu$s]'
                     elif desc == 'V_to_Hz':
                         p_val = param[1] / 1e6
                         unit = '[MHz/V]'
