@@ -74,7 +74,7 @@ def create_gates(t_final,
         bounds=carrier_bounds
     )
     X90p = control.Instruction(
-        name="X90p",
+        name="X90p:Id",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
@@ -87,17 +87,17 @@ def create_gates(t_final,
 
     if all_gates:
         Y90p = copy.deepcopy(X90p)
-        Y90p.name = "Y90p"
+        Y90p.name = "Y90p:Id"
         Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
         Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
         X90m = copy.deepcopy(X90p)
-        X90m.name = "X90m"
+        X90m.name = "X90m:Id"
         X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
         X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
         Y90m = copy.deepcopy(X90p)
-        Y90m.name = "Y90m"
+        Y90m.name = "Y90m:Id"
         Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
         Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
 
@@ -113,7 +113,7 @@ def create_gates(t_final,
             shape=envelopes.no_drive
         )
         Id = control.Instruction(
-            name="Id",
+            name="Id:Id",
             t_start=0.0,
             t_end=t_final,
             channels=["d1"]
@@ -166,7 +166,7 @@ def create_pwc_gates(t_final,
         bounds=carrier_bounds
     )
     X90p = control.Instruction(
-        name="X90p",
+        name="X90p:Id",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
@@ -179,17 +179,17 @@ def create_pwc_gates(t_final,
 
     if all_gates:
         Y90p = copy.deepcopy(X90p)
-        Y90p.name = "Y90p"
+        Y90p.name = "Y90p:Id"
         Y90p.comps['d1']['pwc'].params['xy_angle'] = np.pi / 2
         Y90p.comps['d1']['pwc'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
         X90m = copy.deepcopy(X90p)
-        X90m.name = "X90m"
+        X90m.name = "X90m:Id"
         X90m.comps['d1']['pwc'].params['xy_angle'] = np.pi
         X90m.comps['d1']['pwc'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
         Y90m = copy.deepcopy(X90p)
-        Y90m.name = "Y90m"
+        Y90m.name = "Y90m:Id"
         Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
         Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
 
@@ -239,7 +239,7 @@ def create_rect_gates(t_final,
         bounds=carrier_bounds
     )
     X90p = control.Instruction(
-        name="X90p",
+        name="X90p:Id",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
@@ -252,17 +252,17 @@ def create_rect_gates(t_final,
 
     if all_gates:
         Y90p = copy.deepcopy(X90p)
-        Y90p.name = "Y90p"
+        Y90p.name = "Y90p:Id"
         Y90p.comps['d1']['rect'].params['xy_angle'] = np.pi / 2
         Y90p.comps['d1']['rect'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
 
         X90m = copy.deepcopy(X90p)
-        X90m.name = "X90m"
+        X90m.name = "X90m:Id"
         X90m.comps['d1']['rect'].params['xy_angle'] = np.pi
         X90m.comps['d1']['rect'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
 
         Y90m = copy.deepcopy(X90p)
-        Y90m.name = "Y90m"
+        Y90m.name = "Y90m:Id"
         Y90m.comps['d1']['rect'].params['xy_angle'] = - np.pi / 2
         Y90m.comps['d1']['rect'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
 
@@ -302,7 +302,7 @@ def create_chip_model(qubit1_freq, qubit1_anhar, qubit1_lvls,
         strength=g_coupling
     )
     drive = component.Drive(
-        name="D1",
+        name="d1",
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
         connected=["Q1"],
@@ -357,75 +357,75 @@ def create_opt_map(pulse_type: bool, xy_angle: bool):
     # Parameters to optimize
     if pulse_type == 'gauss':
         gateset_opt_map = [
-            [('X90p', 'd1', 'gauss', 'amp'),
-             ('Y90p', 'd1', 'gauss', 'amp'),
-             ('X90m', 'd1', 'gauss', 'amp'),
-             ('Y90m', 'd1', 'gauss', 'amp')],
-            [('X90p', 'd1', 'gauss', 'freq_offset'),
-             ('Y90p', 'd1', 'gauss', 'freq_offset'),
-             ('X90m', 'd1', 'gauss', 'freq_offset'),
-             ('Y90m', 'd1', 'gauss', 'freq_offset')]
+            [('X90p:Id', 'd1', 'gauss', 'amp'),
+             ('Y90p:Id', 'd1', 'gauss', 'amp'),
+             ('X90m:Id', 'd1', 'gauss', 'amp'),
+             ('Y90m:Id', 'd1', 'gauss', 'amp')],
+            [('X90p:Id', 'd1', 'gauss', 'freq_offset'),
+             ('Y90p:Id', 'd1', 'gauss', 'freq_offset'),
+             ('X90m:Id', 'd1', 'gauss', 'freq_offset'),
+             ('Y90m:Id', 'd1', 'gauss', 'freq_offset')]
         ]
         if xy_angle:
             gateset_opt_map.append(
-                [('X90p', 'd1', 'gauss', 'xy_angle'),
-                 ('Y90p', 'd1', 'gauss', 'xy_angle', add_pih),
-                 ('X90m', 'd1', 'gauss', 'xy_angle', add_pi),
-                 ('Y90m', 'd1', 'gauss', 'xy_angle', add_mpih)]
+                [('X90p:Id', 'd1', 'gauss', 'xy_angle'),
+                 ('Y90p:Id', 'd1', 'gauss', 'xy_angle', add_pih),
+                 ('X90m:Id', 'd1', 'gauss', 'xy_angle', add_pi),
+                 ('Y90m:Id', 'd1', 'gauss', 'xy_angle', add_mpih)]
             )
     elif pulse_type == 'drag':
         gateset_opt_map = [
-            [('X90p', 'd1', 'gauss', 'amp'),
-             ('Y90p', 'd1', 'gauss', 'amp'),
-             ('X90m', 'd1', 'gauss', 'amp'),
-             ('Y90m', 'd1', 'gauss', 'amp')],
-            [('X90p', 'd1', 'gauss', 'freq_offset'),
-             ('Y90p', 'd1', 'gauss', 'freq_offset'),
-             ('X90m', 'd1', 'gauss', 'freq_offset'),
-             ('Y90m', 'd1', 'gauss', 'freq_offset')],
-            [('X90p', 'd1', 'gauss', 'delta'),
-             ('Y90p', 'd1', 'gauss', 'delta'),
-             ('X90m', 'd1', 'gauss', 'delta'),
-             ('Y90m', 'd1', 'gauss', 'delta')]
+            [('X90p:Id', 'd1', 'gauss', 'amp'),
+             ('Y90p:Id', 'd1', 'gauss', 'amp'),
+             ('X90m:Id', 'd1', 'gauss', 'amp'),
+             ('Y90m:Id', 'd1', 'gauss', 'amp')],
+            [('X90p:Id', 'd1', 'gauss', 'freq_offset'),
+             ('Y90p:Id', 'd1', 'gauss', 'freq_offset'),
+             ('X90m:Id', 'd1', 'gauss', 'freq_offset'),
+             ('Y90m:Id', 'd1', 'gauss', 'freq_offset')],
+            [('X90p:Id', 'd1', 'gauss', 'delta'),
+             ('Y90p:Id', 'd1', 'gauss', 'delta'),
+             ('X90m:Id', 'd1', 'gauss', 'delta'),
+             ('Y90m:Id', 'd1', 'gauss', 'delta')]
         ]
         if xy_angle:
             gateset_opt_map.append(
-                [('X90p', 'd1', 'gauss', 'xy_angle'),
-                 ('Y90p', 'd1', 'gauss', 'xy_angle', add_pih),
-                 ('X90m', 'd1', 'gauss', 'xy_angle', add_pi),
-                 ('Y90m', 'd1', 'gauss', 'xy_angle', add_mpih)]
+                [('X90p:Id', 'd1', 'gauss', 'xy_angle'),
+                 ('Y90p:Id', 'd1', 'gauss', 'xy_angle', add_pih),
+                 ('X90m:Id', 'd1', 'gauss', 'xy_angle', add_pi),
+                 ('Y90m:Id', 'd1', 'gauss', 'xy_angle', add_mpih)]
             )
     elif pulse_type == 'pwc':
         gateset_opt_map = [
-            [('X90p', 'd1', 'pwc', 'inphase'),
-             ('Y90p', 'd1', 'pwc', 'inphase'),
-             ('X90m', 'd1', 'pwc', 'inphase'),
-             ('Y90m', 'd1', 'pwc', 'inphase')],
-            [('X90p', 'd1', 'pwc', 'quadrature'),
-             ('Y90p', 'd1', 'pwc', 'quadrature'),
-             ('X90m', 'd1', 'pwc', 'quadrature'),
-             ('Y90m', 'd1', 'pwc', 'quadrature')]
+            [('X90p:Id', 'd1', 'pwc', 'inphase'),
+             ('Y90p:Id', 'd1', 'pwc', 'inphase'),
+             ('X90m:Id', 'd1', 'pwc', 'inphase'),
+             ('Y90m:Id', 'd1', 'pwc', 'inphase')],
+            [('X90p:Id', 'd1', 'pwc', 'quadrature'),
+             ('Y90p:Id', 'd1', 'pwc', 'quadrature'),
+             ('X90m:Id', 'd1', 'pwc', 'quadrature'),
+             ('Y90m:Id', 'd1', 'pwc', 'quadrature')]
         ]
         if xy_angle:
             gateset_opt_map.append(
-                [('X90p', 'd1', 'pwc', 'xy_angle'),
-                 ('Y90p', 'd1', 'pwc', 'xy_angle', add_pih),
-                 ('X90m', 'd1', 'pwc', 'xy_angle', add_pi),
-                 ('Y90m', 'd1', 'pwc', 'xy_angle', add_mpih)]
+                [('X90p:Id', 'd1', 'pwc', 'xy_angle'),
+                 ('Y90p:Id', 'd1', 'pwc', 'xy_angle', add_pih),
+                 ('X90m:Id', 'd1', 'pwc', 'xy_angle', add_pi),
+                 ('Y90m:Id', 'd1', 'pwc', 'xy_angle', add_mpih)]
             )
     elif pulse_type == 'rect':
         gateset_opt_map = [
-            [('X90p', 'd1', 'rect', 'amp'),
-             ('Y90p', 'd1', 'rect', 'amp'),
-             ('X90m', 'd1', 'rect', 'amp'),
-             ('Y90m', 'd1', 'rect', 'amp')]
+            [('X90p:Id', 'd1', 'rect', 'amp'),
+             ('Y90p:Id', 'd1', 'rect', 'amp'),
+             ('X90m:Id', 'd1', 'rect', 'amp'),
+             ('Y90m:Id', 'd1', 'rect', 'amp')]
         ]
         if xy_angle:
             gateset_opt_map.append(
-                [('X90p', 'd1', 'rect', 'xy_angle'),
-                 ('Y90p', 'd1', 'rect', 'xy_angle', add_pih),
-                 ('X90m', 'd1', 'rect', 'xy_angle', add_pi),
-                 ('Y90m', 'd1', 'rect', 'xy_angle', add_mpih)]
+                [('X90p:Id', 'd1', 'rect', 'xy_angle'),
+                 ('Y90p:Id', 'd1', 'rect', 'xy_angle', add_pih),
+                 ('X90m:Id', 'd1', 'rect', 'xy_angle', add_pi),
+                 ('Y90m:Id', 'd1', 'rect', 'xy_angle', add_mpih)]
             )
     return gateset_opt_map
 
@@ -440,40 +440,40 @@ def create_fcts(lindbladian, U_dict=True):
     if not lindbladian:
 
         def unit_compsub_X90p(U_dict):
-            return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+            return fidelities.unitary_infid(U_dict, 'X90p:Id', proj=True)
         def unit_compsub_Y90p(U_dict):
-            return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
+            return fidelities.unitary_infid(U_dict, 'Y90p:Id', proj=True)
         def unit_compsub_X90m(U_dict):
-            return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
+            return fidelities.unitary_infid(U_dict, 'X90m:Id', proj=True)
         def unit_compsub_Y90m(U_dict):
-            return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
+            return fidelities.unitary_infid(U_dict, 'Y90m:Id', proj=True)
 
         def unit_fulluni_X90p(U_dict):
-            return fidelities.unitary_infid(U_dict, 'X90p', proj=False)
+            return fidelities.unitary_infid(U_dict, 'X90p:Id', proj=False)
         def unit_fulluni_Y90p(U_dict):
-            return fidelities.unitary_infid(U_dict, 'Y90p', proj=False)
+            return fidelities.unitary_infid(U_dict, 'Y90p:Id', proj=False)
         def unit_fulluni_X90m(U_dict):
-            return fidelities.unitary_infid(U_dict, 'X90m', proj=False)
+            return fidelities.unitary_infid(U_dict, 'X90m:Id', proj=False)
         def unit_fulluni_Y90m(U_dict):
-            return fidelities.unitary_infid(U_dict, 'Y90m', proj=False)
+            return fidelities.unitary_infid(U_dict, 'Y90m:Id', proj=False)
 
         def avfid_compsub_X90p(U_dict):
-            return fidelities.average_infid(U_dict, 'X90p', proj=True)
+            return fidelities.average_infid(U_dict, 'X90p:Id', proj=True)
         def avfid_compsub_Y90p(U_dict):
-            return fidelities.average_infid(U_dict, 'Y90p', proj=True)
+            return fidelities.average_infid(U_dict, 'Y90p:Id', proj=True)
         def avfid_compsub_X90m(U_dict):
-            return fidelities.average_infid(U_dict, 'X90m', proj=True)
+            return fidelities.average_infid(U_dict, 'X90m:Id', proj=True)
         def avfid_compsub_Y90m(U_dict):
-            return fidelities.average_infid(U_dict, 'Y90m', proj=True)
+            return fidelities.average_infid(U_dict, 'Y90m:Id', proj=True)
 
         def avfid_fulluni_X90p(U_dict):
-            return fidelities.average_infid(U_dict, 'X90p', proj=False)
+            return fidelities.average_infid(U_dict, 'X90p:Id', proj=False)
         def avfid_fulluni_Y90p(U_dict):
-            return fidelities.average_infid(U_dict, 'Y90p', proj=False)
+            return fidelities.average_infid(U_dict, 'Y90p:Id', proj=False)
         def avfid_fulluni_X90m(U_dict):
-            return fidelities.average_infid(U_dict, 'X90m', proj=False)
+            return fidelities.average_infid(U_dict, 'X90m:Id', proj=False)
         def avfid_fulluni_Y90m(U_dict):
-            return fidelities.average_infid(U_dict, 'Y90m', proj=False)
+            return fidelities.average_infid(U_dict, 'Y90m:Id', proj=False)
 
         def epc_ana_compsub(U_dict):
             return fidelities.epc_analytical(U_dict, proj=True)
@@ -482,74 +482,74 @@ def create_fcts(lindbladian, U_dict=True):
             return fidelities.epc_analytical(U_dict, proj=False)
 
         # def pop0_X90p_0_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 0, 'X90p:Id', proj=False)
         # def pop0_X90p_1_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 1, 'X90p:Id', proj=False)
         # def pop0_X90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 2, 'X90p:Id', proj=False)
         # def pop0_X90p_3_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 3, 'X90p:Id', proj=False)
         #
         # def pop0_Y90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
+        #     return fidelities.population(U_dict, 2, 'Y90p:Id', proj=False)
         # def pop0_X90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
+        #     return fidelities.population(U_dict, 2, 'X90m:Id', proj=False)
         # def pop0_Y90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
+        #     return fidelities.population(U_dict, 2, 'Y90m:Id', proj=False)
         #
         # def pop0_X90p_0_compsub(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 0, 'X90p:Id', proj=True)
         # def pop0_X90p_1_compsub(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 1, 'X90p:Id', proj=True)
         # def pop0_X90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 2, 'X90p:Id', proj=True)
         # def pop0_X90p_3_compsub(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 3, 'X90p:Id', proj=True)
         #
         # def pop0_Y90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
+        #     return fidelities.population(U_dict, 2, 'Y90p:Id', proj=True)
         # def pop0_X90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
+        #     return fidelities.population(U_dict, 2, 'X90m:Id', proj=True)
         # def pop0_Y90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
+        #     return fidelities.population(U_dict, 2, 'Y90m:Id', proj=True)
 
     elif lindbladian:
 
         def unit_compsub_X90p(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p:Id', proj=True)
         def unit_compsub_Y90p(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', proj=True)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p:Id', proj=True)
         def unit_compsub_X90m(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m', proj=True)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m:Id', proj=True)
         def unit_compsub_Y90m(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m', proj=True)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m:Id', proj=True)
 
         def unit_fulluni_X90p(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=False)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p:Id', proj=False)
         def unit_fulluni_Y90p(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', proj=False)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p:Id', proj=False)
         def unit_fulluni_X90m(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m', proj=False)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90m:Id', proj=False)
         def unit_fulluni_Y90m(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m', proj=False)
+            return fidelities.lindbladian_unitary_infid(U_dict, 'Y90m:Id', proj=False)
 
         def avfid_compsub_X90p(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+            return fidelities.lindbladian_average_infid(U_dict, 'X90p:Id', proj=True)
         def avfid_compsub_Y90p(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'Y90p', proj=True)
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90p:Id', proj=True)
         def avfid_compsub_X90m(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'X90m', proj=True)
+            return fidelities.lindbladian_average_infid(U_dict, 'X90m:Id', proj=True)
         def avfid_compsub_Y90m(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'Y90m', proj=True)
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90m:Id', proj=True)
 
         def avfid_fulluni_X90p(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=False)
+            return fidelities.lindbladian_average_infid(U_dict, 'X90p:Id', proj=False)
         def avfid_fulluni_Y90p(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'Y90p', proj=False)
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90p:Id', proj=False)
         def avfid_fulluni_X90m(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'X90m', proj=False)
+            return fidelities.lindbladian_average_infid(U_dict, 'X90m:Id', proj=False)
         def avfid_fulluni_Y90m(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'Y90m', proj=False)
+            return fidelities.lindbladian_average_infid(U_dict, 'Y90m:Id', proj=False)
 
         def epc_ana_compsub(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
@@ -558,36 +558,36 @@ def create_fcts(lindbladian, U_dict=True):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=False)
 
         # def pop0_X90p_0_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 0, 'X90p:Id', proj=False)
         # def pop0_X90p_1_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 1, 'X90p:Id', proj=False)
         # def pop0_X90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 2, 'X90p:Id', proj=False)
         # def pop0_X90p_3_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
+        #     return fidelities.population(U_dict, 3, 'X90p:Id', proj=False)
         #
         # def pop0_Y90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
+        #     return fidelities.population(U_dict, 2, 'Y90p:Id', proj=False)
         # def pop0_X90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
+        #     return fidelities.population(U_dict, 2, 'X90m:Id', proj=False)
         # def pop0_Y90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
+        #     return fidelities.population(U_dict, 2, 'Y90m:Id', proj=False)
         #
         # def pop0_X90p_0_compsub(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 0, 'X90p:Id', proj=True)
         # def pop0_X90p_1_compsub(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 1, 'X90p:Id', proj=True)
         # def pop0_X90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 2, 'X90p:Id', proj=True)
         # def pop0_X90p_3_compsub(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
+        #     return fidelities.population(U_dict, 3, 'X90p:Id', proj=True)
         #
         # def pop0_Y90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
+        #     return fidelities.population(U_dict, 2, 'Y90p:Id', proj=True)
         # def pop0_X90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
+        #     return fidelities.population(U_dict, 2, 'X90m:Id', proj=True)
         # def pop0_Y90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
+        #     return fidelities.population(U_dict, 2, 'Y90m:Id', proj=True)
 
     fcts_list = [
         unit_compsub_X90p,
@@ -606,8 +606,8 @@ def create_fcts(lindbladian, U_dict=True):
         avfid_fulluni_Y90p,
         avfid_fulluni_X90m,
         avfid_fulluni_Y90m,
-        epc_ana_compsub,
-        epc_ana_fulluni,
+        # epc_ana_compsub,
+        # epc_ana_fulluni,
         # pop0_X90p_0_fulluni,
         # pop0_X90p_1_fulluni,
         # pop0_X90p_2_fulluni,

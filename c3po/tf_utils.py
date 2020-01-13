@@ -338,7 +338,7 @@ def tf_ketket_fid(psi1, psi2):
     return tf_abs(tf.matmul(psi1, psi2))
 
 
-def tf_unitary_overlap(A, B):
+def tf_unitary_overlap(A, B, lvls=None):
     """
     Unitary overlap between two matrices in Tensorflow(tm).
 
@@ -355,7 +355,8 @@ def tf_unitary_overlap(A, B):
         Description of returned object.
 
     """
-    lvls = tf.cast(B.shape[0], B.dtype)
+    if lvls is None:
+        lvls = tf.cast(B.shape[0], B.dtype)
     overlap = tf_abs(
                 tf.linalg.trace(
                     tf.matmul(A, tf.linalg.adjoint(B))
@@ -377,8 +378,9 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     return overlap
 
 
-def tf_average_fidelity(A, B):
-    lvls = tf.cast(B.shape[0], B.dtype)
+def tf_average_fidelity(A, B, lvls=None):
+    if lvls is None:
+        lvls = tf.cast(B.shape[0], B.dtype)
     Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     # get to choi decomposition
     lambda_super = tf_super(Lambda)

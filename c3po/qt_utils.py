@@ -62,41 +62,44 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
-def perfect_gate(lvls: int, gate_str: str, proj: str = 'wzeros'):
-    if gate_str == 'Id':
-        gate = Id
-    elif gate_str == 'X90p':
-        gate = X90p
-    elif gate_str == 'X90m':
-        gate = X90m
-    elif gate_str == 'Xp':
-        gate = Xp
-    elif gate_str == 'Y90p':
-        gate = Y90p
-    elif gate_str == 'Y90m':
-        gate = Y90m
-    elif gate_str == 'Yp':
-        gate = Yp
-    elif gate_str == 'Z90p':
-        gate = Z90p
-    elif gate_str == 'Z90m':
-        gate = Z90m
-    elif gate_str == 'Zp':
-        gate = Zp
-    else:
-        print("gate_str must be one of the basic 90 or 180 degree gates.")
-        print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
-              "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
-        return None
-    if proj == 'compsub':
-        pass
-    elif proj == 'wzeros':
-        zeros = np.zeros([lvls - 2, lvls - 2])
-        gate = scipy_block_diag(gate, zeros)
-    elif proj == 'fulluni':
-        identity = np.eye(lvls - 2)
-        gate = scipy_block_diag(gate, identity)
-    return gate
+def perfect_gate(lvls: int, gates_str: str, proj: str = 'wzeros'):
+    kron_gate = 1
+    for gate_str in gates_str.split(":"):
+        if gate_str == 'Id':
+            gate = Id
+        elif gate_str == 'X90p':
+            gate = X90p
+        elif gate_str == 'X90m':
+            gate = X90m
+        elif gate_str == 'Xp':
+            gate = Xp
+        elif gate_str == 'Y90p':
+            gate = Y90p
+        elif gate_str == 'Y90m':
+            gate = Y90m
+        elif gate_str == 'Yp':
+            gate = Yp
+        elif gate_str == 'Z90p':
+            gate = Z90p
+        elif gate_str == 'Z90m':
+            gate = Z90m
+        elif gate_str == 'Zp':
+            gate = Zp
+        else:
+            print("gate_str must be one of the basic 90 or 180 degree gates.")
+            print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
+                  "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
+            return None
+        if proj == 'compsub':
+            pass
+        elif proj == 'wzeros':
+            zeros = np.zeros([lvls - 2, lvls - 2])
+            gate = scipy_block_diag(gate, zeros)
+        elif proj == 'fulluni':
+            identity = np.eye(lvls - 2)
+            gate = scipy_block_diag(gate, identity)
+        kron_gate = np.kron(kron_gate, gate)
+    return kron_gate
 
 
 def perfect_CZ(lvls: int, proj: str = 'wzeros'):

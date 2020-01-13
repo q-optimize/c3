@@ -55,15 +55,17 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
 def unitary_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict[gate]
     projection = 'fulluni'
+    num_gates = len(gate.split(':'))
+    lvls = int(U.shape[0] ** (1/num_gates))
+    fid_lvls = lvls
     if proj:
-        U = U[0:2, 0:2]
-        projection = 'compsub'
-    lvls = U.shape[0]
+        projection = 'wzeros'
+        fid_lvls = 2 * num_gates
     U_ideal = tf.constant(
                 perfect_gate(lvls, gate, projection),
                 dtype=tf.complex128
                 )
-    infid = 1 - tf_unitary_overlap(U, U_ideal)
+    infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
@@ -72,11 +74,12 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, proj: bool):
     # to select the right section of the superoper
     U = U_dict[gate]
     projection = 'fulluni'
-    lvls = int(np.sqrt(U.shape[0]))
+    num_gates = len(gate.split(':'))
+    lvls = int(np.sqrt(U.shape[0]) ** (1/num_gates))
     fid_lvls = lvls
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2
+        fid_lvls = 2 * num_gates
     U_ideal = tf_super(
                tf.constant(
                     perfect_gate(lvls, gate, projection),
@@ -90,26 +93,29 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, proj: bool):
 def average_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict[gate]
     projection = 'fulluni'
+    num_gates = len(gate.split(':'))
+    lvls = int(U.shape[0] ** (1/num_gates))
+    fid_lvls = lvls
     if proj:
-        U = U[0:2, 0:2]
-        projection = 'compsub'
-    lvls = U.shape[0]
+        projection = 'wzeros'
+        fid_lvls = 2 * num_gates
     U_ideal = tf.constant(
                 perfect_gate(lvls, gate, projection),
                 dtype=tf.complex128
                 )
-    infid = 1 - tf_average_fidelity(U, U_ideal)
+    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
 def lindbladian_average_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict[gate]
     projection = 'fulluni'
-    lvls = int(np.sqrt(U.shape[0]))
+    num_gates = len(gate.split(':'))
+    lvls = int(np.sqrt(U.shape[0]) ** (1/num_gates))
     fid_lvls = lvls
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2
+        fid_lvls = 2 * num_gates
     U_ideal = tf_super(
                tf.constant(
                     perfect_gate(lvls, gate, projection),
