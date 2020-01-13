@@ -1,6 +1,7 @@
 """Experiment class that models the whole experiment."""
 
 import types
+import copy
 import numpy as np
 import tensorflow as tf
 from c3po.component import C3obj
@@ -24,7 +25,14 @@ class Experiment:
         self.generator = generator
 
     def write_config(self):
-        return 0
+        cfg = {}
+        cfg = copy.deepcopy(self.__dict__)
+        for key in cfg:
+            if key == 'model':
+                cfg[key] = self.model.write_config()
+            elif key == 'generator':
+                cfg[key] = self.generator.write_config()
+        return cfg
 
     def list_parameters(self):
         par_list = []

@@ -22,24 +22,40 @@ class Optimizer:
         self.noise_level = 0
         self.sampling = False
         self.batch_size = 1
-        self.skip_bad_points = False  # The Millikan option
+        self.skip_bad_points = False  # The Millikan option, don't judge
+
+        # NICO: ###############################################################
+        # The default fields of this class to be stored in a config. Note: Data
+        # heavy fields are excluded, as they will be transfered via logfile.
+        # Maybe this should include the optimizer state in the future, to allow
+        # for easier pause and repeat? A dedicated optim_state JSON might be
+        # better for that.
+        #######################################################################
+        self.cfg_keys = [
+            'noise_level', 'sampling', 'batch_size', 'skip_bad_points',
+            'data_path', 'gateset_opt_map', 'opt_map',
+            'opt_name', 'logfile_name'
+        ]
         if cfg is not None:
             self.load_config(cfg)
 
     def write_config(self, filename):
+        # TODO This will need to be moved to the top level script. Problem
+        # Class or similar.
         cfg = {}
         cfg['title'] = "Majestic C3 config file"
         cfg['date'] = time.asctime(time.localtime())
         cfg['python_version'] = python_version()
         cfg['c3_version'] = c3po.__version__
-        cfg['optimizer'] = copy.deepcopy(self.__dict__)
-        for key in cfg['optimizer']:
-            if key == 'gateset':
-                cfg['optimizer'][key] = self.gateset.write_config()
-            elif key == 'sim':
-                cfg['optimizer'][key] = self.sim.write_config()
-            elif key == 'exp':
-                cfg['optimizer'][key] = self.exp.write_config()
+
+        # Optimizer specifc code follows
+        cfg['optimizer'] = {}
+        cfg['optimizer']['gateset'] = self.gateset.write_config()
+        cfg['optimizer']['sim'] = self.sim.write_config()
+        cfg['optimizer']['exp'] = self.exp.write_config()
+        for key in self.cfg_keys:
+            cfg['optimizer'][key] = self.__dict__[key]
+
         with open(filename, "w") as cfg_file:
             json.dump(cfg, cfg_file)
 

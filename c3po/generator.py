@@ -2,6 +2,7 @@
 
 import types
 import json
+import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -25,6 +26,17 @@ class Generator:
 
         self.resolution = resolution
         # TODO add line knowledge (mapping of which devices are connected)
+
+    def write_config(self):
+        cfg = {}
+        cfg = copy.deepcopy(self.__dict__)
+        devcfg = {}
+        for key in self.devices:
+            dev = self.devices[key]
+            devcfg[dev.name] = dev.write_config()
+        cfg["devices"] = devcfg
+        cfg.pop('signal', None)
+        return cfg
 
     def generate_signals(self, instr: Instruction):
         # TODO deal with multiple instructions within GateSet
@@ -73,7 +85,6 @@ class Generator:
         return self.devices["readout"].readout(phase)
 
 
-
 class Device(C3obj):
     """Device that is part of the stack generating the instruction signals."""
 
@@ -91,6 +102,16 @@ class Device(C3obj):
         )
         self.resolution = resolution
         self.params = {}
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        cfg.pop('signal', None)
+        cfg.pop('ts', None)
+        cfg.pop('amp_tot', None)
+        cfg.pop('amp_tot_sq', None)
+        for p in cfg['params']:
+            cfg['params'][p] = float(cfg['params'][p])
+        return cfg
 
     def prepare_plot(self):
         plt.rcParams['figure.dpi'] = 100

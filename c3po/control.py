@@ -1,4 +1,5 @@
 import types
+import copy
 import numpy as np
 from c3po.component import C3obj
 
@@ -10,9 +11,13 @@ class GateSet:
         self.instructions = {}
 
     def write_config(self):
-        return list(self.instructions.keys())
+        cfg = {}
+        for instr in self.instructions:
+            cfg[instr] = self.instructions[instr].write_config()
+        return cfg
 
     def add_instruction(self, instr):
+        # TODO make this use ___dict___ ?
         self.instructions[instr.name] = instr
 
     def list_parameters(self):
@@ -231,6 +236,13 @@ class Instruction(C3obj):
         for chan in channels:
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for chan in self.comps:
+            for comp in self.comps[chan]:
+                cfg['comps'][chan][comp] = 0
+        return cfg
 
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp

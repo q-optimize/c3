@@ -375,13 +375,19 @@ def tf_log10(x):
     return numerator / denominator
 
 
-def tf_abs(x):
+def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
     return tf.reshape(
                 tf.cast(
-                    tf.sqrt(tf.math.conj(x)*x),
+                    tf.math.conj(x)*x,
                     dtype=tf.float64),
-                shape=[1])
+                shape=[1]
+    )
+
+
+def tf_abs(x):
+    """Rewritten so that is has a gradient."""
+    return tf.sqrt(tf_abs_squared(x))
 
 
 def tf_ave(x: list):

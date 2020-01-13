@@ -1,6 +1,7 @@
 """The model class, containing information on the system and its modelling."""
 
 import numpy as np
+import copy
 import tensorflow as tf
 from scipy.linalg import expm
 from c3po.hamiltonians import resonator, duffing
@@ -139,6 +140,9 @@ class Model:
                 self.control_Hs.append(h)
 
         self.n_params = len(self.params)
+
+    def write_config(self):
+        return "We don't care about the model... YET!"
 
     def initialise_lindbladian(self):
         """Construct Lindbladian (collapse) operators."""
