@@ -233,6 +233,11 @@ cliffords_decomp = [
                     ['X90p', 'Y90p', 'X90m']
                     ]
 
+sum = 0
+for cd in cliffords_decomp:
+    sum = sum + len(cd)
+cliffors_per_gate = sum / len(cliffords_decomp)
+
 # cliffords_decomp = [
 #                    ['X90p', 'X90m'],
 #                    ['X90p', 'X90p'],
