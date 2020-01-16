@@ -175,7 +175,7 @@ def plot_learning(logfolder=""):
         plt.grid()
         plt.semilogy(its, goal_function)
         plt.tight_layout()
-
+        plt.show()
 
 
 def plot_envelope_history(logfilename):

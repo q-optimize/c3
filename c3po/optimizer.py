@@ -137,32 +137,52 @@ class Optimizer:
                 ipar += 1
                 U_dict = self.sim.get_gates()
                 iseq = 1
+                fids = []
+                sims = []
                 for seqs in m[1]:
                     seq = seqs[0]
                     fid = seqs[1]
+
                     if (self.skip_bad_points and fid > 0.25):
                         self.logfile.write(
                             f"\n  Skipped point with infidelity>0.25.\n"
                         )
                         iseq += 1
                         continue
-                    this_goal = self.eval_func(U_dict, seq, fid)
+                    this_goal = self.eval_func(U_dict, seq)
                     self.logfile.write(
                         f"\n  Sequence {iseq} of {len(m[1])}:\n  {seq}\n"
                     )
                     iseq += 1
                     self.logfile.write(
-                        f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
+                        f"  Simulation:  {float(this_goal.numpy()):8.5f}"
                     )
                     self.logfile.write(
                         f"  Experiment: {fid:8.5f}"
                     )
                     self.logfile.write(
-                        f"  Diff: {float(this_goal.numpy()):8.5f}\n"
+                        f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    goal += this_goal ** 2
+                    goal += (fid-this_goal) ** 2
                     used_seqs += 1
+
+                    fids.append(fid)
+                    sims.append(float(this_goal.numpy()))
+
+                self.logfile.write(
+                    f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(sims)):8.5f}\n"
+                )
+                self.logfile.write(
+                    f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(fids)):8.5f}\n"
+                )
+                self.logfile.flush()
 
             goal = tf.sqrt(goal / used_seqs)
             self.logfile.write(
