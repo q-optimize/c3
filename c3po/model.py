@@ -240,7 +240,7 @@ class Model:
 
         return drift_H, self.control_Hs
 
-    def get_drift_eigenframe(self, params=None):
+    def get_drift_eigenframe(self, params=None, transformation=False):
         if params is None:
             params = self.params
 
@@ -252,6 +252,14 @@ class Model:
         e,v = tf.linalg.eigh(drift_H)
         eigenframe = tf.zeros_like(drift_H)
         eigenframe = tf.linalg.set_diag(eigenframe, e)
+
+        if transformation:
+            order = tf.argmax(tf.abs(v), axis=1)
+            np_transform = np.zeros_like(drift_H.numpy())
+            for indx in order:
+                np_transform[:,indx] = v[indx].numpy()
+            transform = tf.constant(np_transform, dtype=tf.complex128)
+            return eigenframe, tran
         return eigenframe
 
     def get_Virtual_Z(self, t_final):
