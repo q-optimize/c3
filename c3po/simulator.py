@@ -227,3 +227,180 @@ class Simulator():
                  transform=ax.transAxes)
         plt.show()
         return r, A, B
+
+
+    def leakage_RB(self,
+       psi_init,
+       U_dict,
+       min_length: int = 5,
+       max_length: int = 100,
+       num_lengths: int = 20,
+       num_seqs: int = 30,
+       plot_all=True,
+       progress=True,
+       logspace=False,
+       return_plot=False,
+       fig=None,
+       ax=None
+    ):
+        print('performing Leakage RB experiment')
+        if logspace:
+            lengths = np.rint(
+                        np.logspace(
+                            np.log10(min_length),
+                            np.log10(max_length),
+                            num=num_lengths
+                            )
+                        ).astype(int)
+        else:
+            lengths = np.rint(
+                        np.linspace(
+                            min_length,
+                            max_length,
+                            num=num_lengths
+                            )
+                        ).astype(int)
+        comp_surv = []
+        surv_prob = []
+        for L in lengths:
+            if progress:
+                print(L)
+            seqs = single_length_RB(num_seqs, L)
+            Us = evaluate_sequences(U_dict, seqs)
+            pop0s = []
+            pop_comps = []
+            for U in Us:
+                pops = self.populations(tf.matmul(U, psi_init))
+                pop0s.append(float(pops[0]))
+                pop_comps.append(float(pops[0])+float(pops[1]))
+            surv_prob.append(pop0s)
+            comp_surv.append(pop_comps)
+
+        def RB_leakage(len, r_leak, A_leak, B_leak):
+            return A_leak + B_leak * r_leak**(len)
+        bounds = (0, 1)
+        init_guess = [0.9, 0.5, 0.5]
+        fitted = False
+        while not fitted:
+            print('lengths shape', lengths.shape)
+            print('surv_prob shape', np.array(comp_surv).shape)
+            try:
+                comp_means = np.mean(comp_surv, axis=1)
+                comp_stds = np.std(comp_surv, axis=1) / np.sqrt(len(comp_surv[0]))
+                solution, cov = curve_fit(RB_leakage,
+                                          lengths,
+                                          comp_means,
+                                          sigma=comp_stds,
+                                          bounds=bounds,
+                                          p0=init_guess)
+                r_leak, A_leak, B_leak = solution
+                fitted = True
+            except Exception as message:
+                print(message)
+                print('increasing RB length.')
+                if logspace:
+                    new_lengths = np.rint(
+                                np.logspace(
+                                    np.log10(max_length + min_length),
+                                    np.log10(max_length * 2),
+                                    num=num_lengths
+                                    )
+                                ).astype(int)
+                else:
+                    new_lengths = np.rint(
+                                np.linspace(
+                                    max_length + min_length,
+                                    max_length*2,
+                                    num=num_lengths
+                                    )
+                                ).astype(int)
+                max_length = max_length * 2
+                for L in new_lengths:
+                    if progress:
+                        print(L)
+                    seqs = single_length_RB(num_seqs, L)
+                    Us = evaluate_sequences(U_dict, seqs)
+                    pop0s = []
+                    pop_comps = []
+                    for U in Us:
+                        pops = self.populations(tf.matmul(U, psi_init))
+                        pop0s.append(float(pops[0]))
+                        pop_comps.append(float(pops[0]))
+                    surv_prob.append(pop0s)
+                    comp_surv.append(pop_comps)
+                lengths = np.append(lengths, new_lengths)
+
+
+        def RB_surv(len, r, A, C):
+            return A + B_leak * r_leak**(len) + C * r**(len)
+        bounds = (0, 1)
+        init_guess = [0.9, 0.5, 0.5]
+        surv_means = np.mean(surv_prob, axis=1)
+        surv_stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
+        solution, cov = curve_fit(RB_surv,
+                                  lengths,
+                                  surv_means,
+                                  sigma=surv_stds,
+                                  bounds=bounds,
+                                  p0=init_guess)
+        r, A, C = solution
+
+        leakage = (1-A_leak)*(1-r_leak)
+        seepage = A_leak*(1-r_leak)
+        fid = 0.5*(r+1-leakage)
+
+        if fig == None:
+            fig, ax = plt.subplots(2)
+        if plot_all:
+            ax[0].plot(lengths,
+                    comp_surv,
+                    marker='o',
+                    color='red',
+                    linestyle='None')
+        ax[0].errorbar(lengths,
+                    comp_means,
+                    yerr=comp_stds,
+                    color='blue',
+                    marker='x',
+                    linestyle='None')
+        ax[0].set_title('RB Leakage')
+        ax[0].set_ylabel('Population in comp sub')
+        ax[0].set_xlabel('# Cliffords')
+        ax[0].set_ylim(0, 1)
+        ax[0].set_xlim(0, lengths[-1])
+        fitted = RB_leakage(lengths, r_leak, A_leak, B_leak)
+        ax[0].plot(lengths, fitted)
+        ax[0].text(0.1, 0.1,
+                 'r_leak={:.4f}, A_leak={:.3f}, B_leak={:.3f}'.format(r_leak, A_leak, B_leak),
+                 size=16,
+                 transform=ax[0].transAxes)
+
+        if plot_all:
+            ax[1].plot(lengths,
+                    surv_prob,
+                    marker='o',
+                    color='red',
+                    linestyle='None')
+        ax[1].errorbar(lengths,
+                    surv_means,
+                    yerr=surv_stds,
+                    color='blue',
+                    marker='x',
+                    linestyle='None')
+        ax[1].set_title('RB results')
+        ax[1].set_ylabel('Population in 0')
+        ax[1].set_xlabel('# Cliffords')
+        ax[1].set_ylim(0, 1)
+        ax[1].set_xlim(0, lengths[-1])
+        fitted = RB_surv(lengths, r, A, C)
+        ax[1].plot(lengths, fitted)
+        ax[1].text(0.1, 0.1,
+                 'r={:.4f}, A={:.3f}, C={:.3f}'.format(r, A, C),
+                 size=16,
+                 transform=ax[1].transAxes)
+
+        if return_plot:
+            return fid, leakage, seepage, fig, ax
+        else:
+            fig.show()
+            return fid, leakage, seepage
