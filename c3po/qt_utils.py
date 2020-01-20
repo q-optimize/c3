@@ -165,12 +165,19 @@ C23 = X90m @ Y90p @ Y90p
 C24 = X90p @ Y90p @ X90m
 
 
-def perfect_cliffords(lvls: int, proj: str = 'fulluni'):
+def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
     # TODO make perfect clifford more general by making it take a decomposition
-    x90p = perfect_gate(lvls, 'X90p', proj)
-    y90p = perfect_gate(lvls, 'Y90p', proj)
-    x90m = perfect_gate(lvls, 'X90m', proj)
-    y90m = perfect_gate(lvls, 'Y90m', proj)
+
+    if num_gates == 1:
+        x90p = perfect_gate(lvls, 'X90p', proj)
+        y90p = perfect_gate(lvls, 'Y90p', proj)
+        x90m = perfect_gate(lvls, 'X90m', proj)
+        y90m = perfect_gate(lvls, 'Y90m', proj)
+    elif num_gates == 2:
+        x90p = perfect_gate(lvls, 'X90p:Id', proj)
+        y90p = perfect_gate(lvls, 'Y90p:Id', proj)
+        x90m = perfect_gate(lvls, 'X90m:Id', proj)
+        y90m = perfect_gate(lvls, 'Y90m:Id', proj)
 
     C1 = x90p @ x90m
     C2 = y90p @ x90p
@@ -232,6 +239,8 @@ cliffords_decomp = [
                     ['X90m', 'Y90p', 'Y90p'],
                     ['X90p', 'Y90p', 'X90m']
                     ]
+
+cliffords_decomp_xId = [[gate + ':Id' for gate in clif] for clif in cliffords_decomp]
 
 sum = 0
 for cd in cliffords_decomp:
