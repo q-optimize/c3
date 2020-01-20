@@ -461,37 +461,27 @@ def create_fcts(lindbladian, U_dict=True):
         def epc_ana_fulluni(U_dict):
             return fidelities.epc_analytical(U_dict, proj=False)
 
-        # def pop0_X90p_0_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
-        # def pop0_X90p_1_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
-        # def pop0_X90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
-        # def pop0_X90p_3_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
-        #
-        # def pop0_Y90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
-        # def pop0_X90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
-        # def pop0_Y90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
-        #
-        # def pop0_X90p_0_compsub(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
-        # def pop0_X90p_1_compsub(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
-        # def pop0_X90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
-        # def pop0_X90p_3_compsub(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
-        #
-        # def pop0_Y90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
-        # def pop0_X90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
-        # def pop0_Y90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
+        def epc_RB(U_dict):
+            return fidelities.RB(U_dict, logspace=True, lindbladian=False)[0]
+
+        def epc_leakage_RB(U_dict):
+            return fidelities.leakage_RB(U_dict, logspace=True, lindbladian=False)[0]
+
+        def pop0_X90p_0_fulluni(U_dict):
+            return fidelities.population(U_dict, 0, 'X90p')
+        def pop0_X90p_1_fulluni(U_dict):
+            return fidelities.population(U_dict, 1, 'X90p')
+        def pop0_X90p_2_fulluni(U_dict):
+            return fidelities.population(U_dict, 2, 'X90p')
+        def pop0_X90p_3_fulluni(U_dict):
+            return fidelities.population(U_dict, 3, 'X90p')
+
+        def pop0_Y90p_2_fulluni(U_dict):
+            return fidelities.population(U_dict, 2, 'Y90p')
+        def pop0_X90m_2_fulluni(U_dict):
+            return fidelities.population(U_dict, 2, 'X90m')
+        def pop0_Y90m_2_fulluni(U_dict):
+            return fidelities.population(U_dict, 2, 'Y90m')
 
     elif lindbladian:
 
@@ -537,71 +527,56 @@ def create_fcts(lindbladian, U_dict=True):
         def epc_ana_fulluni(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=False)
 
-        # def pop0_X90p_0_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=False)
-        # def pop0_X90p_1_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=False)
-        # def pop0_X90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=False)
-        # def pop0_X90p_3_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=False)
-        #
-        # def pop0_Y90p_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=False)
-        # def pop0_X90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=False)
-        # def pop0_Y90m_2_fulluni(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=False)
-        #
-        # def pop0_X90p_0_compsub(U_dict):
-        #     return fidelities.population(U_dict, 0, 'X90p', proj=True)
-        # def pop0_X90p_1_compsub(U_dict):
-        #     return fidelities.population(U_dict, 1, 'X90p', proj=True)
-        # def pop0_X90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90p', proj=True)
-        # def pop0_X90p_3_compsub(U_dict):
-        #     return fidelities.population(U_dict, 3, 'X90p', proj=True)
-        #
-        # def pop0_Y90p_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90p', proj=True)
-        # def pop0_X90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'X90m', proj=True)
-        # def pop0_Y90m_2_compsub(U_dict):
-        #     return fidelities.population(U_dict, 2, 'Y90m', proj=True)
+        def epc_RB(U_dict):
+            return fidelities.RB(U_dict, logspace=True, lindbladian=True)[0]
+
+        def epc_leakage_RB(U_dict):
+            return fidelities.leakage_RB(U_dict, logspace=True, lindbladian=True)[0]
+
+        def pop0_X90p_0_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 0, 'X90p')
+        def pop0_X90p_1_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 1, 'X90p')
+        def pop0_X90p_2_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 2, 'X90p')
+        def pop0_X90p_3_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 3, 'X90p')
+
+        def pop0_Y90p_2_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 2, 'Y90p')
+        def pop0_X90m_2_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 2, 'X90m')
+        def pop0_Y90m_2_fulluni(U_dict):
+            return fidelities.lindbladian_population(U_dict, 2, 'Y90m')
 
     fcts_list = [
         unit_compsub_X90p,
         unit_compsub_Y90p,
         unit_compsub_X90m,
         unit_compsub_Y90m,
-        unit_fulluni_X90p,
-        unit_fulluni_Y90p,
-        unit_fulluni_X90m,
-        unit_fulluni_Y90m,
+        # unit_fulluni_X90p,
+        # unit_fulluni_Y90p,
+        # unit_fulluni_X90m,
+        # unit_fulluni_Y90m,
         avfid_compsub_X90p,
         avfid_compsub_Y90p,
         avfid_compsub_X90m,
         avfid_compsub_Y90m,
-        avfid_fulluni_X90p,
-        avfid_fulluni_Y90p,
-        avfid_fulluni_X90m,
-        avfid_fulluni_Y90m,
+        # avfid_fulluni_X90p,
+        # avfid_fulluni_Y90p,
+        # avfid_fulluni_X90m,
+        # avfid_fulluni_Y90m,
         epc_ana_compsub,
-        epc_ana_fulluni,
-        # pop0_X90p_0_fulluni,
-        # pop0_X90p_1_fulluni,
-        # pop0_X90p_2_fulluni,
-        # pop0_X90p_3_fulluni,
-        # pop0_Y90p_2_fulluni,
-        # pop0_X90m_2_fulluni,
-        # pop0_Y90m_2_fulluni,
-        # pop0_X90p_0_compsub,
-        # pop0_X90p_1_compsub,
-        # pop0_X90p_2_compsub,
-        # pop0_X90p_3_compsub,
-        # pop0_Y90p_2_compsub,
-        # pop0_X90m_2_compsub,
-        # pop0_Y90m_2_compsub,
+        # epc_ana_fulluni,
+        epc_RB,
+        epc_leakage_RB,
+        pop0_X90p_0_fulluni,
+        pop0_X90p_1_fulluni,
+        pop0_X90p_2_fulluni,
+        pop0_X90p_3_fulluni,
+        pop0_Y90p_2_fulluni,
+        pop0_X90m_2_fulluni,
+        pop0_Y90m_2_fulluni,
     ]
 
     if U_dict:
