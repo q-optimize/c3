@@ -8,7 +8,8 @@ from c3po.tf_utils import tf_ave, tf_super, tf_ketket_fid, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_psi_dm, \
     tf_dm_vect, tf_dmket_fid
 from c3po.qt_utils import basis, perfect_gate, perfect_cliffords, \
-    cliffords_decomp
+    cliffords_decomp, cliffords_decomp_xId, single_length_RB
+
 
 
 def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
@@ -124,20 +125,25 @@ def lindbladian_average_infid(U_dict: dict, gate: str, proj: bool):
 
 
 def epc_analytical(U_dict: dict, proj: bool):
-    real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
-    lvls = real_cliffords[0].shape[0]
+    gate = list(U_dict.keys())[0]
+    U =  U_dict[gate]
+    num_gates = len(gate.split(':'))
+    lvls = int(U.shape[0] ** (1/num_gates))
+    fid_lvls = lvls
+    if num_gates == 1:
+        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+    elif num_gates == 2:
+        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
     projection = 'fulluni'
     if proj:
-        projection = 'compsub'
-        lvls = 2
-    ideal_cliffords = perfect_cliffords(lvls, projection)
+        projection = 'wzeros'
+        fid_lvls = 2 * num_gates
+    ideal_cliffords = perfect_cliffords(lvls, proj = projection, num_gates = num_gates)
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
-        if proj:
-            C_real = C_real[0:2, 0:2]
         C_ideal = ideal_cliffords[C_indx]
-        ave_fid = tf_average_fidelity(C_real, C_ideal)
+        ave_fid = tf_average_fidelity(C_real, C_ideal, fid_lvls)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
@@ -165,6 +171,264 @@ def lindbladian_epc_analytical(U_dict: dict, proj: bool):
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
+
+def populations(state, lindbladian):
+    if lindbladian:
+        diag = []
+        dim = int(np.sqrt(len(state)))
+        indeces = [n * dim + n for n in range(dim)]
+        for indx in indeces:
+            diag.append(state[indx])
+        return np.abs(diag)
+    else:
+        return np.abs(state)**2
+
+def population(U_dict: dict, lvl: int, gate: str):
+    U = U_dict[gate]
+    lvls = U.shape[0]
+    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+    psi_actual = tf.matmul(U, psi_0)
+    return populations(psi_actual, lindbladian=False)[lvl]
+
+
+def lindbladian_population(U_dict: dict, lvl: int, gate: str):
+    U = U_dict[gate]
+    lvls = int(np.sqrt(U.shape[0]))
+    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+    dv_0 = tf_dm_vect(tf_psi_dm(psi_0))
+    dv_actual = tf.matmul(U, dv_0)
+    return populations(dv_actual, lindbladian=True)[lvl]
+
+
+def RB(
+       U_dict,
+       min_length: int = 5,
+       max_length: int = 100,
+       num_lengths: int = 20,
+       num_seqs: int = 30,
+       logspace=False,
+       lindbladian=False
+       ):
+    print('Performing RB fit experiment.')
+    gate = list(U_dict.keys())[0]
+    U =  U_dict[gate]
+    dim = int(U.shape[0])
+    psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
+    if logspace:
+        lengths = np.rint(
+                    np.logspace(
+                        np.log10(min_length),
+                        np.log10(max_length),
+                        num=num_lengths
+                        )
+                    ).astype(int)
+    else:
+        lengths = np.rint(
+                    np.linspace(
+                        min_length,
+                        max_length,
+                        num=num_lengths
+                        )
+                    ).astype(int)
+    surv_prob = []
+    for L in lengths:
+        seqs = single_length_RB(num_seqs, L)
+        Us = evaluate_sequences(U_dict, seqs)
+        pop0s = []
+        for U in Us:
+            pops = populations(tf.matmul(U, psi_init), lindbladian)
+            pop0s.append(float(pops[0]))
+        surv_prob.append(pop0s)
+
+    def RB_fit(len, r, A, B):
+        return A * r**(len) + B
+    bounds = (0, 1)
+    init_guess = [0.9, 0.5, 0.5]
+    fitted = False
+    while not fitted:
+        try:
+            means = np.mean(surv_prob, axis=1)
+            stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
+            solution, cov = curve_fit(RB_fit,
+                                      lengths,
+                                      means,
+                                      sigma=stds,
+                                      bounds=bounds,
+                                      p0=init_guess)
+            r, A, B = solution
+            fitted = True
+        except Exception as message:
+            if logspace:
+                new_lengths = np.rint(
+                            np.logspace(
+                                np.log10(max_length + min_length),
+                                np.log10(max_length * 2),
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            else:
+                new_lengths = np.rint(
+                            np.linspace(
+                                max_length + min_length,
+                                max_length*2,
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            max_length = max_length * 2
+            for L in new_lengths:
+                seqs = single_length_RB(num_seqs, L)
+                Us = evaluate_sequences(U_dict, seqs)
+                pop0s = []
+                for U in Us:
+                    pops = populations(tf.matmul(U, psi_init), lindbladian)
+                    pop0s.append(float(pops[0]))
+                surv_prob.append(pop0s)
+            lengths = np.append(lengths, new_lengths)
+    epc =  0.5 * (1 - r)
+
+    if savefig:
+        fig, ax = plt.subplots()
+        if plot_all:
+            ax.plot(lengths,
+                    surv_prob,
+                    marker='o',
+                    color='red',
+                    linestyle='None')
+        ax.errorbar(lengths,
+                    means,
+                    yerr=stds,
+                    color='blue',
+                    marker='x',
+                    linestyle='None')
+        plt.title('RB results')
+        plt.ylabel('Population in 0')
+        plt.xlabel('# Cliffords')
+        plt.ylim(0, 1)
+        plt.xlim(0, lengths[-1])
+        fitted = RB_fit(lengths, r, A, B)
+        ax.plot(lengths, fitted)
+        plt.text(0.1, 0.1,
+                 'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
+                 size=16,
+                 transform=ax.transAxes)
+        return epc, r, A, B, fig, ax
+    else:
+        return epc, r, A, B
+
+
+def leakage_RB(
+   U_dict,
+   min_length: int = 5,
+   max_length: int = 100,
+   num_lengths: int = 20,
+   num_seqs: int = 30,
+   logspace=False,
+   lindbladian=False
+):
+    print('Performing leakage RB fit experiment.')
+    gate = list(U_dict.keys())[0]
+    U =  U_dict[gate]
+    dim = int(U.shape[0])
+    psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
+    if logspace:
+        lengths = np.rint(
+                    np.logspace(
+                        np.log10(min_length),
+                        np.log10(max_length),
+                        num=num_lengths
+                        )
+                    ).astype(int)
+    else:
+        lengths = np.rint(
+                    np.linspace(
+                        min_length,
+                        max_length,
+                        num=num_lengths
+                        )
+                    ).astype(int)
+    comp_surv = []
+    surv_prob = []
+    for L in lengths:
+        seqs = single_length_RB(num_seqs, L)
+        Us = evaluate_sequences(U_dict, seqs)
+        pop0s = []
+        pop_comps = []
+        for U in Us:
+            pops = populations(tf.matmul(U, psi_init), lindbladian)
+            pop0s.append(float(pops[0]))
+            pop_comps.append(float(pops[0])+float(pops[1]))
+        surv_prob.append(pop0s)
+        comp_surv.append(pop_comps)
+
+    def RB_leakage(len, r_leak, A_leak, B_leak):
+        return A_leak + B_leak * r_leak**(len)
+    bounds = (0, 1)
+    init_guess = [0.9, 0.5, 0.5]
+    fitted = False
+    while not fitted:
+        try:
+            comp_means = np.mean(comp_surv, axis=1)
+            comp_stds = np.std(comp_surv, axis=1) / np.sqrt(len(comp_surv[0]))
+            solution, cov = curve_fit(RB_leakage,
+                                      lengths,
+                                      comp_means,
+                                      sigma=comp_stds,
+                                      bounds=bounds,
+                                      p0=init_guess)
+            r_leak, A_leak, B_leak = solution
+            fitted = True
+        except Exception as message:
+            if logspace:
+                new_lengths = np.rint(
+                            np.logspace(
+                                np.log10(max_length + min_length),
+                                np.log10(max_length * 2),
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            else:
+                new_lengths = np.rint(
+                            np.linspace(
+                                max_length + min_length,
+                                max_length*2,
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            max_length = max_length * 2
+            for L in new_lengths:
+                seqs = single_length_RB(num_seqs, L)
+                Us = evaluate_sequences(U_dict, seqs)
+                pop0s = []
+                pop_comps = []
+                for U in Us:
+                    pops = populations(tf.matmul(U, psi_init), lindbladian)
+                    pop0s.append(float(pops[0]))
+                    pop_comps.append(float(pops[0]))
+                surv_prob.append(pop0s)
+                comp_surv.append(pop_comps)
+            lengths = np.append(lengths, new_lengths)
+
+
+    def RB_surv(len, r, A, C):
+        return A + B_leak * r_leak**(len) + C * r**(len)
+    bounds = (0, 1)
+    init_guess = [0.9, 0.5, 0.5]
+    surv_means = np.mean(surv_prob, axis=1)
+    surv_stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
+    solution, cov = curve_fit(RB_surv,
+                              lengths,
+                              surv_means,
+                              sigma=surv_stds,
+                              bounds=bounds,
+                              p0=init_guess)
+    r, A, C = solution
+
+    leakage = (1-A_leak)*(1-r_leak)
+    seepage = A_leak*(1-r_leak)
+    fid = 0.5*(r+1-leakage)
+    epc = 1 - fid
+
+    return epc, leakage, seepage, r_leak, A_leak, B_leak, r, A, C
 
 
 # def orbit_infid(U_dict: dict):
