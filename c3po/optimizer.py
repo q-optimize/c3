@@ -7,10 +7,13 @@ import copy
 import c3po
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 from platform import python_version
 
+from c3po.tf_utils import tf_abs
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
+from nevergrad.optimization import registry as algo_registry
 
 
 class Optimizer:
@@ -124,7 +127,7 @@ class Optimizer:
             )
         batch_size = len(measurements)
         ipar = 1
-        goal = 0
+        goals = []
         used_seqs = 0
         for m in measurements:
             gateset_params = m[0]
@@ -164,7 +167,7 @@ class Optimizer:
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goal += (fid-this_goal) ** 2
+                goals.append(tf_abs(fid-this_goal))
                 used_seqs += 1
 
                 fids.append(fid)
@@ -184,9 +187,9 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tf.sqrt(goal / used_seqs)
+        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
         self.logfile.write(
-            f"Finished batch with RMS: {float(goal.numpy())}\n"
+            f"Finished batch with median: {float(goal.numpy())}\n"
         )
         self.logfile.flush()
 
@@ -228,7 +231,10 @@ class Optimizer:
                     gateset_params, self.gateset_opt_map, scaled=False
                 )
                 self.logfile.write(
-                    f"\n  Parameterset {ipar} of {batch_size}:  {self.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
+                    f"\n  Parameterset {ipar} of {batch_size}:  "
+                )
+                self.logfile.write(
+                    f"{self.gateset.get_parameters(self.gateset_opt_map, to_str=True)}\n"
                 )
                 ipar += 1
                 U_dict = self.sim.get_gates()
@@ -325,6 +331,27 @@ class Optimizer:
         res = es.result + (es.stop(), es, es.logger)
         return res[0]
 
+    def oneplusone(self, x0, goal_fun, settings={}):
+        optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+        while True:
+            self.logfile.write(f"Batch {self.iteration}\n")
+            self.logfile.flush()
+            tmp = optimizer.ask()
+            samples = tmp.args
+            solutions = []
+            for sample in samples:
+                goal = float(goal_fun(sample))
+                solutions.append(goal)
+                self.log_parameters(sample)
+            self.iteration += 1
+            optimizer.tell(
+                tmp,
+                solutions
+            )
+
+        recommendation = optimizer.provide_recommendation()
+        return recommendation.args[0]
+
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
         options['disp'] = True
@@ -340,61 +367,6 @@ class Optimizer:
             options=options
         )
         return res.x
-
-    # Adam.
-    # Adapted from:
-    # https://gluon.mxnet.io/chapter06_optimization/adam-scratch.html
-
-    def Adam_update(
-        self, p, grad, vs, sqrs, k_iter, alpha=0.1, beta1=0.9, beta2=0.999,
-        eps_stable=1e-8
-    ):
-        if k_iter == 0:
-            vs = eps_stable * np.ones(len(p))
-            sqrs = eps_stable * np.ones(len(p))
-
-        for k in range(len(p)):
-            vs[k] = beta1 * vs[k] + (1 - beta1) * grad[k]
-            sqrs[k] = beta2 * sqrs[k] + (1 - beta2) * np.square(grad[k])
-
-            v_bias_corr = vs[k] / (1 - beta1 ** (k_iter+1))
-            # Here we want to count from 1
-            sqr_bias_corr = sqrs[k] / (1 - beta2 ** (k_iter+1))
-            # but Python natively counts form 0
-
-            div = v_bias_corr / (np.sqrt(sqr_bias_corr) + eps_stable)
-            p[k] = p[k] - alpha * div
-
-        return p, vs, sqrs
-
-    def Adam(
-        self, p0, loss_and_grad_func, fun_goal=0.03, alpha=0.1,
-        beta1=0.9, beta2=0.999, eps_stable=1e-8, stopping_func=None
-    ):
-
-        p = p0
-        vs = []
-        sqrs = []
-        loss = 1
-        k_iter = 0
-        while loss > fun_goal:
-            loss, loss_grad = loss_and_grad_func(p)
-
-            if stopping_func is not None:
-                if stopping_func(k_iter, p, loss, loss_grad):
-                    return p
-
-            new_p, vs, sqrs = self.Adam_update(
-                p, loss_grad, vs, sqrs, k_iter, alpha, beta1, beta2, eps_stable
-            )
-            p = new_p
-            print(
-            f"\nAt iterate    {k_iter}    f=  {loss:E}    g=  {np.linalg.norm(loss_grad):E}\n"
-            )
-            self.log_parameters(p)
-            k_iter += 1
-
-        return p
 
     def optimize_controls(
         self,
@@ -520,6 +492,17 @@ class Optimizer:
                     x0,
                     self.goal_run_n_with_grad,
                     options=settings
+                )
+
+            elif self.algorithm == 'oneplusone':
+                x_best = self.oneplusone(
+                    x0,
+                    self.goal_run_n,
+                    options=settings
+                )
+            else:
+                raise Exception(
+                    "I don't know the selected optimization algorithm."
                 )
 
             self.gateset.set_parameters(
