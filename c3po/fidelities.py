@@ -28,28 +28,25 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
     return infid
 
 
-def population(U_dict: dict, lvl: int, gate: str, proj: bool):
-    U = U_dict[gate]
-    if proj:
-        U = U[0:2, 0:2]
-    lvls = U.shape[0]
-    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-    psi_f = tf.constant(basis(lvls, lvl), dtype=tf.complex128)
-    psi_actual = tf.matmul(U, psi_0)
-    overlap = tf_ketket_fid(psi_f, psi_actual)
-    return overlap
-
-
-def lindbladian_population(U_dict: dict, lvl: int, gate: str):
-    # TODO deal with projection of the superoper
-    U = U_dict[gate]
-    lvls = int(np.sqrt(U.shape[0]))
-    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-    dv_0 = tf_dm_vect(tf_psi_dm(psi_0))
-    psi_f = tf.constant(basis(lvls, lvl), dtype=tf.complex128)
-    dv_actual = tf.matmul(U, dv_0)
-    overlap = tf_dmket_fid(dv_actual, psi_f)
-    return overlap
+# def population(U_dict: dict, lvl: int, gate: str):
+#     U = U_dict[gate]
+#     lvls = U.shape[0]
+#     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+#     psi_f = tf.constant(basis(lvls, lvl), dtype=tf.complex128)
+#     psi_actual = tf.matmul(U, psi_0)
+#     overlap = tf_ketket_fid(psi_f, psi_actual)
+#     return overlap
+#
+#
+# def lindbladian_population(U_dict: dict, lvl: int, gate: str):
+#     U = U_dict[gate]
+#     lvls = int(np.sqrt(U.shape[0]))
+#     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+#     dv_0 = tf_dm_vect(tf_psi_dm(psi_0))
+#     psi_f = tf.constant(basis(lvls, lvl), dtype=tf.complex128)
+#     dv_actual = tf.matmul(U, dv_0)
+#     overlap = tf_dmket_fid(dv_actual, psi_f)
+#     return overlap
 
 
 def unitary_infid(U_dict: dict, gate: str, proj: bool):
