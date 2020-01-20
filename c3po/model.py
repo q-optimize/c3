@@ -240,6 +240,20 @@ class Model:
 
         return drift_H, self.control_Hs
 
+    def get_drift_eigenframe(self, params=None):
+        if params is None:
+            params = self.params
+
+        drift_H = tf.zeros_like(self.drift_Hs[0])
+        for ii in range(self.n_params):
+            drift_H += \
+                tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
+
+        e,v = tf.linalg.eigh(drift_H)
+        eigenframe = tf.zeros_like(drift_H)
+        eigenframe = tf.linalg.set_diag(eigenframe, e)
+        return eigenframe
+
     def get_Virtual_Z(self, t_final):
         anns = []
         freqs = []
