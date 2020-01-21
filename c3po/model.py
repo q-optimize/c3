@@ -249,7 +249,40 @@ class Model:
         e,v = tf.linalg.eigh(drift_H)
         eigenframe = tf.zeros_like(drift_H)
         eigenframe = tf.linalg.set_diag(eigenframe, e)
-        return eigenframe
+
+        order = tf.argmax(tf.abs(v), axis=1)
+        np_transform = np.zeros_like(drift_H.numpy())
+        for indx in order:
+            np_transform[:,indx] = v[indx].numpy()
+        transform = tf.constant(np_transform, dtype=tf.complex128)
+
+        return eigenframe, transform
+
+    def dress_Hamiltonians(self, params=None):
+        if self.dressed = True:
+
+            return
+
+        eigenframe, transform = self.get_drift_eigenframe(params=None)
+        drift_Hs = self.drift_Hs
+        control_Hs = self.control_Hs
+        for indx in range(len(drift_Hs)):
+            drift_h = drift_Hs[indx]
+            drift_Hs[indx] = tf.matmul(
+                tf.matmul(transform, drift_h),
+                tf.linalg.adjoint(transform)
+            )
+        for indx in range(len(control_Hs)):
+            ctrl_h = control_Hs[indx]
+            control_Hs[indx] = tf.matmul(
+                tf.matmul(transform, ctrl_h),
+                tf.linalg.adjoint(transform)
+            )
+        self.drift_Hs = drift_Hs
+        self.control_Hs = control_Hs
+        self.transform = transform
+        self.dressed = True
+        return drift_Hs, control_Hs
 
     def get_parameters(self):
         values = []
