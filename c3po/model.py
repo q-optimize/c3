@@ -264,8 +264,7 @@ class Model:
 
     def dress_Hamiltonians(self, params=None):
         if self.dressed = True:
-
-            return
+            pass
 
         eigenframe, transform = self.get_drift_eigenframe(params=None)
         drift_Hs = self.drift_Hs
