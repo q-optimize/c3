@@ -241,7 +241,7 @@ class Model:
 
         return drift_H, self.control_Hs
 
-    def get_drift_eigenframe(self, params=None, transformation=False):
+    def get_drift_eigenframe(self, params=None):
         if params is None:
             params = self.params
 
@@ -254,14 +254,39 @@ class Model:
         eigenframe = tf.zeros_like(drift_H)
         eigenframe = tf.linalg.set_diag(eigenframe, e)
 
-        if transformation:
-            order = tf.argmax(tf.abs(v), axis=1)
-            np_transform = np.zeros_like(drift_H.numpy())
-            for indx in order:
-                np_transform[:,indx] = v[indx].numpy()
-            transform = tf.constant(np_transform, dtype=tf.complex128)
-            return eigenframe, tran
-        return eigenframe
+        order = tf.argmax(tf.abs(v), axis=1)
+        np_transform = np.zeros_like(drift_H.numpy())
+        for indx in order:
+            np_transform[:,indx] = v[indx].numpy()
+        transform = tf.constant(np_transform, dtype=tf.complex128)
+
+        return eigenframe, transform
+
+    def dress_Hamiltonians(self, params=None):
+        if self.dressed = True:
+
+            return
+
+        eigenframe, transform = self.get_drift_eigenframe(params=None)
+        drift_Hs = self.drift_Hs
+        control_Hs = self.control_Hs
+        for indx in range(len(drift_Hs)):
+            drift_h = drift_Hs[indx]
+            drift_Hs[indx] = tf.matmul(
+                tf.matmul(transform, drift_h),
+                tf.linalg.adjoint(transform)
+            )
+        for indx in range(len(control_Hs)):
+            ctrl_h = control_Hs[indx]
+            control_Hs[indx] = tf.matmul(
+                tf.matmul(transform, ctrl_h),
+                tf.linalg.adjoint(transform)
+            )
+        self.drift_Hs = drift_Hs
+        self.control_Hs = control_Hs
+        self.transform = transform
+        self.dressed = True
+        return drift_Hs, control_Hs
 
     def get_Virtual_Z(self, t_final):
         anns = []
@@ -356,7 +381,9 @@ class Model:
     def initialise():
         dims = tf.reduce_prod(self.dims)
         init_temp = self.spam_params['init_temp']
-        # check if the dressed basis is "actived"
+        # check if the dressed basis is "actived" else activate
+        if self.dressed = False:
+            self.dress_Hamiltonians()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
         freq_diff = diag[1:] - diag[:-1]
