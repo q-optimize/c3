@@ -5,7 +5,7 @@ import copy
 import tensorflow as tf
 from scipy.linalg import expm
 from c3po.hamiltonians import resonator, duffing
-from c3po.component import Qubit, Resonator, Drive, Coupling
+from c3po.component import Quantity, Qubit, Resonator, Drive, Coupling
 from c3po.constants import kb, hbar
 from c3po.tf_utils import tf_expm
 from c3po.qt_utils import basis
@@ -57,6 +57,8 @@ class Model:
             chip_elements
             ):
 
+        self.spam_params = {}
+        self.dressed = False
         self.chip_elements = chip_elements
         self.control_Hs = []
 
@@ -241,32 +243,63 @@ class Model:
 
         return drift_H, self.control_Hs
 
-    def get_drift_eigenframe(self, params=None):
+    def get_drift_eigen(self, params=None, ordered=False):
         if params is None:
             params = self.params
 
         drift_H = tf.zeros_like(self.drift_Hs[0])
         for ii in range(self.n_params):
-            drift_H += \
-                tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
+            drift_H += tf.cast(
+                params[ii].tf_get_value(), tf.complex128
+            ) * self.drift_Hs[ii]
 
         e,v = tf.linalg.eigh(drift_H)
-        eigenframe = tf.zeros_like(drift_H)
-        eigenframe = tf.linalg.set_diag(eigenframe, e)
 
-        order = tf.argmax(tf.abs(v), axis=1)
-        np_transform = np.zeros_like(drift_H.numpy())
-        for indx in order:
-            np_transform[:,indx] = v[indx].numpy()
-        transform = tf.constant(np_transform, dtype=tf.complex128)
+        if ordered:
+            order = tf.argmax(tf.abs(v), axis=0)
+            np_transform = np.zeros_like(drift_H.numpy())
+            np_diag = np.zeros_like(e.numpy())
+            for count in range(len(e)):
+                indx = order[count]
+                np_transform[:,indx] = v[:,count].numpy()
+                np_diag[indx] = e[count]
+            transform = tf.constant(np_transform, dtype=tf.complex128)
+            diag = tf.constant(np_diag, dtype=tf.complex128)
+            eigenframe = tf.linalg.diag(diag)
+        else:
+            eigenframe = tf.linalg.diag(e)
+            transform = v
 
         return eigenframe, transform
 
     def dress_Hamiltonians(self, params=None):
-        if self.dressed = True:
+        if self.dressed == True:
             pass
+        if not hasattr(self, 'transform'):
+            eigenframe, transform = self.get_drift_eigen(params=None, ordered=True)
+        drift_Hs = self.drift_Hs
+        control_Hs = self.control_Hs
+        for indx in range(len(drift_Hs)):
+            drift_h = drift_Hs[indx]
+            drift_Hs[indx] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(transform), drift_h),
+                transform
+            )
+        for indx in range(len(control_Hs)):
+            ctrl_h = control_Hs[indx]
+            control_Hs[indx] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(transform), ctrl_h),
+                transform
+            )
+        self.drift_Hs = drift_Hs
+        self.control_Hs = control_Hs
+        self.transform = transform
+        self.dressed = True
 
-        eigenframe, transform = self.get_drift_eigenframe(params=None)
+    def undress_Hamiltonians(self, params=None):
+        if self.dressed == False:
+            pass
+        transform = self.transform
         drift_Hs = self.drift_Hs
         control_Hs = self.control_Hs
         for indx in range(len(drift_Hs)):
@@ -283,9 +316,7 @@ class Model:
             )
         self.drift_Hs = drift_Hs
         self.control_Hs = control_Hs
-        self.transform = transform
-        self.dressed = True
-        return drift_Hs, control_Hs
+        self.dressed = False
 
     def get_Virtual_Z(self, t_final):
         anns = []
@@ -369,19 +400,19 @@ class Model:
         else:
             return tf.abs(state)**2
 
-    def percentage_01_spam(state, lindbladian):
+    def percentage_01_spam(self, state, lindbladian):
         meas_error = self.spam_params['meas_err'].tf_get_value()
         bias = self.spam_params['bias'].tf_get_value()
         pops = self.populations(state, lindbladian)
 
-    def set_spam_param(name: str, quan: Quantity):
+    def set_spam_param(self, name: str, quan: Quantity):
         self.spam_params[name] = quan
 
-    def initialise():
+    def initialise(self):
         dims = tf.reduce_prod(self.dims)
         init_temp = self.spam_params['init_temp']
         # check if the dressed basis is "actived" else activate
-        if self.dressed = False:
+        if self.dressed == False:
             self.dress_Hamiltonians()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
@@ -391,4 +422,4 @@ class Model:
         init_psi = basis(dims,0) * (1 - tf.reduce_sum(det_bal))
         for level in range(dims-1):
             init_psi = init_psi + basis(dims,level) * det_bal[level]
-        return init_psi
+        return init_psi, det_bal
