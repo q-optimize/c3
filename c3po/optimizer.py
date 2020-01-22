@@ -81,6 +81,7 @@ class Optimizer:
         goal = self.eval_func(U_dict)
         self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
         self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
         return goal
 
     def goal_run_with_grad(self, current_params):
@@ -96,6 +97,7 @@ class Optimizer:
         self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
+        self.log_parameters()
         return goal
 
     def goal_run_n(self, current_params):
@@ -195,6 +197,7 @@ class Optimizer:
 
         self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
         self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
         return goal
 
     def goal_run_n_keras(self):
@@ -287,14 +290,15 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tf.sqrt(tf.reduce_mean(tf.stack(goals) ** 2))
+        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
         self.logfile.write(
-            f"Finished batch with RMS: {float(goal.numpy())}\n"
+            f"Finished batch with median: {float(goal.numpy())}\n"
         )
         self.logfile.flush()
 
         self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
         self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
         return goal
 
     def goal_run_n_with_grad(self, current_params):
@@ -322,7 +326,7 @@ class Optimizer:
                 )
             batch_size = len(measurements)
             ipar = 1
-            goal = 0
+            goals = []
             used_seqs = 0
             for m in measurements:
                 gateset_params = m['params']
@@ -368,7 +372,7 @@ class Optimizer:
                         f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    goal += (fid-this_goal) ** 2
+                    goals.append(tf_abs(fid-this_goal))
                     used_seqs += 1
 
                     fids.append(fid)
@@ -388,9 +392,9 @@ class Optimizer:
                 )
                 self.logfile.flush()
 
-            goal = tf.sqrt(goal / used_seqs)
+            goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
             self.logfile.write(
-                f"Finished batch with RMS: {float(goal.numpy())}\n"
+                f"Finished batch with median: {float(goal.numpy())}\n"
             )
             self.logfile.flush()
 
@@ -400,6 +404,7 @@ class Optimizer:
         self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
+        self.log_parameters()
         return goal
 
     def lookup_gradient(self, x):
@@ -419,7 +424,7 @@ class Optimizer:
                 goal = float(goal_fun(sample).numpy())
                 goal = (1 + self.noise_level * np.random.randn()) * goal
                 solutions.append(goal)
-                self.log_parameters(sample)
+
             self.evaluation += 1
             es.tell(
                 samples,
@@ -456,8 +461,6 @@ class Optimizer:
     def lbfgs(self, x0, goal, options):
         options['disp'] = True
         # Run the initial point explictly or it'll be ignored by callback
-        init_goal = goal(x0)
-        self.log_parameters(x0)
         res = minimize(
             lambda x: float(goal(x).numpy()),
             x0,
@@ -678,9 +681,7 @@ class Optimizer:
             plt.plot(X, rms, 'x')
             plt.show()
 
-    def log_parameters(self, x):
-        # FIXME why does log take an x parameter and doesn't use it?
-        # If because callback requires it, we could print them or store them.
+    def log_parameters(self):
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
         self.logfile.write(f"\nStarting evaluation {self.evaluation}\n")
