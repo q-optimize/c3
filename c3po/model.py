@@ -226,7 +226,7 @@ class Model:
             col_ops.append(
                 tf.cast(
                     self.cops_params_fcts[ii](
-                        self.cops_params[ii],self.collapse_ops[ii]
+                        self.cops_params[ii], self.collapse_ops[ii]
                     ), tf.complex128
                 )
             )
@@ -254,19 +254,26 @@ class Model:
                 params[ii].tf_get_value(), tf.complex128
             ) * self.drift_Hs[ii]
 
-        e,v = tf.linalg.eigh(drift_H)
+        e, v = tf.linalg.eigh(drift_H)
 
         if ordered:
-            order = tf.argmax(tf.abs(v), axis=0)
-            np_transform = np.zeros_like(drift_H.numpy())
-            np_diag = np.zeros_like(e.numpy())
-            for count in range(len(e)):
-                indx = order[count]
-                np_transform[:,indx] = v[:,count].numpy()
-                np_diag[indx] = e[count]
-            transform = tf.constant(np_transform, dtype=tf.complex128)
-            diag = tf.constant(np_diag, dtype=tf.complex128)
-            eigenframe = tf.linalg.diag(diag)
+            reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
+            e = tf.reshape(e, [e.shape[0], 1])
+            eigenframe = tf.matmul(
+                reorder_matrix, e
+            )
+            # tmp = tf.matmul(reorder_matrix, v)
+            transform = tf.matmul(v, reorder_matrix)
+            # order = tf.argmax(tf.abs(v), axis=0)
+            # np_transform = np.zeros_like(drift_H.numpy())
+            # np_diag = np.zeros_like(e.numpy())
+            # for count in range(len(e)):
+            #     indx = order[count]
+            #     np_transform[:,indx] = v[:,count].numpy()
+            #     np_diag[indx] = e[count]
+            # transform = tf.constant(np_transform, dtype=tf.complex128)
+            # diag = tf.constant(np_diag, dtype=tf.complex128)
+            # eigenframe = tf.linalg.diag(diag)
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
@@ -274,10 +281,12 @@ class Model:
         return eigenframe, transform
 
     def dress_Hamiltonians(self, params=None):
-        if self.dressed == True:
+        if self.dressed:
             pass
         if not hasattr(self, 'transform'):
-            eigenframe, transform = self.get_drift_eigen(params=None, ordered=True)
+            eigenframe, transform = self.get_drift_eigen(
+                params=None, ordered=True
+            )
         drift_Hs = self.drift_Hs
         control_Hs = self.control_Hs
         for indx in range(len(drift_Hs)):
@@ -298,7 +307,7 @@ class Model:
         self.dressed = True
 
     def undress_Hamiltonians(self, params=None):
-        if self.dressed == False:
+        if not self.dressed:
             pass
         transform = self.transform
         drift_Hs = self.drift_Hs
@@ -330,13 +339,12 @@ class Model:
                 freq_indx = self.params_desc.index((name, 'freq'))
                 freqs.append(self.params[freq_indx])
 
-
         # TODO make sure terms is right
         # num_oper = np.matmul(anns[0].T.conj(), anns[0])
         num_oper = tf.constant(
             np.matmul(anns[0].T.conj(), anns[0]),
             dtype=tf.complex128
-	)
+        )
         VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
         for ii in range(1, len(anns)):
             num_oper = tf.constant(
@@ -388,12 +396,15 @@ class Model:
     # From here there is temporary code that deals with initialization and
     # measurement
 
-    def readout_au_phase(self,
+    def readout_au_phase(
+        self,
         factor: Quantity = None,
         offset: Quantity = None,
-        phase = None
+        phase=None
     ):
-        """Fake the readout process by multiplying a state phase with a factor."""
+        """
+        Fake the readout process by multiplying a state phase with a factor.
+        """
         offset = self.spam_params['factor'].tf_get_value()
         factor = self.spam_params['offset'].tf_get_value()
         return phase * factor + offset
@@ -432,18 +443,15 @@ class Model:
         self.spam_params_desc.append(name)
 
     def initialise(self):
-        dims = tf.reduce_prod(self.dims)
         indx_it = self.spam_params_desc.index('init_temp')
         init_temp = self.spam_params[indx_it]
         # check if the dressed basis is "actived" else activate
-        if self.dressed == False:
+        if not self.dressed:
             self.dress_Hamiltonians()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
-        freq_diff = diag[1:] - diag[0]
+        freq_diff = diag - diag[0]
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
-        init_psi = basis(dims,0) * (1 - tf.reduce_sum(det_bal))
-        for level in range(dims-1):
-            init_psi = init_psi + basis(dims,level) * det_bal[level]
-        return init_psi, det_bal
+        norm_bal = det_bal / tf.reduce_sum(det_bal)
+        return tf.sqrt(norm_bal)
