@@ -466,7 +466,6 @@ class Optimizer:
             x0,
             jac=self.lookup_gradient,
             method='L-BFGS-B',
-            callback=self.log_parameters,
             options=options
         )
         return res.x

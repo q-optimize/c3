@@ -35,8 +35,6 @@ class Quantity:
         symbol: str = '\\alpha',
         unit: str = 'a.u.'
     ):
-        min = np.min([min, max])
-        max = np.max([min, max])
         self.offset = min
         self.scale = np.array(np.abs(max - min))
         self.set_value(value)
