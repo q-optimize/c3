@@ -412,9 +412,19 @@ class Model:
             return tf.abs(state)**2
 
     def percentage_01_spam(self, state, lindbladian):
-        meas_error = self.spam_params['meas_err'].tf_get_value()
-        bias = self.spam_params['bias'].tf_get_value()
+        meas_offsets = self.spam_params['meas_offsets'] #.tf_get_value()
+        initial_meas = self.spam_params['initial_meas'] #.tf_get_value()
+        row1 = initial_meas + meas_offsets
+        row1 = tf.reshape(row1, [1, row1.shape[0]])
+        extra_dim = int(len(state)/len(initial_meas))
+        print(extra_dim)
+        if extra_dim != 1:
+            row1 = tf.concat([row1]*extra_dim,1)
+        row2 = tf.ones_like(row1) - row1
+        conf_matrix = tf.concat([row1, row2], 0)
         pops = self.populations(state, lindbladian)
+        return conf_matrix
+        #return tf.matmul(conf_matrix, pops)
 
     def set_spam_param(self, name: str, quan: Quantity):
         self.spam_params[name] = quan
