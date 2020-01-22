@@ -416,9 +416,9 @@ class Model:
             self.dress_Hamiltonians()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
-        freq_diff = diag[1:] - diag[:-1]
+        freq_diff = diag[1:] - diag[0]
         beta = 1 / (init_temp * kb)
-        det_bal = tf.exp(-hbar*freq_diff*beta)
+        det_bal = tf.exp(-hbar * freq_diff * beta)
         init_psi = basis(dims,0) * (1 - tf.reduce_sum(det_bal))
         for level in range(dims-1):
             init_psi = init_psi + basis(dims,level) * det_bal[level]
