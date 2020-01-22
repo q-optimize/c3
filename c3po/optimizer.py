@@ -129,10 +129,13 @@ class Optimizer:
                 gateset_params, self.gateset_opt_map, scaled=False
             )
             self.logfile.write(
-                f"\n  Parameterset {ipar} of {batch_size}:  "
-            )
-            self.logfile.write(
-                self.gateset.get_parameters(self.gateset_opt_map, to_str=True)
+                "\n  Parameterset {} of {}:  {}".format(
+                    ipar,
+                    batch_size,
+                    self.gateset.get_parameters(
+                        self.gateset_opt_map, to_str=True
+                    )
+                )
             )
             ipar += 1
             U_dict = self.sim.get_gates()
@@ -226,10 +229,13 @@ class Optimizer:
                 gateset_params, self.gateset_opt_map, scaled=False
             )
             self.logfile.write(
-                f"\n  Parameterset {ipar} of {batch_size}:  "
-            )
-            self.logfile.write(
-                self.gateset.get_parameters(self.gateset_opt_map, to_str=True)
+                "\n  Parameterset {} of {}:  {}".format(
+                    ipar,
+                    batch_size,
+                    self.gateset.get_parameters(
+                        self.gateset_opt_map, to_str=True
+                    )
+                )
             )
             ipar += 1
             U_dict = self.sim.get_gates()
@@ -324,11 +330,12 @@ class Optimizer:
                     gateset_params, self.gateset_opt_map, scaled=False
                 )
                 self.logfile.write(
-                    f"\n  Parameterset {ipar} of {batch_size}:  "
-                )
-                self.logfile.write(
-                    self.gateset.get_parameters(
-                        self.gateset_opt_map, to_str=True
+                    "\n  Parameterset {} of {}:  {}".format(
+                        ipar,
+                        batch_size,
+                        self.gateset.get_parameters(
+                            self.gateset_opt_map, to_str=True
+                        )
                     )
                 )
                 ipar += 1
