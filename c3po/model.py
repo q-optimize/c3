@@ -57,7 +57,7 @@ class Model:
             chip_elements
             ):
 
-        self.spam_params = {}
+        self.spam_params = []
         self.spam_params_desc = []
         self.dressed = False
         self.chip_elements = chip_elements
@@ -376,7 +376,7 @@ class Model:
 
     def set_parameters(self, values):
         ln = len(self.params)
-        ln_s = len(values)-len(spam_params)
+        ln_s = len(values)-len(self.spam_params)
         for ii in range(0, ln):
             self.params[ii].tf_set_value(values[ii])
         if hasattr(self, 'collapse_ops'):
@@ -395,19 +395,6 @@ class Model:
 
     # From here there is temporary code that deals with initialization and
     # measurement
-
-    def readout_au_phase(
-        self,
-        factor: Quantity = None,
-        offset: Quantity = None,
-        phase=None
-    ):
-        """
-        Fake the readout process by multiplying a state phase with a factor.
-        """
-        offset = self.spam_params['factor'].tf_get_value()
-        factor = self.spam_params['offset'].tf_get_value()
-        return phase * factor + offset
 
     @staticmethod
     def populations(state, lindbladian):
@@ -431,12 +418,12 @@ class Model:
         extra_dim = int(len(state)/len(initial_meas))
         print(extra_dim)
         if extra_dim != 1:
-            row1 = tf.concat([row1]*extra_dim,1)
+            row1 = tf.concat([row1]*extra_dim, 1)
         row2 = tf.ones_like(row1) - row1
         conf_matrix = tf.concat([row1, row2], 0)
         pops = self.populations(state, lindbladian)
-        return conf_matrix
-        #return tf.matmul(conf_matrix, pops)
+        pops = tf.reshape(pops, [pops.shape[0],1])
+        return tf.matmul(conf_matrix, pops)
 
     def set_spam_param(self, name: str, quan: Quantity):
         self.spam_params.append(quan)
@@ -445,9 +432,6 @@ class Model:
     def initialise(self):
         indx_it = self.spam_params_desc.index('init_temp')
         init_temp = self.spam_params[indx_it]
-        # check if the dressed basis is "actived" else activate
-        if not self.dressed:
-            self.dress_Hamiltonians()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
         freq_diff = diag - diag[0]
