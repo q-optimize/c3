@@ -58,6 +58,7 @@ class Model:
             ):
 
         self.spam_params = {}
+        self.spam_params_desc = []
         self.dressed = False
         self.chip_elements = chip_elements
         self.control_Hs = []
@@ -358,21 +359,30 @@ class Model:
                     values.append(float(par.value))
                 else:
                     values.append(float(par))
+        for par in self.spam_params:
+            if scaled:
+                values.append(float(par.value))
+            else:
+                values.append(float(par))
         return values
 
     def set_parameters(self, values):
         ln = len(self.params)
+        ln_s = len(values)-len(spam_params)
         for ii in range(0, ln):
             self.params[ii].tf_set_value(values[ii])
         if hasattr(self, 'collapse_ops'):
-            for ii in range(ln, len(values)):
+            for ii in range(ln, ln_s):
                 self.cops_params[ii-ln].tf_set_value(values[ii])
+        for ii in range(ln_s,len(values)):
+            self.spam_params[ii-ln_s].tf_set_value(values[ii])
 
     def list_parameters(self):
         par_list = []
         par_list.extend(self.params_desc)
         if hasattr(self, 'collapse_ops'):
             par_list.extend(self.cops_params_desc)
+        par_list.extend(self.spam_params_desc)
         return par_list
 
     # From here there is temporary code that deals with initialization and
@@ -401,8 +411,10 @@ class Model:
             return tf.abs(state)**2
 
     def percentage_01_spam(self, state, lindbladian):
-        meas_offsets = self.spam_params['meas_offsets'] #.tf_get_value()
-        initial_meas = self.spam_params['initial_meas'] #.tf_get_value()
+        indx_ms = self.spam_params_desc.index('meas_offset')
+        indx_im = self.spam_params_desc.index('initial_meas')
+        meas_offsets = self.spam_params[indx_ms] #.tf_get_value()
+        initial_meas = self.spam_params[indx_im] #.tf_get_value()
         row1 = initial_meas + meas_offsets
         row1 = tf.reshape(row1, [1, row1.shape[0]])
         extra_dim = int(len(state)/len(initial_meas))
@@ -416,11 +428,13 @@ class Model:
         #return tf.matmul(conf_matrix, pops)
 
     def set_spam_param(self, name: str, quan: Quantity):
-        self.spam_params[name] = quan
+        self.spam_params.append(quan)
+        self.spam_params_desc.append(name)
 
     def initialise(self):
         dims = tf.reduce_prod(self.dims)
-        init_temp = self.spam_params['init_temp']
+        indx_it = self.spam_params_desc.index('init_temp')
+        init_temp = self.spam_params[indx_it]
         # check if the dressed basis is "actived" else activate
         if self.dressed == False:
             self.dress_Hamiltonians()
