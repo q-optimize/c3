@@ -164,7 +164,7 @@ class Model:
 
                     if 'temp' not in vals:
                         def t1(t1, L1):
-                            gamma =(0.5/t1.tf_get_value())**0.5
+                            gamma = (0.5 / t1.tf_get_value()) ** 0.5
                             return gamma * L1
 
                         self.collapse_ops.append(L1)
