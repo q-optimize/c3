@@ -30,6 +30,8 @@ def num3str(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P']
     small_units = ['m', 'mu', 'n', 'p', 'f']
     ret = []
+    if not hasattr(val, "__iter__"):
+        val = [val]
     for v in val:
         sign = 1
         if v == 0:
