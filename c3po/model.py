@@ -411,8 +411,8 @@ class Model:
     def percentage_01_spam(self, state, lindbladian):
         indx_ms = self.spam_params_desc.index('meas_offset')
         indx_im = self.spam_params_desc.index('initial_meas')
-        meas_offsets = self.spam_params[indx_ms] #.tf_get_value()
-        initial_meas = self.spam_params[indx_im] #.tf_get_value()
+        meas_offsets = self.spam_params[indx_ms].tf_get_value()
+        initial_meas = self.spam_params[indx_im].tf_get_value()
         row1 = initial_meas + meas_offsets
         row1 = tf.reshape(row1, [1, row1.shape[0]])
         extra_dim = int(len(state)/len(initial_meas))
@@ -431,7 +431,7 @@ class Model:
 
     def initialise(self):
         indx_it = self.spam_params_desc.index('init_temp')
-        init_temp = self.spam_params[indx_it]
+        init_temp = self.spam_params[indx_it].tf_get_value()
         drift_H, control_Hs = self.get_Hamiltonians()
         diag = tf.linalg.diag_part(drift_H)
         freq_diff = diag - diag[0]
