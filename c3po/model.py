@@ -360,18 +360,18 @@ class Model:
             if scaled:
                 values.append(par.value.numpy())
             else:
-                values.append(float(par))
+                values.append(par.numpy())
         if hasattr(self, 'collapse_ops'):
             for par in self.cops_params:
                 if scaled:
                     values.append(par.value.numpy())
                 else:
-                    values.append(float(par))
+                    values.append(par.numpy())
         for par in self.spam_params:
             if scaled:
                 values.append(par.value.numpy())
             else:
-                values.append(float(par))
+                values.append(par.numpy())
         return values
 
     def set_parameters(self, values):

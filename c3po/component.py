@@ -77,7 +77,7 @@ class Quantity:
             val = val / 2 / np.pi
         return num3str(val) + self.unit
 
-    def __float__(self):
+    def numpy(self):
         return self.get_value()
 
     def get_value(self, val=None):

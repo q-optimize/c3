@@ -153,9 +153,9 @@ class Device(C3obj):
         params = []
         for key in sorted(self.params.keys()):
             if scaled:
-                params.append(float(self.params[key].value))
+                params.append(self.params[key].value.numpy())
             else:
-                params.append(float(self.params[key]))
+                params.append(self.params[key].numpy())
         return params
 
     def set_parameters(self, values):
