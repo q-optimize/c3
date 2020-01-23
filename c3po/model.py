@@ -59,7 +59,6 @@ class Model:
 
         self.spam_params = []
         self.spam_params_desc = []
-        self.dressed = False
         self.chip_elements = chip_elements
         self.control_Hs = []
 
@@ -187,8 +186,8 @@ class Model:
                          )
 
                         def t1_temp(t1_temp, L2):
-                            gamma = (0.5/t1_temp[0])**0.5
-                            beta = 1 / (t1_temp[1] * kb)
+                            gamma = (0.5/t1_temp[0].tf_get_value())**0.5
+                            beta = 1 / (t1_temp[1].tf_get_value() * kb)
                             det_bal = tf.exp(-hbar*freq_diff*beta)
                             det_bal_mat = tf.linalg.tensor_diag(det_bal)
                             return gamma * (L1 + L2 @ det_bal_mat)
@@ -230,6 +229,14 @@ class Model:
                     ), tf.complex128
                 )
             )
+
+        if self.dress:
+            for indx in range(len(col_ops)):
+                col_ops[indx] = tf.matmul(
+                    tf.matmul(tf.linalg.adjoint(transform), col_ops[indx]),
+                    transform
+                )
+
         return col_ops
 
     def get_Hamiltonians(self, params=None):
@@ -241,10 +248,55 @@ class Model:
             drift_H += tf.cast(
                 params[ii].tf_get_value(), tf.complex128
             ) * self.drift_Hs[ii]
+        control_Hs = self.control_Hs
 
-        return drift_H, self.control_Hs
+        if self.dress:
+            drift_H = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(transform), drift_H),
+                transform
+            )
+            for indx in range(len(control_Hs)):
+                control_Hs[indx] = tf.matmul(
+                    tf.matmul(tf.linalg.adjoint(transform), control_Hs[indx]),
+                    transform
+                )
 
-    def get_drift_eigen(self, params=None, ordered=False):
+        return drift_H, control_Hs
+
+    def get_Virtual_Z(self, t_final, freqs):
+        # lo_freqs need to be ordered the same as the names of the qubits
+        anns = []
+        # freqs = []
+        for name in self.names:
+            # TODO Effectively collect parameters of the virtual Z
+            if name[0] == 'q' or name[0] == 'Q':
+                ann_indx = self.names.index(name)
+                anns.append(self.ann_opers[ann_indx])
+                # freq_indx = self.params_desc.index((name, 'freq'))
+                # freqs.append(self.params[freq_indx])
+
+        # TODO make sure terms is right
+        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
+        num_oper = tf.constant(
+            np.matmul(anns[0].T.conj(), anns[0]),
+            dtype=tf.complex128
+        )
+        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
+        for ii in range(1, len(anns)):
+            num_oper = tf.constant(
+                np.matmul(anns[ii].T.conj(), anns[ii]),
+                dtype=tf.complex128
+            )
+            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
+
+        if self.dress:
+            VZ = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), VZ),
+                self.transform
+            )
+        return VZ
+
+    def get_drift_eigen(self, params=None, ordered=True):
         if params is None:
             params = self.params
 
@@ -280,98 +332,34 @@ class Model:
 
         return eigenframe, transform
 
-    def dress_Hamiltonians(self, params=None):
-        if self.dressed:
-            pass
-        if not hasattr(self, 'transform'):
-            eigenframe, transform = self.get_drift_eigen(
-                params=None, ordered=True
-            )
-        drift_Hs = self.drift_Hs
-        control_Hs = self.control_Hs
-        for indx in range(len(drift_Hs)):
-            drift_h = drift_Hs[indx]
-            drift_Hs[indx] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(transform), drift_h),
-                transform
-            )
-        for indx in range(len(control_Hs)):
-            ctrl_h = control_Hs[indx]
-            control_Hs[indx] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(transform), ctrl_h),
-                transform
-            )
-        self.drift_Hs = drift_Hs
-        self.control_Hs = control_Hs
-        self.transform = transform
-        self.dressed = True
+    def recalc_dressed(self):
+        self.eigenframe, self.transform = get_drift_eigen()
 
-    def undress_Hamiltonians(self, params=None):
-        if not self.dressed:
-            pass
-        transform = self.transform
-        drift_Hs = self.drift_Hs
-        control_Hs = self.control_Hs
-        for indx in range(len(drift_Hs)):
-            drift_h = drift_Hs[indx]
-            drift_Hs[indx] = tf.matmul(
-                tf.matmul(transform, drift_h),
-                tf.linalg.adjoint(transform)
-            )
-        for indx in range(len(control_Hs)):
-            ctrl_h = control_Hs[indx]
-            control_Hs[indx] = tf.matmul(
-                tf.matmul(transform, ctrl_h),
-                tf.linalg.adjoint(transform)
-            )
-        self.drift_Hs = drift_Hs
-        self.control_Hs = control_Hs
-        self.dressed = False
+    def get_qubit_freqs(self):
+        # TODO figure how to get the correct dressed frequencies
+        pass
 
-    def get_Virtual_Z(self, t_final):
-        anns = []
-        freqs = []
-        for name in self.names:
-            # TODO Effectively collect parameters of the virtual Z
-            if name[0] == 'q' or name[0] == 'Q':
-                ann_indx = self.names.index(name)
-                anns.append(self.ann_opers[ann_indx])
-                freq_indx = self.params_desc.index((name, 'freq'))
-                freqs.append(self.params[freq_indx])
 
-        # TODO make sure terms is right
-        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
-        num_oper = tf.constant(
-            np.matmul(anns[0].T.conj(), anns[0]),
-            dtype=tf.complex128
-        )
-        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
-        for ii in range(1, len(anns)):
-            num_oper = tf.constant(
-                np.matmul(anns[ii].T.conj(), anns[ii]),
-                dtype=tf.complex128
-            )
-            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
-        return VZ
+    # things that deal with parameters
 
     def get_parameters(self, scaled=False):
         values = []
         for par in self.params:
             if scaled:
-                values.append(float(par.value))
+                values.append(par.value.numpy())
             else:
-                values.append(float(par))
+                values.append(par.numpy())
         if hasattr(self, 'collapse_ops'):
             for par in self.cops_params:
                 if scaled:
-                    values.append(float(par.value))
+                    values.append(par.value.numpy())
                 else:
-                    values.append(float(par))
+                    values.append(par.numpy())
         for par in self.spam_params:
             if scaled:
-                values.append(float(par.value))
+                values.append(par.value.numpy())
             else:
-                values.append(float(par))
+                values.append(par.numpy())
         return values
 
     def set_parameters(self, values):
@@ -384,6 +372,7 @@ class Model:
                 self.cops_params[ii-ln].tf_set_value(values[ii])
         for ii in range(ln_s,len(values)):
             self.spam_params[ii-ln_s].tf_set_value(values[ii])
+        self.recalc_dressed()
 
     def list_parameters(self):
         par_list = []
@@ -411,12 +400,11 @@ class Model:
     def percentage_01_spam(self, state, lindbladian):
         indx_ms = self.spam_params_desc.index('meas_offset')
         indx_im = self.spam_params_desc.index('initial_meas')
-        meas_offsets = self.spam_params[indx_ms] #.tf_get_value()
-        initial_meas = self.spam_params[indx_im] #.tf_get_value()
+        meas_offsets = self.spam_params[indx_ms].tf_get_value()
+        initial_meas = self.spam_params[indx_im].tf_get_value()
         row1 = initial_meas + meas_offsets
         row1 = tf.reshape(row1, [1, row1.shape[0]])
         extra_dim = int(len(state)/len(initial_meas))
-        print(extra_dim)
         if extra_dim != 1:
             row1 = tf.concat([row1]*extra_dim, 1)
         row2 = tf.ones_like(row1) - row1
@@ -431,11 +419,13 @@ class Model:
 
     def initialise(self):
         indx_it = self.spam_params_desc.index('init_temp')
-        init_temp = self.spam_params[indx_it]
+        init_temp = self.spam_params[indx_it].tf_get_value()
+        init_temp = tf.cast(init_temp, dtype=tf.complex128)
         drift_H, control_Hs = self.get_Hamiltonians()
+        # diag = tf.math.real(tf.linalg.diag_part(drift_H))
         diag = tf.linalg.diag_part(drift_H)
         freq_diff = diag - diag[0]
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        return tf.sqrt(norm_bal)
+        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0],1])

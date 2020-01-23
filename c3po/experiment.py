@@ -61,11 +61,11 @@ class Experiment:
             if not (pars == []):
                 values.append(pars)
         # TODO Deal with bounds correctly
-        self.par_lens = [len(list) for list in values]
+        self.par_lens = [len(v) for v in values]
         par_indx = self.parameter_indeces(opt_map)
         values_flat = []
-        for list in values:
-            values_flat.extend(list)
+        for v in values:
+            values_flat.extend(v)
         values_new = [values_flat[indx] for indx in par_indx]
         return values_new
 

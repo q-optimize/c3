@@ -31,8 +31,9 @@ def num3str(val):
     small_units = ['m', 'mu', 'n', 'p', 'f']
     ret = []
     if not hasattr(val, "__iter__"):
-        val = [val]
-    for v in val:
+        val = np.array([val])
+    for idx in range(val.shape[0]):
+        v = val[idx]
         sign = 1
         if v == 0:
             return "0"
