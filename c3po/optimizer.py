@@ -26,6 +26,7 @@ class Optimizer:
         self.sampling = False
         self.batch_size = 1
         self.skip_bad_points = False  # The Millikan option, don't judge
+        self.divide_by_std = False  # Goal func in terms of experiment std
 
         # NICO: ###############################################################
         # The default fields of this class to be stored in a config. Note: Data
@@ -347,9 +348,10 @@ class Optimizer:
                 iseq = 1
                 fids = []
                 sims = []
-                for seqs in m['seqs']:
-                    seq = seqs['gate_seq']
-                    fid = seqs['result']
+                for this_seq in m['seqs']:
+                    seq = this_seq['gate_seq']
+                    fid = this_seq['result']
+                    std = this_seq['result_std']
 
                     if (self.skip_bad_points and fid > 0.25):
                         self.logfile.write(
@@ -366,13 +368,17 @@ class Optimizer:
                         f"  Simulation:  {float(this_goal.numpy()):8.5f}"
                     )
                     self.logfile.write(
-                        f"  Experiment: {fid:8.5f}"
+                        f"  Experiment: {fid:8.5f} std: {std:8.5f}"
                     )
                     self.logfile.write(
                         f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    goals.append(tf_abs(fid-this_goal))
+                    distance = tf_abs(fid-this_goal)
+                    if self.divide_by_std:
+                        goals.append(distance / std)
+                    else:
+                        goals.append(distance)
                     used_seqs += 1
 
                     fids.append(fid)
@@ -411,7 +417,7 @@ class Optimizer:
         key = str(x)
         if key not in self.gradients.keys():
             self.goal_run_with_grad(x)
-        return self.gradients[key]
+        return self.gradients.pop(key)
 
     def cmaes(self, x0, goal_fun, settings={}):
         es = cmaes.CMAEvolutionStrategy(x0, 0.2, settings)
