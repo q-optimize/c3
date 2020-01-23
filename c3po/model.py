@@ -187,8 +187,8 @@ class Model:
                          )
 
                         def t1_temp(t1_temp, L2):
-                            gamma = (0.5/t1_temp[0])**0.5
-                            beta = 1 / (t1_temp[1] * kb)
+                            gamma = (0.5/t1_temp[0].tf_get_value())**0.5
+                            beta = 1 / (t1_temp[1].tf_get_value() * kb)
                             det_bal = tf.exp(-hbar*freq_diff*beta)
                             det_bal_mat = tf.linalg.tensor_diag(det_bal)
                             return gamma * (L1 + L2 @ det_bal_mat)
@@ -358,18 +358,18 @@ class Model:
         values = []
         for par in self.params:
             if scaled:
-                values.append(float(par.value))
+                values.append(par.value.numpy())
             else:
                 values.append(float(par))
         if hasattr(self, 'collapse_ops'):
             for par in self.cops_params:
                 if scaled:
-                    values.append(float(par.value))
+                    values.append(par.value.numpy())
                 else:
                     values.append(float(par))
         for par in self.spam_params:
             if scaled:
-                values.append(float(par.value))
+                values.append(par.value.numpy())
             else:
                 values.append(float(par))
         return values
@@ -432,10 +432,12 @@ class Model:
     def initialise(self):
         indx_it = self.spam_params_desc.index('init_temp')
         init_temp = self.spam_params[indx_it].tf_get_value()
+        init_temp = tf.cast(init_temp, dtype=tf.complex128)
         drift_H, control_Hs = self.get_Hamiltonians()
+        # diag = tf.math.real(tf.linalg.diag_part(drift_H))
         diag = tf.linalg.diag_part(drift_H)
         freq_diff = diag - diag[0]
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        return tf.sqrt(norm_bal)
+        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0],1])
