@@ -19,37 +19,39 @@ def plot_OC_logs(logfolder=""):
         log = filename.readlines()
     goal_function = []
     parameters = {}
-    for line in log:
+    opt_map = json.loads(log[4])
+    for line in log[5:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
                 goal_function.append(point['goal'])
                 units = {}
-                for param in point['params']:
+                for iparam in range(len(point['params'])):
+                    param = point['params'][iparam]
                     unit = ''
                     p_name = ''
-                    for desc in param[0][0]:
+                    for desc in opt_map[iparam]:
                         p_name += ' ' + desc
                     if desc == 'freq_offset':
-                        p_val = param[1] / 1e6 / 2 / np.pi
+                        p_val = param / 1e6 / 2 / np.pi
                         unit = '[MHz]'
                     elif desc == 'xy_angle':
-                        p_val = param[1] / np.pi
+                        p_val = param / np.pi
                         unit = '[$\\pi$]'
                     elif desc == 'freq':
-                        p_val = param[1] / 1e9 / 2 / np.pi
+                        p_val = param / 1e9 / 2 / np.pi
                         unit = '[GHz]'
                     elif desc == 'anhar':
-                        p_val = param[1] / 1e6 / 2 / np.pi
+                        p_val = param / 1e6 / 2 / np.pi
                         unit = '[MHz]'
                     elif desc == 'V_to_Hz':
-                        p_val = param[1] / 1e6
+                        p_val = param / 1e6
                         unit = '[MHz/V]'
                     elif desc == 'rise_time':
-                        p_val = param[1] / 1e-9
+                        p_val = param / 1e-9
                         unit = '[ns]'
                     else:
-                        p_val = param[1]
+                        p_val = param
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
                     parameters[p_name].append(p_val)
@@ -84,7 +86,7 @@ def plot_calibration(logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = -1
-    for line in log:
+    for line in log[5:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
@@ -118,40 +120,42 @@ def plot_learning(logfolder=""):
         log = filename.readlines()
     goal_function = []
     parameters = {}
-    for line in log:
+    opt_map = json.loads(log[4])
+    for line in log[5:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
                 goal_function.append(point['goal'])
                 units = {}
-                for param in point['params']:
+                for iparam in range(len(point['params'])):
+                    param = point['params'][iparam]
                     unit = ''
                     p_name = ''
-                    for desc in param[0]:
+                    for desc in opt_map[iparam]:
                         p_name += ' ' + desc
                     if desc == 'freq_offset':
-                        p_val = param[1] / 1e6 / 2 / np.pi
+                        p_val = param / 1e6 / 2 / np.pi
                         unit = '[MHz]'
                     elif desc == 'xy_angle':
-                        p_val = param[1] / np.pi
+                        p_val = param / np.pi
                         unit = '[$\\pi$]'
                     elif desc == 'freq':
-                        p_val = param[1] / 1e9 / 2 / np.pi
+                        p_val = param / 1e9 / 2 / np.pi
                         unit = '[GHz]'
                     elif desc == 'anhar':
-                        p_val = param[1] / 1e6 / 2 / np.pi
+                        p_val = param / 1e6 / 2 / np.pi
                         unit = '[MHz]'
                     elif desc == 't1' or desc == 't2star':
-                        p_val = param[1] / 1e-6 / 2 / np.pi
+                        p_val = param / 1e-6 / 2 / np.pi
                         unit = '[$\\mu$s]'
                     elif desc == 'V_to_Hz':
-                        p_val = param[1] / 1e6
+                        p_val = param / 1e6
                         unit = '[MHz/V]'
                     elif desc == 'rise_time':
-                        p_val = param[1] / 1e-9
+                        p_val = param / 1e-9
                         unit = '[ns]'
                     else:
-                        p_val = param[1]
+                        p_val = param
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
                     parameters[p_name].append(p_val)

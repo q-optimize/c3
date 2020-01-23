@@ -583,8 +583,8 @@ class Optimizer:
             start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
             self.logfile.write("Starting optimization at ")
             self.logfile.write(start_time_str)
-            self.logfile.write("Optimization parameters:\n")
-            self.logfile.write(f"\n {self.opt_map}\n\n")
+            self.logfile.write("Optimization parameters:\n\n")
+            self.logfile.write(json.dumps(self.opt_map))
             # TODO put optmizer specific code here
             if self.algorithm == 'cmaes':
                 x_best = self.cmaes(
