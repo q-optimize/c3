@@ -4,6 +4,7 @@ import types
 import numpy as np
 import tensorflow as tf
 from c3po.utils import num3str
+from c3po.hamiltonians import resonator, duffing
 
 
 class Quantity:
@@ -16,9 +17,9 @@ class Quantity:
     value: np.array(np.float64) or np.float64
         value of the quantity
     min: np.array(np.float64) or np.float64
-        minimun values this quantity is allowed to take
+        minimun params this quantity is allowed to take
     max: np.array(np.float64) or np.float64
-        maximum values this quantity is allowed to take
+        maximum params this quantity is allowed to take
     symbol: str
         latex representation
     unit: str
@@ -132,6 +133,29 @@ class C3obj:
         self.name = name
         self.desc = desc
         self.comment = comment
+        self.params = {}
+
+    def get_parameters(self, scaled=False):
+        params = []
+        for key in sorted(self.params.keys()):
+            if scaled:
+                params.append(self.params[key].value.numpy())
+            else:
+                params.append(self.params[key].numpy())
+        return params
+
+    def set_parameters(self, values):
+        idx = 0
+        for key in sorted(self.params.keys()):
+            self.params[key].tf_set_value(values[idx])
+            idx += 1
+
+    def list_parameters(self):
+        par_list = []
+        for par_key in sorted(self.params.keys()):
+            par_id = (self.name, par_key)
+            par_list.append(par_id)
+        return par_list
 
 
 class PhysicalComponent(C3obj):
@@ -158,11 +182,6 @@ class PhysicalComponent(C3obj):
             comment=comment
             )
         self.hilbert_dim = hilbert_dim
-        self.values = {}
-
-    def get_values(self):
-        """Return values of the physical component."""
-        return self.values
 
 
 class Qubit(PhysicalComponent):
@@ -203,15 +222,35 @@ class Qubit(PhysicalComponent):
             comment=comment,
             hilbert_dim=hilbert_dim
         )
-        self.values['freq'] = freq
+        self.params['freq'] = freq
         if hilbert_dim > 2:
-            self.values['anhar'] = anhar
+            self.params['anhar'] = anhar
         if t1:
-            self.values['t1'] = t1
+            self.params['t1'] = t1
         if t2star:
-            self.values['t2star'] = t2star
+            self.params['t2star'] = t2star
         if temp:
-            self.values['temp'] = temp
+            self.params['temp'] = temp
+
+    def init_Hs(self, ann_oper):
+        self.drift_Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+        if self.hilbert_dim > 2:
+            self.drift_Hs.append(
+                tf.constant(
+                    duffing(ann_oper),
+                    dtype=tf.complex128
+                )
+            )
+
+    def get_Hamiltonian(self):
+        h = self.params['freq'] * self.drift_Hs['freq']
+        if self.hilbert_dim > 2:
+            h += self.params['anhar'] * self.drift_Hs['anhar']
+
+    def init_Ls(self, ann_oper):
+
 
 
 class Resonator(PhysicalComponent):
@@ -239,8 +278,15 @@ class Resonator(PhysicalComponent):
             comment=comment,
             hilbert_dim=hilbert_dim
             )
-        self.values['freq'] = freq
+        self.params['freq'] = freq
 
+    def init_Hs(self, ann_oper):
+        self.drift_Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+
+    def get_Hamiltonian(self):
+        return self.params['freq'] * self.drift_Hs['freq']
 
 class LineComponent(C3obj):
     """
@@ -259,6 +305,7 @@ class LineComponent(C3obj):
             desc: str = " ",
             comment: str = " ",
             connected: list = [],
+            hamiltonian_func: types.FunctionType = None,
             ):
         super().__init__(
             name=name,
@@ -266,7 +313,6 @@ class LineComponent(C3obj):
             comment=comment
             )
         self.connected = connected
-        self.values = {}
 
 
 class Coupling(LineComponent):
@@ -276,7 +322,7 @@ class Coupling(LineComponent):
     Parameters
     ----------
     strength: np.float64
-        coupling strenght
+        coupling strength
     connected: list
         all physical components coupled via this specific coupling
 
@@ -289,16 +335,25 @@ class Coupling(LineComponent):
             comment: str = " ",
             connected: list = [],
             strength: np.float64 = 0.0,
-            hamiltonian: types.FunctionType = None,
+            hamiltonian_func: types.FunctionType = None,
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            connected=connected
+            connected=connected,
+            hamiltonian_func=hamiltonian_func
             )
-        self.hamiltonian = hamiltonian
-        self.values['strength'] = strength
+        self.hamiltonian_func = hamiltonian_func
+        self.params['strength'] = strength
+
+    def init_Hs(self, ann_opers):
+        self.drift_Hs['strength'] = tf.constant(
+            element.hamiltonian_func(ann_opers), dtype=tf.complex128
+        )
+
+    def get_Hamiltonian(self):
+        return self.params['strength'] * self.drift_Hs['strength']
 
 
 class Drive(LineComponent):
@@ -324,6 +379,16 @@ class Drive(LineComponent):
             name=name,
             desc=desc,
             comment=comment,
-            connected=connected
+            connected=connected,
+            hamiltonian_func=hamiltonian_func
             )
-        self.hamiltonian = hamiltonian
+        self.hamiltonian_func = hamiltonian_func
+
+    def init_Hs(self, ann_opers):
+        for indx in len(connected):
+            self.drift_Hs[connected[indx]] = tf.constant(
+                element.hamiltonian_func(ann_opers[indx]), dtype=tf.complex128
+            )
+
+    def get_Hamiltonian(self):
+        return self.params['strength'] * self.drift_Hs['strength']

@@ -5,7 +5,8 @@ import copy
 import tensorflow as tf
 from scipy.linalg import expm
 from c3po.hamiltonians import resonator, duffing
-from c3po.component import Quantity, Qubit, Resonator, Drive, Coupling
+from c3po.component import Quantity, Qubit, Resonator, Drive, Coupling, \
+    PhysicalComponent
 from c3po.constants import kb, hbar
 from c3po.tf_utils import tf_expm
 from c3po.qt_utils import basis
@@ -54,95 +55,54 @@ class Model:
 
     def __init__(
             self,
-            chip_elements
+            components
             ):
 
         self.spam_params = []
         self.spam_params_desc = []
-        self.chip_elements = chip_elements
+        self.components = components
         self.control_Hs = []
 
         # Construct array with dimension of elements (only qubits & resonators)
-        self.dims = []
-        # TODO store also total dimension of the hilbert space
-        self.names = []
+        dims = []
+        names = []
+        for element in components:
+            if isinstance(element, PhysicalComponent):
+                dims.append(element.hilbert_dim)
+                names.append(element.name)
+        self.tot_dim = np.prod(dims)
 
-        for element in chip_elements:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                self.dims.append(element.hilbert_dim)
-                self.names.append(element.name)
 
         # Create anninhilation operators for physical elements
-        self.ann_opers = []
-        for indx in range(len(self.dims)):
-            a = np.diag(np.sqrt(np.arange(1, self.dims[indx])), k=1)
-            for indy in range(len(self.dims)):
-                qI = np.identity(self.dims[indy])
+        ann_opers = []
+        for indx in range(len(dims)):
+            a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
+            for indy in range(len(dims)):
+                qI = np.identity(dims[indy])
                 if indy < indx:
                     a = np.kron(qI, a)
                 if indy > indx:
                     a = np.kron(a, qI)
-            self.ann_opers.append(a)
+            ann_opers.append(a)
+
+        self.dims = {}
+        self.ann_opers = {}
+        for indx in range(len(dims)):
+self.dims[name[indx]] = dims[indx]
+            self.ann_opers[name[indx]] = ann_opers[indx]
+
 
         # Create drift Hamiltonian matrices and model parameter vector
-        self.params = []
-        self.params_desc = []
-        self.drift_Hs = []
         # TODO avoid checking element type, instead call function in element
-        for element in chip_elements:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                el_indx = self.names.index(element.name)
-                ann_oper = self.ann_opers[el_indx]
+        for element in components:
+            if isinstance(element, PhysicalComponent):
+                element.init_Hs(self.ann_opers[element.name])
 
-                self.drift_Hs.append(
-                    tf.constant(
-                        resonator(ann_oper),
-                        dtype=tf.complex128
-                    )
+            elif isinstance(element, LineComponent):
+                element.init_Hs(
+                    [self.ann_opers for connected_element in element.connected]
                 )
-                # TODO change all .values to .params or viceversa
-                self.params.append(element.values['freq'])
-                self.params_desc.append((element.name, 'freq'))
-
-                if isinstance(element, Qubit) and element.hilbert_dim > 2:
-                    self.drift_Hs.append(
-                        tf.constant(
-                            duffing(ann_oper),
-                            dtype=tf.complex128
-                        )
-                    )
-                    self.params.append(element.values['anhar'])
-                    self.params_desc.append((element.name, 'anhar'))
-
-            elif isinstance(element, Coupling):
-                el_indxs = []
-                for connected_element in element.connected:
-                    el_indxs.append(self.names.index(connected_element))
-                ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
-
-                self.drift_Hs.append(
-                    tf.constant(
-                        element.hamiltonian(ann_opers),
-                        dtype=tf.complex128
-                    )
-                )
-                self.params.append(element.values['strength'])
-                self.params_desc.append((element.name, 'strength'))
-
-            elif isinstance(element, Drive):
-                # TODO order drives by driveline name
-                el_indxs = []
-                h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
-                for connected_element in element.connected:
-                    a = self.ann_opers[self.names.index(connected_element)]
-                    h += tf.constant(
-                        element.hamiltonian(a),
-                        dtype=tf.complex128
-                    )
-
-                self.control_Hs.append(h)
-
-        self.n_params = len(self.params)
+            # TODO order drives by driveline name
 
     def write_config(self):
         return "We don't care about the model... YET!"
@@ -154,12 +114,14 @@ class Model:
         self.cops_params_desc = []
         self.cops_params_fcts = []
 
-        for element in self.chip_elements:
+        for element in self.components:
             if isinstance(element, Qubit) or isinstance(element, Resonator):
                 vals = element.values
+                el_indx = self.names.index(element.name)
+                ann_oper = self.ann_opers[el_indx]
+
                 if 't1' in vals:
-                    el_indx = self.names.index(element.name)
-                    ann_oper = self.ann_opers[el_indx]
+
                     L1 = ann_oper
 
                     if 'temp' not in vals:
