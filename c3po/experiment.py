@@ -34,14 +34,18 @@ class Experiment:
                 cfg[key] = self.generator.write_config()
         return cfg
 
-    def list_parameters(self):
-        par_list = []
+    def exp_components(self):
         components = []
-        components.extend(self.model.line_components())
-        par_list.extend(self.model.list_parameters())
-        devices = self.generator.devices
-        for key in devices:
-            par_list.extend(devices[key].list_parameters())
+        components.extend(self.model.line_comps_dict)
+        components.extend(self.model.phys_comps_dict)
+        components.extend(self.generator.devices)
+        return components
+
+    def list_parameters(self):
+        components = self.exp_components()
+        par_list = []
+        for key in :
+            par_list.extend(components[key].list_parameters())
         return par_list
 
     def parameter_indeces(self, opt_map: list):
@@ -56,12 +60,10 @@ class Experiment:
         if opt_map is None:
             opt_map = self.list_parameters()
         values = []
-        values.append(self.model.get_parameters(scaled))
-        devices = self.generator.devices
-        for key in devices:
-            pars = devices[key].get_parameters(scaled)
-            if not (pars == []):
-                values.append(pars)
+        components = self.exp_components()
+        for key in components:
+            pars = components[key].get_parameters(scaled)
+            values.extend(pars)
         # TODO Deal with bounds correctly
         self.par_lens = [len(v) for v in values]
         par_indx = self.parameter_indeces(opt_map)
@@ -69,7 +71,7 @@ class Experiment:
         for v in values:
             values_flat.extend(v)
         values_new = [values_flat[indx] for indx in par_indx]
-        return values_new
+        return values
 
     def set_parameters(self, values: list, opt_map: list):
         """Set the values in the original instruction class."""

@@ -45,6 +45,14 @@ class Model:
         self.phys_components = phys_components
         self.line_components = line_components
 
+        self.phys_comps_dict = {}
+        for phys_comp in phys_components:
+            self.phys_comps_dict[phys_comp.name] = phys_comp
+        self.line_comps_dict = {}
+        for line_comp in line_components:
+            self.line_comps_dict[line_comp.name] = line_comp
+
+
         # Construct array with dimension of comps (only qubits & resonators)
         dims = []
         names = []
