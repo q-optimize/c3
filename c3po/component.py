@@ -250,7 +250,36 @@ class Qubit(PhysicalComponent):
             h += self.params['anhar'] * self.drift_Hs['anhar']
 
     def init_Ls(self, ann_oper):
+        self.collapse_ops['t1'] = ann_oper
+        self.collapse_ops['temp'] = ann_oper.T.conj()
+        self.collapse_ops['t2star'] = 2 * ann_oper.T.conj() @ ann_oper
 
+
+
+
+        if 't2star' in vals:
+
+            def t2star(t2star, L_dep):
+
+
+    def get_Lindbladian(self):
+
+
+        if 't1' in self.params:
+            gamma = (0.5 / self.params['t1'].tf_get_value()) ** 0.5
+            L = gamma * self.collapse_ops['t1']
+            if 'temp' in self.params:
+                freq_diff = np.array(
+                    [(self.params['freq'] + n*self.params['anharm'])
+                        for n in range(dim)]
+                )
+                beta = 1 / (self.params['temp'].tf_get_value() * kb)
+                det_bal = tf.exp(-hbar*freq_diff*beta)
+                det_bal_mat = tf.linalg.tensor_diag(det_bal)
+                L += gamma * (self.collapse_ops['L2'] @ det_bal_mat)
+        if 't2star' in self.params:
+            gamma = (0.5/self.params['t2star'].tf_get_value())**0.5        
+            L += gamma * L_dep
 
 
 class Resonator(PhysicalComponent):

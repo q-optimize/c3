@@ -63,17 +63,17 @@ class Model:
         self.components = components
         self.control_Hs = []
 
-        # Construct array with dimension of elements (only qubits & resonators)
+        # Construct array with dimension of comps (only qubits & resonators)
         dims = []
         names = []
-        for element in components:
-            if isinstance(element, PhysicalComponent):
-                dims.append(element.hilbert_dim)
-                names.append(element.name)
+        for comp in components:
+            if isinstance(comp, PhysicalComponent):
+                dims.append(comp.hilbert_dim)
+                names.append(comp.name)
         self.tot_dim = np.prod(dims)
 
 
-        # Create anninhilation operators for physical elements
+        # Create anninhilation operators for physical comps
         ann_opers = []
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
@@ -88,19 +88,19 @@ class Model:
         self.dims = {}
         self.ann_opers = {}
         for indx in range(len(dims)):
-self.dims[name[indx]] = dims[indx]
+            self.dims[name[indx]] = dims[indx]
             self.ann_opers[name[indx]] = ann_opers[indx]
 
 
         # Create drift Hamiltonian matrices and model parameter vector
-        # TODO avoid checking element type, instead call function in element
-        for element in components:
-            if isinstance(element, PhysicalComponent):
-                element.init_Hs(self.ann_opers[element.name])
+        # TODO avoid checking comp type, instead call function in comp
+        for comp in components:
+            if isinstance(comp, PhysicalComponent):
+                comp.init_Hs(self.ann_opers[comp.name])
 
-            elif isinstance(element, LineComponent):
-                element.init_Hs(
-                    [self.ann_opers for connected_element in element.connected]
+            elif isinstance(comp, LineComponent):
+                comp.init_Hs(
+                    [self.ann_opers[conn_comp] for conn_comp in comp.connected]
                 )
             # TODO order drives by driveline name
 
@@ -114,11 +114,21 @@ self.dims[name[indx]] = dims[indx]
         self.cops_params_desc = []
         self.cops_params_fcts = []
 
-        for element in self.components:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                vals = element.values
-                el_indx = self.names.index(element.name)
-                ann_oper = self.ann_opers[el_indx]
+        for comp in self.components:
+
+            vals = element.values
+                if 't1' in vals:
+                    el_indx = self.names.index(element.name)
+                    ann_oper = self.ann_opers[el_indx]
+                    L1 = ann_oper
+
+                    if 'temp' not in vals:
+                        def t1(t1, L1):
+                            gamma = (0.5 / t1.tf_get_value()) ** 0.5
+                            return gamma * L1
+            if isinstance(comp, Qubit) or isinstance(comp, Resonator):
+                vals = comp.values
+                ann_oper = self.ann_opers[comp.name]
 
                 if 't1' in vals:
 
@@ -131,12 +141,12 @@ self.dims[name[indx]] = dims[indx]
 
                         self.collapse_ops.append(L1)
                         self.cops_params.append(vals['t1'])
-                        self.cops_params_desc.append((element.name, 't1'))
+                        self.cops_params_desc.append((comp.name, 't1'))
                         self.cops_params_fcts.append(t1)
 
                     else:
                         L2 = ann_oper.T.conj()
-                        dim = element.hilbert_dim
+                        dim = comp.hilbert_dim
                         omega_q = vals['freq'].tf_get_value()
                         if 'anhar' in vals:
                             anhar = vals['anhar'].tf_get_value()
@@ -157,12 +167,12 @@ self.dims[name[indx]] = dims[indx]
                         self.collapse_ops.append(L2)
                         self.cops_params.append([vals['t1'], vals['temp']])
                         self.cops_params_desc.append(
-                            [element.name, 't1 & temp']
+                            [comp.name, 't1 & temp']
                         )
                         self.cops_params_fcts.append(t1_temp)
 
                 if 't2star' in vals:
-                    el_indx = self.names.index(element.name)
+                    el_indx = self.names.index(comp.name)
                     ann_oper = self.ann_opers[el_indx]
                     L_dep = 2 * ann_oper.T.conj() @ ann_oper
 
@@ -172,7 +182,7 @@ self.dims[name[indx]] = dims[indx]
 
                     self.collapse_ops.append(L_dep)
                     self.cops_params.append(vals['t2star'])
-                    self.cops_params_desc.append((element.name, 't2star'))
+                    self.cops_params_desc.append((comp.name, 't2star'))
                     self.cops_params_fcts.append(t2star)
 
         self.cops_n_params = len(self.cops_params)
