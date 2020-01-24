@@ -589,6 +589,7 @@ class Optimizer:
             self.logfile.write(start_time_str)
             self.logfile.write("Optimization parameters:\n\n")
             self.logfile.write(json.dumps(self.opt_map))
+            self.logfile.write("\n")
             # TODO put optmizer specific code here
             if self.algorithm == 'cmaes':
                 x_best = self.cmaes(
