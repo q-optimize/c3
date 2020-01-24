@@ -10,6 +10,22 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+def plot_distribution(logfolder=""):
+    logfilename = logfolder + "confirm.log"
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/confirm.log"
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+    diffs = []
+    for line in log:
+        if line[:10] == 'Simulation':
+            point = json.loads(line)
+            diffs.append(point['Diff'])
+    plt.hist(diffs)
+    plt.title('distribution of difference')
+    plt.show()
+    return
+
 
 def plot_OC_logs(logfolder=""):
     logfilename = logfolder + "openloop.log"
