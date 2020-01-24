@@ -36,6 +36,8 @@ class Experiment:
 
     def list_parameters(self):
         par_list = []
+        components = []
+        components.extend(self.model.line_components())
         par_list.extend(self.model.list_parameters())
         devices = self.generator.devices
         for key in devices:

@@ -67,9 +67,11 @@ class Model:
 
         self.dims = {}
         self.ann_opers = {}
+        self.order = {}
         for indx in range(len(dims)):
             self.dims[name[indx]] = dims[indx]
             self.ann_opers[name[indx]] = ann_opers[indx]
+            self.order[name[indx]] = indx
 
         # Create drift Hamiltonian matrices and model parameter vector
         for phys_comp in phys_components:
@@ -148,41 +150,32 @@ class Model:
                 self.control_Hs[indx]),
                 self.transform
             )
-
+        dressed_FR = tf.matmul(tf.matmul(
+            tf.linalg.adjoint(self.transform),
+            self.FR),
+            self.transform
+        )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
+        self.dressed_FR = dressed_FR
 
-    def get_Virtual_Z(self, t_final, lo_freqs: dict):
+    def update_Frame_Rotation(self, t_final: float64, lo_freqs: dict):
         # lo_freqs need to be ordered the same as the names of the qubits
-        anns = []
-        for name in self.names:
-            # TODO Effectively collect parameters of the virtual Z
-            if name[0] == 'q' or name[0] == 'Q':
-                ann_indx = self.names.index(name)
-                anns.append(self.ann_opers[ann_indx])
-                # freq_indx = self.params_desc.index((name, 'freq'))
-                # freqs.append(self.params[freq_indx])
+        ones = tf.ones(self.tot_dim)
+        FR = tf.linalg.diag(ones)
 
-        # TODO make sure terms is right
-        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
-        num_oper = tf.constant(
-            np.matmul(anns[0].T.conj(), anns[0]),
-            dtype=tf.complex128
-        )
-        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
-        for ii in range(1, len(anns)):
+        for qubit in lo_freqs.keys():
+            ann_oper = ann_opers[qubit]
             num_oper = tf.constant(
-                np.matmul(anns[ii].T.conj(), anns[ii]),
+                np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
             )
-            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
-
-        if self.dress:
-            VZ = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), VZ),
-                self.transform
+            FR = FR * tf.linalg.expm(
+                1.0j * num_oper * lo_freqs[ones] * t_final
             )
-        return VZ
+
+        self.FR = FR
+
 
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
