@@ -245,29 +245,23 @@ class Qubit(PhysicalComponent):
             )
 
     def get_Hamiltonian(self):
-        h = self.params['freq'] * self.drift_Hs['freq']
+        h = self.params['freq'].tf_get_value() * self.drift_Hs['freq']
         if self.hilbert_dim > 2:
-            h += self.params['anhar'] * self.drift_Hs['anhar']
+            h += self.params['anhar'].tf_get_value() * self.drift_Hs['anhar']
+        return h
 
     def init_Ls(self, ann_oper):
         self.collapse_ops['t1'] = ann_oper
         self.collapse_ops['temp'] = ann_oper.T.conj()
         self.collapse_ops['t2star'] = 2 * ann_oper.T.conj() @ ann_oper
 
-
-
-
-        if 't2star' in vals:
-
-            def t2star(t2star, L_dep):
-
-
     def get_Lindbladian(self):
-
-
+        Ls = []
         if 't1' in self.params:
-            gamma = (0.5 / self.params['t1'].tf_get_value()) ** 0.5
+            t1 = self.params['t1'].tf_get_value()
+            gamma = (0.5 / t1) ** 0.5
             L = gamma * self.collapse_ops['t1']
+            Ls.append(L)
             if 'temp' in self.params:
                 freq_diff = np.array(
                     [(self.params['freq'] + n*self.params['anharm'])
@@ -276,11 +270,13 @@ class Qubit(PhysicalComponent):
                 beta = 1 / (self.params['temp'].tf_get_value() * kb)
                 det_bal = tf.exp(-hbar*freq_diff*beta)
                 det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                L += gamma * (self.collapse_ops['L2'] @ det_bal_mat)
+                L = gamma * (self.collapse_ops['L2'] @ det_bal_mat)
+                Ls.append(L)
         if 't2star' in self.params:
-            gamma = (0.5/self.params['t2star'].tf_get_value())**0.5        
-            L += gamma * L_dep
-
+            gamma = (0.5/self.params['t2star'].tf_get_value())**0.5
+            L = gamma * L_dep
+            Ls.append(L)
+        return tf.reduce_sum(Ls)
 
 class Resonator(PhysicalComponent):
     """
@@ -315,7 +311,8 @@ class Resonator(PhysicalComponent):
         )
 
     def get_Hamiltonian(self):
-        return self.params['freq'] * self.drift_Hs['freq']
+        freq = self.params['freq'].tf_get_value()
+        return freq * self.drift_Hs['freq']
 
 class LineComponent(C3obj):
     """

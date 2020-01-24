@@ -60,7 +60,8 @@ class Model:
 
         self.spam_params = []
         self.spam_params_desc = []
-        self.components = components
+        self.phys_components = phys_components
+        self.line_components = line_components
         self.control_Hs = []
 
         # Construct array with dimension of comps (only qubits & resonators)
@@ -127,65 +128,7 @@ class Model:
                             gamma = (0.5 / t1.tf_get_value()) ** 0.5
                             return gamma * L1
             if isinstance(comp, Qubit) or isinstance(comp, Resonator):
-                vals = comp.values
-                ann_oper = self.ann_opers[comp.name]
 
-                if 't1' in vals:
-
-                    L1 = ann_oper
-
-                    if 'temp' not in vals:
-                        def t1(t1, L1):
-                            gamma = (0.5 / t1.tf_get_value()) ** 0.5
-                            return gamma * L1
-
-                        self.collapse_ops.append(L1)
-                        self.cops_params.append(vals['t1'])
-                        self.cops_params_desc.append((comp.name, 't1'))
-                        self.cops_params_fcts.append(t1)
-
-                    else:
-                        L2 = ann_oper.T.conj()
-                        dim = comp.hilbert_dim
-                        omega_q = vals['freq'].tf_get_value()
-                        if 'anhar' in vals:
-                            anhar = vals['anhar'].tf_get_value()
-                        else:
-                            anhar = 0
-                        # TODO This breaks tensorflow for temp
-                        freq_diff = np.array(
-                         [(omega_q + n*anhar) for n in range(dim)]
-                         )
-
-                        def t1_temp(t1_temp, L2):
-                            gamma = (0.5/t1_temp[0].tf_get_value())**0.5
-                            beta = 1 / (t1_temp[1].tf_get_value() * kb)
-                            det_bal = tf.exp(-hbar*freq_diff*beta)
-                            det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                            return gamma * (L1 + L2 @ det_bal_mat)
-
-                        self.collapse_ops.append(L2)
-                        self.cops_params.append([vals['t1'], vals['temp']])
-                        self.cops_params_desc.append(
-                            [comp.name, 't1 & temp']
-                        )
-                        self.cops_params_fcts.append(t1_temp)
-
-                if 't2star' in vals:
-                    el_indx = self.names.index(comp.name)
-                    ann_oper = self.ann_opers[el_indx]
-                    L_dep = 2 * ann_oper.T.conj() @ ann_oper
-
-                    def t2star(t2star, L_dep):
-                        gamma = (0.5/t2star.tf_get_value())**0.5
-                        return gamma * L_dep
-
-                    self.collapse_ops.append(L_dep)
-                    self.cops_params.append(vals['t2star'])
-                    self.cops_params_desc.append((comp.name, 't2star'))
-                    self.cops_params_fcts.append(t2star)
-
-        self.cops_n_params = len(self.cops_params)
 
     def get_lindbladian(self, cops_params=None):
         """Return Lindbladian operators and their prefactors."""
