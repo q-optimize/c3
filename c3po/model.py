@@ -230,13 +230,6 @@ class Model:
                 )
             )
 
-        if self.dress:
-            for indx in range(len(col_ops)):
-                col_ops[indx] = tf.matmul(
-                    tf.matmul(tf.linalg.adjoint(transform), col_ops[indx]),
-                    transform
-                )
-
         return col_ops
 
     def get_Hamiltonians(self, params=None):
@@ -249,17 +242,6 @@ class Model:
                 params[ii].tf_get_value(), tf.complex128
             ) * self.drift_Hs[ii]
         control_Hs = self.control_Hs
-
-        if self.dress:
-            drift_H = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(transform), drift_H),
-                transform
-            )
-            for indx in range(len(control_Hs)):
-                control_Hs[indx] = tf.matmul(
-                    tf.matmul(tf.linalg.adjoint(transform), control_Hs[indx]),
-                    transform
-                )
 
         return drift_H, control_Hs
 
@@ -332,13 +314,9 @@ class Model:
 
         return eigenframe, transform
 
-    def recalc_dressed(self):
-        self.eigenframe, self.transform = get_drift_eigen()
-
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
         pass
-
 
     # things that deal with parameters
 
@@ -372,7 +350,7 @@ class Model:
                 self.cops_params[ii-ln].tf_set_value(values[ii])
         for ii in range(ln_s,len(values)):
             self.spam_params[ii-ln_s].tf_set_value(values[ii])
-        self.recalc_dressed()
+        # self.recalc_dressed()
 
     def list_parameters(self):
         par_list = []

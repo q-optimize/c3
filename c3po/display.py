@@ -10,6 +10,7 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+
 def plot_distribution(logfolder=""):
     logfilename = logfolder + "confirm.log"
     if not os.path.isfile(logfilename):
@@ -18,13 +19,14 @@ def plot_distribution(logfolder=""):
         log = filename.readlines()
     diffs = []
     for line in log:
-        if line[:10] == 'Simulation':
-            point = json.loads(line)
-            diffs.append(point['Diff'])
-    plt.hist(diffs)
+        if line[:12] == '  Simulation':
+            diffs.append(np.abs(float(line.split()[7])))
+    plt.hist(diffs, bins=101)
+    print(f"RMS: {np.sqrt(np.mean(np.square(diffs)))}")
+    print(f"Median: {np.median(diffs)}")
     plt.title('distribution of difference')
     plt.show()
-    return
+    return diffs
 
 
 def plot_OC_logs(logfolder=""):
