@@ -79,7 +79,7 @@ class Generator:
                 # plt.title("Multiplex")
                 # plt.show()
         self.signal = gen_signal
-        return gen_signal
+        return gen_signal, lo_signal['ts']
 
     def readout_signal(self, phase):
         return self.devices["readout"].readout(phase)
@@ -143,8 +143,8 @@ class Device(C3obj):
         else:
             offset = 0
             num = self.slice_num + 1
-        t_start = tf.constant(t_start + offset, dtype=tf.float64)
-        t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        t_start = tf.constant(t_start + offset, dtype=tf.complex128)
+        t_end = tf.constant(t_end - offset, dtype=tf.complex128)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -347,9 +347,9 @@ class Response(Device):
 
     def process(self, iq_signal):
         n_ts = int(self.params['rise_time'].tf_get_value() * self.resolution)
-        ts = tf.linspace(tf.constant(
-            0.0, dtype=tf.float64),
-            self.params['rise_time'].tf_get_value(),
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            int(self.params['rise_time'].tf_get_value()),
             n_ts
         )
         cen = tf.cast(

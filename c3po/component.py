@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from c3po.utils import num3str
 from c3po.hamiltonians import resonator, duffing
+from c3po.constants import kb, hbar
 
 
 class Quantity:
@@ -38,6 +39,7 @@ class Quantity:
     ):
         self.offset = np.array(min)
         self.scale = np.abs(np.array(max) - np.array(min))
+        # TODO if setting is out of bounds this double breaks
         self.set_value(value)
         self.symbol = symbol
         self.unit = unit
@@ -99,7 +101,7 @@ class Quantity:
         # getting needs to be tensorflowy
         return tf.cast(
             self.scale * (self.value + 1) / 2 + self.offset,
-            tf.float64
+            tf.complex128
         )
 
     def tf_set_value(self, val):
@@ -135,20 +137,15 @@ class C3obj:
         self.comment = comment
         self.params = {}
 
-    def get_parameters(self, scaled=False):
-        params = []
-        for key in sorted(self.params.keys()):
-            if scaled:
-                params.append(self.params[key].value.numpy())
-            else:
-                params.append(self.params[key].numpy())
-        return params
+    def get_parameter(self, par_id, scaled=False):
+        if scaled:
+            param = self.params[par_id].value.numpy()
+        else:
+            param = self.params[par_id].numpy()
+        return param
 
-    def set_parameters(self, values):
-        idx = 0
-        for key in sorted(self.params.keys()):
-            self.params[key].tf_set_value(values[idx])
-            idx += 1
+    def set_parameter(self, par_id, value):
+        self.params[par_id].tf_set_value(value)
 
     def list_parameters(self):
         par_list = []
@@ -157,6 +154,9 @@ class C3obj:
             par_list.append(par_id)
         return par_list
 
+    def print_parameter(self, par_id):
+        print(self.params[par_id])
+
 
 class PhysicalComponent(C3obj):
     """
@@ -164,7 +164,7 @@ class PhysicalComponent(C3obj):
 
     Parameters
     ----------
-    hilber_dim: int
+    hilbert_dim: int
         dimension of the Hilbert space representing this physical component
 
     """
@@ -182,6 +182,8 @@ class PhysicalComponent(C3obj):
             comment=comment
             )
         self.hilbert_dim = hilbert_dim
+        self.Hs = {}
+        self.collapse_ops = {}
 
 
 class Qubit(PhysicalComponent):
@@ -233,21 +235,18 @@ class Qubit(PhysicalComponent):
             self.params['temp'] = temp
 
     def init_Hs(self, ann_oper):
-        self.drift_Hs['freq'] = tf.constant(
+        self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
         if self.hilbert_dim > 2:
-            self.drift_Hs.append(
-                tf.constant(
-                    duffing(ann_oper),
-                    dtype=tf.complex128
-                )
+            self.Hs['anhar'] = tf.constant(
+                duffing(ann_oper), dtype=tf.complex128
             )
 
     def get_Hamiltonian(self):
-        h = self.params['freq'].tf_get_value() * self.drift_Hs['freq']
+        h = self.params['freq'].tf_get_value() * self.Hs['freq']
         if self.hilbert_dim > 2:
-            h += self.params['anhar'].tf_get_value() * self.drift_Hs['anhar']
+            h += self.params['anhar'].tf_get_value() * self.Hs['anhar']
         return h
 
     def init_Ls(self, ann_oper):
@@ -265,7 +264,7 @@ class Qubit(PhysicalComponent):
             if 'temp' in self.params:
                 freq_diff = np.array(
                     [(self.params['freq'] + n*self.params['anharm'])
-                        for n in range(dim)]
+                        for n in range(self.hilbert_dim)]
                 )
                 beta = 1 / (self.params['temp'].tf_get_value() * kb)
                 det_bal = tf.exp(-hbar*freq_diff*beta)
@@ -274,9 +273,10 @@ class Qubit(PhysicalComponent):
                 Ls.append(L)
         if 't2star' in self.params:
             gamma = (0.5/self.params['t2star'].tf_get_value())**0.5
-            L = gamma * L_dep
+            L = gamma * self.collapse_ops['t2star']
             Ls.append(L)
         return tf.reduce_sum(Ls)
+
 
 class Resonator(PhysicalComponent):
     """
@@ -306,13 +306,14 @@ class Resonator(PhysicalComponent):
         self.params['freq'] = freq
 
     def init_Hs(self, ann_oper):
-        self.drift_Hs['freq'] = tf.constant(
+        self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
         freq = self.params['freq'].tf_get_value()
-        return freq * self.drift_Hs['freq']
+        return freq * self.Hs['freq']
+
 
 class LineComponent(C3obj):
     """
@@ -339,6 +340,7 @@ class LineComponent(C3obj):
             comment=comment
             )
         self.connected = connected
+        self.Hs = {}
 
 
 class Coupling(LineComponent):
@@ -374,12 +376,15 @@ class Coupling(LineComponent):
         self.params['strength'] = strength
 
     def init_Hs(self, ann_opers):
-        self.drift_Hs['strength'] = tf.constant(
-            element.hamiltonian_func(ann_opers), dtype=tf.complex128
+        opers_list = [
+            ann_opers[conn_comp] for conn_comp in self.connected
+        ]
+        self.Hs['strength'] = tf.constant(
+            self.hamiltonian_func(opers_list), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
-        return self.params['strength'] * self.drift_Hs['strength']
+        return self.params['strength'] * self.Hs['strength']
 
 
 class Drive(LineComponent):
@@ -399,7 +404,7 @@ class Drive(LineComponent):
             desc: str = " ",
             comment: str = " ",
             connected: list = [],
-            hamiltonian: types.FunctionType = None,
+            hamiltonian_func: types.FunctionType = None,
             ):
         super().__init__(
             name=name,
@@ -410,11 +415,15 @@ class Drive(LineComponent):
             )
         self.hamiltonian_func = hamiltonian_func
 
-    def init_Hs(self, ann_opers):
-        for indx in len(connected):
-            self.drift_Hs[connected[indx]] = tf.constant(
-                element.hamiltonian_func(ann_opers[indx]), dtype=tf.complex128
+    def init_Hs(self, ann_opers: dict):
+        hs = []
+        for key in self.connected:
+            hs.append(
+                tf.constant(
+                    self.hamiltonian_func(ann_opers[key]), dtype=tf.complex128
+                )
             )
+        self.h = tf.reduce_sum(hs)
 
     def get_Hamiltonian(self):
-        return self.params['strength'] * self.drift_Hs['strength']
+        return self.h

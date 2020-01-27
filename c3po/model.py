@@ -1,14 +1,9 @@
 """The model class, containing information on the system and its modelling."""
 
 import numpy as np
-import copy
 import tensorflow as tf
-from scipy.linalg import expm
-from c3po.hamiltonians import resonator, duffing
-from c3po.component import Quantity, Qubit, Resonator, Drive, Coupling
+from c3po.component import Quantity, Drive, Coupling
 from c3po.constants import kb, hbar
-from c3po.tf_utils import tf_expm
-from c3po.qt_utils import basis
 
 
 class Model:
@@ -52,7 +47,6 @@ class Model:
         for line_comp in line_components:
             self.line_comps_dict[line_comp.name] = line_comp
 
-
         # Construct array with dimension of comps (only qubits & resonators)
         dims = []
         names = []
@@ -75,64 +69,61 @@ class Model:
 
         self.dims = {}
         self.ann_opers = {}
-        self.order = {}
         for indx in range(len(dims)):
-            self.dims[name[indx]] = dims[indx]
-            self.ann_opers[name[indx]] = ann_opers[indx]
-            self.order[name[indx]] = indx
+            self.dims[names[indx]] = dims[indx]
+            self.ann_opers[names[indx]] = ann_opers[indx]
 
         # Create drift Hamiltonian matrices and model parameter vector
         for phys_comp in phys_components:
-            ann_oper = self.ann_opers[comp.name]
+            ann_oper = self.ann_opers[phys_comp.name]
             phys_comp.init_Hs(ann_oper)
             phys_comp.init_Ls(ann_oper)
 
         for line_comp in line_components:
-            ann_opers = [
-                self.ann_opers[conn_comp] for conn_comp in comp.connected
-            ]
-            comp.init_Hs(ann_opers)
-            # TODO order drives by driveline name
+            line_comp.init_Hs(self.ann_opers)
 
         self.update_model()
 
-    def update_model(self):
+    def get_Hamiltonians(self, dressed=False):
+        if dressed:
+            return self.dressed_drift_H, self.dressed_control_Hs
+        else:
+            return self.drift_H, self.control_Hs
+
+    def get_Lindbladians(self, dressed=False):
+        if dressed:
+            return self.dressed_col_ps
+        else:
+            return self.col_ops
+
+    def update_model(self, dressed=False):
         self.update_Hamiltonians()
         self.update_Lindbladians()
-        self.update_drift_eigen()
-        self.update_dressed()
+        if dressed:
+            self.update_dressed()
 
     def update_Hamiltonians(self):
-        control_Hs = []
-        drift_H = tf.zeros(self.tot_dim)
+        control_Hs = {}
+        drift_H = tf.zeros([self.tot_dim, self.tot_dim], dtype=tf.complex128)
         for phys_comp in self.phys_components:
             drift_H += phys_comp.get_Hamiltonian()
-
         for line_comp in self.line_components:
             if isinstance(line_comp, Coupling):
-                drift_H += line_comp.get_Hamiltonian
+                drift_H += line_comp.get_Hamiltonian()
             elif isinstance(line_comp, Drive):
-                control_Hs.append(line_comp.get_Hamiltonian)
+                control_Hs[line_comp.name] = line_comp.get_Hamiltonian()
+        self.drift_H = drift_H
+        self.control_Hs = control_Hs
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
         col_ops = []
         for phys_comp in self.phys_components:
             col_ops.append(phys_comp.get_Lindbladian())
-
-        if self.dress:
-            for indx in range(len(col_ops)):
-                col_ops[indx] = tf.matmul(tf.matmul(
-                    tf.linalg.adjoint(self.transform),
-                    col_ops[indx]),
-                    self.transform
-                )
-
         self.col_ops = col_ops
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
-
         if ordered:
             reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
             e = tf.reshape(e, [e.shape[0], 1])
@@ -141,39 +132,37 @@ class Model:
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
-
         self.eigenframe = eigenframe
         self.transform = transform
 
     def update_dressed(self):
-        dressed_control_Hs = []
+        self.update_drift_eigen()
+        dressed_control_Hs = {}
         dressed_drift_H = tf.matmul(tf.matmul(
             tf.linalg.adjoint(self.transform),
             self.drift_H),
             self.transform
         )
-        for indx in range(len(control_Hs)):
-            dressed_control_Hs[indx] = tf.matmul(tf.matmul(
+        for key in self.control_Hs:
+            dressed_control_Hs[key] = tf.matmul(tf.matmul(
                 tf.linalg.adjoint(self.transform),
-                self.control_Hs[indx]),
+                self.control_Hs[key]),
                 self.transform
             )
-        dressed_FR = tf.matmul(tf.matmul(
-            tf.linalg.adjoint(self.transform),
-            self.FR),
-            self.transform
-        )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
-        self.dressed_FR = dressed_FR
 
-    def update_Frame_Rotation(self, t_final: float64, lo_freqs: dict):
+    def get_Frame_Rotation(
+        self,
+        t_final: np.float64,
+        lo_freqs: dict,
+        dressed: bool
+    ):
         # lo_freqs need to be ordered the same as the names of the qubits
         ones = tf.ones(self.tot_dim)
         FR = tf.linalg.diag(ones)
-
         for qubit in lo_freqs.keys():
-            ann_oper = ann_opers[qubit]
+            ann_oper = self.ann_opers[qubit]
             num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
@@ -181,9 +170,13 @@ class Model:
             FR = FR * tf.linalg.expm(
                 1.0j * num_oper * lo_freqs[ones] * t_final
             )
-
-        self.FR = FR
-
+        if dressed:
+            FR = tf.matmul(tf.matmul(
+                tf.linalg.adjoint(self.transform),
+                FR),
+                self.transform
+            )
+        return FR
 
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
@@ -217,7 +210,7 @@ class Model:
         row2 = tf.ones_like(row1) - row1
         conf_matrix = tf.concat([row1, row2], 0)
         pops = self.populations(state, lindbladian)
-        pops = tf.reshape(pops, [pops.shape[0],1])
+        pops = tf.reshape(pops, [pops.shape[0], 1])
         return tf.matmul(conf_matrix, pops)
 
     def set_spam_param(self, name: str, quan: Quantity):
@@ -235,4 +228,4 @@ class Model:
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0],1])
+        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])

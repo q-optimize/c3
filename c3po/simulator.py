@@ -42,8 +42,8 @@ class Simulator():
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             instr = self.gateset.instructions[gate]
-            signal = self.exp.generator.generate_signals(instr)
-            U = self.propagation(signal)
+            signal, ts = self.exp.generator.generate_signals(instr)
+            U = self.propagation(signal, ts)
             if self.use_VZ:
                 VZ = self.exp.model.get_Virtual_Z(instr.t_end - instr.t_start)
                 if self.lindbladian:
@@ -75,19 +75,18 @@ class Simulator():
         return U
 
     def propagation(self,
-                    signal: dict
+                    signal: dict,
+                    ts
                     ):
-        signals = []
-        # This sorting ensures that signals and hks are matched
-        # TODO do hks and signals matching more rigorously
-        for key in sorted(signal):
-            out = signal[key]
-            # TODO this points to the fact that all sim_res must be the same
-            ts = out["ts"]
-            signals.append(out["values"])
 
+        h0, hctrls = self.exp.model.get_Hamiltonians()
+        signals = []
+        hks = []
+        for key in signal:
+            signals.append(signal[key]["values"])
+            hks.append(hctrls[key])
         dt = ts[1].numpy() - ts[0].numpy()
-        h0, hks = self.exp.model.get_Hamiltonians()
+
         if self.lindbladian:
             col_ops = self.exp.model.get_lindbladian()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
