@@ -72,6 +72,7 @@ class Experiment:
                 par_id,
                 values[val_indx:val_indx+par_len]
             )
+        self.model.update_model()
 
     def print_parameters(self, opt_map=None):
         if opt_map is None:
