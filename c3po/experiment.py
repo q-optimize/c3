@@ -25,9 +25,10 @@ class Experiment:
         self.generator = generator
 
         components = {}
-        components.update(self.model.line_comps_dict)
-        components.update(self.model.phys_comps_dict)
+        components.update(self.model.couplings)
+        components.update(self.model.subsystems)
         components.update(self.generator.devices)
+        components['Model'] = model
         self.components = components
 
         id_list = []
@@ -46,18 +47,15 @@ class Experiment:
         return cfg
 
     def get_parameters(self, opt_map=None, scaled=False):
-        """Return list of values and bounds of parameters in opt_map."""
         if opt_map is None:
             opt_map = self.id_list
         values = []
-        par_lens = []
         for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
-            par = self.components[comp_id].get_parameter(par_id, scaled)
-            par_lens.append(par.size)
-            values.extend(par.flatten())
-        self.par_lens = par_lens
+            values.extend(
+                self.components[comp_id].get_parameter(par_id, scaled)
+            )
         return values
 
     def set_parameters(self, values: list, opt_map: list):
@@ -67,7 +65,7 @@ class Experiment:
             comp_id = id[0]
             par_id = id[1]
             id_indx = self.id_list.index(id)
-            par_len = self.par_lens[id_indx]
+            par_len = self.par_shape[id_indx]
             self.components[comp_id].set_parameter(
                 par_id,
                 values[val_indx:val_indx+par_len]

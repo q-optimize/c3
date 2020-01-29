@@ -43,6 +43,7 @@ class Quantity:
         self.set_value(value)
         self.symbol = symbol
         self.unit = unit
+        self.shape = value.shape()
 
     def __add__(self, other):
         return self.get_value() + other
@@ -423,7 +424,7 @@ class Drive(LineComponent):
                     self.hamiltonian_func(ann_opers[key]), dtype=tf.complex128
                 )
             )
-        self.h = tf.reduce_sum(hs)
+        self.h = tf.add_n(hs)
 
     def get_Hamiltonian(self):
         return self.h

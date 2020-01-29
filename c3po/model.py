@@ -31,28 +31,21 @@ class Model:
 
     """
 
-    def __init__(
-            self,
-            phys_components,
-            line_components
-            ):
-
-        self.phys_components = phys_components
-        self.line_components = line_components
-
-        self.phys_comps_dict = {}
-        for phys_comp in phys_components:
-            self.phys_comps_dict[phys_comp.name] = phys_comp
-        self.line_comps_dict = {}
-        for line_comp in line_components:
-            self.line_comps_dict[line_comp.name] = line_comp
+    def __init__(self, subsystems, couplings):
+        self.params = {}
+        self.subsystems = {}
+        for comp in subsystems:
+            self.subsystems[comp.name] = comp
+        self.couplings = {}
+        for comp in couplings:
+            self.couplings[comp.name] = comp
 
         # Construct array with dimension of comps (only qubits & resonators)
         dims = []
         names = []
-        for phys_comp in phys_components:
-            dims.append(phys_comp.hilbert_dim)
-            names.append(phys_comp.name)
+        for subs in subsystems:
+            dims.append(subs.hilbert_dim)
+            names.append(subs.name)
         self.tot_dim = np.prod(dims)
 
         # Create anninhilation operators for physical comps
@@ -74,15 +67,28 @@ class Model:
             self.ann_opers[names[indx]] = ann_opers[indx]
 
         # Create drift Hamiltonian matrices and model parameter vector
-        for phys_comp in phys_components:
-            ann_oper = self.ann_opers[phys_comp.name]
-            phys_comp.init_Hs(ann_oper)
-            phys_comp.init_Ls(ann_oper)
+        for subs in subsystems:
+            ann_oper = self.ann_opers[subs.name]
+            subs.init_Hs(ann_oper)
+            subs.init_Ls(ann_oper)
 
-        for line_comp in line_components:
-            line_comp.init_Hs(self.ann_opers)
+        for line in couplings:
+            line.init_Hs(self.ann_opers)
+
+        self.params['state_confusion'] = tf.eye(
+            sum(self.dims.values()), dtype=tf.float64
+        )
 
         self.update_model()
+
+    def list_parameters(self):
+        ids = []
+        for key in self.params:
+            ids.append(("Model", key))
+        return ids
+
+    def get_parameter(self, par_id, scaled=False):
+        return self.params[par_id].numpy()
 
     def get_Hamiltonians(self, dressed=False):
         if dressed:
@@ -105,21 +111,21 @@ class Model:
     def update_Hamiltonians(self):
         control_Hs = {}
         drift_H = tf.zeros([self.tot_dim, self.tot_dim], dtype=tf.complex128)
-        for phys_comp in self.phys_components:
-            drift_H += phys_comp.get_Hamiltonian()
-        for line_comp in self.line_components:
-            if isinstance(line_comp, Coupling):
-                drift_H += line_comp.get_Hamiltonian()
-            elif isinstance(line_comp, Drive):
-                control_Hs[line_comp.name] = line_comp.get_Hamiltonian()
+        for sub in self.subsystems.values():
+            drift_H += sub.get_Hamiltonian()
+        for key, line in self.couplings.items():
+            if isinstance(line, Coupling):
+                drift_H += line.get_Hamiltonian()
+            elif isinstance(line, Drive):
+                control_Hs[key] = line.get_Hamiltonian()
         self.drift_H = drift_H
         self.control_Hs = control_Hs
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
         col_ops = []
-        for phys_comp in self.phys_components:
-            col_ops.append(phys_comp.get_Lindbladian())
+        for subs in self.subsystems.values():
+            col_ops.append(subs.get_Lindbladian())
         self.col_ops = col_ops
 
     def update_drift_eigen(self, ordered=True):
@@ -198,17 +204,7 @@ class Model:
             return tf.abs(state)**2
 
     def percentage_01_spam(self, state, lindbladian):
-        indx_ms = self.spam_params_desc.index('meas_offset')
-        indx_im = self.spam_params_desc.index('initial_meas')
-        meas_offsets = self.spam_params[indx_ms].tf_get_value()
-        initial_meas = self.spam_params[indx_im].tf_get_value()
-        row1 = initial_meas + meas_offsets
-        row1 = tf.reshape(row1, [1, row1.shape[0]])
-        extra_dim = int(len(state)/len(initial_meas))
-        if extra_dim != 1:
-            row1 = tf.concat([row1]*extra_dim, 1)
-        row2 = tf.ones_like(row1) - row1
-        conf_matrix = tf.concat([row1, row2], 0)
+        conf_matrix = self.params['state_confusion']
         pops = self.populations(state, lindbladian)
         pops = tf.reshape(pops, [pops.shape[0], 1])
         return tf.matmul(conf_matrix, pops)

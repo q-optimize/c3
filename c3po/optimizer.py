@@ -3,7 +3,6 @@
 import random
 import time
 import json
-import copy
 import c3po
 import numpy as np
 import tensorflow as tf
@@ -13,7 +12,7 @@ from platform import python_version
 from c3po.tf_utils import tf_abs
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
-from nevergrad.optimization import registry as algo_registry
+# from nevergrad.optimization import registry as algo_registry
 
 
 class Optimizer:
@@ -88,7 +87,9 @@ class Optimizer:
     def goal_run_with_grad(self, current_params):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
+            self.gateset.set_parameters(
+                current_params, self.opt_map, scaled=True
+            )
             U_dict = self.sim.get_gates()
             goal = self.eval_func(U_dict)
 
@@ -440,26 +441,26 @@ class Optimizer:
         res = es.result + (es.stop(), es, es.logger)
         return res[0]
 
-    def oneplusone(self, x0, goal_fun, settings={}):
-        optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
-        while True:
-            self.logfile.write(f"Batch {self.evaluation}\n")
-            self.logfile.flush()
-            tmp = optimizer.ask()
-            samples = tmp.args
-            solutions = []
-            for sample in samples:
-                goal = float(goal_fun(sample).numpy())
-                solutions.append(goal)
-                self.log_parameters(sample)
-            self.evaluation += 1
-            optimizer.tell(
-                tmp,
-                solutions
-            )
-
-        recommendation = optimizer.provide_recommendation()
-        return recommendation.args[0]
+    # def oneplusone(self, x0, goal_fun, settings={}):
+    #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+    #     while True:
+    #         self.logfile.write(f"Batch {self.evaluation}\n")
+    #         self.logfile.flush()
+    #         tmp = optimizer.ask()
+    #         samples = tmp.args
+    #         solutions = []
+    #         for sample in samples:
+    #             goal = float(goal_fun(sample).numpy())
+    #             solutions.append(goal)
+    #             self.log_parameters(sample)
+    #         self.evaluation += 1
+    #         optimizer.tell(
+    #             tmp,
+    #             solutions
+    #         )
+    #
+    #     recommendation = optimizer.provide_recommendation()
+    #     return recommendation.args[0]
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
