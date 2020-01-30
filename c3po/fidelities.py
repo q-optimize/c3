@@ -3,7 +3,10 @@
 
 import numpy as np
 import tensorflow as tf
-from c3po.tf_utils import tf_ave, tf_super, tf_ketket_fid, \
+import matplotlib.pyplot as plt
+import tensorflow_probability as tfp
+from scipy.optimize import curve_fit
+from c3po.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, evaluate_sequences, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_psi_dm, \
     tf_dm_vect, tf_dmket_fid
@@ -209,7 +212,7 @@ def RB(
        logspace=False,
        lindbladian=False
        ):
-    print('Performing RB fit experiment.')
+    # print('Performing RB fit experiment.')
     gate = list(U_dict.keys())[0]
     U =  U_dict[gate]
     dim = int(U.shape[0])
@@ -284,36 +287,32 @@ def RB(
                     pop0s.append(float(pops[0]))
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
-    epc =  0.5 * (1 - r)
+    epc = 0.5 * (1 - r)
 
-    if savefig:
-        fig, ax = plt.subplots()
-        if plot_all:
-            ax.plot(lengths,
-                    surv_prob,
-                    marker='o',
-                    color='red',
-                    linestyle='None')
-        ax.errorbar(lengths,
-                    means,
-                    yerr=stds,
-                    color='blue',
-                    marker='x',
-                    linestyle='None')
-        plt.title('RB results')
-        plt.ylabel('Population in 0')
-        plt.xlabel('# Cliffords')
-        plt.ylim(0, 1)
-        plt.xlim(0, lengths[-1])
-        fitted = RB_fit(lengths, r, A, B)
-        ax.plot(lengths, fitted)
-        plt.text(0.1, 0.1,
-                 'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
-                 size=16,
-                 transform=ax.transAxes)
-        return epc, r, A, B, fig, ax
-    else:
-        return epc, r, A, B
+    fig, ax = plt.subplots()
+    ax.plot(lengths,
+            surv_prob,
+            marker='o',
+            color='red',
+            linestyle='None')
+    ax.errorbar(lengths,
+                means,
+                yerr=stds,
+                color='blue',
+                marker='x',
+                linestyle='None')
+    plt.title('RB results')
+    plt.ylabel('Population in 0')
+    plt.xlabel('# Cliffords')
+    plt.ylim(0, 1)
+    plt.xlim(0, lengths[-1])
+    fitted = RB_fit(lengths, r, A, B)
+    ax.plot(lengths, fitted)
+    plt.text(0.1, 0.1,
+             'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
+             size=16,
+             transform=ax.transAxes)
+    return epc, r, A, B, fig, ax
 
 
 def leakage_RB(
@@ -325,9 +324,9 @@ def leakage_RB(
    logspace=False,
    lindbladian=False
 ):
-    print('Performing leakage RB fit experiment.')
+    # print('Performing leakage RB fit experiment.')
     gate = list(U_dict.keys())[0]
-    U =  U_dict[gate]
+    U = U_dict[gate]
     dim = int(U.shape[0])
     psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
@@ -431,15 +430,33 @@ def leakage_RB(
     return epc, leakage, seepage, r_leak, A_leak, B_leak, r, A, C
 
 
-# def orbit_infid(U_dict: dict):
-#     seqs = single_length_RB(RB_number=25, RB_length=20)
-#     U_seqs = evaluate_sequences(U_dict, seqs)
-#     lvls = tf.cast(U_seqs[0].shape[0], U_seqs[0].dtype)
-#     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-#     psi_yp = tf.constant(xy_basis(lvls, 'yp'), dtype=tf.complex128)
-#     infids = []
-#     for U in U_seqs:
-#         psi_actual = tf.matmul(U, psi_0)
-#         overlap = tf_ketket_fid(psi_yp, psi_actual)
-#         infids.append(1 - overlap)
-#     return tf_ave(infids)
+def orbit_infid(
+    U_dict,
+    RB_number: int = 30,
+    RB_length: int = 20,
+    lindbladian=False,
+    shots: int = None,
+    seqs=None
+):
+    if not seqs:
+        seqs = single_length_RB(RB_number=RB_number, RB_length=RB_length)
+    Us = evaluate_sequences(U_dict, seqs)
+    infids = []
+    for U in Us:
+        dim = int(U.shape[0])
+        psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
+        psi_actual = tf.matmul(U, psi_init)
+        pop0 = tf_abs(psi_actual[0])**2
+        p1 = 1 - pop0
+        if shots:
+            infid = tf.reduce_sum(
+                tf.keras.backend.random_binomial(
+                    [shots],
+                    p=p1,
+                    dtype=tf.float64,
+                )
+            )/shots
+        else:
+            infid = p1
+        infids.append(infid)
+    return tf_ave(infids)
