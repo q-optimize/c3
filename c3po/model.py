@@ -53,6 +53,7 @@ class Model:
             chip_elements
             ):
 
+        self.dressed = False
         self.chip_elements = chip_elements
         self.control_Hs = []
 
@@ -246,22 +247,21 @@ class Model:
             drift_H += \
                 tf.cast(params[ii], tf.complex128) * self.drift_Hs[ii]
 
-        e,v = tf.linalg.eigh(drift_H)
+        e, v = tf.linalg.eigh(drift_H)
         eigenframe = tf.zeros_like(drift_H)
         eigenframe = tf.linalg.set_diag(eigenframe, e)
 
         order = tf.argmax(tf.abs(v), axis=1)
         np_transform = np.zeros_like(drift_H.numpy())
         for indx in order:
-            np_transform[:,indx] = v[indx].numpy()
+            np_transform[:, indx] = v[indx].numpy()
         transform = tf.constant(np_transform, dtype=tf.complex128)
 
         return eigenframe, transform
 
     def dress_Hamiltonians(self, params=None):
-        if self.dressed = True:
-
-            return
+        if self.dressed is True:
+            pass
 
         eigenframe, transform = self.get_drift_eigenframe(params=None)
         drift_Hs = self.drift_Hs

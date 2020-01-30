@@ -49,7 +49,6 @@ class Optimizer:
             tmp = (values[i] - offset) / scale
             tmp = 2 * tmp - 1
             x0.append(tmp)
-
         return x0
 
     def to_bound_phys_scale(self, x0, bounds):
@@ -80,6 +79,20 @@ class Optimizer:
         return np.array(values).reshape(self.param_shape)
 
     def goal_run(self, x):
+        current_params = tf.constant(
+            self.to_bound_phys_scale(x, self.bounds)
+        )
+        U_dict = self.sim.get_gates(current_params, self.opt_map)
+        self.U_dict = U_dict
+        goal = self.fid_func(U_dict)
+        opt_map = [params[0] for params in self.opt_map]
+        self.optim_status['params'] = list(zip(
+            opt_map, current_params.numpy().tolist()
+        ))
+        self.optim_status['goal'] = float(goal.numpy())
+        return goal
+
+    def goal_run_with_grad(self, x):
         with tf.GradientTape() as t:
             current_params = tf.constant(
                 self.to_bound_phys_scale(x, self.bounds)
@@ -183,7 +196,7 @@ class Optimizer:
                 settings['CMA_stds'] = scale_bounds
 
         x0 = self.to_scale_one(values, bounds)
-        es = cmaes.CMAEvolutionStrategy(x0, 1, settings)
+        es = cmaes.CMAEvolutionStrategy(x0, 0.25, settings)
         while not es.stop():
             self.logfile.write(f"Batch {self.iteration}\n")
             self.logfile.flush()
@@ -203,6 +216,8 @@ class Optimizer:
                 )
                 self.logfile.write("\n")
                 self.logfile.flush()
+                for cal in self.callbacks:
+                    print(cal.__name__ + ': ' + cal(self.U_dict).numpy())
             self.iteration += 1
             es.tell(
                 samples,
@@ -214,7 +229,10 @@ class Optimizer:
         res = es.result + (es.stop(), es, es.logger)
         x_opt = res[0]
         values_opt = self.to_bound_phys_scale(x_opt, bounds)
-        # cmaes res is tuple, tread carefully. res[0] = values_opt
+        # cmaes res is tuple, tread carefully.
+        res_list = list(res)
+        res_list[0] = values_opt
+        res = tuple(res_list)
         self.results[self.opt_name] = res
         return values_opt
 
@@ -250,6 +268,7 @@ class Optimizer:
         opt,
         opt_name,
         fid_func,
+        callbacks=[],
         settings={},
         other_funcs={}
     ):
@@ -289,6 +308,7 @@ class Optimizer:
         self.opt_map = opt_map
         self.opt_name = opt_name
         self.fid_func = fid_func
+        self.callbacks = callbacks
         self.optim_status = {}
         self.iteration = 1
 
@@ -316,7 +336,7 @@ class Optimizer:
                 values_opt = self.lbfgs(
                     values,
                     self.bounds,
-                    self.goal_run,
+                    self.goal_run_with_grad,
                     self.goal_gradient_run,
                     options=settings
                 )
