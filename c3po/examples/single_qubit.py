@@ -8,6 +8,7 @@ import copy
 import c3po.component as component
 from c3po.model import Model as Mdl
 from c3po.tf_utils import tf_limit_gpu_memory
+from c3po.qt_utils import single_length_RB
 
 import c3po.generator as generator
 import c3po.fidelities as fidelities
@@ -40,18 +41,18 @@ def create_gates(t_final,
 
     """
     gauss_params = {
-        'amp': 0.5 * np.pi / v_hz_conversion,
+        'amp': 0.4 * np.pi / v_hz_conversion,
         't_final': t_final,
-        'xy_angle': 0.0,
-        'freq_offset': 0e6 * 2 * np.pi,
-        'delta': 1 / qubit_anhar
+        'xy_angle': -0.3 * np.pi,
+        'freq_offset': -80e6 * 2 * np.pi,
+        'delta': 1.3 / qubit_anhar
     }
     gauss_bounds = {
-        'amp': [0.01 * np.pi / v_hz_conversion, 1.5 * np.pi / v_hz_conversion],
+        'amp': [0.3 * np.pi / v_hz_conversion, 0.5 * np.pi / v_hz_conversion],
         't_final': [1e-9, 30e-9],
-        'xy_angle': [-1 * np.pi/2, 1 * np.pi/2],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, 100 * 1e6 * 2 * np.pi],
-        'delta': [10/qubit_anhar, 0.1/qubit_anhar]
+        'xy_angle': [-1 * np.pi/2, 0],
+        'freq_offset': [-100 * 1e6 * 2 * np.pi, -60 * 1e6 * 2 * np.pi],
+        'delta': [1.6/qubit_anhar, 1/qubit_anhar]
     }
 
     gauss_env = control.Envelope(
@@ -386,13 +387,7 @@ def create_opt_map(pulse_type: bool, xy_angle: bool):
              ('X90m', 'd1', 'pwc', 'quadrature'),
              ('Y90m', 'd1', 'pwc', 'quadrature')]
         ]
-        if xy_angle:
-            gateset_opt_map.append(
-                [('X90p', 'd1', 'pwc', 'xy_angle'),
-                 ('Y90p', 'd1', 'pwc', 'xy_angle', add_pih),
-                 ('X90m', 'd1', 'pwc', 'xy_angle', add_pi),
-                 ('Y90m', 'd1', 'pwc', 'xy_angle', add_mpih)]
-            )
+
     elif pulse_type == 'rect':
         gateset_opt_map = [
             [('X90p', 'd1', 'rect', 'amp'),
@@ -411,7 +406,11 @@ def create_opt_map(pulse_type: bool, xy_angle: bool):
 
 
 # Fidelity fucntions
-def create_fcts(lindbladian, U_dict=True):
+def create_fcts(lindbladian,
+    U_dict=True,
+    RB_number = 20,
+    RB_length = 50,
+    shots = 500):
     # Define infidelity functions (search fucntions)'
 
     def store_U_dict(U_dict):
@@ -457,15 +456,8 @@ def create_fcts(lindbladian, U_dict=True):
 
         def epc_ana_compsub(U_dict):
             return fidelities.epc_analytical(U_dict, proj=True)
-
         def epc_ana_fulluni(U_dict):
             return fidelities.epc_analytical(U_dict, proj=False)
-
-        def epc_RB(U_dict):
-            return fidelities.RB(U_dict, logspace=True, lindbladian=False)[0]
-
-        def epc_leakage_RB(U_dict):
-            return fidelities.leakage_RB(U_dict, logspace=True, lindbladian=False)[0]
 
         def pop0_X90p_0_fulluni(U_dict):
             return fidelities.population(U_dict, 0, 'X90p')
@@ -523,15 +515,8 @@ def create_fcts(lindbladian, U_dict=True):
 
         def epc_ana_compsub(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
-
         def epc_ana_fulluni(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=False)
-
-        def epc_RB(U_dict):
-            return fidelities.RB(U_dict, logspace=True, lindbladian=True)[0]
-
-        def epc_leakage_RB(U_dict):
-            return fidelities.leakage_RB(U_dict, logspace=True, lindbladian=True)[0]
 
         def pop0_X90p_0_fulluni(U_dict):
             return fidelities.lindbladian_population(U_dict, 0, 'X90p')
@@ -548,6 +533,44 @@ def create_fcts(lindbladian, U_dict=True):
             return fidelities.lindbladian_population(U_dict, 2, 'X90m')
         def pop0_Y90m_2_fulluni(U_dict):
             return fidelities.lindbladian_population(U_dict, 2, 'Y90m')
+
+    def epc_RB(U_dict):
+        return fidelities.RB(U_dict, logspace=True, lindbladian=lindbladian)[0]
+    def RB_fig(U_dict):
+        return fidelities.RB(U_dict, logspace=True, lindbladian=lindbladian)[-2:]
+    def epc_leakage_RB(U_dict):
+        return fidelities.leakage_RB(U_dict,
+            logspace=True, lindbladian=lindbladian)[0]
+
+    seqs = single_length_RB(RB_number=RB_number, RB_length=RB_length)
+    def orbit_no_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs)
+    def orbit_seq_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            RB_number=RB_number, RB_length=RB_length)
+    def orbit_shot_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs, shots=shots)
+    def orbit_seq_shot_noise(U_dict):
+        return fidelities.orbit_infid(U_dict,lindbladian=lindbladian,
+            shots=shots, RB_number=RB_number, RB_length=RB_length)
+    seqs6 = single_length_RB(RB_number=RB_number, RB_length=6)
+    seqs10 = single_length_RB(RB_number=RB_number, RB_length=10)
+    seqs20 = single_length_RB(RB_number=RB_number, RB_length=20)
+    seqs40 = single_length_RB(RB_number=RB_number, RB_length=40)
+    def orbit6(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs6)
+    def orbit10(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs10)
+    def orbit20(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs20)
+    def orbit40(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs40)
 
     fcts_list = [
         unit_compsub_X90p,
@@ -567,9 +590,17 @@ def create_fcts(lindbladian, U_dict=True):
         # avfid_fulluni_X90m,
         # avfid_fulluni_Y90m,
         epc_ana_compsub,
-        # epc_ana_fulluni,
+        epc_ana_fulluni,
         epc_RB,
         epc_leakage_RB,
+        orbit6,
+        orbit10,
+        orbit20,
+        orbit40,
+        orbit_no_noise,
+        orbit_seq_noise,
+        orbit_shot_noise,
+        orbit_seq_shot_noise,
         pop0_X90p_0_fulluni,
         pop0_X90p_1_fulluni,
         pop0_X90p_2_fulluni,
