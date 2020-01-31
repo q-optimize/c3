@@ -143,8 +143,8 @@ class Device(C3obj):
         else:
             offset = 0
             num = self.slice_num + 1
-        t_start = tf.constant(t_start + offset, dtype=tf.complex128)
-        t_end = tf.constant(t_end - offset, dtype=tf.complex128)
+        t_start = tf.constant(t_start + offset, dtype=tf.float64)
+        t_end = tf.constant(t_end - offset, dtype=tf.float64)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -172,8 +172,8 @@ class Readout(Device):
         self.params['offset'] = offset
 
     def readout(self, phase):
-        offset = self.params['offset'].tf_get_value()
-        factor = self.params['factor'].tf_get_value()
+        offset = self.params['offset'].get_value()
+        factor = self.params['factor'].get_value()
         return phase * factor + offset
 
 
@@ -201,8 +201,8 @@ class Volts_to_Hertz(Device):
 
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
-        offset = self.params['offset'].tf_get_value()
-        v2hz = self.params['V_to_Hz'].tf_get_value()
+        offset = self.params['offset'].get_value()
+        v2hz = self.params['V_to_Hz'].get_value()
         if offset is None:
             att = v2hz
         else:
@@ -346,17 +346,17 @@ class Response(Device):
         return convolution
 
     def process(self, iq_signal):
-        n_ts = int(self.params['rise_time'].tf_get_value() * self.resolution)
+        n_ts = int(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
-            int(self.params['rise_time'].tf_get_value()),
+            int(self.params['rise_time'].get_value()),
             n_ts
         )
         cen = tf.cast(
-            (self.params['rise_time'].tf_get_value() - 1 / self.resolution) / 2,
+            (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
             tf.float64
         )
-        sigma = self.params['rise_time'].tf_get_value() / 4
+        sigma = self.params['rise_time'].get_value() / 4
         gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
         offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
@@ -423,7 +423,7 @@ class LO(Device):
         for c in channel:
             comp = channel[c]
             if isinstance(comp, Carrier):
-                omega_lo = comp.params['freq'].tf_get_value()
+                omega_lo = comp.params['freq'].get_value()
                 self.signal["values"] = (
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
@@ -506,12 +506,12 @@ class AWG(Device):
                     comp = channel[key]
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp'].tf_get_value()
+                        amp = comp.params['amp'].get_value()
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle'].tf_get_value()
-                        freq_offset = comp.params['freq_offset'].tf_get_value()
-                        delta = comp.params['delta'].tf_get_value()
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
+                        delta = comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
                         # TODO Deal with the scale of delta
@@ -549,12 +549,12 @@ class AWG(Device):
                     # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp'].tf_get_value()
+                        amp = comp.params['amp'].get_value()
 
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle'].tf_get_value()
-                        freq_offset = comp.params['freq_offset'].tf_get_value()
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
                         phase = - xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)

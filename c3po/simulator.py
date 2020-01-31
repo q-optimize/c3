@@ -88,7 +88,7 @@ class Simulator():
         dt = ts[1].numpy() - ts[0].numpy()
 
         if self.lindbladian:
-            col_ops = self.exp.model.get_lindbladian()
+            col_ops = self.exp.model.get_Lindbladians()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)

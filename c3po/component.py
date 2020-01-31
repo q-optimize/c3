@@ -43,73 +43,73 @@ class Quantity:
         self.set_value(value)
         self.symbol = symbol
         self.unit = unit
-        self.shape = value.shape()
+        if hasattr(value, "shape"):
+            self.shape = value.shape
+            self.length = np.prod(value.shape)
+        else:
+            self.shape = ()
+            self.length = 1
 
     def __add__(self, other):
-        return self.get_value() + other
+        return self.numpy() + other
 
     def __radd__(self, other):
-        return self.get_value() + other
+        return self.numpy() + other
 
     def __sub__(self, other):
-        return self.get_value() - other
+        return self.numpy() - other
 
     def __rsub__(self, other):
-        return other - self.get_value()
+        return other - self.numpy()
 
     def __mul__(self, other):
-        return self.get_value() * other
+        return self.numpy() * other
 
     def __rmul__(self, other):
-        return self.get_value() * other
+        return self.numpy() * other
 
     def __pow__(self, other):
-        return self.get_value() ** other
+        return self.numpy() ** other
 
     def __rpow__(self, other):
-        return other ** self.get_value()
+        return other ** self.numpy()
 
     def __truediv__(self, other):
-        return self.get_value() / other
+        return self.numpy() / other
 
     def __rtruediv__(self, other):
-        return other / self.get_value()
+        return other / self.numpy()
 
     def __str__(self):
-        val = self.get_value()
+        val = self.numpy()
         if self.unit == "Hz 2pi":
             val = val / 2 / np.pi
         return num3str(val) + self.unit
 
     def numpy(self):
-        return self.get_value()
+        return self.scale * (self.value.numpy() + 1) / 2 + self.offset
 
     def get_value(self, val=None):
         if val is None:
-            val = self.value.numpy()
+            val = self.value
         return self.scale * (val + 1) / 2 + self.offset
 
     def set_value(self, val):
         # setting can be numpyish
         tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
         if np.any(tmp < -1) or np.any(tmp > 1):
-            raise Exception(f"Value {val} out of bounds for quantity {self}.")
+            raise ValueError()
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)
 
-    def tf_get_value(self):
-        # getting needs to be tensorflowy
-        return tf.cast(
-            self.scale * (self.value + 1) / 2 + self.offset,
-            tf.complex128
-        )
+    def get_opt_value(self):
+        return self.value.numpy().flatten()
 
-    def tf_set_value(self, val):
-        self.value = tf.acos(tf.cos((val + 1) * np.pi / 2)) / np.pi * 2 - 1
-
-    # TODO find good name for physical_bounded vs order1_unbounded
-    # TODO At some point make self.value private
+    def set_opt_value(self, val):
+        self.value = tf.acos(tf.cos(
+            (tf.reshape(val, self.shape) + 1) * np.pi / 2
+        )) / np.pi * 2 - 1
 
 
 class C3obj:
@@ -137,16 +137,6 @@ class C3obj:
         self.desc = desc
         self.comment = comment
         self.params = {}
-
-    def get_parameter(self, par_id, scaled=False):
-        if scaled:
-            param = self.params[par_id].value.numpy()
-        else:
-            param = self.params[par_id].numpy()
-        return param
-
-    def set_parameter(self, par_id, value):
-        self.params[par_id].tf_set_value(value)
 
     def list_parameters(self):
         par_list = []
@@ -245,9 +235,15 @@ class Qubit(PhysicalComponent):
             )
 
     def get_Hamiltonian(self):
-        h = self.params['freq'].tf_get_value() * self.Hs['freq']
+        h = tf.cast(
+                self.params['freq'].get_value(),
+                tf.complex128
+        ) * self.Hs['freq']
         if self.hilbert_dim > 2:
-            h += self.params['anhar'].tf_get_value() * self.Hs['anhar']
+            h += tf.cast(
+                self.params['anhar'].get_value(),
+                tf.complex128
+            ) * self.Hs['anhar']
         return h
 
     def init_Ls(self, ann_oper):
@@ -258,7 +254,7 @@ class Qubit(PhysicalComponent):
     def get_Lindbladian(self):
         Ls = []
         if 't1' in self.params:
-            t1 = self.params['t1'].tf_get_value()
+            t1 = self.params['t1'].get_value()
             gamma = (0.5 / t1) ** 0.5
             L = gamma * self.collapse_ops['t1']
             Ls.append(L)
@@ -267,16 +263,16 @@ class Qubit(PhysicalComponent):
                     [(self.params['freq'] + n*self.params['anharm'])
                         for n in range(self.hilbert_dim)]
                 )
-                beta = 1 / (self.params['temp'].tf_get_value() * kb)
+                beta = 1 / (self.params['temp'].get_value() * kb)
                 det_bal = tf.exp(-hbar*freq_diff*beta)
                 det_bal_mat = tf.linalg.tensor_diag(det_bal)
                 L = gamma * (self.collapse_ops['L2'] @ det_bal_mat)
                 Ls.append(L)
         if 't2star' in self.params:
-            gamma = (0.5/self.params['t2star'].tf_get_value())**0.5
+            gamma = (0.5/self.params['t2star'].get_value())**0.5
             L = gamma * self.collapse_ops['t2star']
             Ls.append(L)
-        return tf.reduce_sum(Ls)
+        return tf.cast(sum(Ls), tf.complex128)
 
 
 class Resonator(PhysicalComponent):
@@ -312,7 +308,7 @@ class Resonator(PhysicalComponent):
         )
 
     def get_Hamiltonian(self):
-        freq = self.params['freq'].tf_get_value()
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         return freq * self.Hs['freq']
 
 
@@ -424,7 +420,7 @@ class Drive(LineComponent):
                     self.hamiltonian_func(ann_opers[key]), dtype=tf.complex128
                 )
             )
-        self.h = tf.add_n(hs)
+        self.h = sum(hs)
 
     def get_Hamiltonian(self):
         return self.h

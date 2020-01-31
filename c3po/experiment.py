@@ -50,26 +50,33 @@ class Experiment:
         if opt_map is None:
             opt_map = self.id_list
         values = []
+        par_lens = []
         for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
-            values.extend(
-                self.components[comp_id].get_parameter(par_id, scaled)
-            )
+            par = self.components[comp_id].params[par_id]
+            par_lens.append(par.length)
+            if scaled:
+                values.extend(par.get_opt_value())
+            else:
+                values.append(par.get_value())
+        self.par_lens = par_lens
         return values
 
-    def set_parameters(self, values: list, opt_map: list):
+    def set_parameters(self, values: list, opt_map: list, scaled=False):
         """Set the values in the original instruction class."""
         val_indx = 0
         for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
             id_indx = self.id_list.index(id)
-            par_len = self.par_shape[id_indx]
-            self.components[comp_id].set_parameter(
-                par_id,
-                values[val_indx:val_indx+par_len]
-            )
+            par_len = self.par_lens[id_indx]
+            par = self.components[comp_id].params[par_id]
+            if scaled:
+                par.set_opt_value(values[val_indx:val_indx+par_len])
+            else:
+                par.set_value(values[val_indx])
+            val_indx += par_len
         self.model.update_model()
 
     def print_parameters(self, opt_map=None):
@@ -126,18 +133,6 @@ class Task(C3obj):
             comment=comment
         )
         self.params = {}
-
-    def get_parameters(self):
-        params = []
-        for key in sorted(self.params.keys()):
-            params.append(self.params[key])
-        return params
-
-    def set_parameters(self, values):
-        idx = 0
-        for key in sorted(self.params.keys()):
-            self.params[key] = values[idx]
-            idx += 1
 
     def list_parameters(self):
         par_list = []

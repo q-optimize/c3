@@ -79,7 +79,9 @@ class Optimizer:
         self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
         U_dict = self.sim.get_gates()
         goal = self.eval_func(U_dict)
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = np.array(
+            self.exp.get_parameters(self.opt_map)
+        ).tolist()
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -96,7 +98,9 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = np.array(
+            self.exp.get_parameters(self.opt_map)
+        ).tolist()
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
@@ -197,7 +201,9 @@ class Optimizer:
         )
         self.logfile.flush()
 
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = np.array(
+            self.exp.get_parameters(self.opt_map)
+        ).tolist()
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -298,7 +304,9 @@ class Optimizer:
         )
         self.logfile.flush()
 
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = np.array(
+            self.exp.get_parameters(self.opt_map)
+        ).tolist()
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -307,7 +315,7 @@ class Optimizer:
         learn_from = self.learn_from['seqs_grouped_by_param_set']
         with tf.GradientTape() as t:
             t.watch(current_params)
-            self.exp.set_parameters(current_params, self.opt_map)
+            self.exp.set_parameters(current_params, self.opt_map, scaled=True)
 
             if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
@@ -408,7 +416,9 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = np.array(
+            self.exp.get_parameters(self.opt_map)
+        ).tolist()
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()

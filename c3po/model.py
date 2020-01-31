@@ -74,10 +74,19 @@ class Model:
 
         for line in couplings:
             line.init_Hs(self.ann_opers)
-
-        self.params['state_confusion'] = tf.eye(
-            sum(self.dims.values()), dtype=tf.float64
+        dim = sum(self.dims.values())
+        # TODO Resolve confusion!
+        # minimum = np.zeros([dim, 2]) + 0.9 * np.diag()
+        # # row1 =
+        # # row2 = tf.ones_like(row1) - row1
+        # conf_matrix = tf.concat([row1, row2], 0)
+        confusion = Quantity(
+            value=np.eye(dim),
+            min=np.zeros([dim, dim]),
+            max=1.5*np.ones([dim, dim])
         )
+
+        self.params['state_confusion'] = confusion
 
         self.update_model()
 
@@ -89,6 +98,9 @@ class Model:
 
     def get_parameter(self, par_id, scaled=False):
         return self.params[par_id].numpy()
+
+    def set_parameter(self, par_id, value, scaled=False):
+        self.params[par_id].set_value(value)
 
     def get_Hamiltonians(self, dressed=False):
         if dressed:
@@ -215,7 +227,7 @@ class Model:
 
     def initialise(self):
         indx_it = self.spam_params_desc.index('init_temp')
-        init_temp = self.spam_params[indx_it].tf_get_value()
+        init_temp = self.spam_params[indx_it].get_value()
         init_temp = tf.cast(init_temp, dtype=tf.complex128)
         drift_H, control_Hs = self.get_Hamiltonians()
         # diag = tf.math.real(tf.linalg.diag_part(drift_H))
