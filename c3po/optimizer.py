@@ -416,9 +416,9 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = np.array(
-            self.exp.get_parameters(self.opt_map)
-        ).tolist()
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
