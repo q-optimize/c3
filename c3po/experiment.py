@@ -32,9 +32,13 @@ class Experiment:
         self.components = components
 
         id_list = []
-        for key in self.components:
-            id_list.extend(self.components[key].list_parameters())
+        par_lens = []
+        for comp in self.components.values():
+            id_list.extend(comp.list_parameters())
+            for par in comp.params.values():
+                par_lens.append(par.length)
         self.id_list = id_list
+        self.par_lens = par_lens
 
     def write_config(self):
         cfg = {}
@@ -50,17 +54,14 @@ class Experiment:
         if opt_map is None:
             opt_map = self.id_list
         values = []
-        par_lens = []
         for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
             par = self.components[comp_id].params[par_id]
-            par_lens.append(par.length)
             if scaled:
                 values.extend(par.get_opt_value())
             else:
                 values.append(par.get_value())
-        self.par_lens = par_lens
         return values
 
     def set_parameters(self, values: list, opt_map: list, scaled=False):
