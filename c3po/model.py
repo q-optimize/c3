@@ -32,6 +32,7 @@ class Model:
     """
 
     def __init__(self, subsystems, couplings):
+        self.dressed = False
         self.params = {}
         self.subsystems = {}
         for comp in subsystems:
@@ -84,22 +85,22 @@ class Model:
             ids.append(("Model", key))
         return ids
 
-    def get_Hamiltonians(self, dressed=False):
-        if dressed:
+    def get_Hamiltonians(self):
+        if self.dressed:
             return self.dressed_drift_H, self.dressed_control_Hs
         else:
             return self.drift_H, self.control_Hs
 
-    def get_Lindbladians(self, dressed=False):
-        if dressed:
+    def get_Lindbladians(self):
+        if self.dressed:
             return self.dressed_col_ps
         else:
             return self.col_ops
 
-    def update_model(self, dressed=True):
+    def update_model(self):
         self.update_Hamiltonians()
         self.update_Lindbladians()
-        if dressed:
+        if self.dressed:
             self.update_dressed()
 
     def update_Hamiltonians(self):
