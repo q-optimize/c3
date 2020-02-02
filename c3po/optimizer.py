@@ -129,7 +129,6 @@ class Optimizer:
             )
         batch_size = len(measurements)
         ipar = 1
-        goals = []
         used_seqs = 0
         for m in measurements:
             gateset_params = m['params']
@@ -150,9 +149,11 @@ class Optimizer:
             iseq = 1
             fids = []
             sims = []
-            for seqs in m['seqs']:
-                seq = seqs['gate_seq']
-                fid = seqs['result']
+            stds = []
+            for seq in m['seqs']:
+                seq = seq['gate_seq']
+                fid = seq['result']
+                std = seq['result_std']
 
                 if (self.skip_bad_points and fid > 0.25):
                     self.logfile.write(
@@ -175,11 +176,11 @@ class Optimizer:
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goals.append(tf_abs(fid-this_goal))
                 used_seqs += 1
 
                 fids.append(fid)
-                sims.append(float(this_goal.numpy()))
+                sims.append(this_goal)
+                stds.append(std)
 
             self.logfile.write(
                 f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -195,7 +196,11 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+        goal = self.fom(
+            tf.constant(fids, dtype=tf.float64),
+            tf.concat(sims, axis=0),
+            tf.constant(stds, dtype=tf.float64)
+        )
         self.logfile.write(
             f"Finished batch with median: {float(goal.numpy())}\n"
         )
@@ -232,10 +237,9 @@ class Optimizer:
             )
         batch_size = len(measurements)
         ipar = 1
-        goals = []
         used_seqs = 0
         for m in measurements:
-            gateset_params = m[0]
+            gateset_params = m['params']
             self.gateset.set_parameters(
                 gateset_params, self.gateset_opt_map, scaled=False
             )
@@ -253,9 +257,11 @@ class Optimizer:
             iseq = 1
             fids = []
             sims = []
-            for seqs in m[1]:
-                seq = seqs[0]
-                fid = seqs[1]
+            stds = []
+            for seq in m['seqs']:
+                seq = seq['gate_seq']
+                fid = seq['result']
+                std = seq['result_std']
 
                 if (self.skip_bad_points and fid > 0.25):
                     self.logfile.write(
@@ -278,11 +284,11 @@ class Optimizer:
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goals.append(tf_abs(fid-this_goal))
                 used_seqs += 1
 
                 fids.append(fid)
                 sims.append(float(this_goal.numpy()))
+                stds.append(std)
 
             self.logfile.write(
                 f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -298,9 +304,12 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+        goal = self.fom(fids, sims, stds)
         self.logfile.write(
-            f"Finished batch with median: {float(goal.numpy())}\n"
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
         )
         self.logfile.flush()
 
@@ -336,7 +345,6 @@ class Optimizer:
                 )
             batch_size = len(measurements)
             ipar = 1
-            goals = []
             used_seqs = 0
             for m in measurements:
                 gateset_params = m['params']
@@ -357,6 +365,7 @@ class Optimizer:
                 iseq = 1
                 fids = []
                 sims = []
+                stds = []
                 for this_seq in m['seqs']:
                     seq = this_seq['gate_seq']
                     fid = this_seq['result']
@@ -383,15 +392,11 @@ class Optimizer:
                         f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    distance = tf_abs(fid-this_goal)
-                    if self.divide_by_std:
-                        goals.append(distance / std)
-                    else:
-                        goals.append(distance)
                     used_seqs += 1
 
                     fids.append(fid)
-                    sims.append(float(this_goal.numpy()))
+                    sims.append(this_goal)
+                    stds.append(std)
 
                 self.logfile.write(
                     f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -407,9 +412,16 @@ class Optimizer:
                 )
                 self.logfile.flush()
 
-            goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+            goal = self.fom(
+                tf.constant(fids, dtype=tf.float64),
+                tf.concat(sims, axis=0),
+                stds
+            )
             self.logfile.write(
-                f"Finished batch with median: {float(goal.numpy())}\n"
+                "Finished batch with {}: {}\n".format(
+                    self.fom.__name__,
+                    float(goal.numpy())
+                )
             )
             self.logfile.flush()
 
@@ -579,6 +591,7 @@ class Optimizer:
         exp,
         sim,
         eval_func,
+        fom,
         opt_name='learn_model',
         settings={}
     ):
@@ -587,6 +600,7 @@ class Optimizer:
         self.exp = exp
         self.sim = sim
         self.eval_func = eval_func
+        self.fom = fom
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
