@@ -31,12 +31,13 @@ def neg_loglkh_binom(exp_values, sim_values, stds):
     Return the likelihood of the experimental values given the simulated
     values, and given a binomial distribution function.
     """
+    shots = tf.constant(500., dtype=tf.float64)
+    binom = tfp.distributions.Binomial(total_count=shots, probs=sim_values)
+    loglkhs = binom.log_prob(exp_values*shots)
+    loglkh = tf.reduce_sum(loglkhs)
     print(sim_values)
     print(exp_values)
-    binom = tfp.distributions.Binomial(total_count=500, probs=sim_values)
-    loglkhs = binom.log_prob(exp_values)
     print(loglkhs)
-    loglkh = tf.reduce_sum(loglkhs)
     return -loglkh
 
 
@@ -47,9 +48,7 @@ def neg_loglkh_binom_gauss(exp_values, sim_values, stds):
     https://towardsdatascience.com/
     differentiable-convolution-of-probability-distributions-with-tensorflow-79c1dd769b46
     """
-    print(sim_values)
-    print(exp_values)
-    shots = 500
+    shots = tf.constant(500., dtype=tf.float64)
     binom = tfp.distributions.Binomial(total_count=shots, probs=sim_values)
     gauss = tfp.distributions.Normal(0., 0.0125*shots)
     # dimensions of this input (for NWC format) are
@@ -58,14 +57,16 @@ def neg_loglkh_binom_gauss(exp_values, sim_values, stds):
     # [filter_width, in_channels, out_channels]
     # note the minus sign of x
     lkhs = tf.nn.conv1d(
-        tf.reshape(binom.prob(exp_values), (1, -1, 1)),
-        tf.reshape(gauss.prob(-exp_values), (-1, 1, 1)),
+        tf.reshape(binom.prob(exp_values*shots), (1, -1, 1)),
+        tf.reshape(gauss.prob(-exp_values*shots), (-1, 1, 1)),
         stride=1,
         padding='SAME',
         data_format='NWC'
     )
-    print(lkhs)
     loglkhs = tf.math.log(lkhs)
-    print(loglkhs)
     loglkh = tf.reduce_sum(loglkhs)
+    print(sim_values)
+    print(exp_values)
+    print(lkhs)
+    print(loglkhs)
     return -loglkh
