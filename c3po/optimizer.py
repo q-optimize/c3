@@ -79,9 +79,9 @@ class Optimizer:
         self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
         U_dict = self.sim.get_gates()
         goal = self.eval_func(U_dict)
-        self.optim_status['params'] = np.array(
-            self.exp.get_parameters(self.opt_map)
-        ).tolist()
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -98,9 +98,9 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = np.array(
-            self.exp.get_parameters(self.opt_map)
-        ).tolist()
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
@@ -201,9 +201,9 @@ class Optimizer:
         )
         self.logfile.flush()
 
-        self.optim_status['params'] = np.array(
-            self.exp.get_parameters(self.opt_map)
-        ).tolist()
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -304,9 +304,9 @@ class Optimizer:
         )
         self.logfile.flush()
 
-        self.optim_status['params'] = np.array(
-            self.exp.get_parameters(self.opt_map)
-        ).tolist()
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -639,9 +639,8 @@ class Optimizer:
                 raise Exception(
                     "I don't know the selected optimization algorithm."
                 )
-
             self.exp.set_parameters(
-                x_best, self.opt_map
+                x_best, self.opt_map, scaled=True
             )
             end_time = time.time()
             self.logfile.write(
