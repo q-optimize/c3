@@ -11,6 +11,65 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
+
+def get_sim_exp_std_diff(logfolder=""):
+    logfilename = logfolder + "confirm.log"
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/confirm.log"
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+    sims = []
+    exps = []
+    stds = []
+    diffs = []
+    for line in log:
+        if line[:12] == '  Simulation':
+            line_split = line.split()
+            sims.append(np.abs(float(line_split[1])))
+            exps.append(np.abs(float(line_split[3])))
+            stds.append(np.abs(float(line_split[5])))
+            diffs.append(np.abs(float(line_split[7])))
+    return sims, exps, stds, diffs
+
+def plot_exp_vs_sim(logfolder=""):
+    plt.figure()
+    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    plt.scatter(exps, sims)
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    plt.show(block=False)
+
+def plot_exp_vs_err(logfolder=""):
+    plt.figure()
+    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    plt.scatter(exps, diffs)
+    plt.title('Exp vs Diff')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim/Exp fidelity diff')
+    plt.show(block=False)
+
+def plot_exp_vs_errstd(logfolder=""):
+    plt.figure()
+    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    errs = []
+    for indx in range(len(diffs)):
+        errs.append(diffs[indx]/stds[indx])
+    plt.scatter(exps, errs)
+    plt.title('Exp vs Diff (in std)')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim/Exp fidelity diff (in std)')
+    plt.show(block=False)
+
+def plot_distribution(logfolder=""):
+    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    plt.hist(diffs, bins=101)
+    print(f"RMS: {np.sqrt(np.mean(np.square(diffs)))}")
+    print(f"Median: {np.median(diffs)}")
+    plt.title('distribution of difference')
+    plt.show()
+    return diffs
+
 def plot_OC_logs(logfolder=""):
     logfilename = logfolder + "openloop.log"
     if not os.path.isfile(logfilename):
