@@ -35,18 +35,48 @@ def neg_loglkh_binom(exp_values, sim_values, stds):
     binom = tfp.distributions.Binomial(total_count=shots, probs=sim_values)
     loglkhs = binom.log_prob(exp_values*shots)
     loglkh = tf.reduce_sum(loglkhs)
-    print(sim_values)
-    print(exp_values)
-    print(loglkhs)
+    # print(sim_values)
+    # print(exp_values)
+    # print(loglkhs)
+    return -loglkh
+
+
+def neg_loglkh_gauss(exp_values, sim_values, stds):
+    """
+    Likelihood of the experimental values.
+
+    The distribution is assumed to be binomial (approximated by a gaussian),
+    plus an extra fixed gaussian noise distribution (here set at 0.0125)
+    """
+    std_b = tf.sqrt(sim_values*(1-sim_values))
+    mean_b = sim_values
+    std_g = 0.0125
+    mean_g = 0.
+    mean = mean_b + mean_g
+    std = tf.sqrt(std_g**2 + std_b**2)
+    gauss = tfp.distributions.Normal(mean, std)
+    loglkhs = gauss.log_prob(exp_values)
+    loglkh = tf.reduce_sum(loglkhs)
+    # print('sim')
+    # print(sim_values)
+    # print('exp')
+    # print(exp_values)
+    # print('log_likelihood')
+    # print(loglkhs)
+    # print('\n')
     return -loglkh
 
 
 def neg_loglkh_binom_gauss(exp_values, sim_values, stds):
     """
-    Likelihood of the experimental values.
+    Likelihood of the experimental values. CONVOLUTION NOT WORKING.
+
+    To fix this problem we would need to convolve over a large range of values,
+    including negative, and then select out the ones of interest.
 
     https://towardsdatascience.com/
-    differentiable-convolution-of-probability-distributions-with-tensorflow-79c1dd769b46
+    differentiable-convolution-of-
+    probability-distributions-with-tensorflow-79c1dd769b46
     """
     shots = tf.constant(500., dtype=tf.float64)
     binom = tfp.distributions.Binomial(total_count=shots, probs=sim_values)
@@ -65,8 +95,8 @@ def neg_loglkh_binom_gauss(exp_values, sim_values, stds):
     )
     loglkhs = tf.math.log(lkhs)
     loglkh = tf.reduce_sum(loglkhs)
-    print(sim_values)
-    print(exp_values)
-    print(lkhs)
-    print(loglkhs)
+    # print(sim_values)
+    # print(exp_values)
+    # print(lkhs)
+    # print(loglkhs)
     return -loglkh
