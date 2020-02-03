@@ -196,14 +196,23 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = self.fom(
-            tf.constant(fids, dtype=tf.float64),
-            tf.concat(sims, axis=0),
-            tf.constant(stds, dtype=tf.float64)
-        )
+        fids = tf.constant(fids, dtype=tf.float64)
+        sims = tf.concat(sims, axis=0)
+        stds = tf.constant(stds, dtype=tf.float64)
+        goal = self.fom(fids, sims, stds)
         self.logfile.write(
-            f"Finished batch with median: {float(goal.numpy())}\n"
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
         )
+        for cb_fom in self.callback_foms:
+            self.logfile.write(
+                "Finished batch with {}: {}\n".format(
+                    cb_fom.__name__,
+                    float(cb_fom(fids, sims, stds).numpy())
+                )
+            )
         self.logfile.flush()
 
         self.optim_status['params'] = [
@@ -412,17 +421,23 @@ class Optimizer:
                 )
                 self.logfile.flush()
 
-            goal = self.fom(
-                tf.constant(fids, dtype=tf.float64),
-                tf.concat(sims, axis=0),
-                stds
-            )
+            fids = tf.constant(fids, dtype=tf.float64)
+            sims = tf.concat(sims, axis=0)
+            stds = tf.constant(stds, dtype=tf.float64)
+            goal = self.fom(fids, sims, stds)
             self.logfile.write(
                 "Finished batch with {}: {}\n".format(
                     self.fom.__name__,
                     float(goal.numpy())
                 )
             )
+            for cb_fom in self.callback_foms:
+                self.logfile.write(
+                    "Finished batch with {}: {}\n".format(
+                        cb_fom.__name__,
+                        float(cb_fom(fids, sims, stds).numpy())
+                    )
+                )
             self.logfile.flush()
 
         grad = t.gradient(goal, current_params)
@@ -592,6 +607,7 @@ class Optimizer:
         sim,
         eval_func,
         fom,
+        callback_foms = [],
         opt_name='learn_model',
         settings={}
     ):
@@ -601,6 +617,7 @@ class Optimizer:
         self.sim = sim
         self.eval_func = eval_func
         self.fom = fom
+        self.callback_foms = callback_foms
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
