@@ -187,7 +187,7 @@ class Volts_to_Hertz(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             V_to_Hz: Quantity = None,
-            offset: Quantity = Quantity(value=0, min=-1, max=1)
+            offset = None
     ):
         super().__init__(
             name=name,
@@ -197,13 +197,14 @@ class Volts_to_Hertz(Device):
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
-        self.params['offset'] = offset
+        if offset:
+            self.params['offset'] = offset
 
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
-        offset = self.params['offset'].get_value()
         v2hz = self.params['V_to_Hz'].get_value()
-        if offset is None:
+        if 'offset' is self.params:
+            offset = self.params['offset'].get_value()
             att = v2hz
         else:
             att = v2hz / (drive_frequency + offset)
