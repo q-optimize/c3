@@ -203,11 +203,11 @@ class Volts_to_Hertz(Device):
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
         v2hz = self.params['V_to_Hz'].get_value()
-        if 'offset' is self.params:
+        if 'offset' in self.params:
             offset = self.params['offset'].get_value()
-            att = v2hz
-        else:
             att = v2hz / (drive_frequency + offset)
+        else:
+            att = v2hz
         self.signal = mixed_signal * att
         return self.signal
 
