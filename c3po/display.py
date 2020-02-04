@@ -269,17 +269,20 @@ def plot_envelope_history(logfilename):
     plt.show()
 
 
-def plot_awg(logfolder=""):
+def plot_awg(logfolder="", num_plots=1):
     logfilename = logfolder + "awg.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/awg.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
-    point = json.loads(log[-1])
-    fig, ax = plt.subplots()
-    l1, = plt.plot(point['inphase'], lw=2)
-    l2, = plt.plot(point['quadrature'], lw=2)
-    plt.show()
+    plt.figure(figsize=(8, 2*num_plots))
+    for ii in range(num_plots):
+        point = json.loads(log[-ii-1])
+        plt.subplot(num_plots, 1, ii+1)
+        plt.plot(point['inphase'], lw=2)
+        plt.plot(point['quadrature'], lw=2)
+        plt.grid()
+    plt.show(block=False)
 
 
 def plot_foms(logfolder=""):
