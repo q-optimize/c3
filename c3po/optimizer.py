@@ -409,7 +409,8 @@ class Optimizer:
                     stds.append(std)
 
                 self.sim.plot_dynamics(self.sim.ket_0)
-                plt.show(block=False)
+                plt.savefig("/localdisk/c3logs/recent/dynamics.png")
+                plt.close()
 
                 # plt.figure()
                 # signal = self.exp.generator.signal['d1']
@@ -421,9 +422,6 @@ class Optimizer:
                 # plt.plot(signal['ts'], conv_signal['inphase'])
                 # plt.plot(signal['ts'], conv_signal['quadrature'])
                 # plt.show(block=False)
-
-                plt.pause(1)
-                plt.close('all')
 
                 self.logfile.write(
                     f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
