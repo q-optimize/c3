@@ -164,10 +164,10 @@ class Envelope(InstructionComponent):
         if 'freq_offset' not in params:
             params['freq_offset'] = 0.0
 
-    def get_shape_values(self, ts):
+    def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times."""
-        dt = ts[1] - ts[0]
-        offset = self.shape(ts[0]-dt, self.params)
+        if t_before:
+            offset = self.shape(t_before, self.params)
         # With the offset, we make sure the signal starts with amplitude 0.
         return self.shape(ts, self.params) - offset
 

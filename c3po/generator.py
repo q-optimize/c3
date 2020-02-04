@@ -473,6 +473,7 @@ class AWG(Device):
             ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
             dt = ts[1] - ts[0]
+            t_before = ts[0] - dt
             amp_tot_sq = 0.0
             inphase_comps = []
             quadrature_comps = []
@@ -519,7 +520,7 @@ class AWG(Device):
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
-                            env = comp.get_shape_values(ts)
+                            env = comp.get_shape_values(ts, t_before)
 
                         denv = t.gradient(env, ts)
                         if denv is None:
