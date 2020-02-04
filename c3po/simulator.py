@@ -21,15 +21,17 @@ from c3po.qt_utils import single_length_RB
 class Simulator():
     """Simulator object."""
 
-    def __init__(self,
-                 exp: Experiment,
-                 gateset: GateSet
-                 ):
+    def __init__(
+        self,
+        exp: Experiment,
+        gateset: GateSet
+    ):
         self.exp = exp
         self.gateset = gateset
         self.unitaries = {}
         self.lindbladian = False
         self.use_VZ = False
+        self.dUs = {}
 
     def write_config(self):
         return 0
@@ -43,7 +45,7 @@ class Simulator():
         for gate in self.gateset.instructions.keys():
             instr = self.gateset.instructions[gate]
             signal, ts = self.exp.generator.generate_signals(instr)
-            U = self.propagation(signal, ts)
+            U = self.propagation(signal, ts, gate)
             if self.use_VZ:
                 VZ = self.exp.model.get_Virtual_Z(instr.t_end - instr.t_start)
                 if self.lindbladian:
@@ -74,10 +76,12 @@ class Simulator():
             U.append(tf_matmul_right(Us))
         return U
 
-    def propagation(self,
-                    signal: dict,
-                    ts
-                    ):
+    def propagation(
+        self,
+        signal: dict,
+        ts,
+        gate
+    ):
 
         h0, hctrls = self.exp.model.get_Hamiltonians()
         signals = []
@@ -92,23 +96,22 @@ class Simulator():
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)
-        self.dUs = dUs
+        self.dUs[gate] = dUs
         self.ts = ts
         U = tf_matmul_left(dUs)
         self.U = U
         return U
 
-    def plot_dynamics(self,
-                      psi_init
-                      ):
+    def plot_dynamics(self, psi_init, seqs):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
         pop_t = self.populations(psi_t)
-        for du in dUs:
-            psi_t = np.matmul(du.numpy(), psi_t)
-            pops = self.populations(psi_t)
-            pop_t = np.append(pop_t, pops, axis=1)
+        for seq in seqs:
+            for du in dUs[seq]:
+                psi_t = np.matmul(du.numpy(), psi_t)
+                pops = self.populations(psi_t)
+                pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1] - ts[0]

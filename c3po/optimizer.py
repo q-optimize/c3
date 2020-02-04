@@ -607,7 +607,7 @@ class Optimizer:
         sim,
         eval_func,
         fom,
-        callback_foms = [],
+        callback_foms=[],
         opt_name='learn_model',
         settings={}
     ):
