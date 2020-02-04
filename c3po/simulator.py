@@ -30,7 +30,6 @@ class Simulator():
         self.gateset = gateset
         self.unitaries = {}
         self.lindbladian = False
-        self.use_VZ = False
         self.dUs = {}
 
     def write_config(self):
@@ -47,11 +46,22 @@ class Simulator():
             signal, ts = self.exp.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
             if self.use_VZ:
-                VZ = self.exp.model.get_Virtual_Z(instr.t_end - instr.t_start)
+                # TODO change LO freq to at the level of a line
+                lo_freqs = {}
+                for line, ctrls in instr.comps.items():
+                    lo_freqs[line] = tf.cast(
+                        ctrls['carrier'].params['freq'].get_value(),
+                        tf.complex128
+                    )
+                t_final = tf.constant(
+                    instr.t_end - instr.t_start,
+                    dtype=tf.complex128
+                )
+                FR = self.exp.model.get_Frame_Rotation(t_final, lo_freqs)
                 if self.lindbladian:
-                    U = tf.matmul(tf_super(VZ), U)
+                    U = tf.matmul(tf_super(FR), U)
                 else:
-                    U = tf.matmul(VZ, U)
+                    U = tf.matmul(FR, U)
             gates[gate] = U
             self.unitaries = gates
         return gates
