@@ -130,10 +130,11 @@ class Simulator():
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        data_path = "/localdisk/c3figs/recent"
+        data_path = "/localdisk/c3logs/recent/"
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png')
+        plt.close()
 
     def populations(self, state):
         if self.lindbladian:
