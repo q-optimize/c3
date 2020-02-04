@@ -6,6 +6,7 @@ import json
 import c3po
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 from platform import python_version
 
@@ -406,6 +407,23 @@ class Optimizer:
                     fids.append(fid)
                     sims.append(this_goal)
                     stds.append(std)
+
+                self.sim.plot_dynamics(self.sim.ket_0)
+                plt.show(block=False)
+
+                # plt.figure()
+                # signal = self.exp.generator.signal['d1']
+                # plt.plot(signal['ts'], signal['values'])
+                # plt.show(block=False)
+                #
+                # plt.figure()
+                # conv_signal = self.exp.generator.devices['resp'].signal
+                # plt.plot(signal['ts'], conv_signal['inphase'])
+                # plt.plot(signal['ts'], conv_signal['quadrature'])
+                # plt.show(block=False)
+
+                plt.pause(1)
+                plt.close('all')
 
                 self.logfile.write(
                     f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
