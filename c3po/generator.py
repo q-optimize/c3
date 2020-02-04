@@ -187,7 +187,7 @@ class Volts_to_Hertz(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             V_to_Hz: Quantity = None,
-            offset = None
+            offset=None
     ):
         super().__init__(
             name=name,
