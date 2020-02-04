@@ -408,7 +408,7 @@ class Optimizer:
                     sims.append(this_goal)
                     stds.append(std)
 
-                self.sim.plot_dynamics(self.sim.ket_0)
+                self.sim.plot_dynamics(self.sim.ket_0, seq)
                 plt.show(block=False)
 
                 # plt.figure()

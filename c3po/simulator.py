@@ -102,25 +102,25 @@ class Simulator():
         self.U = U
         return U
 
-    def plot_dynamics(self, psi_init, seqs):
+    def plot_dynamics(self, psi_init, seq):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
         pop_t = self.populations(psi_t)
-        for seq in seqs:
-            for du in dUs[seq]:
+        for gate in seq:
+            for du in dUs[gate]:
                 psi_t = np.matmul(du.numpy(), psi_t)
                 pops = self.populations(psi_t)
                 pop_t = np.append(pop_t, pops, axis=1)
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1] - ts[0]
-        ts = np.append(0, ts + dt / 2)
+        ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
         axs.plot(ts / 1e-9, pop_t.T)
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        data_path = "/tmp/c3figs/"
+        data_path = "/localdisk/c3figs/recent"
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png')
