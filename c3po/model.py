@@ -156,22 +156,22 @@ class Model:
     def get_Frame_Rotation(
         self,
         t_final: np.float64,
-        lo_freqs: dict,
-        dressed: bool
+        lo_freqs: dict
     ):
         # lo_freqs need to be ordered the same as the names of the qubits
-        ones = tf.ones(self.tot_dim)
+        ones = tf.ones(self.tot_dim, dtype=tf.complex128)
         FR = tf.linalg.diag(ones)
-        for qubit in lo_freqs.keys():
+        for line, lo_freq in lo_freqs.items():
+            qubit = self.couplings[line].connected[0]
             ann_oper = self.ann_opers[qubit]
             num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
             )
             FR = FR * tf.linalg.expm(
-                1.0j * num_oper * lo_freqs[ones] * t_final
+                1.0j * num_oper * lo_freq * t_final
             )
-        if dressed:
+        if self.dressed:
             FR = tf.matmul(tf.matmul(
                 tf.linalg.adjoint(self.transform),
                 FR),
