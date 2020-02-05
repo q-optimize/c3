@@ -11,29 +11,34 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
-def get_sim_exp_std_diff(logfolder=""):
-    logfilename = logfolder + "confirm.log"
-    if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/confirm.log"
+def get_sim_exp_std_diff(logfilename=""):
+    if logfilename == "":
+        #logfilename = "/tmp/c3logs/recent/confirm.log"
+        logfilename = "/tmp/c3logs/recent/learn_model.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     sims = []
     exps = []
     stds = []
     diffs = []
-    for line in log:
-        if line[:12] == '  Simulation':
+    par_lines_count = 0
+    for line in log[::-1]:
+        if line[0] == "{":
+            par_lines_count += 1
+        if par_lines_count == 1 and line[:12] == '  Simulation':
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
             stds.append(np.abs(float(line_split[5])))
             diffs.append(np.abs(float(line_split[7])))
+        elif par_lines_count == 2:
+            break
     return sims, exps, stds, diffs
 
 
-def plot_exp_vs_sim(logfolder=""):
+def plot_exp_vs_sim(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.scatter(exps, sims)
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
@@ -41,9 +46,9 @@ def plot_exp_vs_sim(logfolder=""):
     plt.show(block=False)
 
 
-def plot_exp_vs_err(logfolder=""):
+def plot_exp_vs_err(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.scatter(exps, diffs)
     plt.title('Exp vs Diff')
     plt.xlabel('Exp fidelity')
@@ -51,9 +56,9 @@ def plot_exp_vs_err(logfolder=""):
     plt.show(block=False)
 
 
-def plot_exp_vs_errstd(logfolder=""):
+def plot_exp_vs_errstd(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     errs = []
     for indx in range(len(diffs)):
         errs.append(diffs[indx]/stds[indx])
@@ -64,8 +69,8 @@ def plot_exp_vs_errstd(logfolder=""):
     plt.show(block=False)
 
 
-def plot_distribution(logfolder=""):
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+def plot_distribution(logfilename=""):
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.hist(diffs, bins=101)
     print(f"RMS: {np.sqrt(np.mean(np.square(diffs)))}")
     print(f"Median: {np.median(diffs)}")
