@@ -198,13 +198,21 @@ class Model:
         else:
             return tf.abs(state)**2
 
-    def percentage_01_spam(self, state, lindbladian):
-        row1 = self.params['state_confusion'].get_value()
-        row2 = tf.ones_like(row1) - row1
-        conf_matrix = tf.concat([[row1], [row2]], 0)
+    def pop1_spam(self, state, lindbladian):
+        if 'confusion_row' in self.params:
+            row1 = self.params['confusion_row'].get_value()
+            row2 = tf.ones_like(row1) - row1
+            conf_matrix = tf.concat([[row1], [row2]], 0)
+        elif 'confusion_matrix' in self.params:
+            conf_matrix = self.params['confusion_matrix'].get_value()
         pops = self.populations(state, lindbladian)
         pops = tf.reshape(pops, [pops.shape[0], 1])
-        return tf.matmul(conf_matrix, pops)
+        pop1 = tf.matmul(conf_matrix, pops)[1]
+        if 'meas_offset' in self.params:
+            pop1 = pop1 - self.params['meas_offset'].get_value()
+        if 'meas_scale' in self.params:
+            pop1 = pop1 * self.params['meas_scale'].get_value()
+        return pop1
 
     def set_spam_param(self, name: str, quan: Quantity):
         self.params[name] = quan
