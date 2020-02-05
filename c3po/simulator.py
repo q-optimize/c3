@@ -35,9 +35,7 @@ class Simulator():
     def write_config(self):
         return 0
 
-    def get_gates(
-        self
-    ):
+    def get_gates(self):
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
