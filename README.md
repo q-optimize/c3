@@ -3,7 +3,7 @@
 The c<sup>3</sup>po package is intended to close the loop between open-loop control optimization, control pulse calibration, and model-matching based on calibration data.
 
 Currently, only the closed-loop tune-up (calibration) functionality is provided, with pulse parameters optimized using the [CMA-ES](http://www.cmap.polytechnique.fr/~nikolaus.hansen/) algorithm.  Simulation of the calibration process is possible using [QuTip](http://qutip.org/), although this will soon be replaced by a higher-performance [TensorFlow](http://tensorflow.org) implementation.
- 
+
 c<sup>3</sup>po  provides a simple Python API through which it may integrate with virtually any experimental setup. Such "drivers" are supplied for [LabVIEW](https://www.ni.com/en-us/shop/labview.html) and [Labber](https://labber.org/) -driven experiments, with additional integrations expected soon.
 
 The package is authored by the team at Saarland University. Contact us at [quantum.c3po@gmail.com](mailto://quantum.c3po@gmail.com).
@@ -24,7 +24,7 @@ Until the project reaches the v1.0 release, source code will be provided upon re
 <a name="installation"><a/>
 ## Installation (developer mode)
 
-The easiest way to use the c<sup>3</sup>po package is through the installation with [pip](https://pypi.org/project/pip/), in developer mode. 
+The easiest way to use the c<sup>3</sup>po package is through the installation with [pip](https://pypi.org/project/pip/), in developer mode.
 
 Place the source files in the directory of your choice, and then run
 ```
@@ -42,18 +42,24 @@ the deletion of the c<sup>3</sup>po package.
 
 <a name="usage"><a/>
 ## Usage
-Examples for the usage of the c<sup>3</sup>po package can be found in: 
+Examples for the usage of the c<sup>3</sup>po package can be found in:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/](./c3po/examples/)
 
 
 ### c<sup>3</sup>po for Calibration
-An introduction to calibration using c<sup>3</sup>po can be seen in the jupyter notebook: 
+An introduction to calibration using c<sup>3</sup>po to send a list of
+ parameters to an existing experimental framework (Pycqed, Labber) can be seen
+  in the jupyter notebook:
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration.ipynb](./c3po/examples/Single_gate_calibration.ipynb)
+
+An example for a more low level implementation with the generation of AWG
+ signals and communication to a experimental setup is found in:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration_labview_setup.ipynb](./c3po/examples/Single_gate_calibration_labview_setup.ipynb)
 
-
-There, an exemplary code can be seen for calibrating a X-gate in an experimental
+There, an exemplary code can be seen for calibrating a single qubit X-gate in an experimental
 setup using LabVIEW. It is shown how to specifying a pulse and later on how to
 theoretically use LabVIEW to communicate with the experiment.
 
@@ -62,10 +68,4 @@ theoretically use LabVIEW to communicate with the experiment.
 - [QuTip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
 
-<a name="misc"><a/>
-## Misc
-### Specifying Hamiltonians for the calibration simulation
-- [Hamiltonian notation](http://qutip.org/docs/latest/guide/dynamics/dynamics-time.html)
-
 ![C3PO Logo](./C3PO_small.jpg)
-
