@@ -58,10 +58,14 @@ class Simulator():
                     dtype=tf.complex128
                 )
                 FR = self.exp.model.get_Frame_Rotation(t_final, lo_freqs)
+
                 if self.lindbladian:
-                    U = tf.matmul(tf_super(FR), U)
+                    SFR = tf_super(FR)
+                    U = tf.matmul(SFR, U)
+                    self.FR = SFR
                 else:
                     U = tf.matmul(FR, U)
+                    self.FR = FR
             gates[gate] = U
             self.unitaries = gates
         return gates
@@ -84,6 +88,7 @@ class Simulator():
             for gate in sequence:
                 Us.append(gates[gate])
             U.append(tf_matmul_right(Us))
+
         return U
 
     def propagation(
@@ -122,6 +127,8 @@ class Simulator():
                 psi_t = np.matmul(du.numpy(), psi_t)
                 pops = self.populations(psi_t)
                 pop_t = np.append(pop_t, pops, axis=1)
+            psi_t = tf.matmul(self.FR, psi_t)
+
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1] - ts[0]
@@ -130,10 +137,11 @@ class Simulator():
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        data_path = "/localdisk/c3figs/recent"
+        data_path = "/localdisk/c3logs/recent/"
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
-        fig.savefig(data_path+'dynamics.png')
+        fig.savefig(data_path+'dynamics.png', dpi=300)
+        plt.close()
 
     def populations(self, state):
         if self.lindbladian:

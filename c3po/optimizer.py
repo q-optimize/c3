@@ -109,7 +109,7 @@ class Optimizer:
 
     def goal_run_n(self, current_params):
         learn_from = self.learn_from['seqs_grouped_by_param_set']
-        self.exp.set_parameters(current_params, self.opt_map)
+        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
 
         if self.sampling == 'random':
             measurements = random.sample(learn_from, self.batch_size)
@@ -151,10 +151,10 @@ class Optimizer:
             fids = []
             sims = []
             stds = []
-            for seq in m['seqs']:
-                seq = seq['gate_seq']
-                fid = seq['result']
-                std = seq['result_std']
+            for this_seq in m['seqs']:
+                seq = this_seq['gate_seq']
+                fid = this_seq['result']
+                std = this_seq['result_std']
 
                 if (self.skip_bad_points and fid > 0.25):
                     self.logfile.write(
@@ -196,6 +196,8 @@ class Optimizer:
                 f" std: {float(np.std(fids)):8.5f}\n"
             )
             self.logfile.flush()
+
+        self.sim.plot_dynamics(self.sim.ket_0, seq)
 
         fids = tf.constant(fids, dtype=tf.float64)
         sims = tf.concat(sims, axis=0)
