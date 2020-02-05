@@ -1,6 +1,7 @@
 """Experiment class that models the whole experiment."""
 
 import types
+import copy
 import numpy as np
 import tensorflow as tf
 from c3po.component import C3obj
@@ -23,60 +24,69 @@ class Experiment:
         self.model = model
         self.generator = generator
 
-    def list_parameters(self):
-        par_list = []
-        par_list.extend(self.model.list_parameters())
-        devices = self.generator.devices
-        for key in devices:
-            par_list.extend(devices[key].list_parameters())
-        return par_list
+        components = {}
+        components.update(self.model.couplings)
+        components.update(self.model.subsystems)
+        components.update(self.generator.devices)
+        components['Model'] = model
+        self.components = components
 
-    def parameter_indeces(self, opt_map: list):
-        par_list = self.list_parameters()
-        par_indx = []
-        for par_id in opt_map:
-            par_indx.append(par_list.index(par_id))
-        return par_indx
+        id_list = []
+        par_lens = []
+        for comp in self.components.values():
+            id_list.extend(comp.list_parameters())
+            for par in comp.params.values():
+                par_lens.append(par.length)
+        self.id_list = id_list
+        self.par_lens = par_lens
 
-    def get_parameters(self, opt_map=None):
-        """Return list of values and bounds of parameters in opt_map."""
+    def write_config(self):
+        cfg = {}
+        cfg = copy.deepcopy(self.__dict__)
+        for key in cfg:
+            if key == 'model':
+                cfg[key] = self.model.write_config()
+            elif key == 'generator':
+                cfg[key] = self.generator.write_config()
+        return cfg
+
+    def get_parameters(self, opt_map=None, scaled=False):
+        if opt_map is None:
+            opt_map = self.id_list
+        values = []
+        for id in opt_map:
+            comp_id = id[0]
+            par_id = id[1]
+            par = self.components[comp_id].params[par_id]
+            if scaled:
+                values.extend(par.get_opt_value())
+            else:
+                values.append(par.get_value())
+        return values
+
+    def set_parameters(self, values: list, opt_map: list, scaled=False):
+        """Set the values in the original instruction class."""
+        val_indx = 0
+        for id in opt_map:
+            comp_id = id[0]
+            par_id = id[1]
+            id_indx = self.id_list.index(id)
+            par_len = self.par_lens[id_indx]
+            par = self.components[comp_id].params[par_id]
+            if scaled:
+                par.set_opt_value(values[val_indx:val_indx+par_len])
+            else:
+                par.set_value(values[val_indx])
+            val_indx += par_len
+        self.model.update_model()
+
+    def print_parameters(self, opt_map=None):
         if opt_map is None:
             opt_map = self.list_parameters()
-        values = []
-        values.append(self.model.get_parameters())
-        devices = self.generator.devices
-        for key in devices:
-            pars = devices[key].get_parameters()
-            if not (pars == []):
-                values.append(pars)
-        # TODO Deal with bounds correctly
-        self.par_lens = [len(list) for list in values]
-        par_indx = self.parameter_indeces(opt_map)
-        values_flat = []
-        for list in values:
-            values_flat.extend(list)
-        values_new = [values_flat[indx] for indx in par_indx]
-        bounds = np.kron(np.array([[0.9], [1.1]]), np.array(values_new)).T
-        return values_new, bounds
-
-    def set_parameters(self, values: list, opt_map: list):
-        """Set the values in the original instruction class."""
-        pars, _ = self.get_parameters(self.list_parameters())
-        par_indx = self.parameter_indeces(opt_map)
-        indx = 0
-        for par_ii in par_indx:
-            pars[par_ii] = values[indx]
-            indx = indx + 1
-        first_ind = 0
-        last_ind = first_ind + self.par_lens[0]
-        params = pars[first_ind:last_ind]
-        self.model.set_parameters(params)
-        devs = self.generator.devices
-        indx = 0
-        for par in opt_map:
-            if par[0] in devs.keys():
-                devs[par[0]].params[par[1]] = values[indx]
-            indx += 1
+        for id in opt_map:
+            comp_id = id[0]
+            par_id = id[1]
+            self.components[comp_id].print_parameter(par_id)
 
 
 class Measurement:
@@ -124,18 +134,6 @@ class Task(C3obj):
             comment=comment
         )
         self.params = {}
-
-    def get_parameters(self):
-        params = []
-        for key in sorted(self.params.keys()):
-            params.append(self.params[key])
-        return params
-
-    def set_parameters(self, values):
-        idx = 0
-        for key in sorted(self.params.keys()):
-            self.params[key] = values[idx]
-            idx += 1
 
     def list_parameters(self):
         par_list = []

@@ -7,8 +7,8 @@ import copy
 
 import c3po.component as component
 from c3po.model import Model as Mdl
-from c3po.tf_utils import tf_limit_gpu_memory
-from c3po.qt_utils import single_length_RB
+from c3po.component import Quantity as Qty
+# from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
 import c3po.fidelities as fidelities
@@ -23,6 +23,8 @@ def create_gates(t_final,
                  v_hz_conversion,
                  qubit_freq,
                  qubit_anhar,
+                 freq_offset,
+                 carrier_freq,
                  all_gates=True
                  ):
     """
@@ -41,43 +43,45 @@ def create_gates(t_final,
 
     """
     gauss_params = {
-        'amp': 0.4 * np.pi / v_hz_conversion,
+        'amp': Qty(
+            value=0.5 * np.pi / v_hz_conversion,
+            min=0.0 * np.pi / v_hz_conversion,
+            max=1.5 * np.pi / v_hz_conversion,
+            unit='V'
+        ),
         't_final': t_final,
-        'xy_angle': -0.3 * np.pi,
-        'freq_offset': -80e6 * 2 * np.pi,
-        'delta': 1.3 / qubit_anhar
+        'xy_angle': Qty(
+            value=0.0,
+            min=-1 * np.pi/2,
+            max=1 * np.pi/2,
+            unit='rad'
+        ),
+        'freq_offset': freq_offset,
+        'delta': Qty(
+            value=0.95 / qubit_anhar,
+            min=1.5 / qubit_anhar,
+            max=0.5 / qubit_anhar,
+            unit='s'
+        ),
     }
-    gauss_bounds = {
-        'amp': [0.3 * np.pi / v_hz_conversion, 0.5 * np.pi / v_hz_conversion],
-        't_final': [1e-9, 30e-9],
-        'xy_angle': [-1 * np.pi/2, 0],
-        'freq_offset': [-100 * 1e6 * 2 * np.pi, -60 * 1e6 * 2 * np.pi],
-        'delta': [1.6/qubit_anhar, 1/qubit_anhar]
-    }
-
     gauss_env = control.Envelope(
         name="gauss",
         desc="Gaussian comp 1 of signal 1",
         params=gauss_params,
-        bounds=gauss_bounds,
         shape=envelopes.gaussian
     )
     carrier_parameters = {
-        'freq': qubit_freq
-    }
-    carrier_bounds = {
-        'freq': [4e9 * 2 * np.pi, 7e9 * 2 * np.pi]
+        'freq': carrier_freq
     }
     carr = control.Carrier(
         name="carrier",
         desc="Frequency of the local oscillator",
-        params=carrier_parameters,
-        bounds=carrier_bounds
+        params=carrier_parameters
     )
     X90p = control.Instruction(
         name="X90p",
         t_start=0.0,
-        t_end=t_final,
+        t_end=t_final.get_value(),
         channels=["d1"]
     )
     X90p.add_component(gauss_env, "d1")
@@ -89,19 +93,30 @@ def create_gates(t_final,
     if all_gates:
         Y90p = copy.deepcopy(X90p)
         Y90p.name = "Y90p"
-        Y90p.comps['d1']['gauss'].params['xy_angle'] = np.pi / 2
-        Y90p.comps['d1']['gauss'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+        Y90p.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=np.pi / 2,
+            min=0 * np.pi/2,
+            max=2 * np.pi/2,
+            unit='rad'
+        )
 
         X90m = copy.deepcopy(X90p)
         X90m.name = "X90m"
-        X90m.comps['d1']['gauss'].params['xy_angle'] = np.pi
-        X90m.comps['d1']['gauss'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=np.pi,
+            min=1 * np.pi/2,
+            max=3 * np.pi/2,
+            unit='rad'
+        )
 
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
-        Y90m.comps['d1']['gauss'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['gauss'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
-
+        Y90m.comps['d1']['gauss'].params['xy_angle'] = Qty(
+            value=-np.pi/2,
+            min=-2 * np.pi/2,
+            max=0 * np.pi/2,
+            unit='rad'
+        )
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
         gates.add_instruction(Y90p)
@@ -192,7 +207,9 @@ def create_pwc_gates(t_final,
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
         Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [
+            -2 * np.pi/2, 0 * np.pi/2
+        ]
 
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
@@ -201,11 +218,11 @@ def create_pwc_gates(t_final,
 
 
 def create_rect_gates(t_final,
-                     qubit_freq,
-                     amp,
-                     amp_limit,
-                     all_gates=True
-                     ):
+                      qubit_freq,
+                      amp,
+                      amp_limit,
+                      all_gates=True
+                      ):
 
     rect_params = {
         'amp': amp,
@@ -255,17 +272,23 @@ def create_rect_gates(t_final,
         Y90p = copy.deepcopy(X90p)
         Y90p.name = "Y90p"
         Y90p.comps['d1']['rect'].params['xy_angle'] = np.pi / 2
-        Y90p.comps['d1']['rect'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+        Y90p.comps['d1']['rect'].bounds['xy_angle'] = [
+            0 * np.pi/2, 2 * np.pi/2
+        ]
 
         X90m = copy.deepcopy(X90p)
         X90m.name = "X90m"
         X90m.comps['d1']['rect'].params['xy_angle'] = np.pi
-        X90m.comps['d1']['rect'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m.comps['d1']['rect'].bounds['xy_angle'] = [
+            1 * np.pi/2, 3 * np.pi/2
+        ]
 
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
         Y90m.comps['d1']['rect'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['rect'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m.comps['d1']['rect'].bounds['xy_angle'] = [
+            -2 * np.pi/2, 0 * np.pi/2
+        ]
 
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
@@ -290,10 +313,9 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
         connected=["Q1"],
-        hamiltonian=drive_ham
+        hamiltonian_func=drive_ham
     )
-    chip_elements = [q1, drive]
-    model = Mdl(chip_elements)
+    model = Mdl([q1], [drive])
     if t1:
         q1.values['t1'] = t1
     if t2star:
@@ -306,11 +328,9 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
 
 
 # Devices and generator
-def create_generator(sim_res,
-                     awg_res,
-                     v_hz_conversion,
-                     logdir,
-                     rise_time=0.3e-9):
+def create_generator(
+    sim_res, awg_res, v_hz_conversion, logdir, rise_time=None
+):
     lo = generator.LO(resolution=sim_res)
     awg = generator.AWG(resolution=awg_res, logdir=logdir)
     mixer = generator.Mixer()

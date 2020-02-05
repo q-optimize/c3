@@ -75,7 +75,7 @@ def flattop(t, params):
 
 def gaussian_sigma(t, params):
     """Normalized gaussian."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     sigma = tf.cast(params['sigma'], dtype=tf.float64)
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
@@ -87,14 +87,14 @@ def gaussian_sigma(t, params):
 
 def gaussian(t, params):
     """Normalized gaussian with fixed time/sigma ratio."""
-    params['sigma'] = params['t_final']/6
+    params['sigma'] = params['t_final'].get_value()/6
     return gaussian_sigma(t, params)
 
 
 def gaussian_nonorm(t, params):
     """Gaussian."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    sigma = params['sigma'].get_value()
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     return gauss
 

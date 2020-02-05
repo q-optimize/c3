@@ -3,222 +3,492 @@
 import random
 import time
 import json
+import c3po
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
+import tensorflow_probability as tfp
+from platform import python_version
 
+from c3po.tf_utils import tf_abs
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
+# from nevergrad.optimization import registry as algo_registry
 
 # TODO make callback fucntions take U_dict
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
-    def __init__(self, data_path):
-        self.results = {}
+    def __init__(self, cfg=None):
+        # Set defaults
         self.gradients = {}
-        self.simulate_noise = False
+        self.noise_level = 0
         self.sampling = False
         self.batch_size = 1
-        self.data_path = data_path
+        self.skip_bad_points = False  # The Millikan option, don't judge
+        self.divide_by_std = False  # Goal func in terms of experiment std
 
-    def to_scale_one(self, values, bounds):
-        """
-        Return a vector of scale 1 that plays well with optimizers.
+        # NICO: ###############################################################
+        # The default fields of this class to be stored in a config. Note: Data
+        # heavy fields are excluded, as they will be transfered via logfile.
+        # Maybe this should include the optimizer state in the future, to allow
+        # for easier pause and repeat? A dedicated optim_state JSON might be
+        # better for that.
+        #######################################################################
+        self.cfg_keys = [
+            'noise_level', 'sampling', 'batch_size', 'skip_bad_points',
+            'data_path', 'gateset_opt_map', 'opt_map',
+            'opt_name', 'logfile_name'
+        ]
+        if cfg is not None:
+            self.load_config(cfg)
 
-        If the input is higher dimension, it also linearizes.
+    def write_config(self, filename):
+        # TODO This will need to be moved to the top level script. Problem
+        # Class or similar.
+        cfg = {}
+        cfg['title'] = "Majestic C3 config file"
+        cfg['date'] = time.asctime(time.localtime())
+        cfg['python_version'] = python_version()
+        cfg['c3_version'] = c3po.__version__
 
-        Parameters
-        ----------
-        values : array/str
-            Array of parameter in physical units. Can also be the name of an
-            array already stored in this Gate instance.
+        # Optimizer specifc code follows
+        cfg['optimizer'] = {}
+        cfg['optimizer']['gateset'] = self.gateset.write_config()
+        cfg['optimizer']['sim'] = self.sim.write_config()
+        cfg['optimizer']['exp'] = self.exp.write_config()
+        for key in self.cfg_keys:
+            cfg['optimizer'][key] = self.__dict__[key]
 
-        Returns
-        -------
-        array
-            Numpy array of pulse parameters, rescaled to values within [-1, 1]
+        with open(filename, "w") as cfg_file:
+            json.dump(cfg, cfg_file)
 
-        """
-        # TODO Give warning when outside bounds
-        x0 = []
-        values = values.flatten()
-        for i in range(len(values)):
-            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = min(bounds[i].T)
-            tmp = (values[i] - offset) / scale
-            tmp = 2 * tmp - 1
-            x0.append(tmp)
-        return x0
+    def load_config(self, filename):
+        with open(filename, "r") as cfg_file:
+            cfg = json.loads(cfg_file.read(1))
+        for key in cfg:
+            if key == 'gateset':
+                self.gateset.load_config(cfg[key])
+            elif key == 'sim':
+                self.sim.load_config(cfg[key])
+            elif key == 'exp':
+                self.exp.load_config(cfg[key])
+            else:
+                self.__dict__[key] = cfg[key]
 
-    def to_bound_phys_scale(self, x0, bounds):
-        """
-        Transform an optimizer vector back to physical scale & original shape.
-
-        Parameters
-        ----------
-        one : array
-            Array of pulse parameters in scale 1
-
-        bounds: array
-            Array of control parameter bounds
-
-        Returns
-        -------
-        array
-            control parameters, compatible with bounds in physical units.
-
-        """
-        values = []
-        for i in range(len(x0)):
-            scale = np.abs(bounds[i].T[0] - bounds[i].T[1])
-            offset = min(bounds[i].T)
-            tmp = np.arccos(np.cos((x0[i] + 1) * np.pi / 2)) / np.pi
-            tmp = scale * tmp + offset
-            values.append(tmp)
-        return np.array(values).reshape(self.param_shape)
-
-    def goal_run(self, x):
-        current_params = tf.constant(
-            self.to_bound_phys_scale(x, self.bounds)
-        )
-        U_dict = self.sim.get_gates(current_params, self.opt_map)
-        self.U_dict = U_dict
-        goal = self.fid_func(U_dict)
-        opt_map = [params[0] for params in self.opt_map]
-        self.optim_status['params'] = list(zip(
-            opt_map, current_params.numpy().tolist()
-        ))
+    def goal_run(self, current_params):
+        self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
+        U_dict = self.sim.get_gates()
+        goal = self.eval_func(U_dict)
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
         return goal
 
-    def goal_run_with_grad(self, x):
+    def goal_run_with_grad(self, current_params):
         with tf.GradientTape() as t:
-            current_params = tf.constant(
-                self.to_bound_phys_scale(x, self.bounds)
-            )
             t.watch(current_params)
-            U_dict = self.sim.get_gates(current_params, self.opt_map)
-            goal = self.fid_func(U_dict)
+            self.gateset.set_parameters(
+                current_params, self.opt_map, scaled=True
+            )
+            U_dict = self.sim.get_gates()
+            goal = self.eval_func(U_dict)
 
-        self.U_dict = U_dict
         grad = t.gradient(goal, current_params)
-        scale = np.diff(self.bounds)
-        gradients = grad.numpy().flatten() * scale.T
-        self.gradients[str(x)] = gradients
-        # TODO fix error when JSONing fucntion types
-        # this hack only gets the first on each cluster of params
-        opt_map = [params[0] for params in self.opt_map]
-        self.optim_status['params'] = list(zip(
-            opt_map, current_params.numpy().tolist()
-        ))
+        gradients = grad.numpy().flatten()
+        self.gradients[str(current_params.numpy())] = gradients
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
-        return float(goal.numpy())
+        self.log_parameters()
+        return goal
 
-    def goal_run_n(self, x):
-        learn_from = self.learn_from
-        with tf.GradientTape() as t:
-            current_params = tf.constant(
-                self.to_bound_phys_scale(x, self.bounds)
+    def goal_run_n(self, current_params):
+        learn_from = self.learn_from['seqs_grouped_by_param_set']
+        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+
+        if self.sampling == 'random':
+            measurements = random.sample(learn_from, self.batch_size)
+        elif self.sampling == 'even':
+            n = int(len(learn_from) / self.batch_size)
+            measurements = learn_from[::n]
+        elif self.sampling == 'from_start':
+            measurements = learn_from[:self.batch_size]
+        elif self.sampling == 'from_end':
+            measurements = learn_from[-self.batch_size:]
+        elif self.sampling == 'ALL':
+            measurements = learn_from
+        else:
+            raise(
+                """Unspecified sampling method.\n
+                Select from 'from_end'  'even', 'random' , 'from_start', 'ALL'.
+                Thank you."""
             )
-            t.watch(current_params)
-            goal = 0
+        batch_size = len(measurements)
+        ipar = 1
+        used_seqs = 0
+        for m in measurements:
+            gateset_params = m['params']
+            self.gateset.set_parameters(
+                gateset_params, self.gateset_opt_map, scaled=False
+            )
+            self.logfile.write(
+                "\n  Parameterset {} of {}:  {}".format(
+                    ipar,
+                    batch_size,
+                    self.gateset.get_parameters(
+                        self.gateset_opt_map, to_str=True
+                    )
+                )
+            )
+            ipar += 1
+            U_dict = self.sim.get_gates()
+            iseq = 1
+            fids = []
+            sims = []
+            stds = []
+            for this_seq in m['seqs']:
+                seq = this_seq['gate_seq']
+                fid = this_seq['result']
+                std = this_seq['result_std']
 
-            if self.sampling == 'random':
-                measurements = random.sample(learn_from, self.batch_size)
-            elif self.sampling == 'even':
-                n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[-n:]
-            elif self.sampling == 'from_start':
-                measurements = learn_from[:self.batch_size]
-            elif self.sampling == 'from_end':
-                measurements = learn_from[-self.batch_size:]
-            batch_size = len(measurements)
-            for m in measurements:
-                gateset_params = m[0]
-                seq = m[1]
-                fid = m[2]
-                this_goal = self.eval_func(
-                    current_params,
-                    self.opt_map,
-                    gateset_params,
-                    self.gateset_opt_map,
-                    seq,
-                    fid
-                )
+                if (self.skip_bad_points and fid > 0.25):
+                    self.logfile.write(
+                        f"\n  Skipped point with infidelity>0.25.\n"
+                    )
+                    iseq += 1
+                    continue
+                this_goal = self.eval_func(U_dict, seq)
                 self.logfile.write(
-                    f"\n  Sequence:  {seq}\n"
+                    f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
                 )
+                iseq += 1
                 self.logfile.write(
-                    f"  Simulation:  {float(this_goal.numpy())+fid:8.5f}"
+                    f"  Simulation:  {float(this_goal.numpy()):8.5f}"
                 )
                 self.logfile.write(
                     f"  Experiment: {fid:8.5f}"
                 )
                 self.logfile.write(
-                    f"  Diff: {float(this_goal.numpy()):8.5f}\n"
+                    f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goal += this_goal ** 2
+                used_seqs += 1
 
-            goal = tf.sqrt(goal / batch_size)
+                fids.append(fid)
+                sims.append(this_goal)
+                stds.append(std)
+
             self.logfile.write(
-                f"Finished batch with RMS: {float(goal.numpy())}\n"
+                f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
+            )
+            self.logfile.write(
+                f" std: {float(np.std(sims)):8.5f}\n"
+            )
+            self.logfile.write(
+                f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
+            )
+            self.logfile.write(
+                f" std: {float(np.std(fids)):8.5f}\n"
             )
             self.logfile.flush()
 
+        self.sim.plot_dynamics(self.sim.ket_0, seq)
+
+        fids = tf.constant(fids, dtype=tf.float64)
+        sims = tf.concat(sims, axis=0)
+        stds = tf.constant(stds, dtype=tf.float64)
+        goal = self.fom(fids, sims, stds)
+        self.logfile.write(
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
+        )
+        for cb_fom in self.callback_foms:
+            self.logfile.write(
+                "Finished batch with {}: {}\n".format(
+                    cb_fom.__name__,
+                    float(cb_fom(fids, sims, stds).numpy())
+                )
+            )
+        self.logfile.flush()
+
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
+        self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
+        return goal
+
+    def goal_run_n_keras(self):
+        learn_from = self.learn_from
+        current_params = self.keras_vars
+        self.exp.set_parameters(current_params, self.opt_map)
+
+        if self.sampling == 'random':
+            measurements = random.sample(learn_from, self.batch_size)
+        elif self.sampling == 'even':
+            n = int(len(learn_from) / self.batch_size)
+            measurements = learn_from[::n]
+        elif self.sampling == 'from_start':
+            measurements = learn_from[:self.batch_size]
+        elif self.sampling == 'from_end':
+            measurements = learn_from[-self.batch_size:]
+        elif self.sampling == 'ALL':
+            measurements = learn_from
+        else:
+            raise(
+                """Unspecified sampling method.\n
+                Select from 'from_end'  'even', 'random' , 'from_start', 'ALL'.
+                Thank you."""
+            )
+        batch_size = len(measurements)
+        ipar = 1
+        used_seqs = 0
+        for m in measurements:
+            gateset_params = m['params']
+            self.gateset.set_parameters(
+                gateset_params, self.gateset_opt_map, scaled=False
+            )
+            self.logfile.write(
+                "\n  Parameterset {} of {}:  {}".format(
+                    ipar,
+                    batch_size,
+                    self.gateset.get_parameters(
+                        self.gateset_opt_map, to_str=True
+                    )
+                )
+            )
+            ipar += 1
+            U_dict = self.sim.get_gates()
+            iseq = 1
+            fids = []
+            sims = []
+            stds = []
+            for seq in m['seqs']:
+                seq = seq['gate_seq']
+                fid = seq['result']
+                std = seq['result_std']
+
+                if (self.skip_bad_points and fid > 0.25):
+                    self.logfile.write(
+                        f"\n  Skipped point with infidelity>0.25.\n"
+                    )
+                    iseq += 1
+                    continue
+                this_goal = self.eval_func(U_dict, seq)
+                self.logfile.write(
+                    f"\n  Sequence {iseq} of {len(m[1])}:\n  {seq}\n"
+                )
+                iseq += 1
+                self.logfile.write(
+                    f"  Simulation:  {float(this_goal.numpy()):8.5f}"
+                )
+                self.logfile.write(
+                    f"  Experiment: {fid:8.5f}"
+                )
+                self.logfile.write(
+                    f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
+                )
+                self.logfile.flush()
+                used_seqs += 1
+
+                fids.append(fid)
+                sims.append(float(this_goal.numpy()))
+                stds.append(std)
+
+            self.logfile.write(
+                f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
+            )
+            self.logfile.write(
+                f" std: {float(np.std(sims)):8.5f}\n"
+            )
+            self.logfile.write(
+                f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
+            )
+            self.logfile.write(
+                f" std: {float(np.std(fids)):8.5f}\n"
+            )
+            self.logfile.flush()
+
+        goal = self.fom(fids, sims, stds)
+        self.logfile.write(
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
+        )
+        self.logfile.flush()
+
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
+        self.optim_status['goal'] = float(goal.numpy())
+        self.log_parameters()
+        return goal
+
+    def goal_run_n_with_grad(self, current_params):
+        learn_from = self.learn_from['seqs_grouped_by_param_set']
+        with tf.GradientTape() as t:
+            t.watch(current_params)
+            self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+
+            if self.sampling == 'random':
+                measurements = random.sample(learn_from, self.batch_size)
+            elif self.sampling == 'even':
+                n = int(len(learn_from) / self.batch_size)
+                measurements = learn_from[::n]
+            elif self.sampling == 'from_start':
+                measurements = learn_from[:self.batch_size]
+            elif self.sampling == 'from_end':
+                measurements = learn_from[-self.batch_size:]
+            elif self.sampling == 'ALL':
+                measurements = learn_from
+            else:
+                raise(
+                    """Unspecified sampling method.\n
+                    Select from 'from_end'  'even', 'random' , 'from_start'.
+                    Thank you."""
+                )
+            batch_size = len(measurements)
+            ipar = 1
+            used_seqs = 0
+            for m in measurements:
+                gateset_params = m['params']
+                self.gateset.set_parameters(
+                    gateset_params, self.gateset_opt_map, scaled=False
+                )
+                self.logfile.write(
+                    "\n  Parameterset {} of {}:  {}".format(
+                        ipar,
+                        batch_size,
+                        self.gateset.get_parameters(
+                            self.gateset_opt_map, to_str=True
+                        )
+                    )
+                )
+                ipar += 1
+                U_dict = self.sim.get_gates()
+                iseq = 1
+                fids = []
+                sims = []
+                stds = []
+                for this_seq in m['seqs']:
+                    seq = this_seq['gate_seq']
+                    fid = this_seq['result']
+                    std = this_seq['result_std']
+
+                    if (self.skip_bad_points and fid > 0.25):
+                        self.logfile.write(
+                            f"\n  Skipped point with infidelity>0.25.\n"
+                        )
+                        iseq += 1
+                        continue
+                    this_goal = self.eval_func(U_dict, seq)
+                    self.logfile.write(
+                        f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
+                    )
+                    iseq += 1
+                    self.logfile.write(
+                        f"  Simulation:  {float(this_goal.numpy()):8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Experiment: {fid:8.5f} std: {std:8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
+                    )
+                    self.logfile.flush()
+                    used_seqs += 1
+
+                    fids.append(fid)
+                    sims.append(this_goal)
+                    stds.append(std)
+
+                self.sim.plot_dynamics(self.sim.ket_0, seq)
+
+                # plt.figure()
+                # signal = self.exp.generator.signal['d1']
+                # plt.plot(signal['ts'], signal['values'])
+                # plt.show(block=False)
+                #
+                # plt.figure()
+                # conv_signal = self.exp.generator.devices['resp'].signal
+                # plt.plot(signal['ts'], conv_signal['inphase'])
+                # plt.plot(signal['ts'], conv_signal['quadrature'])
+                # plt.show(block=False)
+
+                self.logfile.write(
+                    f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(sims)):8.5f}\n"
+                )
+                self.logfile.write(
+                    f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(fids)):8.5f}\n"
+                )
+                self.logfile.flush()
+
+            fids = tf.constant(fids, dtype=tf.float64)
+            sims = tf.concat(sims, axis=0)
+            stds = tf.constant(stds, dtype=tf.float64)
+            goal = self.fom(fids, sims, stds)
+            self.logfile.write(
+                "Finished batch with {}: {}\n".format(
+                    self.fom.__name__,
+                    float(goal.numpy())
+                )
+            )
+            for cb_fom in self.callback_foms:
+                self.logfile.write(
+                    "Finished batch with {}: {}\n".format(
+                        cb_fom.__name__,
+                        float(cb_fom(fids, sims, stds).numpy())
+                    )
+                )
+            self.logfile.flush()
+
         grad = t.gradient(goal, current_params)
-        scale = np.diff(self.bounds)
-        gradients = grad.numpy().flatten() * scale.T
-        self.gradients[str(x)] = gradients
-        # TODO fix error when JSONing fucntion types
-        # this hack only gets the first on each cluster of params
-        opt_map = [params[0] for params in self.opt_map]
-        self.optim_status['params'] = list(zip(
-            opt_map, current_params.numpy().tolist()
-        ))
+        gradients = grad.numpy().flatten()
+        self.gradients[str(current_params.numpy())] = gradients
+        self.optim_status['params'] = [
+            par.numpy().tolist()
+            for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
-        return goal.numpy()
+        self.log_parameters()
+        return goal
 
-    def goal_gradient_run(self, x):
-        return self.gradients[str(x)]
+    def lookup_gradient(self, x):
+        key = str(x)
+        return self.gradients.pop(key)
 
-    def cmaes(self, values, bounds, settings={}):
-        # TODO: rewrite from dict to list input
-        if settings:
-            if 'CMA_stds' in settings.keys():
-                scale_bounds = []
-                for i in range(len(bounds)):
-                    scale = np.abs(bounds[i][0] - bounds[i][1])
-                    scale_bounds.append(settings['CMA_stds'][i] / scale)
-                settings['CMA_stds'] = scale_bounds
-
-        x0 = self.to_scale_one(values, bounds)
-        es = cmaes.CMAEvolutionStrategy(x0, 0.25, settings)
+    def cmaes(self, x0, goal_fun, settings={}):
+        es = cmaes.CMAEvolutionStrategy(x0, 0.2, settings)
         while not es.stop():
-            self.logfile.write(f"Batch {self.iteration}\n")
+            self.logfile.write(f"Batch {self.evaluation}\n")
             self.logfile.flush()
             samples = es.ask()
             solutions = []
             for sample in samples:
-                goal = float(self.goal_run(sample))
-                if self.simulate_noise:
-                    goal = (1 + 0.03 * np.random.randn()) * goal
+                goal = float(goal_fun(sample).numpy())
+                goal = (1 + self.noise_level * np.random.randn()) * goal
                 solutions.append(goal)
-                self.logfile.write(
-                    json.dumps({
-                        'params': self.to_bound_phys_scale(
-                            sample, bounds
-                        ).tolist(),
-                        'goal': goal})
-                )
-                self.logfile.write("\n")
-                self.logfile.flush()
-                for cal in self.callbacks:
-                    print(cal.__name__ + ': ' + cal(self.U_dict).numpy())
-            self.iteration += 1
+
+            for cal in self.callbacks:
+                print(cal.__name__ + ': ' + cal(self.U_dict).numpy())
+
+            self.evaluation += 1
             es.tell(
                 samples,
                 solutions
@@ -227,45 +497,48 @@ class Optimizer:
             es.disp()
 
         res = es.result + (es.stop(), es, es.logger)
-        x_opt = res[0]
-        values_opt = self.to_bound_phys_scale(x_opt, bounds)
-        # cmaes res is tuple, tread carefully.
-        res_list = list(res)
-        res_list[0] = values_opt
-        res = tuple(res_list)
-        self.results[self.opt_name] = res
-        return values_opt
+        return res[0]
+
+    # def oneplusone(self, x0, goal_fun, settings={}):
+    #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+    #     while True:
+    #         self.logfile.write(f"Batch {self.evaluation}\n")
+    #         self.logfile.flush()
+    #         tmp = optimizer.ask()
+    #         samples = tmp.args
+    #         solutions = []
+    #         for sample in samples:
+    #             goal = float(goal_fun(sample).numpy())
+    #             solutions.append(goal)
+    #             self.log_parameters(sample)
+    #         self.evaluation += 1
+    #         optimizer.tell(
+    #             tmp,
+    #             solutions
+    #         )
+    #
+    #     recommendation = optimizer.provide_recommendation()
+    #     return recommendation.args[0]
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
-    def lbfgs(self, values, bounds, goal, grad, options):
-        x0 = self.to_scale_one(values, bounds)
+    def lbfgs(self, x0, goal, options):
         # TODO fix error when JSONing fucntion types
-        # this hack only gets the first on each cluster of params
-        opt_map = [params[0] for params in self.opt_map]
-        self.optim_status['params'] = list(zip(
-            opt_map, values.tolist()
-        ))
-        self.log_parameters(x0)
         options['disp'] = True
+        # Run the initial point explictly or it'll be ignored by callback
         res = minimize(
-            goal,
+            lambda x: float(goal(x).numpy()),
             x0,
-            jac=grad,
+            jac=self.lookup_gradient,
             method='L-BFGS-B',
-            callback=self.log_parameters,
             options=options
         )
-
-        values_opt = self.to_bound_phys_scale(res.x, bounds)
-        res.x = values_opt
-        self.results[self.opt_name] = res
-        return values_opt
+        return res.x
 
     def optimize_controls(
         self,
         sim,
+        gateset,
         opt_map,
-        opt,
         opt_name,
         fid_func,
         callbacks=[],
@@ -285,12 +558,12 @@ class Optimizer:
         opt_map : list
             Specifies which parameters will be optimized
 
-        opt : str
+        algorithm : str
             Specification of the optimizer to be used, i.e. cmaes, powell, ...
 
         calib_name : str
 
-        fid_func : function
+        eval_func : function
             Takes the dictionary of gates and outputs a fidelity value of which
             we want to find the minimum
 
@@ -301,46 +574,49 @@ class Optimizer:
             All functions that will be calculated from U_dict and stored
 
         """
-        values, bounds = sim.gateset.get_parameters(opt_map)
-        self.param_shape = values.shape
-        self.bounds = bounds
+        # TODO Separate gateset from the simulation here.
+        x0 = gateset.get_parameters(opt_map, scaled=True)
+        self.init_values = x0
         self.sim = sim
+        self.gateset = gateset
         self.opt_map = opt_map
         self.opt_name = opt_name
         self.fid_func = fid_func
         self.callbacks = callbacks
         self.optim_status = {}
-        self.iteration = 1
+        self.evaluation = 1
 
-        # TODO fix this horrible mess and make the shape of bounds general for
-        # PWC and carrier based controls
-        if len(self.param_shape) > 1:
-            self.bounds = bounds.reshape(bounds.T.shape)
+        # TODO log physical values, not tf values
 
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         start_time = time.time()
         with open(self.logfile_name, 'a') as self.logfile:
-            self.logfile.write(
-                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
-            )
+            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
+            self.logfile.write("Starting optimization at")
+            self.logfile.write(start_time_str)
+            self.logfile.write(f"\n {self.opt_map}\n")
             self.logfile.flush()
-            if opt == 'cmaes':
-                values_opt = self.cmaes(
-                    values,
-                    self.bounds,
+            if self.algorithm == 'cmaes':
+                self.cmaes(
+                    x0,
+                    self.goal_run,
                     settings
                 )
 
-            elif opt == 'lbfgs':
-                values_opt = self.lbfgs(
-                    values,
-                    self.bounds,
+            elif self.algorithm == 'lbfgs':
+                x_best = self.lbfgs(
+                    x0,
                     self.goal_run_with_grad,
-                    self.goal_gradient_run,
                     options=settings
                 )
+
+            self.gateset.set_parameters(
+                x_best, self.opt_map, scaled=True
+            )
             end_time = time.time()
+            self.logfile.write("Started at ")
+            self.logfile.write(start_time_str)
             self.logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
@@ -349,7 +625,6 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        sim.gateset.set_parameters(values_opt, opt_map)
         # TODO decide if gateset object should have history and implement
         # TODO save while setting if you pass a save name
         # pseudocode: controls.save_params_to_history(calib_name)
@@ -357,51 +632,292 @@ class Optimizer:
     def learn_model(
         self,
         exp,
+        sim,
         eval_func,
+        fom,
+        callback_foms=[],
         opt_name='learn_model',
         settings={}
     ):
         # TODO allow for specific data from optimizer to be used for learning
-        values, bounds = exp.get_parameters(self.opt_map)
-        bounds = np.array(bounds)
-        self.bounds = bounds
-        values = np.array(values)
-        self.param_shape = values.shape
+        x0 = exp.get_parameters(self.opt_map, scaled=True)
+        self.exp = exp
+        self.sim = sim
         self.eval_func = eval_func
-
+        self.fom = fom
+        self.callback_foms = callback_foms
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
-        self.iteration = 0
+        self.evaluation = 0
 
         with open(self.logfile_name, 'a') as self.logfile:
             start_time = time.time()
-            self.logfile.write(
-                f"Starting optimization at {time.asctime(time.localtime())}\n\n"
-            )
-            params_opt = self.lbfgs(
-                values,
-                bounds,
-                self.goal_run_n,
-                self.goal_gradient_run,
-                options=settings
+            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
+            self.logfile.write("Starting optimization at ")
+            self.logfile.write(start_time_str)
+            self.logfile.write("Optimization parameters:\n\n")
+            self.logfile.write(json.dumps(self.opt_map))
+            self.logfile.write("\n")
+            # TODO put optmizer specific code here
+            if self.algorithm == 'cmaes':
+                x_best = self.cmaes(
+                    x0,
+                    lambda x: self.goal_run_n(tf.constant(x)),
+                    settings
+                )
+
+            elif self.algorithm == 'lbfgs':
+                x_best = self.lbfgs(
+                    x0,
+                    lambda x: self.goal_run_n_with_grad(tf.constant(x)),
+                    options=settings
+                )
+
+            elif self.algorithm == 'oneplusone':
+                x_best = self.oneplusone(
+                    tf.constant(x0),
+                    self.goal_run_n,
+                    options=settings
+                )
+
+            elif self.algorithm == 'keras-SDG':
+                vars = tf.Variable(x0)
+                self.keras_vars = vars
+                optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
+                optimizer.minimize(self.goal_run_n_keras, var_list=[vars])
+                x_best = vars.numpy()
+
+            elif self.algorithm == 'keras-Adam':
+                vars = tf.Variable(x0)
+                optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
+                optimizer.minimize(self.goal_run_n(vars), var_list=[vars])
+                x_best = vars.numpy()
+
+            else:
+                raise Exception(
+                    "I don't know the selected optimization algorithm."
+                )
+            self.exp.set_parameters(
+                x_best, self.opt_map, scaled=True
             )
             end_time = time.time()
             self.logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
             self.logfile.write(
-                f"Total runtime: {end_time-start_time}"
+                f"Total runtime: {end_time-start_time}\n\n"
             )
             self.logfile.flush()
-        exp.set_parameters(params_opt, self.opt_map)
 
-    def log_parameters(self, x):
-        # FIXME why does log take an x parameter and doesn't use it?
-        # If because callback requires it, we could print them or store them.
+    def model_1d_sweep(
+        self,
+        exp,
+        sim,
+        eval_func,
+        opt_name='model_sweep',
+        num=50,
+    ):
+        from progressbar import ProgressBar, Percentage, Bar, ETA
+        import matplotlib.pyplot as plt
+
+        self.exp = exp
+        self.sim = sim
+        self.eval_func = eval_func
+        self.opt_name = opt_name
+        self.logfile_name = self.data_path + self.opt_name + '.log'
+        print(f"Saving as:\n{self.logfile_name}")
+        self.optim_status = {}
+        self.evaluation = 1
+
+        with open(self.logfile_name, 'a') as self.logfile:
+            X = np.linspace(-1, 1, num)
+            rms = []
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                rms.append(self.goal_run_n([X[ii]]))
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            plt.figure()
+            plt.plot(X, rms, 'x')
+            plt.show()
+
+    def log_parameters(self):
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
-        self.logfile.write(f"\nStarting iteration {self.iteration}\n")
-        self.iteration += 1
+        self.logfile.write(f"\nStarting evaluation {self.evaluation}\n")
+        self.evaluation += 1
         self.logfile.flush()
+
+
+    def confirm_model(
+        self,
+        exp,
+        sim,
+        eval_func,
+        confirm_params,
+        fom,
+        callback_foms=[],
+    ):
+        self.opt_name = "confirm"
+        self.logfile_name = self.data_path + self.opt_name  + '.log'
+        print(f"Saving as:\n{self.logfile_name}")
+        self.optim_status = {}
+        self.evaluation = 0
+        with open(self.logfile_name, 'a') as self.logfile:
+            self.fom = fom
+            self.callback_foms = callback_foms
+            self.exp = exp
+            self.sim = sim
+            self.eval_func = eval_func
+            learn_from = self.learn_from['seqs_grouped_by_param_set']
+            self.exp.set_parameters(confirm_params, self.opt_map, scaled=False)
+
+            if self.sampling == 'random':
+                raise ValueError('do not know which sequences to exclude')
+            elif self.sampling == 'even':
+                n = int(len(learn_from) / self.batch_size)
+                measurements = []
+                for indx in np.arange(len(learn_from)):
+                    if indx % n != 0:
+                        measurements.append(learn_from[indx])
+
+            elif self.sampling == 'from_start':
+                measurements = learn_from[self.batch_size:]
+            elif self.sampling == 'from_end':
+                measurements = learn_from[:-self.batch_size]
+            elif self.sampling == 'ALL':
+                raise ValueError('Already verified')
+            else:
+                raise(
+                    """Unspecified sampling method.\n
+                    Select from 'from_end'  'even', 'random' , 'from_start'.
+                    Thank you."""
+                )
+            batch_size = len(measurements)
+            ipar = 1
+            goals = []
+            used_seqs = 0
+            for m in measurements:
+                gateset_params = m['params']
+                self.gateset.set_parameters(
+                    gateset_params, self.gateset_opt_map, scaled=False
+                )
+                self.logfile.write(
+                    "\n  Parameterset {} of {}:  {}".format(
+                        ipar,
+                        batch_size,
+                        self.gateset.get_parameters(
+                            self.gateset_opt_map, to_str=True
+                        )
+                    )
+                )
+                ipar += 1
+                U_dict = self.sim.get_gates()
+                iseq = 1
+                fids = []
+                sims = []
+                stds = []
+                for this_seq in m['seqs']:
+                    seq = this_seq['gate_seq']
+                    fid = this_seq['result']
+                    std = this_seq['result_std']
+
+                    if (self.skip_bad_points and fid > 0.25):
+                        self.logfile.write(
+                            f"\n  Skipped point with infidelity>0.25.\n"
+                        )
+                        iseq += 1
+                        continue
+
+                    this_goal = self.eval_func(U_dict, seq)
+                    self.logfile.write(
+                        f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
+                    )
+                    iseq += 1
+                    self.logfile.write(
+                        f"  Simulation:  {float(this_goal.numpy()):8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Experiment: {fid:8.5f} std: {std:8.5f}"
+                    )
+                    self.logfile.write(
+                        f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
+                    )
+                    self.logfile.flush()
+                    used_seqs += 1
+
+                    fids.append(fid)
+                    sims.append(this_goal)
+                    stds.append(std)
+
+                tmp_fids = tf.constant(fids, dtype=tf.float64)
+                tmp_sims = tf.concat(sims, axis=0)
+                tmp_stds = tf.constant(stds, dtype=tf.float64)
+                print(
+                    "Current {}: {}".format(
+                        self.fom.__name__,
+                        float(self.fom(tmp_fids, tmp_sims, tmp_stds).numpy())
+                    )
+                )
+                for cb_fom in self.callback_foms:
+                    print(
+                        "Current {}: {}".format(
+                            cb_fom.__name__,
+                            float(cb_fom(tmp_fids, tmp_sims, tmp_stds).numpy())
+                        )
+                    )
+                print("")
+
+                self.logfile.write(
+                    f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(sims)):8.5f}\n"
+                )
+                self.logfile.write(
+                    f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
+                )
+                self.logfile.write(
+                    f" std: {float(np.std(fids)):8.5f}\n"
+                )
+                self.logfile.flush()
+
+            fids = tf.constant(fids, dtype=tf.float64)
+            sims = tf.concat(sims, axis=0)
+            stds = tf.constant(stds, dtype=tf.float64)
+            goal = self.fom(fids, sims, stds)
+            self.logfile.write(
+                "Finished batch with {}: {}\n".format(
+                    self.fom.__name__,
+                    float(goal.numpy())
+                )
+            )
+            for cb_fom in self.callback_foms:
+                self.logfile.write(
+                    "Finished batch with {}: {}\n".format(
+                        cb_fom.__name__,
+                        float(cb_fom(fids, sims, stds).numpy())
+                    )
+                )
+            self.logfile.flush()
+
+            self.optim_status['params'] = [
+                par.numpy().tolist()
+                for par in self.exp.get_parameters(self.opt_map)
+            ]
+            self.optim_status['goal'] = float(goal.numpy())
+            self.log_parameters()
+        return goal

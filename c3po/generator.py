@@ -2,10 +2,11 @@
 
 import types
 import json
+import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.component import C3obj
+from c3po.component import C3obj, Quantity
 from c3po.control import Instruction, Envelope, Carrier
 
 
@@ -26,6 +27,17 @@ class Generator:
         self.resolution = resolution
         # TODO add line knowledge (mapping of which devices are connected)
 
+    def write_config(self):
+        cfg = {}
+        cfg = copy.deepcopy(self.__dict__)
+        devcfg = {}
+        for key in self.devices:
+            dev = self.devices[key]
+            devcfg[dev.name] = dev.write_config()
+        cfg["devices"] = devcfg
+        cfg.pop('signal', None)
+        return cfg
+
     def generate_signals(self, instr: Instruction):
         # TODO deal with multiple instructions within GateSet
         with tf.name_scope('Signal_generation'):
@@ -43,15 +55,15 @@ class Generator:
             for chan in instr.comps:
                 gen_signal[chan] = {}
                 channel = instr.comps[chan]
-                lo_signal = lo.create_signal(channel, t_start, t_end)
-                awg_signal = awg.create_IQ(channel, t_start, t_end)
+                lo_signal, omega_lo = lo.create_signal(channel, t_start, t_end)
+                awg_signal, freq_offset = awg.create_IQ(channel, t_start, t_end)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 if "resp" in self.devices:
                     conv_signal = resp.process(flat_signal)
                 else:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
-                signal = v_to_hz.transform(signal)
+                signal = v_to_hz.transform(signal, omega_lo+freq_offset)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
                 # plt.figure()
@@ -67,7 +79,10 @@ class Generator:
                 # plt.title("Multiplex")
                 # plt.show()
         self.signal = gen_signal
-        return gen_signal
+        return gen_signal, lo_signal['ts']
+
+    def readout_signal(self, phase):
+        return self.devices["readout"].readout(phase)
 
 
 class Device(C3obj):
@@ -86,7 +101,16 @@ class Device(C3obj):
             comment=comment
         )
         self.resolution = resolution
-        self.params = {}
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        cfg.pop('signal', None)
+        cfg.pop('ts', None)
+        cfg.pop('amp_tot', None)
+        cfg.pop('amp_tot_sq', None)
+        for p in cfg['params']:
+            cfg['params'][p] = float(cfg['params'][p])
+        return cfg
 
     def prepare_plot(self):
         plt.rcParams['figure.dpi'] = 100
@@ -124,24 +148,33 @@ class Device(C3obj):
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
-    def get_parameters(self):
-        params = []
-        for key in sorted(self.params.keys()):
-            params.append(self.params[key])
-        return params
 
-    def set_parameters(self, values):
-        idx = 0
-        for key in sorted(self.params.keys()):
-            self.params[key] = values[idx]
-            idx += 1
+class Readout(Device):
+    """Fake the readout process by multiplying a state phase with a factor."""
 
-    def list_parameters(self):
-        par_list = []
-        for par_key in sorted(self.params.keys()):
-            par_id = (self.name, par_key)
-            par_list.append(par_id)
-        return par_list
+    def __init__(
+            self,
+            name: str = "readout",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            factor: Quantity = None,
+            offset: Quantity = None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['factor'] = factor
+        self.params['offset'] = offset
+
+    def readout(self, phase):
+        offset = self.params['offset'].get_value()
+        factor = self.params['factor'].get_value()
+        return phase * factor + offset
 
 
 class Volts_to_Hertz(Device):
@@ -153,7 +186,8 @@ class Volts_to_Hertz(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            V_to_Hz: np.float64 = 1.0
+            V_to_Hz: Quantity = None,
+            offset=None
     ):
         super().__init__(
             name=name,
@@ -163,10 +197,18 @@ class Volts_to_Hertz(Device):
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
+        if offset:
+            self.params['offset'] = offset
 
-    def transform(self, mixed_signal):
+    def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
-        self.signal = mixed_signal * self.params['V_to_Hz']
+        v2hz = self.params['V_to_Hz'].get_value()
+        if 'offset' in self.params:
+            offset = self.params['offset'].get_value()
+            att = v2hz / (drive_frequency + offset)
+        else:
+            att = v2hz
+        self.signal = mixed_signal * att
         return self.signal
 
 
@@ -273,7 +315,7 @@ class Response(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            rise_time: np.float64 = 0.0,
+            rise_time: Quantity = None,
     ):
         super().__init__(
             name=name,
@@ -290,7 +332,7 @@ class Response(Device):
                     [tf.zeros(len(resp_shape), dtype=tf.float64),
                      signal,
                      tf.zeros(len(resp_shape), dtype=tf.float64)],
-                0)
+                    0)
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
                 [convolution,
@@ -305,17 +347,17 @@ class Response(Device):
         return convolution
 
     def process(self, iq_signal):
-        n_ts = int(self.params['rise_time'] * self.resolution)
-        ts = tf.linspace(tf.constant(
-            0.0, dtype=tf.float64),
-            self.params['rise_time'],
+        n_ts = int(self.params['rise_time'].get_value() * self.resolution)
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            int(self.params['rise_time'].get_value()),
             n_ts
         )
         cen = tf.cast(
-            (self.params['rise_time'] - 1 / self.resolution) / 2,
+            (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
             tf.float64
         )
-        sigma = self.params['rise_time'] / 4
+        sigma = self.params['rise_time'].get_value() / 4
         gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
         offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
@@ -346,7 +388,6 @@ class Mixer(Device):
             comment=comment,
             resolution=resolution
         )
-
         self.signal = None
 
     def combine(self, lo_signal, awg_signal):
@@ -383,12 +424,12 @@ class LO(Device):
         for c in channel:
             comp = channel[c]
             if isinstance(comp, Carrier):
-                omega_lo = comp.params['freq']
+                omega_lo = comp.params['freq'].get_value()
                 self.signal["values"] = (
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
                 self.signal["ts"] = ts
-        return self.signal
+                return self.signal, omega_lo
 
 
 class AWG(Device):
@@ -432,6 +473,7 @@ class AWG(Device):
             ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
             dt = ts[1] - ts[0]
+            t_before = ts[0] - dt
             amp_tot_sq = 0.0
             inphase_comps = []
             quadrature_comps = []
@@ -466,18 +508,20 @@ class AWG(Device):
                     comp = channel[key]
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp']
+                        amp = comp.params['amp'].get_value()
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle']
-                        freq_offset = comp.params['freq_offset']
-                        delta = - comp.params['delta']
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
+                        # TODO: check again the sign of this delta
+                        # [orbit:negative, manybird:positive] Fed guess: neg
+                        delta = - comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
-                            env = comp.get_shape_values(ts)
+                            env = comp.get_shape_values(ts, t_before)
 
                         denv = t.gradient(env, ts)
                         if denv is None:
@@ -505,12 +549,14 @@ class AWG(Device):
                     # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp']
+                        amp = comp.params['amp'].get_value()
 
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle']
-                        freq_offset = comp.params['freq_offset']
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
+                        # TODO: check again the sign in front of offset
+                        # [orbit:positive, manybird:negative] Fed guess: pos
                         phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
@@ -527,7 +573,7 @@ class AWG(Device):
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
         self.log_shapes()
-        return {"inphase": inphase, "quadrature": quadrature}
+        return {"inphase": inphase, "quadrature": quadrature}, freq_offset
         # TODO decide when and where to return/sotre params scaled or not
 
     def get_I(self):

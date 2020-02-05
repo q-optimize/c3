@@ -1,4 +1,5 @@
 import types
+import copy
 import numpy as np
 from c3po.component import C3obj
 
@@ -9,7 +10,14 @@ class GateSet:
     def __init__(self):
         self.instructions = {}
 
+    def write_config(self):
+        cfg = {}
+        for instr in self.instructions:
+            cfg[instr] = self.instructions[instr].write_config()
+        return cfg
+
     def add_instruction(self, instr):
+        # TODO make this use ___dict___ ?
         self.instructions[instr.name] = instr
 
     def list_parameters(self):
@@ -22,7 +30,7 @@ class GateSet:
                         par_list.append([(gate, chan, comp, par)])
         return par_list
 
-    def get_parameters(self, opt_map: list):
+    def get_parameters(self, opt_map=None, scaled=False, to_str=False):
         """
         Return list of values and bounds of parameters in opt_map.
 
@@ -53,23 +61,28 @@ class GateSet:
             Example:
             opt_params = (
                 [0,           0,           0,             0],    # Values
-                [[0, 0],      [0, 0],      [0, 0],        [0.0]] # Bounds
                 )
 
         """
         values = []
-        bounds = []
-
+        if opt_map is None:
+            opt_map = self.list_parameters()
         for id in opt_map:
             gate = id[0][0]
-            par_id = id[0][1:4]
+            chan = id[0][1]
+            comp = id[0][2]
+            param = id[0][3]
             gate_instr = self.instructions[gate]
-            value, bound = gate_instr.get_parameter_value_bounds(par_id)
-            values.append(value)
-            bounds.append(bound)
-        return np.array(values), np.array(bounds)
+            par = gate_instr.comps[chan][comp].params[param]
+            if scaled:
+                values.append(par.get_opt_value)
+            elif to_str:
+                values.append(str(par))
+            else:
+                values.append(par.get_value())
+        return values
 
-    def set_parameters(self, values: list, opt_map: list):
+    def set_parameters(self, values: list, opt_map: list, scaled=False):
         """Set the values in the original instruction class."""
         # TODO catch key errors
         for indx in range(len(opt_map)):
@@ -81,8 +94,15 @@ class GateSet:
                 if len(id) == 5:
                     fct = id[4]
                     val = fct(val)
+                chan = par_id[0]
+                comp = par_id[1]
+                param = par_id[2]
                 gate_instr = self.instructions[gate]
-                gate_instr.set_parameter_value(par_id, val)
+                try:
+                    gate_instr.comps[chan][comp].params[param].set_value(val)
+                except ValueError:
+                    print("Value out of bounds")
+                    print(f"Trying to set {par_id} to value {val}")
 
 
 class InstructionComponent(C3obj):
@@ -106,7 +126,6 @@ class InstructionComponent(C3obj):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             ):
         super().__init__(
             name=name,
@@ -114,10 +133,6 @@ class InstructionComponent(C3obj):
             comment=comment
             )
         self.params = params
-        self.bounds = bounds
-        # check that the parameters and bounds have the same key
-        if params.keys() != bounds.keys():
-            raise ValueError('params and bounds must have same keys')
 
 
 class Envelope(InstructionComponent):
@@ -137,7 +152,6 @@ class Envelope(InstructionComponent):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             shape: types.FunctionType = None,
             ):
         super().__init__(
@@ -145,7 +159,6 @@ class Envelope(InstructionComponent):
             desc=desc,
             comment=comment,
             params=params,
-            bounds=bounds,
             )
         self.shape = shape
         if 'amp' not in params:
@@ -155,9 +168,12 @@ class Envelope(InstructionComponent):
         if 'xy_angle' not in params:
             params['xy_angle'] = 0.0
 
-    def get_shape_values(self, ts):
+    def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times."""
-        return self.shape(ts, self.params)
+        if t_before:
+            offset = self.shape(t_before, self.params)
+        # With the offset, we make sure the signal starts with amplitude 0.
+        return self.shape(ts, self.params) - offset
 
 
 class Carrier(InstructionComponent):
@@ -169,14 +185,12 @@ class Carrier(InstructionComponent):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            bounds: dict = {},
             ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             params=params,
-            bounds=bounds,
             )
 
 
@@ -231,27 +245,12 @@ class Instruction(C3obj):
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
 
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for chan in self.comps:
+            for comp in self.comps[chan]:
+                cfg['comps'][chan][comp] = 0
+        return cfg
+
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
-
-    def get_parameter_value_bounds(self, par_id: tuple):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        value = self.comps[chan][comp].params[param]
-        bounds = self.comps[chan][comp].bounds[param]
-        return value, bounds
-
-    def set_parameter_value(self, par_id: tuple, value):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].params[param] = value
-
-    def set_parameter_bounds(self, par_id: tuple, bounds):
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].bounds[param] = bounds

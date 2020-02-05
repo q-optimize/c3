@@ -6,7 +6,137 @@ from tensorflow.python.client import device_lib
 import os
 
 
-# EVOLUTION FUCNTIONS
+def tf_log_level_info():
+    """Display the information about different log levels in tensorflow."""
+    info = (
+            "Log levels of tensorflow:\n"
+            "\t0 = all messages are logged (default behavior)\n"
+            "\t1 = INFO messages are not printed\n"
+            "\t2 = INFO and WARNING messages are not printed\n"
+            "\t3 = INFO, WARNING, and ERROR messages are not printed\n"
+            )
+    print(info)
+
+
+def get_tf_log_level():
+    """Display the current tensorflow log level of the system."""
+    log_lvl = '0'
+
+    if 'TF_CPP_MIN_LOG_LEVEL' in os.environ:
+        log_lvl = os.environ['TF_CPP_MIN_LOG_LEVEL']
+
+    return log_lvl
+
+
+def set_tf_log_level(lvl):
+    """
+    Set tensorflows system log level.
+
+    REMARK: it seems like the 'TF_CPP_MIN_LOG_LEVEL' variable expects a string.
+            the input of this function seems to work with both string and/or
+            integer, as casting string to string does nothing. feels hacked?
+            but I guess it's just python...
+    """
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(lvl)
+
+
+def tf_list_avail_devices():
+    """
+    List available devices.
+
+    Function for displaying all available devices for tf_setuptensorflow
+    operations on the local machine.
+
+    TODO:   Refine output of this function. But without further knowledge
+            about what information is needed, best practise is to output all
+            information available.
+    """
+    local_dev = device_lib.list_local_devices()
+    print(local_dev)
+
+
+def tf_limit_gpu_memory(memory_limit):
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+        try:
+            tf.config.experimental.set_virtual_device_configuration(
+                gpus[0],
+                [tf.config.experimental.VirtualDeviceConfiguration(
+                    memory_limit=memory_limit
+                )]
+            )
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(
+                len(gpus),
+                "Physical GPUs,",
+                len(logical_gpus),
+                "Logical GPUs"
+            )
+        except RuntimeError as e:
+            # Virtual devices must be set before GPUs have been initialized
+            print(e)
+
+
+@tf.function
+def tf_unitary_overlap(A, B):
+    """
+    Unitary overlap between two matrices in Tensorflow(tm).
+
+    Parameters
+    ----------
+    A : Tensor
+        Description of parameter `A`.
+    B : Tensor
+        Description of parameter `B`.
+
+    Returns
+    -------
+    type
+        Description of returned object.
+
+    """
+    overlap = tf.linalg.trace(
+        tf.matmul(tf.conj(tf.transpose(A)), B)) / tf.cast(B.shape[1], B.dtype)
+    return tf.cast(tf.conj(overlap) * overlap, tf.float64)
+
+
+@tf.function
+def tf_measure_operator(M, U):
+    return tf.linalg.trace(tf.matmul(M, U))
+
+
+@tf.function
+def tf_expm(A, terms=24):
+    """
+    Matrix exponential by the series method.
+
+    Parameters
+    ----------
+    A : tf.tensor
+        Matrix to be exponentiated.
+    terms : int
+        Number of terms in the series.
+
+    Returns
+    -------
+    tf.tensor
+        expm(A)
+
+    """
+    r = tf.eye(A.shape[0], dtype=A.dtype)
+    A_powers = A
+    r += A
+
+    ii = 2
+    # TODO Change condition to fixed accuracy.
+    while ii < terms:
+        A_powers = tf.matmul(A_powers, A)
+        r += A_powers / np.math.factorial(ii)
+        ii += 1
+    return r
+
+
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     """
@@ -26,12 +156,14 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     Returns
     -------
     tf.tensor
-        dU = exp(i H(t) dt)
+        dU = exp(-i H(t) dt)
 
     """
     h = h0
-    for ii in range(len(hks)):
+    ii = 0
+    while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
+        ii += 1
     terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     dU = tf_expm(-1j * h * dt, terms)
     return dU
@@ -63,6 +195,36 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
+# def tf_propagation(h0, hks, cflds, dt):
+#     """
+#     Calculate the time evolution of a system controlled by time-dependent
+#     fields.
+#
+#     Parameters
+#     ----------
+#     h0 : tf.tensor
+#         Drift Hamiltonian.
+#     hks : list of tf.tensor
+#         List of control Hamiltonians.
+#     cflds : list
+#         List of control fields, one per control Hamiltonian.
+#     dt : float
+#         Length of one time slice.
+#
+#     Returns
+#     -------
+#     type
+#         Description of returned object.
+#
+#     """
+#     dUs = []
+#     for ii in range(cflds[0].shape[0]):
+#         cf_t = []
+#         for fields in cflds:
+#             cf_t.append(tf.cast(fields[ii], tf.complex128))
+#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+#     return dUs
+
 def tf_propagation(h0, hks, cflds, dt):
     """
     Time evolution of a system controlled by time-dependent fields.
@@ -84,13 +246,56 @@ def tf_propagation(h0, hks, cflds, dt):
         Description of returned object.
 
     """
-    dUs = []
-    for ii in range(len(cflds[0])):
-        cf_t = []
-        for fields in cflds:
-            cf_t.append(tf.cast(fields[ii], tf.complex128))
-        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-    return dUs
+    def tf_time_slice(cf_t):
+        return tf_dU_of_t(h0, hks, cf_t, dt)
+
+    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
+    return tf.map_fn(tf_time_slice, cflds)
+
+# EXPERIMENTAL BATCH PROPAGATION BELOW
+
+# def tf_propagation(h0, hks, cflds, dt):
+#     """
+#     Calculate the time evolution of a system controlled by time-dependent
+#     fields.
+#
+#     Parameters
+#     ----------
+#     h0 : tf.tensor
+#         Drift Hamiltonian.
+#     hks : list of tf.tensor
+#         List of control Hamiltonians.
+#     cflds : list
+#         List of control fields, one per control Hamiltonian.
+#     dt : float
+#         Length of one time slice.
+#
+#     Returns
+#     -------
+#     type
+#         Description of returned object.
+#
+#     """
+#     dUs = []
+#     batch_size = 4
+#     for ii in range(cflds[0].shape[0]//batch_size):
+#         dUs.extend(
+#             tf_propagation_batch(h0, hks, cflds, dt, ii)
+#         )
+#     return dUs
+#
+#
+# @tf.function
+# def tf_propagation_batch(h0, hks, cflds, dt, left):
+#     """
+#     """
+#     dUs = []
+#     for ii in range(left, left+4):
+#         cf_t = []
+#         for fields in cflds:
+#             cf_t.append(tf.cast(fields[ii], tf.complex128))
+#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+#     return dUs
 
 
 def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
@@ -191,13 +396,19 @@ def tf_log10(x):
     return numerator / denominator
 
 
-def tf_abs(x):
+def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
     return tf.reshape(
                 tf.cast(
-                    tf.sqrt(tf.math.conj(x)*x),
+                    tf.math.conj(x)*x,
                     dtype=tf.float64),
-                shape=[1])
+                shape=[1]
+    )
+
+
+def tf_abs(x):
+    """Rewritten so that is has a gradient."""
+    return tf.sqrt(tf_abs_squared(x))
 
 
 def tf_ave(x: list):
@@ -309,6 +520,7 @@ def tf_psi_dm(psi_ket):
     return psi_ket * psi_bra
 
 
+# TODO see which code to get dv is better (and kill the other)
 def tf_dm_vect(dm):
     return tf.reshape(dm,shape=[dm.shape[0]**2, 1])
 

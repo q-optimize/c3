@@ -7,24 +7,28 @@ model, simulating an experiment. Finally try to match the wrong model to the
 calibration data and recover the real one.
 """
 
-import json
 import numpy as np
 import tensorflow as tf
 import c3po.hamiltonians as hamiltonians
 from c3po.utils import log_setup
 from c3po.component import Quantity as Qty
 from c3po.simulator import Simulator as Sim
-from c3po.optimizer import Optimizer as Opt
 from c3po.experiment import Experiment as Exp
 from c3po.tf_utils import tf_abs
 from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
+
+# This import registers the 3D projection, but is otherwise unused.
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 unused import
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib.ticker import LinearLocator, FormatStrFormatter
+
+from progressbar import ProgressBar, Percentage, Bar, ETA
 from c3po.tf_utils import tf_limit_gpu_memory
 
-tf_limit_gpu_memory(100)
-run_name = "synthetic_rnd_smpl"
-logdir = log_setup("/tmp/c3logs/", run_name=run_name)
-
+tf_limit_gpu_memory(50)
+logdir = log_setup("/tmp/c3logs/")
 with tf.device('/CPU:0'):
     # System
     qubit_freq = Qty(
@@ -34,7 +38,7 @@ with tf.device('/CPU:0'):
         unit='Hz 2pi'
     )
     qubit_anhar = Qty(
-        value=-315e6 * 2 * np.pi,
+        value=-315.513734e6 * 2 * np.pi,
         min=-330e6 * 2 * np.pi,
         max=-300e6 * 2 * np.pi,
         unit='Hz 2pi'
@@ -54,20 +58,23 @@ with tf.device('/CPU:0'):
         max=5.14e9 * 2 * np.pi,
         unit='Hz 2pi'
     )
+
     qubit_anhar_wrong = Qty(
-        value=-315e6 * 2 * np.pi,
+        value=-325.513734e6 * 2 * np.pi,
         min=-330e6 * 2 * np.pi,
         max=-300e6 * 2 * np.pi,
         unit='Hz 2pi'
     )
-    qubit_lvls = 4
-    drive_ham = hamiltonians.x_drive
+
     v_hz_conversion_wrong = Qty(
         value=1,
         min=0.9,
         max=1.1,
         unit='rad/V'
     )
+
+    qubit_lvls = 4
+    drive_ham = hamiltonians.x_drive
 
     t_final = Qty(
         value=10e-9,
@@ -83,7 +90,7 @@ with tf.device('/CPU:0'):
     )
 
     carrier_freq = Qty(
-        value=5.1e9 * 2 * np.pi,
+        value=5.25e9 * 2 * np.pi,
         min=5e9 * 2 * np.pi,
         max=5.5e9 * 2 * np.pi,
         unit='Hz 2pi'
@@ -117,30 +124,37 @@ with tf.device('/CPU:0'):
         sim_res, awg_res, v_hz_conversion_wrong, logdir=logdir,
         rise_time=rise_time
     )
-    # gen_wrong.devices['awg'].options = 'drag'
+    gen_wrong.devices['awg'].options = 'drag'
+
     gen_right = create_generator(
         sim_res, awg_res, v_hz_conversion, logdir=logdir, rise_time=rise_time
     )
-    # gen_right.devices['awg'].options = 'drag'
+    gen_right.devices['awg'].options = 'drag'
+
     gates = create_gates(
         t_final=t_final,
-        v_hz_conversion=v_hz_conversion_wrong,
-        qubit_freq=qubit_freq_wrong,
-        qubit_anhar=qubit_anhar_wrong,
-        all_gates=False,
+        v_hz_conversion=v_hz_conversion,
+        qubit_freq=qubit_freq,
+        qubit_anhar=qubit_anhar,
         freq_offset=freq_offset,
         carrier_freq=carrier_freq
     )
+
     # gen.devices['awg'].options = 'drag'
 
     # Simulation class and fidelity function
-    exp_wrong = Exp(model_wrong, gen_wrong)
+    exp_wrong = Exp(
+        model_wrong,
+        gen_wrong
+    )
     sim_wrong = Sim(exp_wrong, gates)
     sim_wrong.use_VZ = True
+    a_q = model_wrong.ann_opers[0]
 
     exp_right = Exp(model_right, gen_right)
     sim_right = Sim(exp_right, gates)
     sim_right.use_VZ = True
+    a_q = model_right.ann_opers[0]
 
     # Define states
     # Define states & unitaries
@@ -172,13 +186,20 @@ with tf.device('/CPU:0'):
         return overlap
 
     def match_calib(
-        U_dict,
-        seq: list,
+        exp_params: list,
+        exp_opt_map: list,
         fid: np.float64
     ):
+        exp_wrong.set_parameters(exp_params, exp_opt_map)
+        U_dict = sim_wrong.get_gates()
         fid_sim = unitary_infid(U_dict)
         diff = fid_sim - fid
         return diff
+
+    def infid_sim(params):
+        exp_wrong.set_parameters(params, exp_opt_map)
+        U_dict = sim_wrong.get_gates()
+        return unitary_infid(U_dict)
 
     # Optimizer object
     opt_map = [
@@ -190,89 +211,93 @@ with tf.device('/CPU:0'):
 
     exp_opt_map = [
         ('Q1', 'freq'),
-        # ('Q1', 'anhar'),
+        ('Q1', 'anhar'),
         # ('Q1', 't1'),
         # ('Q1', 't2star'),
         # ('v_to_hz', 'V_to_Hz'),
         # ('resp', 'rise_time')
     ]
 
-    def c3_openloop():
-        opt = Opt(data_path=logdir)
-        opt.optimize_controls(
-            sim=sim_wrong,
-            opt_map=opt_map,
-            opt='lbfgs',
-            opt_name='openloop',
-            fid_func=unitary_infid
-        )
+    def gen_data(num):
+        with tf.device('/CPU:0'):
+            fid = unitary_infid(sim_right.get_gates())
+            X = np.linspace(-1, 1, num)
+            Y = np.linspace(-1, 1, num)
+            diff = np.zeros((X.shape[0], Y.shape[0]))
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                for jj in range(Y.shape[0]):
+                    diff[ii][jj] = match_calib(
+                        [X[ii], Y[jj]], exp_opt_map, fid
+                    )
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            X, Y = np.meshgrid(X, Y)
+        return X, Y, diff
 
-    def c3_calibration(noise_level=0):
-        opt = Opt(data_path=logdir)
-        opt.noise_level = noise_level
-        opt.optimize_controls(
-            sim=sim_right,
-            opt_map=opt_map,
-            opt='cmaes',
-            # settings={},
-            settings={'ftarget': 1e-4},
-            opt_name='calibration',
-            fid_func=unitary_infid
-        )
-
-    def c3_learn_model(logfilename, sampling='even', batch_size=10):
-        learn_from = []
-        with open(logfilename, "r") as calibration_log:
-            log = calibration_log.readlines()
-        for line in log:
-            if line[0] == "{":
-                line_dict = json.loads(line)
-                learn_from.append(
-                    [line_dict['params'], [[['X90p'], line_dict['goal']]]]
+    def sweep_1d(num):
+        with tf.device('/CPU:0'):
+            fid = unitary_infid(sim_right.get_gates())
+            X = np.linspace(-1, 1, num)
+            diff = []
+            widgets = [
+                'Sweep: ',
+                Percentage(),
+                ' ',
+                Bar(marker='=', left='[', right=']'),
+                ' ',
+                ETA()
+            ]
+            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
+            pbar.start()
+            ii = 0
+            for val in pbar(range(X.shape[0])):
+                diff.append(
+                    match_calib(
+                        [X[ii], qubit_anhar.value], exp_opt_map, fid
+                    )
                 )
-        opt = Opt(data_path=logdir)
-        opt.gateset_opt_map = opt_map
-        opt.opt_map = exp_opt_map
-        opt.sampling = sampling
-        opt.batch_size = batch_size
-        opt.learn_from = learn_from
-        opt.sim = sim_wrong
-        settings = {'ftol': 1e-12}
-        opt.learn_model(
-            exp_wrong,
-            sim_wrong,
-            eval_func=match_calib,
-            settings=settings
-        )
+                pbar.update(ii)
+                ii += 1
+            pbar.finish()
+            plt.figure()
+            plt.plot(X,diff)
+            plt.show()
+        return X, diff
 
-    def model_1d_sweep(logfilename, sampling='even', batch_size=10, num=10):
-        learn_from = []
-        with open(logfilename, "r") as calibration_log:
-            log = calibration_log.readlines()
-        for line in log:
-            if line[0] == "{":
-                line_dict = json.loads(line)
-                learn_from.append(
-                    [line_dict['params'], [[['X90p'], line_dict['goal']]]]
-                )
-        opt = Opt(data_path=logdir)
-        opt.gateset_opt_map = opt_map
-        opt.opt_map = exp_opt_map
-        opt.sampling = sampling
-        opt.batch_size = batch_size
-        opt.learn_from = learn_from
-        opt.sim = sim_wrong
-        settings = {'ftol': 1e-8}
-        opt.model_1d_sweep(
-            exp_wrong,
-            sim_wrong,
-            eval_func=match_calib,
-            num=num
+    def plot(data):
+        X, Y, Z = data
+        Z = Z.T
+        fig = plt.figure()
+        ax = fig.gca()
+        cs = ax.pcolormesh(
+            X,
+            Y,
+            np.abs(Z)
         )
-
-# Run the stuff
-    # c3_openloop()
-    # c3_calibration(noise_level=0)
-    # logfilename = logdir + "calibration.log"
-    # #  sampling = 'from_end'  'even', 'random', 'from_start'
-    # c3_learn_model(logfilename, sampling='random', batch_size=10)
+        ax.plot(
+            [float(qubit_freq.value), float(qubit_freq.value)], [-1, 1],
+            color="tab:red"
+        )
+        ax.plot(
+            [-1, 1], [float(qubit_anhar.value), float(qubit_anhar.value)],
+            color="tab:red"
+        )
+        cbar = fig.colorbar(cs)
+        cbar.set_label('Difference in Unitary fidelity')
+        ax.xaxis.set_label_text("Qubit freq [GHz 2pi]")
+        ax.yaxis.set_label_text('Qubit anharmonicity [MHz 2pi]')
+        plt.title("Difference right/wrong model")
+        plt.grid()
+        plt.show()
