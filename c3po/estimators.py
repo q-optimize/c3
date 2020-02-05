@@ -24,6 +24,18 @@ def stds_dist(exp_values, sim_values, stds):
     return tf.reduce_mean(diffs / stds)
 
 
+def rms_stds_dist(exp_values, sim_values, stds):
+    """Return the mean distance in stds."""
+    diffs = tf.abs(tf.subtract(exp_values, sim_values))
+    return tf.sqrt(tf.reduce_mean((diffs / stds)**2))
+
+
+def std_of_diffs(exp_values, sim_values, stds):
+    """Return the mean distance in stds."""
+    diffs = tf.abs(tf.subtract(exp_values, sim_values))
+    return tf.reduce_std(diffs)
+
+
 def neg_loglkh_binom(exp_values, sim_values, stds):
     """
     Likelihood of the experimental values with binomial distribution.
