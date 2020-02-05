@@ -1,14 +1,9 @@
 """The model class, containing information on the system and its modelling."""
 
 import numpy as np
-import copy
 import tensorflow as tf
-from scipy.linalg import expm
-from c3po.hamiltonians import resonator, duffing
-from c3po.component import Quantity, Qubit, Resonator, Drive, Coupling
+from c3po.component import Quantity, Drive, Coupling
 from c3po.constants import kb, hbar
-from c3po.tf_utils import tf_expm
-from c3po.qt_utils import basis
 
 
 class Model:
@@ -20,345 +15,185 @@ class Model:
 
     Parameters
     ---------
-    component_parameters : dict of dict
-    couplings : dict of dict
     hilbert_space : dict
         Hilbert space dimensions of full space
-    comp_hilbert_space : dict
-        Hilbert space dimensions of computational space
+
 
     Attributes
     ----------
     H0: :class: Drift Hamiltonian
-    Hcs: :class: Instruction Hamiltonians
-    H_tf : empty, constructed when needed
 
-    component_parameters :
-
-    control_fields: list
-        [args, func1_t, func2_t, ,...]
-
-    coupling :
-
-    hilbert_space :
 
     Methods
     -------
     construct_Hamiltonian(component_parameters, hilbert_space)
         Construct a model for this system, to be used in numerics.
-    get_Hamiltonian()
-        Returns the Hamiltonian
-    get_time_slices()
 
     """
 
-    def __init__(
-            self,
-            chip_elements
-            ):
+    def __init__(self, subsystems, couplings):
+        self.dressed = False
+        self.params = {}
+        self.subsystems = {}
+        for comp in subsystems:
+            self.subsystems[comp.name] = comp
+        self.couplings = {}
+        for comp in couplings:
+            self.couplings[comp.name] = comp
 
-        self.spam_params = []
-        self.spam_params_desc = []
-        self.chip_elements = chip_elements
-        self.control_Hs = []
+        # Construct array with dimension of comps (only qubits & resonators)
+        dims = []
+        names = []
+        for subs in subsystems:
+            dims.append(subs.hilbert_dim)
+            names.append(subs.name)
+        self.tot_dim = np.prod(dims)
 
-        # Construct array with dimension of elements (only qubits & resonators)
-        self.dims = []
-        # TODO store also total dimension of the hilbert space
-        self.names = []
-
-        for element in chip_elements:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                self.dims.append(element.hilbert_dim)
-                self.names.append(element.name)
-
-        # Create anninhilation operators for physical elements
-        self.ann_opers = []
-        for indx in range(len(self.dims)):
-            a = np.diag(np.sqrt(np.arange(1, self.dims[indx])), k=1)
-            for indy in range(len(self.dims)):
-                qI = np.identity(self.dims[indy])
+        # Create anninhilation operators for physical comps
+        ann_opers = []
+        for indx in range(len(dims)):
+            a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
+            for indy in range(len(dims)):
+                qI = np.identity(dims[indy])
                 if indy < indx:
                     a = np.kron(qI, a)
                 if indy > indx:
                     a = np.kron(a, qI)
-            self.ann_opers.append(a)
+            ann_opers.append(a)
+
+        self.dims = {}
+        self.ann_opers = {}
+        for indx in range(len(dims)):
+            self.dims[names[indx]] = dims[indx]
+            self.ann_opers[names[indx]] = ann_opers[indx]
 
         # Create drift Hamiltonian matrices and model parameter vector
-        self.params = []
-        self.params_desc = []
-        self.drift_Hs = []
-        # TODO avoid checking element type, instead call function in element
-        for element in chip_elements:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                el_indx = self.names.index(element.name)
-                ann_oper = self.ann_opers[el_indx]
+        for subs in subsystems:
+            ann_oper = self.ann_opers[subs.name]
+            subs.init_Hs(ann_oper)
+            subs.init_Ls(ann_oper)
 
-                self.drift_Hs.append(
-                    tf.constant(
-                        resonator(ann_oper),
-                        dtype=tf.complex128
-                    )
-                )
-                # TODO change all .values to .params or viceversa
-                self.params.append(element.values['freq'])
-                self.params_desc.append((element.name, 'freq'))
+        for line in couplings:
+            line.init_Hs(self.ann_opers)
 
-                if isinstance(element, Qubit) and element.hilbert_dim > 2:
-                    self.drift_Hs.append(
-                        tf.constant(
-                            duffing(ann_oper),
-                            dtype=tf.complex128
-                        )
-                    )
-                    self.params.append(element.values['anhar'])
-                    self.params_desc.append((element.name, 'anhar'))
+        # TODO what is this dim variable used for?
+        dim = sum(self.dims.values())
 
-            elif isinstance(element, Coupling):
-                el_indxs = []
-                for connected_element in element.connected:
-                    el_indxs.append(self.names.index(connected_element))
-                ann_opers = [self.ann_opers[el_indx] for el_indx in el_indxs]
+        self.update_model()
 
-                self.drift_Hs.append(
-                    tf.constant(
-                        element.hamiltonian(ann_opers),
-                        dtype=tf.complex128
-                    )
-                )
-                self.params.append(element.values['strength'])
-                self.params_desc.append((element.name, 'strength'))
+    def list_parameters(self):
+        ids = []
+        for key in self.params:
+            ids.append(("Model", key))
+        return ids
 
-            elif isinstance(element, Drive):
-                # TODO order drives by driveline name
-                el_indxs = []
-                h = tf.zeros(self.ann_opers[0].shape, dtype=tf.complex128)
-                for connected_element in element.connected:
-                    a = self.ann_opers[self.names.index(connected_element)]
-                    h += tf.constant(
-                        element.hamiltonian(a),
-                        dtype=tf.complex128
-                    )
+    def get_Hamiltonians(self):
+        if self.dressed:
+            return self.dressed_drift_H, self.dressed_control_Hs
+        else:
+            return self.drift_H, self.control_Hs
 
-                self.control_Hs.append(h)
+    def get_Lindbladians(self):
+        if self.dressed:
+            return self.dressed_col_ops
+        else:
+            return self.col_ops
 
-        self.n_params = len(self.params)
+    def update_model(self):
+        self.update_Hamiltonians()
+        self.update_Lindbladians()
+        if self.dressed:
+            self.update_dressed()
 
-    def write_config(self):
-        return "We don't care about the model... YET!"
+    def update_Hamiltonians(self):
+        control_Hs = {}
+        drift_H = tf.zeros([self.tot_dim, self.tot_dim], dtype=tf.complex128)
+        for sub in self.subsystems.values():
+            drift_H += sub.get_Hamiltonian()
+        for key, line in self.couplings.items():
+            if isinstance(line, Coupling):
+                drift_H += line.get_Hamiltonian()
+            elif isinstance(line, Drive):
+                control_Hs[key] = line.get_Hamiltonian()
+        self.drift_H = drift_H
+        self.control_Hs = control_Hs
 
-    def initialise_lindbladian(self):
-        """Construct Lindbladian (collapse) operators."""
-        self.collapse_ops = []
-        self.cops_params = []
-        self.cops_params_desc = []
-        self.cops_params_fcts = []
-
-        for element in self.chip_elements:
-            if isinstance(element, Qubit) or isinstance(element, Resonator):
-                vals = element.values
-                if 't1' in vals:
-                    el_indx = self.names.index(element.name)
-                    ann_oper = self.ann_opers[el_indx]
-                    L1 = ann_oper
-
-                    if 'temp' not in vals:
-                        def t1(t1, L1):
-                            gamma = (0.5 / t1.tf_get_value()) ** 0.5
-                            return gamma * L1
-
-                        self.collapse_ops.append(L1)
-                        self.cops_params.append(vals['t1'])
-                        self.cops_params_desc.append((element.name, 't1'))
-                        self.cops_params_fcts.append(t1)
-
-                    else:
-                        L2 = ann_oper.T.conj()
-                        dim = element.hilbert_dim
-                        omega_q = vals['freq'].tf_get_value()
-                        if 'anhar' in vals:
-                            anhar = vals['anhar'].tf_get_value()
-                        else:
-                            anhar = 0
-                        # TODO This breaks tensorflow for temp
-                        freq_diff = np.array(
-                         [(omega_q + n*anhar) for n in range(dim)]
-                         )
-
-                        def t1_temp(t1_temp, L2):
-                            gamma = (0.5/t1_temp[0].tf_get_value())**0.5
-                            beta = 1 / (t1_temp[1].tf_get_value() * kb)
-                            det_bal = tf.exp(-hbar*freq_diff*beta)
-                            det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                            return gamma * (L1 + L2 @ det_bal_mat)
-
-                        self.collapse_ops.append(L2)
-                        self.cops_params.append([vals['t1'], vals['temp']])
-                        self.cops_params_desc.append(
-                            [element.name, 't1 & temp']
-                        )
-                        self.cops_params_fcts.append(t1_temp)
-
-                if 't2star' in vals:
-                    el_indx = self.names.index(element.name)
-                    ann_oper = self.ann_opers[el_indx]
-                    L_dep = 2 * ann_oper.T.conj() @ ann_oper
-
-                    def t2star(t2star, L_dep):
-                        gamma = (0.5/t2star.tf_get_value())**0.5
-                        return gamma * L_dep
-
-                    self.collapse_ops.append(L_dep)
-                    self.cops_params.append(vals['t2star'])
-                    self.cops_params_desc.append((element.name, 't2star'))
-                    self.cops_params_fcts.append(t2star)
-
-        self.cops_n_params = len(self.cops_params)
-
-    def get_lindbladian(self, cops_params=None):
+    def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
-        if cops_params is None:
-            cops_params = self.cops_params
-
         col_ops = []
-        for ii in range(self.cops_n_params):
-            col_ops.append(
-                tf.cast(
-                    self.cops_params_fcts[ii](
-                        self.cops_params[ii], self.collapse_ops[ii]
-                    ), tf.complex128
-                )
-            )
+        for subs in self.subsystems.values():
+            col_ops.append(subs.get_Lindbladian())
+        self.col_ops = col_ops
 
-        return col_ops
-
-    def get_Hamiltonians(self, params=None):
-        if params is None:
-            params = self.params
-
-        drift_H = tf.zeros_like(self.drift_Hs[0])
-        for ii in range(self.n_params):
-            drift_H += tf.cast(
-                params[ii].tf_get_value(), tf.complex128
-            ) * self.drift_Hs[ii]
-        control_Hs = self.control_Hs
-
-        return drift_H, control_Hs
-
-    def get_Virtual_Z(self, t_final, freqs):
-        # lo_freqs need to be ordered the same as the names of the qubits
-        anns = []
-        # freqs = []
-        for name in self.names:
-            # TODO Effectively collect parameters of the virtual Z
-            if name[0] == 'q' or name[0] == 'Q':
-                ann_indx = self.names.index(name)
-                anns.append(self.ann_opers[ann_indx])
-                # freq_indx = self.params_desc.index((name, 'freq'))
-                # freqs.append(self.params[freq_indx])
-
-        # TODO make sure terms is right
-        # num_oper = np.matmul(anns[0].T.conj(), anns[0])
-        num_oper = tf.constant(
-            np.matmul(anns[0].T.conj(), anns[0]),
-            dtype=tf.complex128
-        )
-        VZ = tf.linalg.expm(1.0j * num_oper * (freqs[0] * t_final))
-        for ii in range(1, len(anns)):
-            num_oper = tf.constant(
-                np.matmul(anns[ii].T.conj(), anns[ii]),
-                dtype=tf.complex128
-            )
-            VZ = VZ * tf.linalg.expm(1.0j * num_oper * (freqs[ii] * t_final))
-
-        if self.dress:
-            VZ = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), VZ),
-                self.transform
-            )
-        return VZ
-
-    def get_drift_eigen(self, params=None, ordered=True):
-        if params is None:
-            params = self.params
-
-        drift_H = tf.zeros_like(self.drift_Hs[0])
-        for ii in range(self.n_params):
-            drift_H += tf.cast(
-                params[ii].tf_get_value(), tf.complex128
-            ) * self.drift_Hs[ii]
-
-        e, v = tf.linalg.eigh(drift_H)
-
+    def update_drift_eigen(self, ordered=True):
+        e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
             reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
             e = tf.reshape(e, [e.shape[0], 1])
-            eigenframe = tf.matmul(
-                reorder_matrix, e
-            )
-            # tmp = tf.matmul(reorder_matrix, v)
+            eigenframe = tf.matmul(reorder_matrix, e)
             transform = tf.matmul(v, reorder_matrix)
-            # order = tf.argmax(tf.abs(v), axis=0)
-            # np_transform = np.zeros_like(drift_H.numpy())
-            # np_diag = np.zeros_like(e.numpy())
-            # for count in range(len(e)):
-            #     indx = order[count]
-            #     np_transform[:,indx] = v[:,count].numpy()
-            #     np_diag[indx] = e[count]
-            # transform = tf.constant(np_transform, dtype=tf.complex128)
-            # diag = tf.constant(np_diag, dtype=tf.complex128)
-            # eigenframe = tf.linalg.diag(diag)
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
+        self.eigenframe = eigenframe
+        self.transform = transform
 
-        return eigenframe, transform
+    def update_dressed(self):
+        self.update_drift_eigen()
+        dressed_control_Hs = {}
+        dressed_col_ops = []
+        dressed_drift_H = tf.matmul(tf.matmul(
+            tf.linalg.adjoint(self.transform),
+            self.drift_H),
+            self.transform
+        )
+        for key in self.control_Hs:
+            dressed_control_Hs[key] = tf.matmul(tf.matmul(
+                tf.linalg.adjoint(self.transform),
+                self.control_Hs[key]),
+                self.transform
+            )
+        for col_op in self.col_ops:
+            dressed_col_ops.append(
+                tf.matmul(tf.matmul(
+                    tf.linalg.adjoint(self.transform),
+                    col_op),
+                    self.transform
+                )
+            )
+        self.dressed_drift_H = dressed_drift_H
+        self.dressed_control_Hs = dressed_control_Hs
+        self.dressed_col_ops = dressed_col_ops
+
+    def get_Frame_Rotation(
+        self,
+        t_final: np.float64,
+        lo_freqs: dict
+    ):
+        # lo_freqs need to be ordered the same as the names of the qubits
+        ones = tf.ones(self.tot_dim, dtype=tf.complex128)
+        FR = tf.linalg.diag(ones)
+        for line, lo_freq in lo_freqs.items():
+            qubit = self.couplings[line].connected[0]
+            ann_oper = self.ann_opers[qubit]
+            num_oper = tf.constant(
+                np.matmul(ann_oper.T.conj(), ann_oper),
+                dtype=tf.complex128
+            )
+            FR = FR * tf.linalg.expm(
+                1.0j * num_oper * lo_freq * t_final
+            )
+        if self.dressed:
+            FR = tf.matmul(tf.matmul(
+                tf.linalg.adjoint(self.transform),
+                FR),
+                self.transform
+            )
+        return FR
 
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
         pass
-
-    # things that deal with parameters
-
-    def get_parameters(self, scaled=False):
-        values = []
-        for par in self.params:
-            if scaled:
-                values.append(par.value.numpy())
-            else:
-                values.append(par.numpy())
-        if hasattr(self, 'collapse_ops'):
-            for par in self.cops_params:
-                if scaled:
-                    values.append(par.value.numpy())
-                else:
-                    values.append(par.numpy())
-        for par in self.spam_params:
-            if scaled:
-                values.append(par.value.numpy())
-            else:
-                values.append(par.numpy())
-        return values
-
-    def set_parameters(self, values):
-        ln = len(self.params)
-        ln_s = len(values)-len(self.spam_params)
-        for ii in range(0, ln):
-            self.params[ii].tf_set_value(values[ii])
-        if hasattr(self, 'collapse_ops'):
-            for ii in range(ln, ln_s):
-                self.cops_params[ii-ln].tf_set_value(values[ii])
-        for ii in range(ln_s,len(values)):
-            self.spam_params[ii-ln_s].tf_set_value(values[ii])
-        # self.recalc_dressed()
-
-    def list_parameters(self):
-        par_list = []
-        par_list.extend(self.params_desc)
-        if hasattr(self, 'collapse_ops'):
-            par_list.extend(self.cops_params_desc)
-        par_list.extend(self.spam_params_desc)
-        return par_list
 
     # From here there is temporary code that deals with initialization and
     # measurement
@@ -375,35 +210,32 @@ class Model:
         else:
             return tf.abs(state)**2
 
-    def percentage_01_spam(self, state, lindbladian):
-        indx_ms = self.spam_params_desc.index('meas_offset')
-        indx_im = self.spam_params_desc.index('initial_meas')
-        meas_offsets = self.spam_params[indx_ms].tf_get_value()
-        initial_meas = self.spam_params[indx_im].tf_get_value()
-        row1 = initial_meas + meas_offsets
-        row1 = tf.reshape(row1, [1, row1.shape[0]])
-        extra_dim = int(len(state)/len(initial_meas))
-        if extra_dim != 1:
-            row1 = tf.concat([row1]*extra_dim, 1)
-        row2 = tf.ones_like(row1) - row1
-        conf_matrix = tf.concat([row1, row2], 0)
+    def pop1_spam(self, state, lindbladian):
+        if 'confusion_row' in self.params:
+            row1 = self.params['confusion_row'].get_value()
+            row2 = tf.ones_like(row1) - row1
+            conf_matrix = tf.concat([[row1], [row2]], 0)
+        elif 'confusion_matrix' in self.params:
+            conf_matrix = self.params['confusion_matrix'].get_value()
         pops = self.populations(state, lindbladian)
-        pops = tf.reshape(pops, [pops.shape[0],1])
-        return tf.matmul(conf_matrix, pops)
+        pops = tf.reshape(pops, [pops.shape[0], 1])
+        pop1 = tf.matmul(conf_matrix, pops)[1]
+        if 'meas_offset' in self.params:
+            pop1 = pop1 - self.params['meas_offset'].get_value()
+        if 'meas_scale' in self.params:
+            pop1 = pop1 * self.params['meas_scale'].get_value()
+        return pop1
 
     def set_spam_param(self, name: str, quan: Quantity):
-        self.spam_params.append(quan)
-        self.spam_params_desc.append(name)
+        self.params[name] = quan
 
     def initialise(self):
-        indx_it = self.spam_params_desc.index('init_temp')
-        init_temp = self.spam_params[indx_it].tf_get_value()
-        init_temp = tf.cast(init_temp, dtype=tf.complex128)
-        drift_H, control_Hs = self.get_Hamiltonians()
-        # diag = tf.math.real(tf.linalg.diag_part(drift_H))
-        diag = tf.linalg.diag_part(drift_H)
+        init_temp = tf.cast(
+            self.params['init_temp'].get_value(), dtype=tf.complex128
+        )
+        diag = tf.linalg.diag_part(self.dressed_drift_H)
         freq_diff = diag - diag[0]
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0],1])
+        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])

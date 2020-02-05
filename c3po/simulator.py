@@ -21,35 +21,49 @@ from c3po.qt_utils import single_length_RB
 class Simulator():
     """Simulator object."""
 
-    def __init__(self,
-                 exp: Experiment,
-                 gateset: GateSet
-                 ):
+    def __init__(
+        self,
+        exp: Experiment,
+        gateset: GateSet
+    ):
         self.exp = exp
         self.gateset = gateset
         self.unitaries = {}
         self.lindbladian = False
-        self.use_VZ = False
+        self.dUs = {}
 
     def write_config(self):
         return 0
 
-    def get_gates(
-        self
-    ):
+    def get_gates(self):
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             instr = self.gateset.instructions[gate]
-            signal = self.exp.generator.generate_signals(instr)
-            U = self.propagation(signal)
+            signal, ts = self.exp.generator.generate_signals(instr)
+            U = self.propagation(signal, ts, gate)
             if self.use_VZ:
-                VZ = self.exp.model.get_Virtual_Z(instr.t_end - instr.t_start)
+                # TODO change LO freq to at the level of a line
+                lo_freqs = {}
+                for line, ctrls in instr.comps.items():
+                    lo_freqs[line] = tf.cast(
+                        ctrls['carrier'].params['freq'].get_value(),
+                        tf.complex128
+                    )
+                t_final = tf.constant(
+                    instr.t_end - instr.t_start,
+                    dtype=tf.complex128
+                )
+                FR = self.exp.model.get_Frame_Rotation(t_final, lo_freqs)
+
                 if self.lindbladian:
-                    U = tf.matmul(tf_super(VZ), U)
+                    SFR = tf_super(FR)
+                    U = tf.matmul(SFR, U)
+                    self.FR = SFR
                 else:
-                    U = tf.matmul(VZ, U)
+                    U = tf.matmul(FR, U)
+                    self.FR = FR
             gates[gate] = U
             self.unitaries = gates
         return gates
@@ -72,56 +86,60 @@ class Simulator():
             for gate in sequence:
                 Us.append(gates[gate])
             U.append(tf_matmul_right(Us))
+
         return U
 
-    def propagation(self,
-                    signal: dict
-                    ):
-        signals = []
-        # This sorting ensures that signals and hks are matched
-        # TODO do hks and signals matching more rigorously
-        for key in sorted(signal):
-            out = signal[key]
-            # TODO this points to the fact that all sim_res must be the same
-            ts = out["ts"]
-            signals.append(out["values"])
+    def propagation(
+        self,
+        signal: dict,
+        ts,
+        gate
+    ):
 
+        h0, hctrls = self.exp.model.get_Hamiltonians()
+        signals = []
+        hks = []
+        for key in signal:
+            signals.append(signal[key]["values"])
+            hks.append(hctrls[key])
         dt = ts[1].numpy() - ts[0].numpy()
-        h0, hks = self.exp.model.get_Hamiltonians()
+
         if self.lindbladian:
-            col_ops = self.exp.model.get_lindbladian()
+            col_ops = self.exp.model.get_Lindbladians()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)
-        self.dUs = dUs
+        self.dUs[gate] = dUs
         self.ts = ts
         U = tf_matmul_left(dUs)
         self.U = U
         return U
 
-    def plot_dynamics(self,
-                      psi_init
-                      ):
+    def plot_dynamics(self, psi_init, seq):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
         pop_t = self.populations(psi_t)
-        for du in dUs:
-            psi_t = np.matmul(du.numpy(), psi_t)
-            pops = self.populations(psi_t)
-            pop_t = np.append(pop_t, pops, axis=1)
+        for gate in seq:
+            for du in dUs[gate]:
+                psi_t = np.matmul(du.numpy(), psi_t)
+                pops = self.populations(psi_t)
+                pop_t = np.append(pop_t, pops, axis=1)
+            psi_t = tf.matmul(self.FR, psi_t)
+
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
         dt = ts[1] - ts[0]
-        ts = np.append(0, ts + dt / 2)
+        ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
         axs.plot(ts / 1e-9, pop_t.T)
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        data_path = "/tmp/c3figs/"
+        data_path = "/localdisk/c3logs/recent/"
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
-        fig.savefig(data_path+'dynamics.png')
+        fig.savefig(data_path+'dynamics.png', dpi=300)
+        plt.close()
 
     def populations(self, state):
         if self.lindbladian:

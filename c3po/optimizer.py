@@ -3,17 +3,17 @@
 import random
 import time
 import json
-import copy
 import c3po
 import numpy as np
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 from platform import python_version
 
 from c3po.tf_utils import tf_abs
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
-from nevergrad.optimization import registry as algo_registry
+# from nevergrad.optimization import registry as algo_registry
 
 
 class Optimizer:
@@ -80,7 +80,9 @@ class Optimizer:
         self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
         U_dict = self.sim.get_gates()
         goal = self.eval_func(U_dict)
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -88,14 +90,18 @@ class Optimizer:
     def goal_run_with_grad(self, current_params):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
+            self.gateset.set_parameters(
+                current_params, self.opt_map, scaled=True
+            )
             U_dict = self.sim.get_gates()
             goal = self.eval_func(U_dict)
 
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
@@ -103,7 +109,7 @@ class Optimizer:
 
     def goal_run_n(self, current_params):
         learn_from = self.learn_from['seqs_grouped_by_param_set']
-        self.exp.set_parameters(current_params, self.opt_map)
+        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
 
         if self.sampling == 'random':
             measurements = random.sample(learn_from, self.batch_size)
@@ -124,7 +130,6 @@ class Optimizer:
             )
         batch_size = len(measurements)
         ipar = 1
-        goals = []
         used_seqs = 0
         for m in measurements:
             gateset_params = m['params']
@@ -145,9 +150,11 @@ class Optimizer:
             iseq = 1
             fids = []
             sims = []
-            for seqs in m['seqs']:
-                seq = seqs['gate_seq']
-                fid = seqs['result']
+            stds = []
+            for this_seq in m['seqs']:
+                seq = this_seq['gate_seq']
+                fid = this_seq['result']
+                std = this_seq['result_std']
 
                 if (self.skip_bad_points and fid > 0.25):
                     self.logfile.write(
@@ -170,11 +177,11 @@ class Optimizer:
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goals.append(tf_abs(fid-this_goal))
                 used_seqs += 1
 
                 fids.append(fid)
-                sims.append(float(this_goal.numpy()))
+                sims.append(this_goal)
+                stds.append(std)
 
             self.logfile.write(
                 f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -190,13 +197,30 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+        self.sim.plot_dynamics(self.sim.ket_0, seq)
+
+        fids = tf.constant(fids, dtype=tf.float64)
+        sims = tf.concat(sims, axis=0)
+        stds = tf.constant(stds, dtype=tf.float64)
+        goal = self.fom(fids, sims, stds)
         self.logfile.write(
-            f"Finished batch with median: {float(goal.numpy())}\n"
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
         )
+        for cb_fom in self.callback_foms:
+            self.logfile.write(
+                "Finished batch with {}: {}\n".format(
+                    cb_fom.__name__,
+                    float(cb_fom(fids, sims, stds).numpy())
+                )
+            )
         self.logfile.flush()
 
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -225,10 +249,9 @@ class Optimizer:
             )
         batch_size = len(measurements)
         ipar = 1
-        goals = []
         used_seqs = 0
         for m in measurements:
-            gateset_params = m[0]
+            gateset_params = m['params']
             self.gateset.set_parameters(
                 gateset_params, self.gateset_opt_map, scaled=False
             )
@@ -246,9 +269,11 @@ class Optimizer:
             iseq = 1
             fids = []
             sims = []
-            for seqs in m[1]:
-                seq = seqs[0]
-                fid = seqs[1]
+            stds = []
+            for seq in m['seqs']:
+                seq = seq['gate_seq']
+                fid = seq['result']
+                std = seq['result_std']
 
                 if (self.skip_bad_points and fid > 0.25):
                     self.logfile.write(
@@ -271,11 +296,11 @@ class Optimizer:
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                 )
                 self.logfile.flush()
-                goals.append(tf_abs(fid-this_goal))
                 used_seqs += 1
 
                 fids.append(fid)
                 sims.append(float(this_goal.numpy()))
+                stds.append(std)
 
             self.logfile.write(
                 f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -291,13 +316,18 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+        goal = self.fom(fids, sims, stds)
         self.logfile.write(
-            f"Finished batch with median: {float(goal.numpy())}\n"
+            "Finished batch with {}: {}\n".format(
+                self.fom.__name__,
+                float(goal.numpy())
+            )
         )
         self.logfile.flush()
 
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.log_parameters()
         return goal
@@ -306,7 +336,7 @@ class Optimizer:
         learn_from = self.learn_from['seqs_grouped_by_param_set']
         with tf.GradientTape() as t:
             t.watch(current_params)
-            self.exp.set_parameters(current_params, self.opt_map)
+            self.exp.set_parameters(current_params, self.opt_map, scaled=True)
 
             if self.sampling == 'random':
                 measurements = random.sample(learn_from, self.batch_size)
@@ -327,7 +357,6 @@ class Optimizer:
                 )
             batch_size = len(measurements)
             ipar = 1
-            goals = []
             used_seqs = 0
             for m in measurements:
                 gateset_params = m['params']
@@ -348,6 +377,7 @@ class Optimizer:
                 iseq = 1
                 fids = []
                 sims = []
+                stds = []
                 for this_seq in m['seqs']:
                     seq = this_seq['gate_seq']
                     fid = this_seq['result']
@@ -374,15 +404,24 @@ class Optimizer:
                         f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    distance = tf_abs(fid-this_goal)
-                    if self.divide_by_std:
-                        goals.append(distance / std)
-                    else:
-                        goals.append(distance)
                     used_seqs += 1
 
                     fids.append(fid)
-                    sims.append(float(this_goal.numpy()))
+                    sims.append(this_goal)
+                    stds.append(std)
+
+                self.sim.plot_dynamics(self.sim.ket_0, seq)
+
+                # plt.figure()
+                # signal = self.exp.generator.signal['d1']
+                # plt.plot(signal['ts'], signal['values'])
+                # plt.show(block=False)
+                #
+                # plt.figure()
+                # conv_signal = self.exp.generator.devices['resp'].signal
+                # plt.plot(signal['ts'], conv_signal['inphase'])
+                # plt.plot(signal['ts'], conv_signal['quadrature'])
+                # plt.show(block=False)
 
                 self.logfile.write(
                     f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
@@ -398,16 +437,32 @@ class Optimizer:
                 )
                 self.logfile.flush()
 
-            goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+            fids = tf.constant(fids, dtype=tf.float64)
+            sims = tf.concat(sims, axis=0)
+            stds = tf.constant(stds, dtype=tf.float64)
+            goal = self.fom(fids, sims, stds)
             self.logfile.write(
-                f"Finished batch with median: {float(goal.numpy())}\n"
+                "Finished batch with {}: {}\n".format(
+                    self.fom.__name__,
+                    float(goal.numpy())
+                )
             )
+            for cb_fom in self.callback_foms:
+                self.logfile.write(
+                    "Finished batch with {}: {}\n".format(
+                        cb_fom.__name__,
+                        float(cb_fom(fids, sims, stds).numpy())
+                    )
+                )
             self.logfile.flush()
 
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+        self.optim_status['params'] = [
+            par.numpy().tolist()
+            for par in self.exp.get_parameters(self.opt_map)
+        ]
         self.optim_status['goal'] = float(goal.numpy())
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
@@ -440,26 +495,26 @@ class Optimizer:
         res = es.result + (es.stop(), es, es.logger)
         return res[0]
 
-    def oneplusone(self, x0, goal_fun, settings={}):
-        optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
-        while True:
-            self.logfile.write(f"Batch {self.evaluation}\n")
-            self.logfile.flush()
-            tmp = optimizer.ask()
-            samples = tmp.args
-            solutions = []
-            for sample in samples:
-                goal = float(goal_fun(sample).numpy())
-                solutions.append(goal)
-                self.log_parameters(sample)
-            self.evaluation += 1
-            optimizer.tell(
-                tmp,
-                solutions
-            )
-
-        recommendation = optimizer.provide_recommendation()
-        return recommendation.args[0]
+    # def oneplusone(self, x0, goal_fun, settings={}):
+    #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+    #     while True:
+    #         self.logfile.write(f"Batch {self.evaluation}\n")
+    #         self.logfile.flush()
+    #         tmp = optimizer.ask()
+    #         samples = tmp.args
+    #         solutions = []
+    #         for sample in samples:
+    #             goal = float(goal_fun(sample).numpy())
+    #             solutions.append(goal)
+    #             self.log_parameters(sample)
+    #         self.evaluation += 1
+    #         optimizer.tell(
+    #             tmp,
+    #             solutions
+    #         )
+    #
+    #     recommendation = optimizer.provide_recommendation()
+    #     return recommendation.args[0]
 
 # TODO desing change? make simulator / optimizer communicate with ask and tell?
     def lbfgs(self, x0, goal, options):
@@ -568,6 +623,8 @@ class Optimizer:
         exp,
         sim,
         eval_func,
+        fom,
+        callback_foms=[],
         opt_name='learn_model',
         settings={}
     ):
@@ -576,6 +633,8 @@ class Optimizer:
         self.exp = exp
         self.sim = sim
         self.eval_func = eval_func
+        self.fom = fom
+        self.callback_foms = callback_foms
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
@@ -629,9 +688,8 @@ class Optimizer:
                 raise Exception(
                     "I don't know the selected optimization algorithm."
                 )
-
             self.exp.set_parameters(
-                x_best, self.opt_map
+                x_best, self.opt_map, scaled=True
             )
             end_time = time.time()
             self.logfile.write(
@@ -692,18 +750,29 @@ class Optimizer:
         self.evaluation += 1
         self.logfile.flush()
 
-    def confirm_model(self, exp, sim, eval_func, confirm_params):
+
+    def confirm_model(
+        self,
+        exp,
+        sim,
+        eval_func,
+        confirm_params,
+        fom,
+        callback_foms=[],
+    ):
         self.opt_name = "confirm"
         self.logfile_name = self.data_path + self.opt_name  + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
         self.evaluation = 0
         with open(self.logfile_name, 'a') as self.logfile:
+            self.fom = fom
+            self.callback_foms = callback_foms
             self.exp = exp
             self.sim = sim
             self.eval_func = eval_func
             learn_from = self.learn_from['seqs_grouped_by_param_set']
-            self.exp.set_parameters(confirm_params, self.opt_map)
+            self.exp.set_parameters(confirm_params, self.opt_map, scaled=False)
 
             if self.sampling == 'random':
                 raise ValueError('do not know which sequences to exclude')
@@ -749,6 +818,7 @@ class Optimizer:
                 iseq = 1
                 fids = []
                 sims = []
+                stds = []
                 for this_seq in m['seqs']:
                     seq = this_seq['gate_seq']
                     fid = this_seq['result']
@@ -760,6 +830,7 @@ class Optimizer:
                         )
                         iseq += 1
                         continue
+
                     this_goal = self.eval_func(U_dict, seq)
                     self.logfile.write(
                         f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
@@ -775,22 +846,30 @@ class Optimizer:
                         f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
                     )
                     self.logfile.flush()
-                    distance = tf_abs(fid-this_goal)
-                    if self.divide_by_std:
-                        goals.append(distance / std)
-                    else:
-                        goals.append(distance)
                     used_seqs += 1
 
                     fids.append(fid)
-                    sims.append(float(this_goal.numpy()))
+                    sims.append(this_goal)
+                    stds.append(std)
+
+                tmp_fids = tf.constant(fids, dtype=tf.float64)
+                tmp_sims = tf.concat(sims, axis=0)
+                tmp_stds = tf.constant(stds, dtype=tf.float64)
                 print(
-                    f"Current RMS: {np.sqrt(np.mean(np.square(goals)))}"
+                    "Current {}: {}".format(
+                        self.fom.__name__,
+                        float(self.fom(tmp_fids, tmp_sims, tmp_stds).numpy())
+                    )
                 )
-                median = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
-                print(
-                    f"Current median: {float(median.numpy())}\n"
-                )
+                for cb_fom in self.callback_foms:
+                    print(
+                        "Current {}: {}".format(
+                            cb_fom.__name__,
+                            float(cb_fom(tmp_fids, tmp_sims, tmp_stds).numpy())
+                        )
+                    )
+                print("")
+
                 self.logfile.write(
                     f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
                 )
@@ -805,13 +884,29 @@ class Optimizer:
                 )
                 self.logfile.flush()
 
-            goal = tfp.stats.percentile(goals, 50.0, interpolation='midpoint')
+            fids = tf.constant(fids, dtype=tf.float64)
+            sims = tf.concat(sims, axis=0)
+            stds = tf.constant(stds, dtype=tf.float64)
+            goal = self.fom(fids, sims, stds)
             self.logfile.write(
-                f"Finished batch with median: {float(goal.numpy())}\n"
+                "Finished batch with {}: {}\n".format(
+                    self.fom.__name__,
+                    float(goal.numpy())
+                )
             )
+            for cb_fom in self.callback_foms:
+                self.logfile.write(
+                    "Finished batch with {}: {}\n".format(
+                        cb_fom.__name__,
+                        float(cb_fom(fids, sims, stds).numpy())
+                    )
+                )
             self.logfile.flush()
 
-            self.optim_status['params'] = self.exp.get_parameters(self.opt_map)
+            self.optim_status['params'] = [
+                par.numpy().tolist()
+                for par in self.exp.get_parameters(self.opt_map)
+            ]
             self.optim_status['goal'] = float(goal.numpy())
             self.log_parameters()
         return goal

@@ -69,15 +69,17 @@ class GateSet:
             opt_map = self.list_parameters()
         for id in opt_map:
             gate = id[0][0]
-            par_id = id[0][1:4]
+            chan = id[0][1]
+            comp = id[0][2]
+            param = id[0][3]
             gate_instr = self.instructions[gate]
+            par = gate_instr.comps[chan][comp].params[param]
             if scaled:
-                value = gate_instr.get_parameter_value_scaled(par_id)
+                values.append(par.get_opt_value)
             elif to_str:
-                value = str(gate_instr.get_parameter_qty(par_id))
+                values.append(str(par))
             else:
-                value = gate_instr.get_parameter_value(par_id)
-            values.append(value)
+                values.append(par.get_value())
         return values
 
     def set_parameters(self, values: list, opt_map: list, scaled=False):
@@ -88,15 +90,17 @@ class GateSet:
             for id in ids:
                 gate = id[0]
                 par_id = id[1:4]
+                chan = par_id[0]
+                comp = par_id[1]
+                param = par_id[2]
                 gate_instr = self.instructions[gate]
-                if scaled:
-                    gate_instr.set_parameter_value_scaled(
-                        par_id, values[indx]
+                try:
+                    gate_instr.comps[chan][comp].params[param].set_value(
+                        values[indx]
                     )
-                else:
-                    gate_instr.set_parameter_value(
-                        par_id, values[indx]
-                    )
+                except ValueError:
+                    print("Value out of bounds")
+                    print(f"Trying to set {par_id} to value {values[indx]}")
 
 
 class InstructionComponent(C3obj):
@@ -160,10 +164,10 @@ class Envelope(InstructionComponent):
         if 'freq_offset' not in params:
             params['freq_offset'] = 0.0
 
-    def get_shape_values(self, ts):
+    def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times."""
-        dt = ts[1] - ts[0]
-        offset = self.shape(ts[0]-dt, self. params)
+        if t_before:
+            offset = self.shape(t_before, self.params)
         # With the offset, we make sure the signal starts with amplitude 0.
         return self.shape(ts, self.params) - offset
 
@@ -246,55 +250,3 @@ class Instruction(C3obj):
 
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
-
-    # TODO There's a number of get_parameter functions in different places
-    # that do similar things. Think about this.
-    # TODO Combine these get parameter functions
-    def get_parameter_value_scaled(self, par_id: tuple):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        # The parameter can be a c3po.Quanity or a float, this cast makes it
-        # work in both cases.
-        value = self.comps[chan][comp].params[param].value
-        return value
-
-    def get_parameter_value(self, par_id: tuple):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        # The parameter can be a c3po.Quanity or a float, this cast makes it
-        # work in both cases.
-        value = float(self.comps[chan][comp].params[param])
-        return value
-
-    def get_parameter_qty(self, par_id: tuple):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        # The parameter can be a c3po.Quanity or a float, this cast makes it
-        # work in both cases.
-        value = self.comps[chan][comp].params[param]
-        return value
-
-    # TODO Consider putting this code directly in the gateset object
-    def set_parameter_value_scaled(self, par_id: tuple, value):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        self.comps[chan][comp].params[param].tf_set_value(value)
-
-    def set_parameter_value(self, par_id: tuple, value):
-        """par_id is a tuple with channel, component, parameter."""
-        chan = par_id[0]
-        comp = par_id[1]
-        param = par_id[2]
-        try:
-            self.comps[chan][comp].params[param].set_value(value)
-        except Exception:
-            print("Value out of bounds")
-            print(f"Trying to set {par_id} to value {value}")

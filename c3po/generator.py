@@ -79,7 +79,7 @@ class Generator:
                 # plt.title("Multiplex")
                 # plt.show()
         self.signal = gen_signal
-        return gen_signal
+        return gen_signal, lo_signal['ts']
 
     def readout_signal(self, phase):
         return self.devices["readout"].readout(phase)
@@ -101,7 +101,6 @@ class Device(C3obj):
             comment=comment
         )
         self.resolution = resolution
-        self.params = {}
 
     def write_config(self):
         cfg = copy.deepcopy(self.__dict__)
@@ -149,28 +148,6 @@ class Device(C3obj):
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
-    def get_parameters(self, scaled=False):
-        params = []
-        for key in sorted(self.params.keys()):
-            if scaled:
-                params.append(self.params[key].value.numpy())
-            else:
-                params.append(self.params[key].numpy())
-        return params
-
-    def set_parameters(self, values):
-        idx = 0
-        for key in sorted(self.params.keys()):
-            self.params[key].tf_set_value(values[idx])
-            idx += 1
-
-    def list_parameters(self):
-        par_list = []
-        for par_key in sorted(self.params.keys()):
-            par_id = (self.name, par_key)
-            par_list.append(par_id)
-        return par_list
-
 
 class Readout(Device):
     """Fake the readout process by multiplying a state phase with a factor."""
@@ -195,8 +172,8 @@ class Readout(Device):
         self.params['offset'] = offset
 
     def readout(self, phase):
-        offset = self.params['offset'].tf_get_value()
-        factor = self.params['factor'].tf_get_value()
+        offset = self.params['offset'].get_value()
+        factor = self.params['factor'].get_value()
         return phase * factor + offset
 
 
@@ -210,7 +187,7 @@ class Volts_to_Hertz(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             V_to_Hz: Quantity = None,
-            offset: Quantity = Quantity(value=0, min=-1, max=1)
+            offset=None
     ):
         super().__init__(
             name=name,
@@ -220,16 +197,17 @@ class Volts_to_Hertz(Device):
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
-        self.params['offset'] = offset
+        if offset:
+            self.params['offset'] = offset
 
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
-        offset = self.params['offset'].tf_get_value()
-        v2hz = self.params['V_to_Hz'].tf_get_value()
-        if offset is None:
-            att = v2hz
-        else:
+        v2hz = self.params['V_to_Hz'].get_value()
+        if 'offset' in self.params:
+            offset = self.params['offset'].get_value()
             att = v2hz / (drive_frequency + offset)
+        else:
+            att = v2hz
         self.signal = mixed_signal * att
         return self.signal
 
@@ -369,17 +347,17 @@ class Response(Device):
         return convolution
 
     def process(self, iq_signal):
-        n_ts = int(self.params['rise_time'].tf_get_value() * self.resolution)
-        ts = tf.linspace(tf.constant(
-            0.0, dtype=tf.float64),
-            self.params['rise_time'].tf_get_value(),
+        n_ts = int(self.params['rise_time'].get_value() * self.resolution)
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            int(self.params['rise_time'].get_value()),
             n_ts
         )
         cen = tf.cast(
-            (self.params['rise_time'].tf_get_value() - 1 / self.resolution) / 2,
+            (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
             tf.float64
         )
-        sigma = self.params['rise_time'].tf_get_value() / 4
+        sigma = self.params['rise_time'].get_value() / 4
         gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
         offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
@@ -446,7 +424,7 @@ class LO(Device):
         for c in channel:
             comp = channel[c]
             if isinstance(comp, Carrier):
-                omega_lo = comp.params['freq'].tf_get_value()
+                omega_lo = comp.params['freq'].get_value()
                 self.signal["values"] = (
                     tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
                 )
@@ -495,6 +473,7 @@ class AWG(Device):
             ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
             dt = ts[1] - ts[0]
+            t_before = ts[0] - dt
             amp_tot_sq = 0.0
             inphase_comps = []
             quadrature_comps = []
@@ -529,19 +508,19 @@ class AWG(Device):
                     comp = channel[key]
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp'].tf_get_value()
+                        amp = comp.params['amp'].get_value()
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle'].tf_get_value()
-                        freq_offset = comp.params['freq_offset'].tf_get_value()
-                        delta = comp.params['delta'].tf_get_value()
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
+                        delta = comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
                         # TODO Deal with the scale of delta
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
-                            env = comp.get_shape_values(ts)
+                            env = comp.get_shape_values(ts, t_before)
 
                         denv = t.gradient(env, ts)
                         if denv is None:
@@ -572,12 +551,12 @@ class AWG(Device):
                     # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
-                        amp = comp.params['amp'].tf_get_value()
+                        amp = comp.params['amp'].get_value()
 
                         amp_tot_sq += amp**2
 
-                        xy_angle = comp.params['xy_angle'].tf_get_value()
-                        freq_offset = comp.params['freq_offset'].tf_get_value()
+                        xy_angle = comp.params['xy_angle'].get_value()
+                        freq_offset = comp.params['freq_offset'].get_value()
                         phase = - xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)

@@ -131,8 +131,6 @@ with tf.device('/CPU:0'):
         freq_offset=freq_offset,
         carrier_freq=carrier_freq
     )
-
-
     # gen.devices['awg'].options = 'drag'
 
     # Simulation class and fidelity function

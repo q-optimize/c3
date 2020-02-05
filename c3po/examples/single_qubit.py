@@ -8,7 +8,7 @@ import copy
 import c3po.component as component
 from c3po.model import Model as Mdl
 from c3po.component import Quantity as Qty
-from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
+# from c3po.tf_utils import tf_limit_gpu_memory as tf_limit_gpu_memory
 
 import c3po.generator as generator
 
@@ -187,7 +187,9 @@ def create_pwc_gates(t_final,
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
         Y90m.comps['d1']['pwc'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m.comps['d1']['pwc'].bounds['xy_angle'] = [
+            -2 * np.pi/2, 0 * np.pi/2
+        ]
 
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
@@ -196,11 +198,11 @@ def create_pwc_gates(t_final,
 
 
 def create_rect_gates(t_final,
-                     qubit_freq,
-                     amp,
-                     amp_limit,
-                     all_gates=True
-                     ):
+                      qubit_freq,
+                      amp,
+                      amp_limit,
+                      all_gates=True
+                      ):
 
     rect_params = {
         'amp': amp,
@@ -250,17 +252,23 @@ def create_rect_gates(t_final,
         Y90p = copy.deepcopy(X90p)
         Y90p.name = "Y90p"
         Y90p.comps['d1']['rect'].params['xy_angle'] = np.pi / 2
-        Y90p.comps['d1']['rect'].bounds['xy_angle'] = [0 * np.pi/2, 2 * np.pi/2]
+        Y90p.comps['d1']['rect'].bounds['xy_angle'] = [
+            0 * np.pi/2, 2 * np.pi/2
+        ]
 
         X90m = copy.deepcopy(X90p)
         X90m.name = "X90m"
         X90m.comps['d1']['rect'].params['xy_angle'] = np.pi
-        X90m.comps['d1']['rect'].bounds['xy_angle'] = [1 * np.pi/2, 3 * np.pi/2]
+        X90m.comps['d1']['rect'].bounds['xy_angle'] = [
+            1 * np.pi/2, 3 * np.pi/2
+        ]
 
         Y90m = copy.deepcopy(X90p)
         Y90m.name = "Y90m"
         Y90m.comps['d1']['rect'].params['xy_angle'] = - np.pi / 2
-        Y90m.comps['d1']['rect'].bounds['xy_angle'] = [-2 * np.pi/2, 0 * np.pi/2]
+        Y90m.comps['d1']['rect'].bounds['xy_angle'] = [
+            -2 * np.pi/2, 0 * np.pi/2
+        ]
 
         gates.add_instruction(X90m)
         gates.add_instruction(Y90m)
@@ -285,10 +293,9 @@ def create_chip_model(qubit_freq, qubit_anhar, qubit_lvls, drive_ham,
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
         connected=["Q1"],
-        hamiltonian=drive_ham
+        hamiltonian_func=drive_ham
     )
-    chip_elements = [q1, drive]
-    model = Mdl(chip_elements)
+    model = Mdl([q1], [drive])
     if t1:
         q1.values['t1'] = t1
     if t2star:

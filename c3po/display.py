@@ -11,46 +11,54 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
-def get_sim_exp_std_diff(logfolder=""):
-    logfilename = logfolder + "confirm.log"
-    if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/confirm.log"
+def get_sim_exp_std_diff(logfilename=""):
+    if logfilename == "":
+        #logfilename = "/tmp/c3logs/recent/confirm.log"
+        logfilename = "/tmp/c3logs/recent/learn_model.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     sims = []
     exps = []
     stds = []
     diffs = []
-    for line in log:
-        if line[:12] == '  Simulation':
+    par_lines_count = 0
+    for line in log[::-1]:
+        if line[0] == "{":
+            par_lines_count += 1
+        if par_lines_count == 1 and line[:12] == '  Simulation':
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
             stds.append(np.abs(float(line_split[5])))
             diffs.append(np.abs(float(line_split[7])))
+        elif par_lines_count == 2:
+            break
     return sims, exps, stds, diffs
 
-def plot_exp_vs_sim(logfolder=""):
+
+def plot_exp_vs_sim(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.scatter(exps, sims)
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
     plt.show(block=False)
 
-def plot_exp_vs_err(logfolder=""):
+
+def plot_exp_vs_err(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.scatter(exps, diffs)
     plt.title('Exp vs Diff')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim/Exp fidelity diff')
     plt.show(block=False)
 
-def plot_exp_vs_errstd(logfolder=""):
+
+def plot_exp_vs_errstd(logfilename=""):
     plt.figure()
-    sims, exps, stds, diffs = get_sim_exp_std_diff()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     errs = []
     for indx in range(len(diffs)):
         errs.append(diffs[indx]/stds[indx])
@@ -60,7 +68,9 @@ def plot_exp_vs_errstd(logfolder=""):
     plt.ylabel('Sim/Exp fidelity diff (in std)')
     plt.show(block=False)
 
-def plot_distribution(logfolder=""):
+
+def plot_distribution(logfilename=""):
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.hist(diffs, bins=101)
     print(f"RMS: {np.sqrt(np.mean(np.square(diffs)))}")
     print(f"Median: {np.median(diffs)}")
@@ -358,14 +368,43 @@ def plot_envelope_history(logfilename):
     plt.show()
 
 
-def plot_awg(logfolder=""):
+def plot_awg(logfolder="", num_plots=1):
     logfilename = logfolder + "awg.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/awg.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
-    point = json.loads(log[-1])
-    fig, ax = plt.subplots()
-    l1, = plt.plot(point['inphase'], lw=2)
-    l2, = plt.plot(point['quadrature'], lw=2)
-    plt.show()
+    plt.figure(figsize=(8, 2*num_plots))
+    for ii in range(num_plots):
+        point = json.loads(log[-ii-1])
+        plt.subplot(num_plots, 1, ii+1)
+        plt.plot(point['inphase'], lw=2)
+        plt.plot(point['quadrature'], lw=2)
+        plt.grid()
+    plt.show(block=False)
+
+
+def plot_foms(logfolder=""):
+    logfilename = logfolder + 'learn_model.log'
+    if not os.path.isfile(logfilename):
+        logfilename = "/tmp/c3logs/recent/learn_from.log"
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+    batch = -1
+    foms = []
+    names = [0, 0, 0, 0, 0]
+    for line in log:
+        split = line.split()
+        if split == []:
+            continue
+        elif split[0] == "Starting":
+            batch += 1
+            foms.append([0, 0, 0, 0, 0])
+            fom_id = 0
+        elif split[0:2] == ['Finished', 'batch']:
+            foms[batch][fom_id] = float(split[4])
+            names[fom_id] = split[3].split(":")[0].replace('_', '\_')
+            fom_id += 1
+    plt.semilogy(np.array(foms))
+    plt.legend(names)
+    plt.show(block=False)
