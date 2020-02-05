@@ -93,7 +93,7 @@ class Model:
 
     def get_Lindbladians(self):
         if self.dressed:
-            return self.dressed_col_ps
+            return self.dressed_col_ops
         else:
             return self.col_ops
 
@@ -139,6 +139,7 @@ class Model:
     def update_dressed(self):
         self.update_drift_eigen()
         dressed_control_Hs = {}
+        dressed_col_ops = []
         dressed_drift_H = tf.matmul(tf.matmul(
             tf.linalg.adjoint(self.transform),
             self.drift_H),
@@ -150,8 +151,17 @@ class Model:
                 self.control_Hs[key]),
                 self.transform
             )
+        for col_op in self.col_ops:
+            dressed_col_ops.append(
+                tf.matmul(tf.matmul(
+                    tf.linalg.adjoint(self.transform),
+                    col_op),
+                    self.transform
+                )
+            )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
+        self.dressed_col_ops = dressed_col_ops
 
     def get_Frame_Rotation(
         self,
