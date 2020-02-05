@@ -14,7 +14,6 @@ from c3po.tf_utils import tf_abs
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
 # from nevergrad.optimization import registry as algo_registry
-
 # TODO make callback fucntions take U_dict
 
 class Optimizer:
@@ -485,8 +484,8 @@ class Optimizer:
                 goal = (1 + self.noise_level * np.random.randn()) * goal
                 solutions.append(goal)
 
-            for cal in self.callbacks:
-                print(cal.__name__ + ': ' + cal(self.U_dict).numpy())
+            # for cal in self.callbacks:
+            #     print(cal.__name__ + ': ' + cal(self.U_dict).numpy())
 
             self.evaluation += 1
             es.tell(
