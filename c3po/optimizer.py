@@ -760,7 +760,6 @@ class Optimizer:
         self.evaluation += 1
         self.logfile.flush()
 
-
     def confirm_model(
         self,
         exp,
@@ -771,7 +770,7 @@ class Optimizer:
         callback_foms=[],
     ):
         self.opt_name = "confirm"
-        self.logfile_name = self.data_path + self.opt_name  + '.log'
+        self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
         self.optim_status = {}
         self.evaluation = 0
@@ -807,7 +806,6 @@ class Optimizer:
                 )
             batch_size = len(measurements)
             ipar = 1
-            goals = []
             used_seqs = 0
             for m in measurements:
                 gateset_params = m['params']
