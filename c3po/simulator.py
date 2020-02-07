@@ -86,7 +86,7 @@ class Simulator():
             Us = []
             for gate in sequence:
                 Us.append(gates[gate])
-            U.append(tf_matmul_right(Us))
+            U.append(tf_matmul_left(Us))
 
         return U
 
