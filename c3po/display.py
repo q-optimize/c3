@@ -29,8 +29,8 @@ def get_sim_exp_std_diff(logfilename=""):
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
-            stds.append(np.abs(float(line_split[5])))
-            diffs.append(np.abs(float(line_split[7])))
+            # stds.append(np.abs(float(line_split[5])))
+            diffs.append(np.abs(float(line_split[5])))
         elif par_lines_count == 2:
             break
     return sims, exps, stds, diffs
