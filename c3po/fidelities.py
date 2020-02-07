@@ -8,8 +8,8 @@ import tensorflow_probability as tfp
 from scipy.optimize import curve_fit
 from c3po.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, evaluate_sequences, \
-    tf_average_fidelity, tf_superoper_average_fidelity, tf_psi_dm, \
-    tf_dm_vect, tf_dmket_fid
+    tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
+    tf_dm_to_vect, tf_dmket_fid
 from c3po.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
 
@@ -46,7 +46,7 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
 #     U = U_dict[gate]
 #     lvls = int(np.sqrt(U.shape[0]))
 #     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-#     dv_0 = tf_dm_vect(tf_psi_dm(psi_0))
+#     dv_0 = tf_dm_to_vect(tf_state_to_dm(psi_0))
 #     psi_f = tf.constant(basis(lvls, lvl), dtype=tf.complex128)
 #     dv_actual = tf.matmul(U, dv_0)
 #     overlap = tf_dmket_fid(dv_actual, psi_f)
@@ -198,7 +198,7 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
     lvls = int(np.sqrt(U.shape[0]))
     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-    dv_0 = tf_dm_vect(tf_psi_dm(psi_0))
+    dv_0 = tf_dm_to_vect(tf_state_to_dm(psi_0))
     dv_actual = tf.matmul(U, dv_0)
     return populations(dv_actual, lindbladian=True)[lvl]
 

@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from c3po.component import Quantity, Drive, Coupling
 from c3po.constants import kb, hbar
+from c3po.tf_utils import tf_state_to_dm, tf_vec_to_dm, tf_dm_to_vec
 
 
 class Model:
@@ -198,12 +199,8 @@ class Model:
     @staticmethod
     def populations(state, lindbladian):
         if lindbladian:
-            diag = []
-            dim = int(tf.sqrt(len(state)))
-            indeces = [n * dim + n for n in range(dim)]
-            for indx in indeces:
-                diag.append(state[indx])
-            return tf.abs(diag)
+            rho = tf_vec_to_dm(state)
+            return tf.math.real(tf.linalg.diag_part(rho))
         else:
             return tf.abs(state)**2
 
@@ -226,13 +223,20 @@ class Model:
     def set_spam_param(self, name: str, quan: Quantity):
         self.params[name] = quan
 
-    def initialise(self):
+    def initialise(self, lindbladian):
         init_temp = tf.cast(
             self.params['init_temp'].get_value(), dtype=tf.complex128
         )
-        diag = tf.linalg.diag_part(self.dressed_drift_H)
+        # TODO Deal with dressed basis for thermal state
+        diag = tf.linalg.diag_part(self.drift_H)
         freq_diff = diag - diag[0]
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        return tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
+        state = tf_state_to_dm(
+            tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
+        )
+        if lindbladian:
+            return tf_dm_to_vec(state)
+        else:
+            return state
