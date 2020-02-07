@@ -6,37 +6,37 @@ import tensorflow_probability as tfp
 from c3po.tf_utils import tf_abs
 
 
-def median_dist(exp_values, sim_values, stds):
+def median_dist(exp_values, sim_values, exp_stds):
     """Return the median of the differences."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tfp.stats.percentile(diffs, 50.0, interpolation='midpoint')
 
 
-def rms_dist(exp_values, sim_values, stds):
+def rms_dist(exp_values, sim_values, exp_stds):
     """Return the root mean squared of the differences."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.sqrt(tf.reduce_mean(diffs ** 2))
 
 
-def stds_dist(exp_values, sim_values, stds):
-    """Return the mean distance in stds."""
+def exp_stds_dist(exp_values, sim_values, exp_stds):
+    """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.reduce_mean(diffs / stds)
+    return tf.reduce_mean(diffs / exp_stds)
 
 
-def rms_stds_dist(exp_values, sim_values, stds):
-    """Return the mean distance in stds."""
+def rms_exp_stds_dist(exp_values, sim_values, exp_stds):
+    """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.sqrt(tf.reduce_mean((diffs / stds)**2))
+    return tf.sqrt(tf.reduce_mean((diffs / exp_stds)**2))
 
 
-def std_of_diffs(exp_values, sim_values, stds):
-    """Return the mean distance in stds."""
+def std_of_diffs(exp_values, sim_values, exp_stds):
+    """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.reduce_std(diffs)
 
 
-def neg_loglkh_binom(exp_values, sim_values, stds):
+def neg_loglkh_binom(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values with binomial distribution.
 
@@ -53,7 +53,7 @@ def neg_loglkh_binom(exp_values, sim_values, stds):
     return -loglkh
 
 
-def neg_loglkh_gauss(exp_values, sim_values, stds):
+def neg_loglkh_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
 
@@ -79,7 +79,7 @@ def neg_loglkh_gauss(exp_values, sim_values, stds):
     return -loglkh
 
 
-def neg_loglkh_binom_gauss(exp_values, sim_values, stds):
+def neg_loglkh_binom_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values. CONVOLUTION NOT WORKING.
 

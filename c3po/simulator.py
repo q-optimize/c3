@@ -77,7 +77,7 @@ class Simulator():
         """
         Sequences are assumed to be given in the correct order (left to right).
             e.g.
-            ['X90p','Y90p'] --> U = X90p x Y90p
+            ['X90p','Y90p','Xp'] --> U = X90p x Y90p x Xp
         """
         gates = U_dict
         # TODO deal with the case where you only evaluate one sequence
