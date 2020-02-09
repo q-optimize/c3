@@ -87,6 +87,7 @@ def gaussian_sigma(t, params):
 
 def gaussian(t, params):
     """Normalized gaussian with fixed time/sigma ratio."""
+    # TODO this might cause an error
     params['sigma'] = params['t_final'].get_value()/6
     return gaussian_sigma(t, params)
 

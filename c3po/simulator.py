@@ -126,7 +126,8 @@ class Simulator():
                 psi_t = np.matmul(du.numpy(), psi_t)
                 pops = self.populations(psi_t)
                 pop_t = np.append(pop_t, pops, axis=1)
-            psi_t = tf.matmul(self.FR, psi_t)
+            if self.use_VZ:
+                psi_t = tf.matmul(self.FR, psi_t)
 
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
@@ -140,6 +141,7 @@ class Simulator():
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png', dpi=300)
+        plt.show()
         plt.close()
 
     def populations(self, state):

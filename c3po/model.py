@@ -233,10 +233,8 @@ class Model:
         beta = 1 / (init_temp * kb)
         det_bal = tf.exp(-hbar * freq_diff * beta)
         norm_bal = det_bal / tf.reduce_sum(det_bal)
-        state = tf_state_to_dm(
-            tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
-        )
+        state = tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
         if lindbladian:
-            return tf_dm_to_vec(state)
+            return tf_dm_to_vec(tf_state_to_dm(state))
         else:
             return state
