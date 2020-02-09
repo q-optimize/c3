@@ -172,8 +172,11 @@ class Envelope(InstructionComponent):
         """Return the value of the shape function at the specified times."""
         if t_before:
             offset = self.shape(t_before, self.params)
+            vals = self.shape(ts, self.params) - offset
+        else:
+            vals = self.shape(ts, self.params)
         # With the offset, we make sure the signal starts with amplitude 0.
-        return self.shape(ts, self.params) - offset
+        return vals
 
 
 class Carrier(InstructionComponent):
