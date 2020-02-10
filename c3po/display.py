@@ -10,6 +10,13 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+def exp_vs_sim(exps, sims, stds):
+    fig = plt.figure()
+    plt.scatter(exps, sims)
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
 
 def get_sim_exp_std_diff(logfilename=""):
     if logfilename == "":
@@ -29,8 +36,8 @@ def get_sim_exp_std_diff(logfilename=""):
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
-            # stds.append(np.abs(float(line_split[5])))
-            diffs.append(np.abs(float(line_split[5])))
+            stds.append(np.abs(float(line_split[5])))
+            diffs.append(np.abs(float(line_split[7])))
         elif par_lines_count == 2:
             break
     return sims, exps, stds, diffs

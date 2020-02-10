@@ -1,5 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
+import os
 import random
 import time
 import json
@@ -291,7 +292,7 @@ class Optimizer:
                     f"  Simulation:  {float(this_goal.numpy()):8.5f}"
                 )
                 self.logfile.write(
-                    f"  Experiment: {fid:8.5f}"
+                    f"  Experiment: {fid:8.5f} std: {std:8.5f}"
                 )
                 self.logfile.write(
                     f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
@@ -411,7 +412,7 @@ class Optimizer:
                     sims.append(this_goal)
                     stds.append(std)
 
-                self.sim.plot_dynamics(self.sim.ket_0, seq)
+                # self.sim.plot_dynamics(self.sim.ket_0, seq)
 
                 # plt.figure()
                 # signal = self.exp.generator.signal['d1']
@@ -456,6 +457,16 @@ class Optimizer:
                     )
                 )
             self.logfile.flush()
+
+            for cb_fig in self.callback_figs:
+                fig = cb_fig(fids, sims, stds)
+                fig.savefig(
+                    self.data_path
+                    + cb_fig.__name__ + '/'
+                    + 'eval:' + str(self.evaluation) + "__"
+                    + self.fom.__name__ + str(round(goal.numpy(), 3))
+                    + '.png'
+                )
 
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
@@ -636,6 +647,7 @@ class Optimizer:
         eval_func,
         fom,
         callback_foms=[],
+        callback_figs=[],
         opt_name='learn_model',
         settings={}
     ):
@@ -646,6 +658,9 @@ class Optimizer:
         self.eval_func = eval_func
         self.fom = fom
         self.callback_foms = callback_foms
+        self.callback_figs = callback_figs
+        for cb_fig in callback_figs:
+            os.makedirs(self.data_path + cb_fig.__name__)
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
@@ -761,7 +776,7 @@ class Optimizer:
                 best_point.write(json.dumps(self.optim_status))
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
-        self.logfile.write(f"\nStarting evaluation {self.evaluation}\n")
+        self.logfile.write(f"\nFinished evaluation {self.evaluation}\n")
         self.evaluation += 1
         self.logfile.flush()
 
