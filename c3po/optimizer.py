@@ -16,6 +16,7 @@ import cma.evolution_strategy as cmaes
 # from nevergrad.optimization import registry as algo_registry
 # TODO make callback fucntions take U_dict
 
+
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
@@ -333,29 +334,11 @@ class Optimizer:
         self.log_parameters()
         return goal
 
-    def goal_run_n_with_grad(self, current_params):
-        learn_from = self.learn_from['seqs_grouped_by_param_set']
+    def goal_run_n_with_grad(self, current_params, measurements):
         with tf.GradientTape() as t:
             t.watch(current_params)
             self.exp.set_parameters(current_params, self.opt_map, scaled=True)
 
-            if self.sampling == 'random':
-                measurements = random.sample(learn_from, self.batch_size)
-            elif self.sampling == 'even':
-                n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::n]
-            elif self.sampling == 'from_start':
-                measurements = learn_from[:self.batch_size]
-            elif self.sampling == 'from_end':
-                measurements = learn_from[-self.batch_size:]
-            elif self.sampling == 'ALL':
-                measurements = learn_from
-            else:
-                raise(
-                    """Unspecified sampling method.\n
-                    Select from 'from_end'  'even', 'random' , 'from_start'.
-                    Thank you."""
-                )
             batch_size = len(measurements)
             ipar = 1
             used_seqs = 0
@@ -525,13 +508,22 @@ class Optimizer:
         # TODO fix error when JSONing fucntion types
         options['disp'] = True
         # Run the initial point explictly or it'll be ignored by callback
-        res = minimize(
-            lambda x: float(goal(x).numpy()),
-            x0,
-            jac=self.lookup_gradient,
-            method='L-BFGS-B',
-            options=options
-        )
+        if "rotate_data" in options.keys():
+            res = minimize(
+                lambda x: float(goal(x).numpy()),
+                x0,
+                jac=self.lookup_gradient,
+                method='L-BFGS-B',
+                options=options
+            )
+        else:
+            res = minimize(
+                lambda x: float(goal(x).numpy()),
+                x0,
+                jac=self.lookup_gradient,
+                method='L-BFGS-B',
+                options=options
+            )
         return res.x
 
     def optimize_controls(
@@ -660,7 +652,26 @@ class Optimizer:
             self.logfile.write("Optimization parameters:\n\n")
             self.logfile.write(json.dumps(self.opt_map))
             self.logfile.write("\n")
-            # TODO put optmizer specific code here
+
+            learn_from = self.learn_from['seqs_grouped_by_param_set']
+            # TODO put optmizer specific code here 
+            if self.sampling == 'random':
+                measurements = random.sample(learn_from, self.batch_size)
+            elif self.sampling == 'even':
+                n = int(len(learn_from) / self.batch_size)
+                measurements = learn_from[::n]
+            elif self.sampling == 'from_start':
+                measurements = learn_from[:self.batch_size]
+            elif self.sampling == 'from_end':
+                measurements = learn_from[-self.batch_size:]
+            elif self.sampling == 'ALL':
+                measurements = learn_from
+            else:
+                raise(
+                    """Unspecified sampling method.\n
+                    Select from 'from_end'  'even', 'random' , 'from_start'.
+                    Thank you."""
+                )
             if self.algorithm == 'cmaes':
                 x_best = self.cmaes(
                     x0,

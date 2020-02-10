@@ -43,8 +43,10 @@ def plot_exp_vs_sim(logfilename=""):
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
-    plt.show(block=False)
-
+    data_path = "/".join(logfilename.split("/")[:-1])+"/"
+    if data_path == "/":
+        data_path = "./"
+    plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
 
 def plot_exp_vs_err(logfilename=""):
     plt.figure()
@@ -340,7 +342,6 @@ def plot_learning(logfolder=""):
         plt.grid()
         plt.semilogy(its, goal_function)
         plt.tight_layout()
-        plt.show()
         plt.savefig("learn_model.png")
 
 
