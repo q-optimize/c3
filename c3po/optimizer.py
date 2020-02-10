@@ -27,6 +27,7 @@ class Optimizer:
         self.batch_size = 1
         self.skip_bad_points = False  # The Millikan option, don't judge
         self.divide_by_std = False  # Goal func in terms of experiment std
+        self.current_best_goal = 1e10
 
         # NICO: ###############################################################
         # The default fields of this class to be stored in a config. Note: Data
@@ -754,6 +755,10 @@ class Optimizer:
             plt.show()
 
     def log_parameters(self):
+        if self.optim_status['goal'] < self.current_best_goal:
+            self.current_best_goal = self.optim_status['goal']
+            with open(self.data_path+'best_point', 'w') as best_point:
+                best_point.write(json.dumps(self.optim_status))
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
         self.logfile.write(f"\nStarting evaluation {self.evaluation}\n")
