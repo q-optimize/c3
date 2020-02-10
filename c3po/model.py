@@ -166,12 +166,15 @@ class Model:
     def get_Frame_Rotation(
         self,
         t_final: np.float64,
-        lo_freqs: dict
+        lo_freqs: dict,
+        framechanges: dict
     ):
         # lo_freqs need to be ordered the same as the names of the qubits
         ones = tf.ones(self.tot_dim, dtype=tf.complex128)
         FR = tf.linalg.diag(ones)
-        for line, lo_freq in lo_freqs.items():
+        for line in lo_freqs.keys():
+            lo_freq = lo_freqs[line]
+            framechange = framechanges[line]
             qubit = self.couplings[line].connected[0]
             ann_oper = self.ann_opers[qubit]
             num_oper = tf.constant(
@@ -179,7 +182,7 @@ class Model:
                 dtype=tf.complex128
             )
             FR = FR * tf.linalg.expm(
-                1.0j * num_oper * lo_freq * t_final
+                1.0j * num_oper * (lo_freq * t_final + framechange)
             )
         if self.dressed:
             FR = tf.matmul(tf.matmul(

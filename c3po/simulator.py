@@ -47,17 +47,25 @@ class Simulator():
             if self.use_VZ:
                 # TODO change LO freq to at the level of a line
                 lo_freqs = {}
+                framechanges = {}
                 for line, ctrls in instr.comps.items():
                     lo_freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value(),
+                        tf.complex128
+                    )
+                    framechanges[line] = tf.cast(
+                        ctrls['carrier'].params['framechange'].get_value(),
                         tf.complex128
                     )
                 t_final = tf.constant(
                     instr.t_end - instr.t_start,
                     dtype=tf.complex128
                 )
-                FR = self.exp.model.get_Frame_Rotation(t_final, lo_freqs)
-
+                FR = self.exp.model.get_Frame_Rotation(
+                    t_final,
+                    lo_freqs,
+                    framechanges
+                )
                 if self.lindbladian:
                     SFR = tf_super(FR)
                     U = tf.matmul(SFR, U)
@@ -141,7 +149,7 @@ class Simulator():
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png', dpi=300)
-        plt.show()
+        #plt.show(block=False)
         plt.close()
 
     def populations(self, state):
