@@ -1,6 +1,7 @@
 import types
 import copy
 import numpy as np
+import tensorflow as tf
 from c3po.component import C3obj
 
 
@@ -176,7 +177,9 @@ class Envelope(InstructionComponent):
         else:
             vals = self.shape(ts, self.params)
         # With the offset, we make sure the signal starts with amplitude 0.
-        return vals
+        t_final = self.params['t_final']
+        mask = tf.cast(ts<t_final.numpy(), tf.float64)
+        return vals*mask
 
 
 class Carrier(InstructionComponent):

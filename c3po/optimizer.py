@@ -110,27 +110,8 @@ class Optimizer:
         self.log_parameters()
         return goal
 
-    def eval_goal(self, current_params):
-        learn_from = self.learn_from['seqs_grouped_by_param_set']
+    def eval_goal(self, current_params, measurements):
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-
-        if self.sampling == 'random':
-            measurements = random.sample(learn_from, self.batch_size)
-        elif self.sampling == 'even':
-            n = int(len(learn_from) / self.batch_size)
-            measurements = learn_from[::n]
-        elif self.sampling == 'from_start':
-            measurements = learn_from[:self.batch_size]
-        elif self.sampling == 'from_end':
-            measurements = learn_from[-self.batch_size:]
-        elif self.sampling == 'ALL':
-            measurements = learn_from
-        else:
-            raise(
-                """Unspecified sampling method.\n
-                Select from 'from_end'  'even', 'random' , 'from_start', 'ALL'.
-                Thank you."""
-            )
         batch_size = len(measurements)
         ipar = 1
         used_seqs = 0
@@ -237,14 +218,14 @@ class Optimizer:
         self.optim_status['goal'] = float(goal.numpy())
         return goal
 
-    def goal_run_n(self, current_params):
-        goal = self.eval_goal(current_params)
+    def goal_run_n(self, current_params, measurements):
+        goal = self.eval_goal(current_params, measurements)
         return goal
 
     def goal_run_n_with_grad(self, current_params, measurements):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            goal = self.eval_goal(current_params)
+            goal = self.eval_goal(current_params, measurements)
 
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
@@ -471,6 +452,8 @@ class Optimizer:
                 measurements = learn_from[-self.batch_size:]
             elif self.sampling == 'ALL':
                 measurements = learn_from
+            elif self.sampling == 'rotating':
+                pass
             else:
                 raise(
                     """Unspecified sampling method.\n
@@ -481,15 +464,36 @@ class Optimizer:
                 x_best = self.cmaes(
                     x0,
                     lambda x: self.goal_run_n(tf.constant(x)),
+                    measurements,
                     settings
                 )
 
             elif self.algorithm == 'lbfgs':
                 x_best = self.lbfgs(
                     x0,
-                    lambda x: self.goal_run_n_with_grad(tf.constant(x)),
+                    lambda x: self.goal_run_n_with_grad(tf.constant(x),
+                        measurements
+                    ),
                     options=settings
                 )
+
+            elif self.algorithm == 'lbfgs-rotating':
+                left = 0
+                right = 10
+                settings['maxiter'] = 5
+                current_x = x0
+                while right<len(learn_from):
+                    self.logfile.write(f"\n\nSelecting data {left}:{right}\n")
+                    measurements = learn_from[left:right]
+                    current_x = self.lbfgs(
+                        current_x,
+                        lambda x: self.goal_run_n_with_grad(tf.constant(x),
+                            measurements
+                        ),
+                        options=settings
+                    )
+                    left = right
+                    right = min(left+10,len(learn_from))
 
             elif self.algorithm == 'oneplusone':
                 x_best = self.oneplusone(
