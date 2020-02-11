@@ -18,6 +18,23 @@ def exp_vs_sim(exps, sims, stds):
     plt.ylabel('Sim fidelity')
     return fig
 
+def exp_vs_sim_2d_hist(exps, sims, stds):
+    # example in
+    # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html
+    fig = plt.figure()
+    H, xedges, yedges = np.histogram2d(exps, sims, bins=40)
+    H = H.T
+    plt.imshow(
+        H,
+        origin='lower',
+        # interpolation='bilinear',
+        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    )
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
+
 def get_sim_exp_std_diff(logfilename=""):
     if logfilename == "":
         #logfilename = "/tmp/c3logs/recent/confirm.log"
