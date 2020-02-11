@@ -211,6 +211,7 @@ class Optimizer:
                 + self.fom.__name__ + str(round(goal.numpy(), 3))
                 + '.png'
             )
+            plt.close(fig)
 
         self.optim_status['params'] = [
             par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
@@ -581,6 +582,7 @@ class Optimizer:
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
             with open(self.data_path+'best_point', 'w') as best_point:
+                best_point.write(json.dumps(self.opt_map))
                 best_point.write(json.dumps(self.optim_status))
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
