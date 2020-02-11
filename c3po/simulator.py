@@ -150,7 +150,7 @@ class Simulator():
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png', dpi=300)
         #plt.show(block=False)
-        plt.close()
+        plt.close(fig)
 
     def populations(self, state):
         if self.lindbladian:

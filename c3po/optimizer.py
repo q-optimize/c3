@@ -148,7 +148,7 @@ class Optimizer:
                     continue
                 this_goal = self.eval_func(U_dict, seq)
                 self.logfile.write(
-                    f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
+                    f"\n  Sequence {iseq} of {len(m['seqs'])}\n"
                 )
                 iseq += 1
                 self.logfile.write(
@@ -463,15 +463,18 @@ class Optimizer:
             if self.algorithm == 'cmaes':
                 x_best = self.cmaes(
                     x0,
-                    lambda x: self.goal_run_n(tf.constant(x)),
-                    measurements,
+                    lambda x: self.goal_run_n(
+                        tf.constant(x),
+                        measurements
+                    ),
                     settings
                 )
 
             elif self.algorithm == 'lbfgs':
                 x_best = self.lbfgs(
                     x0,
-                    lambda x: self.goal_run_n_with_grad(tf.constant(x),
+                    lambda x: self.goal_run_n_with_grad(
+                        tf.constant(x),
                         measurements
                     ),
                     options=settings
@@ -479,7 +482,7 @@ class Optimizer:
 
             elif self.algorithm == 'lbfgs-rotating':
                 left = 0
-                right = 10
+                right = self.batch_size
                 settings['maxiter'] = 5
                 current_x = x0
                 while right<len(learn_from):
@@ -493,7 +496,7 @@ class Optimizer:
                         options=settings
                     )
                     left = right
-                    right = min(left+10,len(learn_from))
+                    right = min(left+self.batch_size, len(learn_from))
 
             elif self.algorithm == 'oneplusone':
                 x_best = self.oneplusone(

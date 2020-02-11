@@ -210,6 +210,8 @@ class Model:
     def pop1_spam(self, state, lindbladian):
         if 'confusion_row' in self.params:
             row1 = self.params['confusion_row'].get_value()
+            if "Q2" in self.dims.keys():
+                row1 = tf.concat([row1]*self.dims["Q2"], 0)
             row2 = tf.ones_like(row1) - row1
             conf_matrix = tf.concat([[row1], [row2]], 0)
         elif 'confusion_matrix' in self.params:
