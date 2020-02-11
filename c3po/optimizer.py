@@ -229,6 +229,7 @@ class Optimizer:
                 + self.fom.__name__ + str(round(goal.numpy(), 3))
                 + '.png'
             )
+            plt.close(fig)
 
         self.optim_status['params'] = [
             par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
