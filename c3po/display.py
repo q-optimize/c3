@@ -382,7 +382,7 @@ def plot_awg(logfolder="", num_plots=1):
         plt.plot(point['inphase'], lw=2)
         plt.plot(point['quadrature'], lw=2)
         plt.grid()
-    plt.show(block=False)
+    plt.savefig(logfolder+"awg.png", dpi=300)
 
 
 def plot_foms(logfolder=""):
