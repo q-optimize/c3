@@ -10,6 +10,30 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+def exp_vs_sim(exps, sims, stds):
+    fig = plt.figure()
+    plt.scatter(exps, sims)
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
+
+def exp_vs_sim_2d_hist(exps, sims, stds):
+    # example in
+    # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html
+    fig = plt.figure()
+    H, xedges, yedges = np.histogram2d(exps, sims, bins=40)
+    H = H.T
+    plt.imshow(
+        H,
+        origin='lower',
+        # interpolation='bilinear',
+        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    )
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
 
 def get_sim_exp_std_diff(logfilename=""):
     if logfilename == "":
@@ -29,8 +53,8 @@ def get_sim_exp_std_diff(logfilename=""):
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
-            # stds.append(np.abs(float(line_split[5])))
-            diffs.append(np.abs(float(line_split[5])))
+            stds.append(np.abs(float(line_split[5])))
+            diffs.append(np.abs(float(line_split[7])))
         elif par_lines_count == 2:
             break
     return sims, exps, stds, diffs
