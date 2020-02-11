@@ -76,7 +76,11 @@ class Experiment:
             if scaled:
                 par.set_opt_value(values[val_indx:val_indx+par_len])
             else:
-                par.set_value(values[val_indx])
+                try:
+                    par.set_value(values[val_indx])
+                except ValueError:
+                    print("Value out of bounds")
+                    print(f"Trying to set {id} to value {values[val_indx]}")
             val_indx += par_len
         self.model.update_model()
 
