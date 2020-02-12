@@ -300,9 +300,9 @@ def plot_learning_CMA(logfolder=""):
 
 
 def plot_learning(logfolder=""):
+    if not logfolder:
+        logfolder = "/tmp/c3logs/recent/"
     logfilename = logfolder + 'learn_model.log'
-    if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/learn_from.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -366,7 +366,7 @@ def plot_learning(logfolder=""):
         plt.grid()
         plt.semilogy(its, goal_function)
         plt.tight_layout()
-        plt.savefig("learn_model.png")
+        plt.savefig(logfolder + "learn_model.png")
 
 
 def plot_envelope_history(logfilename):
