@@ -213,6 +213,33 @@ class Optimizer:
             )
             plt.close(fig)
 
+        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, seqs[-1])
+        l, r = axs.get_xlim()
+        axs.plot(r, exp_val, 'x')
+        fig.savefig(
+            self.data_path
+            + 'dynamics_seq/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal.numpy(), 3))
+            + '.png'
+        )
+        plt.close(fig)
+
+        fig, axs = self.sim.plot_dynamics(
+            self.sim.ket_0,
+            ['X90p','Y90p','X90p','Y90p']
+        )
+        fig.savefig(
+            self.data_path
+            + 'dynamics_xyxy/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal.numpy(), 3))
+            + '.png'
+        )
+        plt.close(fig)
+
+        c3po.display.plot_learning(self.data_path)
+
         self.optim_status['params'] = [
             par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
         ]
@@ -425,6 +452,8 @@ class Optimizer:
         self.callback_figs = callback_figs
         for cb_fig in callback_figs:
             os.makedirs(self.data_path + cb_fig.__name__)
+        os.makedirs(self.data_path + 'dynamics_seq/')
+        os.makedirs(self.data_path + 'dynamics_xyxy/')
         self.opt_name = opt_name
         self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
@@ -580,6 +609,7 @@ class Optimizer:
             self.current_best_goal = self.optim_status['goal']
             with open(self.data_path+'best_point', 'w') as best_point:
                 best_point.write(json.dumps(self.opt_map))
+                best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
