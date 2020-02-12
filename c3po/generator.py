@@ -526,6 +526,8 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
+                        # TODO: check again the sign in front of offset
+                        # [orbit:positive, manybird:negative] Fed guess: pos
                         phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * (

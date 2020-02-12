@@ -310,26 +310,27 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
         return dUs
 
 
-# MATRIX MULTIPLICATION FUCNTIONS
-def evaluate_sequences(
-    U_dict: dict,
-    sequences: list
-):
-    """
-    Sequences are assumed to be given in the correct order (left to right).
-
-        e.g.
-        ['X90p','Y90p'] --> U = X90p x Y90p
-    """
-    gates = U_dict
-    # TODO deal with the case where you only evaluate one sequence
-    U = []
-    for sequence in sequences:
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U.append(tf_matmul_right(Us))
-    return U
+# # MATRIX MULTIPLICATION FUCNTIONS
+# def evaluate_sequences(
+#     U_dict: dict,
+#     sequences: list
+# ):
+#     """
+#     Sequences are assumed to be given in the correct order (left to right).
+#
+#         e.g.
+#         ['X90p','Y90p'] --> U = X90p x Y90p
+#     """
+#     gates = U_dict
+#     # TODO deal with the case where you only evaluate one sequence
+#     U = []
+#     for sequence in sequences:
+#         Us = []
+#         for gate in sequence:
+#             Us.append(gates[gate])
+#         U.append(tf_matmul_right(Us))
+#         #### WARNING WARNING ^^ look there, it says right WARNING
+#     return U
 
 
 def tf_matmul_left(dUs):
