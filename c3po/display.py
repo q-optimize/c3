@@ -352,7 +352,7 @@ def plot_learning(logfolder=""):
     if n_params > 0:
         nrows = np.ceil(np.sqrt(n_params + 1))
         ncols = np.ceil((n_params + 1) / nrows)
-        plt.figure(figsize=(3 * ncols, 2 * nrows))
+        fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
@@ -367,6 +367,7 @@ def plot_learning(logfolder=""):
         plt.semilogy(its, goal_function)
         plt.tight_layout()
         plt.savefig(logfolder + "learn_model.png")
+        plt.close(fig)
 
 
 def plot_envelope_history(logfilename):
