@@ -114,9 +114,8 @@ class Optimizer:
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         batch_size = len(measurements)
         ipar = 1
-        used_seqs = 0
-        fids = []
-        sims = []
+        exp_values = []
+        sim_values = []
         stds = []
         for m in measurements:
             gateset_params = m['params']
@@ -134,59 +133,33 @@ class Optimizer:
             )
             ipar += 1
             U_dict = self.sim.get_gates()
-            iseq = 1
-            for this_seq in m['seqs']:
-                seq = this_seq['gate_seq']
-                fid = this_seq['result']
-                std = this_seq['result_std']
-
-                if (self.skip_bad_points and fid > 0.25):
-                    self.logfile.write(
-                        f"\n  Skipped point with infidelity>0.25.\n"
-                    )
-                    iseq += 1
-                    continue
-                this_goal = self.eval_func(U_dict, seq)
+            seqs = [seq['gate_seq'] for seq in m['seqs']]
+            values = self.eval_func(U_dict, seqs)
+            for indx in range(len(m['seqs'])):
+                exp_val = m['seqs'][indx]['result']
+                std = m['seqs'][indx]['result_std']
+                sim_val = float(values[indx].numpy())
+                exp_values.append(exp_val)
+                stds.append(std)
                 self.logfile.write(
-                    f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
-                )
-                iseq += 1
-                self.logfile.write(
-                    f"  Simulation:  {float(this_goal.numpy()):8.5f}"
+                    f"\n  Sequence {indx} of {len(m['seqs'])}:\n"
                 )
                 self.logfile.write(
-                    f"  Experiment: {fid:8.5f}"
+                    f"  Simulation:  {sim_val:8.5f}"
                 )
                 self.logfile.write(
-                    f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
+                    f"  Experiment: {exp_val:8.5f} std: {std:8.5f}"
+                )
+                self.logfile.write(
+                    f"  Diff: {exp_val-sim_val:8.5f}\n"
                 )
                 self.logfile.flush()
-                used_seqs += 1
+            sim_values.extend(values)
 
-                fids.append(fid)
-                sims.append(this_goal)
-                stds.append(std)
-
-            self.logfile.write(
-                f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
-            )
-            self.logfile.write(
-                f" std: {float(np.std(sims)):8.5f}\n"
-            )
-            self.logfile.write(
-                f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
-            )
-            self.logfile.write(
-                f" std: {float(np.std(fids)):8.5f}\n"
-            )
-            self.logfile.flush()
-
-        self.sim.plot_dynamics(self.sim.ket_0, seq)
-
-        fids = tf.constant(fids, dtype=tf.float64)
-        sims = tf.concat(sims, axis=0)
+        exp_values = tf.constant(exp_values, dtype=tf.float64)
+        sim_values = tf.concat(sim_values, axis=0)
         stds = tf.constant(stds, dtype=tf.float64)
-        goal = self.fom(fids, sims, stds)
+        goal = self.fom(exp_values, sim_values, stds)
         self.logfile.write(
             "Finished batch with {}: {}\n".format(
                 self.fom.__name__,
@@ -197,13 +170,13 @@ class Optimizer:
             self.logfile.write(
                 "Finished batch with {}: {}\n".format(
                     cb_fom.__name__,
-                    float(cb_fom(fids, sims, stds).numpy())
+                    float(cb_fom(exp_values, sim_values, stds).numpy())
                 )
             )
         self.logfile.flush()
 
         for cb_fig in self.callback_figs:
-            fig = cb_fig(fids, sims, stds)
+            fig = cb_fig(exp_values, sim_values, stds)
             fig.savefig(
                 self.data_path
                 + cb_fig.__name__ + '/'
