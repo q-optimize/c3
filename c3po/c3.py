@@ -2,43 +2,56 @@
 
 import time
 import json
+import pickle
 import numpy as np
 import tensorflow as tf
 from c3po.optimizer import Optimizer
-from c3po.alorithms import cmaes
+import matplotlib.pyplot as plt
+
 
 class C3(Optimizer):
     """Object that deals with the model learning."""
 
     def __init__(
         self,
-        exp,
-        sim,
-        eval_func,
         fom,
-        data_path,
-        learn_from,
+        dir_path,
         sampling,
+        batch_size,
         opt_map,
-        gateset_opt_map,
-        algorithm_no_grad=cmaes,
-        algorithm_with_grad=None,
         callback_foms=[],
-        opt_name='learn_model',
+        callback_figs=[],
+        algorithm_no_grad=None,
+        algorithm_with_grad=None,
     ):
         """Initiliase."""
-        self.sim = sim
-        self.eval_func = eval_func
         self.fom = fom
-        self.callback_foms = callback_foms
-        self.opt_name = opt_name
-        self.data = data_path
-        self.logfile_name = self.data_path + self.opt_name + '.log'
-        self.optim_status = {}
-        self.learn_from = learn_from
+        self.dir_path = dir_path
         self.sampling = sampling
+        self.batch_size = batch_size
         self.opt_map = opt_map
-        self.gateset_opt_map = gateset_opt_map
+        self.callback_foms = callback_foms
+        self.callback_figs = callback_figs
+        super().__init__()
+
+        if algorithm_with_grad:
+            self.algorithm = algorithm_with_grad
+            self.grad = True
+        elif algorithm_no_grad:
+            self.algorithm = algorithm_no_grad
+            self.grad = False
+        else:
+            raise ValueError("You need to pass an algorithm call")
+
+        self.logfile_name = self.dir_path + 'learn_model.log'
+        self.optim_status = {}
+
+    def set_exp(self, exp):
+        self.exp = exp
+
+    def read_data(self, datafile):
+        with open(datafile, 'rb+') as file:
+            self.learn_from = pickle.load(file)
 
     def select_from_data(self):
         learn_from = self.learn_from
@@ -68,22 +81,21 @@ class C3(Optimizer):
         with open(self.logfile_name, 'a') as logfile:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
-            logfile.write("Optimization parameters:\n\n")
+            logfile.write("Optimization parameters:\n")
             logfile.write(json.dumps(self.opt_map))
             logfile.write("\n")
 
     def learn_model(self):
         print(f"Saving as:\n{self.logfile_name}")
-        x0 = self.sim.exp.get_parameters(self.opt_map, scaled=True)
-
-        if self.algorithm_with_grad:
+        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
+        if self.grad:
             self.algorithm(
                 x0,
                 self.fct_to_min_with_grad,
                 self.lookup_gradient
             )
-        elif self.algorithm_no_grad:
-            self.algorithm_no_grad(
+        elif self.grad:
+            self.algorithm(
                 x0,
                 self.fct_to_min
             )
@@ -91,20 +103,7 @@ class C3(Optimizer):
             raise ValueError("You need to pass an algorithm call")
 
         # TODO deal with kears learning differently
-        # if self.algorithm == 'keras-SDG':
-        #     vars = tf.Variable(x0)
-        #     self.keras_vars = vars
-        #     optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
-        #     optimizer.minimize(self.goal_run_n_keras, var_list=[vars])
-        #     x_best = vars.numpy()
-        #
-        # elif self.algorithm == 'keras-Adam':
-        #     vars = tf.Variable(x0)
-        #     optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
-        #     optimizer.minimize(self.goal_run_n(vars), var_list=[vars])
-        #     x_best = vars.numpy()
-
-        self.sim.exp.set_parameters(self.x_best, self.opt_map, scaled=True)
+        self.exp.set_parameters(self.x_best, self.opt_map, scaled=True)
         self.end_time = time.time()
         with open(self.logfile_name, 'a') as logfile:
             logfile.write(
@@ -139,81 +138,54 @@ class C3(Optimizer):
         self.optim_status['gradient'] = gradients.tolist()
 
     def goal_run_n(self, current_params, measurements):
-        self.sim.exp.set_parameters(current_params, self.opt_map, scaled=True)
+        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         batch_size = len(measurements)
+        exp_values = []
+        exp_stds = []
+        sim_values = []
 
         for ipar in range(len(measurements)):
             m = measurements[ipar]
             gateset_params = m['params']
+            gateset__opt_map = m["opt_map"]
             sequences = m['seqs']
+            m_vals = m['results']
+            m_stds = m['result_stds']
             num_seqs = len(sequences)
-            self.sim.gateset.set_parameters(
-                gateset_params, self.gateset_opt_map, scaled=False
+
+            self.exp.gateset.set_parameters(
+                gateset_params, gateset__opt_map, scaled=False
             )
-            U_dict = self.sim.get_gates()
+            sim_vals = self.exp.evaluate()
+
+            exp_values.extend(m_vals)
+            exp_stds.extend(m_stds)
+            sim_values.extend(sim_vals)
 
             with open(self.logfile_name, 'a') as logfile:
                 logfile.write(
-                    "\n  Parameterset {} of {}:  {}".format(
+                    "\n  Parameterset {} of {}:\n {}\n {}".format(
                         ipar,
                         batch_size,
+                        logfile.write(json.dumps(self.opt_map)),
                         self.sim.gateset.get_parameters(
                             self.gateset_opt_map, to_str=True
-                        )
+                        ),
                     )
                 )
-
-            exp_values = []
-            sim_values = []
-            exp_stds = []
             for iseq in range(num_seqs):
-                seq = sequences[iseq]
-                gates = seq['gate_seq']
-                exp_val = seq['result']
-                exp_std = seq['result_std']
-
-                sim_val = self.eval_func(U_dict, gates)
-                sim_val_numpy = float(sim_val.numpy())
-
-                exp_values.append(exp_val)
-                sim_values.append(sim_val)
-                exp_stds.append(exp_std)
-
+                m_val = m_vals[iseq]
+                m_std = m_stds[iseq]
+                sim_val = sim_vals[iseq].numpy()
                 with open(self.logfile_name, 'a') as logfile:
                     logfile.write(
-                        "\n  Sequence {} of {}:\n  {}\n".format(
-                            iseq, num_seqs, gates
-                        )
+                        " Sequence {} of {}:\n".format(iseq, num_seqs)
                     )
-                    iseq += 1
-                    logfile.write(
-                        f"  Simulation:  {sim_val_numpy:8.5f}"
-                    )
-                    logfile.write(
-                        f"  Experiment: {exp_val:8.5f}"
-                    )
-                    logfile.write(
-                        f"  Diff: {exp_val-sim_val_numpy:8.5f}\n"
-                    )
+                    logfile.write(f" Simulation:  {sim_val:8.5f}")
+                    logfile.write(f" Experiment: {m_val:8.5f}")
+                    logfile.write(f" Std: {m_std:8.5f}")
+                    logfile.write(f" Diff: {m_val-sim_val:8.5f}\n")
                     logfile.flush()
-
-
-            with open(self.logfile_name, 'a') as logfile:
-                logfile.write(
-                    f"  Mean simulation values: {float(np.mean(sim_values)):8.5f}"
-                )
-                logfile.write(
-                    f" std: {float(np.std(sim_values)):8.5f}\n"
-                )
-                logfile.write(
-                    f"  Mean experiment values: {float(np.mean(exp_values)):8.5f}"
-                )
-                logfile.write(
-                    f" std: {float(np.std(exp_values)):8.5f}\n"
-                )
-                logfile.flush()
-
-        self.sim.plot_dynamics(self.sim.ket_0, seq)
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values = tf.concat(sim_values, axis=0)
@@ -222,20 +194,47 @@ class C3(Optimizer):
         goal_numpy = float(goal.numpy())
 
         with open(self.logfile_name, 'a') as logfile:
-            logfile.write(
-                "Finished batch with {}: {}\n".format(
-                    self.fom.__name__,
-                    goal_numpy
-                )
-            )
+            logfile.write("Finished batch with\n")
+            logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
-                logfile.write(
-                    "Finished batch with {}: {}\n".format(
-                        cb_fom.__name__,
-                        float(cb_fom(exp_values, sim_values, exp_stds).numpy())
-                    )
-                )
+                val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
+                logfile.write("{}: {}\n".format(cb_fom.__name__, val))
             logfile.flush()
+
+        for cb_fig in self.callback_figs:
+            fig = cb_fig(exp_values, sim_values, exp_stds)
+            fig.savefig(
+                self.dir_path
+                + cb_fig.__name__ + '/'
+                + 'eval:' + str(self.evaluation) + "__"
+                + self.fom.__name__ + str(round(goal.numpy(), 3))
+                + '.png'
+            )
+            plt.close(fig)
+        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, sequences[0])
+        l, r = axs.get_xlim()
+        axs.plot(r, fid, 'x')
+        fig.savefig(
+            self.dir_path
+            + 'dynamics_seq/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal.numpy(), 3))
+            + '.png'
+        )
+        plt.close(fig)
+        fig, axs = self.sim.plot_dynamics(
+            self.sim.ket_0,
+            ['X90p','Y90p','X90p','Y90p']
+        )
+        fig.savefig(
+            self.dir_path
+            + 'dynamics_xyxy/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal.numpy(), 3))
+            + '.png'
+        )
+        plt.close(fig)
+        c3po.display.plot_learning(self.dir_path)
 
         self.optim_status['params'] = [
             par.numpy().tolist()
@@ -243,3 +242,16 @@ class C3(Optimizer):
         ]
         self.optim_status['goal'] = goal_numpy
         return goal
+
+    def log_parameters(self):
+        if self.optim_status['goal'] < self.current_best_goal:
+            self.current_best_goal = self.optim_status['goal']
+            with open(self.dir_path+'best_point', 'w') as best_point:
+                best_point.write(json.dumps(self.opt_map))
+                best_point.write("\n")
+                best_point.write(json.dumps(self.optim_status))
+        self.logfile.write(json.dumps(self.optim_status))
+        self.logfile.write("\n")
+        self.logfile.write(f"\nFinished evaluation {self.evaluation}\n")
+        self.evaluation += 1
+        self.logfile.flush()

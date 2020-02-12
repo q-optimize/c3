@@ -1,10 +1,13 @@
 """Experiment class that models the whole experiment."""
 
-import types
 import copy
 import numpy as np
 import tensorflow as tf
-from c3po.component import C3obj
+import matplotlib.pyplot as plt
+from c3po.tf_utils import tf_propagation
+from c3po.tf_utils import tf_propagation_lind
+from c3po.tf_utils import tf_matmul_left
+from c3po.tf_utils import tf_super
 
 
 class Experiment:
@@ -20,15 +23,19 @@ class Experiment:
 
     """
 
-    def __init__(self, model, generator):
+    def __init__(self, model, generator, gateset):
         self.model = model
         self.generator = generator
+        self.gateset = gateset
+
+        self.unitaries = {}
+        self.dUs = {}
 
         components = {}
         components.update(self.model.couplings)
         components.update(self.model.subsystems)
+        components.update(self.model.tasks)
         components.update(self.generator.devices)
-        components['Model'] = model
         self.components = components
 
         id_list = []
@@ -42,12 +49,9 @@ class Experiment:
 
     def write_config(self):
         cfg = {}
-        cfg = copy.deepcopy(self.__dict__)
-        for key in cfg:
-            if key == 'model':
-                cfg[key] = self.model.write_config()
-            elif key == 'generator':
-                cfg[key] = self.generator.write_config()
+        cfg['model'] = self.model.write_config()
+        cfg['generator'] = self.generator.write_config()
+        cfg['gateset'] = self.gateset.write_config()
         return cfg
 
     def get_parameters(self, opt_map=None, scaled=False):
@@ -92,146 +96,129 @@ class Experiment:
             par_id = id[1]
             self.components[comp_id].print_parameter(par_id)
 
+    # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
-class Measurement:
-    """
-    It models all of the behaviour of the measurement process.
+    def evaluate(self, seqs):
+        U_dict = self.get_gates()
+        psi_init = self.model.tasks["init_ground"].initialise()
+        Us = self.evaluate_sequences(U_dict, seqs)
+        pop1s = []
+        for U in Us:
+            psi_final = tf.matmul(U, psi_init)
+            pops = self.model.populations(psi_final, self.model.lindbladian)
+            pop1 = self.model.tasks["meas_err"].pop1(
+                pops, self.model.lindbladian
+            )
+            pop1s.append(pop1)
+        return pop1s
 
-    It includes initialization and readout errors.
+    def get_gates(self):
+        gates = {}
+        # TODO allow for not passing model params
+        # model_params, _ = self.model.get_values_bounds()
+        for gate in self.gateset.instructions.keys():
+            instr = self.gateset.instructions[gate]
+            signal, ts = self.generator.generate_signals(instr)
+            U = self.propagation(signal, ts, gate)
+            if self.model.use_FR:
+                # TODO change LO freq to at the level of a line
+                lo_freqs = {}
+                framechanges = {}
+                for line, ctrls in instr.comps.items():
+                    lo_freqs[line] = tf.cast(
+                        ctrls['carrier'].params['freq'].get_value(),
+                        tf.complex128
+                    )
+                    framechanges[line] = tf.cast(
+                        ctrls['carrier'].params['framechange'].get_value(),
+                        tf.complex128
+                    )
+                t_final = tf.constant(
+                    instr.t_end - instr.t_start,
+                    dtype=tf.complex128
+                )
+                FR = self.model.get_Frame_Rotation(
+                    t_final,
+                    lo_freqs,
+                    framechanges
+                )
+                if self.model.lindbladian:
+                    SFR = tf_super(FR)
+                    U = tf.matmul(SFR, U)
+                    self.FR = SFR
+                else:
+                    U = tf.matmul(FR, U)
+                    self.FR = FR
+            gates[gate] = U
+            self.unitaries = gates
+        return gates
 
-    Parameters
-    ----------
-    Tasks: list
-
-    """
-
-    def __init__(self, tasks):
-        self.tasks = {}
-        for task in tasks:
-            self.tasks[task.name] = task
-
-    def measure(self, U_dict):
-        with tf.name_scope('Measurement Tasks'):
-            init_ground = self.devices["init_ground"]
-            fidelity = self.devices["fidelity"]
-            meas_err = self.devices["meas_err"]
-            evolution = self.devices["evolution"]
-            psi_init = init_ground.initialise()
-            psi_final = evolution.evolve(U_dict, psi_init)
-            measured = meas_err.measure(psi_final)
-            fid = fidelity.process(measured)
-        return fid
-
-
-class Task(C3obj):
-    """Task that is part of the measurement setup."""
-
-    def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
+    @staticmethod
+    def evaluate_sequences(
+        U_dict: dict,
+        sequences: list
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.params = {}
+        """
+        Sequences are assumed to be given in the correct order (left to right).
 
-    def list_parameters(self):
-        par_list = []
-        for par_key in sorted(self.params.keys()):
-            par_id = (self.name, par_key)
-            par_list.append(par_id)
-        return par_list
+            e.g.
+            ['X90p','Y90p','Xp'] --> U = X90p x Y90p x Xp
+        """
+        gates = U_dict
+        # TODO deal with the case where you only evaluate one sequence
+        U = []
+        for sequence in sequences:
+            Us = []
+            for gate in sequence:
+                Us.append(gates[gate])
+            U.append(tf_matmul_left(Us))
+        return U
 
-
-class InitialiseGround(Task):
-    """Initialise the ground state with a given thermal distribution."""
-
-    def __init__(
-            self,
-            name: str = "",
-            desc: str = " ",
-            comment: str = " ",
-            temp: np.float64 = 0.0
+    def propagation(
+        self,
+        signal: dict,
+        ts,
+        gate
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.params['temp'] = temp
 
-    def initialise(self):
-        # init_state = thermal population with self.temp
-        # return init_state
-        pass
+        h0, hctrls = self.model.get_Hamiltonians()
+        signals = []
+        hks = []
+        for key in signal:
+            signals.append(signal[key]["values"])
+            hks.append(hctrls[key])
+        dt = ts[1].numpy() - ts[0].numpy()
 
+        if self.model.lindbladian:
+            col_ops = self.model.get_Lindbladians()
+            dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
+        else:
+            dUs = tf_propagation(h0, hks, signals, dt)
+        self.dUs[gate] = dUs
+        self.ts = ts
+        U = tf_matmul_left(dUs)
+        self.U = U
+        return U
 
-class MeasureExpectationZ(Task):
-    """Initialise the ground state with a given thermal distribution."""
+    def plot_dynamics(self, psi_init, seq):
+        # TODO double check if it works well
+        dUs = self.dUs
+        psi_t = psi_init.numpy()
+        pop_t = self.populations(psi_t)
+        for gate in seq:
+            for du in dUs[gate]:
+                psi_t = np.matmul(du.numpy(), psi_t)
+                pops = self.model.populations(psi_t)
+                pop_t = np.append(pop_t, pops, axis=1)
+            if self.model.use_FR:
+                psi_t = tf.matmul(self.FR, psi_t)
 
-    def __init__(
-            self,
-            name: str = "",
-            desc: str = " ",
-            comment: str = " ",
-            meas_error_matrix: np.array = np.array([[1.0, 0.0], [0.0, 1.0]])
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.params['meas_error'] = np.flat(meas_error_matrix)
-
-    def measure(self):
-        # init_state = thermal population with self.temp
-        # return init_state
-        pass
-
-
-class Fidelity(Task):
-    """Perform the fidelity measurement."""
-
-    def __init__(
-            self,
-            name: str = "",
-            desc: str = " ",
-            comment: str = " ",
-            fidelity_fct: types.FunctionType = None
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.fidelity_fct = fidelity_fct
-
-    def process(self, measured):
-        # return self.fidelity_fct(measured)
-        pass
-
-
-class Evolution(Task):
-    """Evolve initial state using U_dict."""
-
-    def __init__(
-            self,
-            name: str = "",
-            desc: str = " ",
-            comment: str = " ",
-            evolution_fct: types.FunctionType = None
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.evolution_fct = evolution_fct
-
-    def evolve(self, U_dict, psi_init):
-        # return self.evolution_fct(U_dict, psi_init)
-        pass
+        fig, axs = plt.subplots(1, 1)
+        ts = self.ts
+        dt = ts[1] - ts[0]
+        ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+        axs.plot(ts / 1e-9, pop_t.T)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Population')
+        return fig, axs

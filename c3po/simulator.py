@@ -26,7 +26,6 @@ class Simulator():
         self.exp = exp
         self.gateset = gateset
         self.unitaries = {}
-        self.lindbladian = False
         self.dUs = {}
 
     def write_config(self):
@@ -38,7 +37,7 @@ class Simulator():
         # model_params, _ = self.model.get_values_bounds()
         for gate in self.gateset.instructions.keys():
             instr = self.gateset.instructions[gate]
-            signal, ts = self.exp.generator.generate_signals(instr)
+            signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
             if self.use_VZ:
                 # TODO change LO freq to at the level of a line
@@ -57,12 +56,12 @@ class Simulator():
                     instr.t_end - instr.t_start,
                     dtype=tf.complex128
                 )
-                FR = self.exp.model.get_Frame_Rotation(
+                FR = self.model.get_Frame_Rotation(
                     t_final,
                     lo_freqs,
                     framechanges
                 )
-                if self.lindbladian:
+                if self.model.lindbladian:
                     SFR = tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
@@ -101,7 +100,7 @@ class Simulator():
         gate
     ):
 
-        h0, hctrls = self.exp.model.get_Hamiltonians()
+        h0, hctrls = self.model.get_Hamiltonians()
         signals = []
         hks = []
         for key in signal:
@@ -109,8 +108,8 @@ class Simulator():
             hks.append(hctrls[key])
         dt = ts[1].numpy() - ts[0].numpy()
 
-        if self.lindbladian:
-            col_ops = self.exp.model.get_Lindbladians()
+        if self.model.lindbladian:
+            col_ops = self.model.get_Lindbladians()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)
@@ -128,7 +127,7 @@ class Simulator():
         for gate in seq:
             for du in dUs[gate]:
                 psi_t = np.matmul(du.numpy(), psi_t)
-                pops = self.populations(psi_t)
+                pops = self.model.populations(psi_t)
                 pop_t = np.append(pop_t, pops, axis=1)
             if self.use_VZ:
                 psi_t = tf.matmul(self.FR, psi_t)
@@ -144,7 +143,7 @@ class Simulator():
         return fig, axs
 
     def populations(self, state):
-        if self.lindbladian:
+        if self.model.lindbladian:
             diag = []
             dim = int(np.sqrt(len(state)))
             indeces = [n * dim + n for n in range(dim)]

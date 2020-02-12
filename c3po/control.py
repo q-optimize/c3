@@ -2,7 +2,7 @@ import types
 import copy
 import numpy as np
 import tensorflow as tf
-from c3po.component import C3obj
+from c3po.c3objs import C3obj
 
 
 class GateSet:

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 from platform import python_version
 
-from c3po.tf_utils import tf_abs
+from c3po.tf_utils import tf_abs, log_setup
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cmaes
 # from nevergrad.optimization import registry as algo_registry
@@ -21,30 +21,18 @@ import cma.evolution_strategy as cmaes
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
-    def __init__(self, cfg=None):
-        # Set defaults
-        self.gradients = {}
-        self.noise_level = 0
-        self.sampling = False
-        self.batch_size = 1
-        self.skip_bad_points = False  # The Millikan option, don't judge
-        self.divide_by_std = False  # Goal func in terms of experiment std
-        self.current_best_goal = 1e10
+    def __init__(self):
+        self.log_setup()
 
-        # NICO: ###############################################################
-        # The default fields of this class to be stored in a config. Note: Data
-        # heavy fields are excluded, as they will be transfered via logfile.
-        # Maybe this should include the optimizer state in the future, to allow
-        # for easier pause and repeat? A dedicated optim_state JSON might be
-        # better for that.
-        #######################################################################
-        self.cfg_keys = [
-            'noise_level', 'sampling', 'batch_size', 'skip_bad_points',
-            'data_path', 'gateset_opt_map', 'opt_map',
-            'opt_name', 'logfile_name'
-        ]
-        if cfg is not None:
-            self.load_config(cfg)
+    def log_setup(self):
+        string = self.algorithm.__name__ + '-' \
+                 + self.sampling + '-' \
+                 + self.batch_size + '-' \
+                 + self.fom.__name__
+        datafile = self.datafile.split('.')[0]
+        string = string + '----[' + datafile + ']'
+        logdir = log_setup(self.dir_path, string)
+        return logdir
 
     def write_config(self, filename):
         # TODO This will need to be moved to the top level script. Problem
