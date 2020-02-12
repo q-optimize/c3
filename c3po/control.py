@@ -1,6 +1,7 @@
 import types
 import copy
 import numpy as np
+import tensorflow as tf
 from c3po.component import C3obj
 
 
@@ -172,8 +173,13 @@ class Envelope(InstructionComponent):
         """Return the value of the shape function at the specified times."""
         if t_before:
             offset = self.shape(t_before, self.params)
+            vals = self.shape(ts, self.params) - offset
+        else:
+            vals = self.shape(ts, self.params)
         # With the offset, we make sure the signal starts with amplitude 0.
-        return self.shape(ts, self.params) - offset
+        t_final = self.params['t_final']
+        mask = tf.cast(ts<t_final.numpy(), tf.float64)
+        return vals*mask
 
 
 class Carrier(InstructionComponent):

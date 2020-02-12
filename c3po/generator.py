@@ -526,6 +526,8 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
+                        # TODO: check again the sign in front of offset
+                        # [orbit:positive, manybird:negative] Fed guess: pos
                         phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * (
@@ -574,7 +576,7 @@ class AWG(Device):
         self.signal['quadrature'] = quadrature / norm
         self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}, freq_offset
-        # TODO decide when and where to return/sotre params scaled or not
+        # TODO decide when and where to return/store params scaled or not
 
     def get_I(self):
         return self.amp_tot * self.signal['inphase']

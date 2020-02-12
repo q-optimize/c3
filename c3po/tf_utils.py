@@ -309,26 +309,27 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
         return dUs
 
 
-# MATRIX MULTIPLICATION FUCNTIONS
-def evaluate_sequences(
-    U_dict: dict,
-    sequences: list
-):
-    """
-    Sequences are assumed to be given in the correct order (left to right).
-
-        e.g.
-        ['X90p','Y90p'] --> U = X90p x Y90p
-    """
-    gates = U_dict
-    # TODO deal with the case where you only evaluate one sequence
-    U = []
-    for sequence in sequences:
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U.append(tf_matmul_right(Us))
-    return U
+# # MATRIX MULTIPLICATION FUCNTIONS
+# def evaluate_sequences(
+#     U_dict: dict,
+#     sequences: list
+# ):
+#     """
+#     Sequences are assumed to be given in the correct order (left to right).
+#
+#         e.g.
+#         ['X90p','Y90p'] --> U = X90p x Y90p
+#     """
+#     gates = U_dict
+#     # TODO deal with the case where you only evaluate one sequence
+#     U = []
+#     for sequence in sequences:
+#         Us = []
+#         for gate in sequence:
+#             Us.append(gates[gate])
+#         U.append(tf_matmul_right(Us))
+#         #### WARNING WARNING ^^ look there, it says right WARNING
+#     return U
 
 
 def tf_matmul_left(dUs):
@@ -515,19 +516,20 @@ def super_to_choi(A):
     return A_choi
 
 
-def tf_psi_dm(psi_ket):
+def tf_state_to_dm(psi_ket):
+    psi_ket = tf.reshape(psi_ket, [psi_ket.shape[0], 1])
     psi_bra = tf.transpose(psi_ket)
     return psi_ket * psi_bra
 
 
 # TODO see which code to get dv is better (and kill the other)
-def tf_dm_vect(dm):
-    return tf.reshape(dm,shape=[dm.shape[0]**2, 1])
+def tf_dm_to_vec(dm):
+    return tf.reshape(tf.transpose(dm), shape=[-1, 1])
 
-# OVERLAP FUCNTIONS
-@tf.function
-def tf_measure_operator(M, U):
-    return tf.linalg.trace(tf.matmul(M, U))
+
+def tf_vec_to_dm(vec):
+    dim = tf.sqrt(tf.cast(vec.shape[0], tf.float32))
+    return tf.transpose(tf.reshape(vec, [dim, dim]))
 
 
 def tf_dmdm_fid(rho, sigma):
@@ -548,33 +550,6 @@ def tf_dmket_fid(rho, psi):
 
 def tf_ketket_fid(psi1, psi2):
     return tf_abs(tf.matmul(psi1, psi2))
-
-
-def tf_unitary_overlap(A, B, lvls=None):
-    """
-    Unitary overlap between two matrices in Tensorflow(tm).
-
-    Parameters
-    ----------
-    A : Tensor
-        Description of parameter `A`.
-    B : Tensor
-        Description of parameter `B`.
-
-    Returns
-    -------
-    type
-        Description of returned object.
-
-    """
-    if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    overlap = tf_abs(
-                tf.linalg.trace(
-                    tf.matmul(A, tf.linalg.adjoint(B))
-                    ) / lvls
-                )**2
-    return overlap
 
 
 def tf_superoper_unitary_overlap(A, B, lvls=None):
@@ -612,76 +587,3 @@ def tf_superoper_average_fidelity(A, B, lvls=None):
     # get only 00 element and measure fidelity
     ave_fid = tf_abs((lambda_choi[0, 0] * lvls + 1) / (lvls + 1))
     return ave_fid
-
-
-# TENSORFLOW UTILITY FUNCTIONS
-def tf_log_level_info():
-    """Display the information about different log levels in tensorflow."""
-    info = (
-            "Log levels of tensorflow:\n"
-            "\t0 = all messages are logged (default behavior)\n"
-            "\t1 = INFO messages are not printed\n"
-            "\t2 = INFO and WARNING messages are not printed\n"
-            "\t3 = INFO, WARNING, and ERROR messages are not printed\n"
-            )
-    print(info)
-
-
-def get_tf_log_level():
-    """Display the current tensorflow log level of the system."""
-    log_lvl = '0'
-
-    if 'TF_CPP_MIN_LOG_LEVEL' in os.environ:
-        log_lvl = os.environ['TF_CPP_MIN_LOG_LEVEL']
-
-    return log_lvl
-
-
-def set_tf_log_level(lvl):
-    """
-    Set tensorflows system log level.
-
-    REMARK: it seems like the 'TF_CPP_MIN_LOG_LEVEL' variable expects a string.
-            the input of this function seems to work with both string and/or
-            integer, as casting string to string does nothing. feels hacked?
-            but I guess it's just python...
-    """
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(lvl)
-
-
-def tf_list_avail_devices():
-    """
-    List available devices.
-
-    Function for displaying all available devices for tf_setuptensorflow
-    operations on the local machine.
-
-    TODO:   Refine output of this function. But without further knowledge
-            about what information is needed, best practise is to output all
-            information available.
-    """
-    local_dev = device_lib.list_local_devices()
-    print(local_dev)
-
-
-def tf_limit_gpu_memory(memory_limit):
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
-        try:
-            tf.config.experimental.set_virtual_device_configuration(
-                gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(
-                    memory_limit=memory_limit
-                )]
-            )
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(
-                len(gpus),
-                "Physical GPUs,",
-                len(logical_gpus),
-                "Logical GPUs"
-            )
-        except RuntimeError as e:
-            # Virtual devices must be set before GPUs have been initialized
-            print(e)

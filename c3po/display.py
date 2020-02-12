@@ -10,6 +10,30 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+def exp_vs_sim(exps, sims, stds):
+    fig = plt.figure()
+    plt.scatter(exps, sims)
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
+
+def exp_vs_sim_2d_hist(exps, sims, stds):
+    # example in
+    # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html
+    fig = plt.figure()
+    H, xedges, yedges = np.histogram2d(exps, sims, bins=40)
+    H = H.T
+    plt.imshow(
+        H,
+        origin='lower',
+        # interpolation='bilinear',
+        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    )
+    plt.title('Exp vs Sim')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Sim fidelity')
+    return fig
 
 def get_sim_exp_std_diff(logfilename=""):
     if logfilename == "":
@@ -43,8 +67,10 @@ def plot_exp_vs_sim(logfilename=""):
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
-    plt.show(block=False)
-
+    data_path = "/".join(logfilename.split("/")[:-1])+"/"
+    if data_path == "/":
+        data_path = "./"
+    plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
 
 def plot_exp_vs_err(logfilename=""):
     plt.figure()
@@ -274,9 +300,9 @@ def plot_learning_CMA(logfolder=""):
 
 
 def plot_learning(logfolder=""):
+    if not logfolder:
+        logfolder = "/tmp/c3logs/recent/"
     logfilename = logfolder + 'learn_model.log'
-    if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/learn_from.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -326,7 +352,7 @@ def plot_learning(logfolder=""):
     if n_params > 0:
         nrows = np.ceil(np.sqrt(n_params + 1))
         ncols = np.ceil((n_params + 1) / nrows)
-        plt.figure(figsize=(3 * ncols, 2 * nrows))
+        fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
@@ -340,8 +366,8 @@ def plot_learning(logfolder=""):
         plt.grid()
         plt.semilogy(its, goal_function)
         plt.tight_layout()
-        plt.show()
-        plt.savefig("learn_model.png")
+        plt.savefig(logfolder + "learn_model.png")
+        plt.close(fig)
 
 
 def plot_envelope_history(logfilename):
@@ -381,7 +407,7 @@ def plot_awg(logfolder="", num_plots=1):
         plt.plot(point['inphase'], lw=2)
         plt.plot(point['quadrature'], lw=2)
         plt.grid()
-    plt.show(block=False)
+    plt.savefig(logfolder+"awg.png", dpi=300)
 
 
 def plot_foms(logfolder=""):

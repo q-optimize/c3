@@ -33,7 +33,7 @@ def rms_exp_stds_dist(exp_values, sim_values, exp_stds):
 def std_of_diffs(exp_values, sim_values, exp_stds):
     """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.reduce_std(diffs)
+    return tf.math.reduce_std(diffs)
 
 
 def neg_loglkh_binom(exp_values, sim_values, exp_stds):
