@@ -493,15 +493,18 @@ class Optimizer:
             if self.algorithm == 'cmaes':
                 x_best = self.cmaes(
                     x0,
-                    lambda x: self.goal_run_n(tf.constant(x)),
-                    measurements,
+                    lambda x: self.goal_run_n(
+                        tf.constant(x),
+                        measurements,
+                    ),
                     settings
                 )
 
             elif self.algorithm == 'lbfgs':
                 x_best = self.lbfgs(
                     x0,
-                    lambda x: self.goal_run_n_with_grad(tf.constant(x),
+                    lambda x: self.goal_run_n_with_grad(
+                        tf.constant(x),
                         measurements
                     ),
                     options=settings
