@@ -165,7 +165,8 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         h += cflds_t[ii] * hks[ii]
         ii += 1
     terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
-    dU = tf_expm(-1j * h * dt, terms)
+    # dU = tf_expm(-1j * h * dt, terms)
+    dU = tf.linalg.expm(-1j * h * dt, terms)
     return dU
 
 
