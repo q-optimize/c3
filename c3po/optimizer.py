@@ -213,9 +213,9 @@ class Optimizer:
             )
             plt.close(fig)
 
-        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, seqs[-1])
+        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, seq)
         l, r = axs.get_xlim()
-        axs.plot(r, exp_val, 'x')
+        axs.plot(r, fid, 'x')
         fig.savefig(
             self.data_path
             + 'dynamics_seq/'
