@@ -166,7 +166,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         ii += 1
     terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     # dU = tf_expm(-1j * h * dt, terms)
-    dU = tf.linalg.expm(-1j * h * dt, terms)
+    dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
 
@@ -196,39 +196,10 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
-# def tf_propagation(h0, hks, cflds, dt):
-#     """
-#     Calculate the time evolution of a system controlled by time-dependent
-#     fields.
-#
-#     Parameters
-#     ----------
-#     h0 : tf.tensor
-#         Drift Hamiltonian.
-#     hks : list of tf.tensor
-#         List of control Hamiltonians.
-#     cflds : list
-#         List of control fields, one per control Hamiltonian.
-#     dt : float
-#         Length of one time slice.
-#
-#     Returns
-#     -------
-#     type
-#         Description of returned object.
-#
-#     """
-#     dUs = []
-#     for ii in range(cflds[0].shape[0]):
-#         cf_t = []
-#         for fields in cflds:
-#             cf_t.append(tf.cast(fields[ii], tf.complex128))
-#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-#     return dUs
-
 def tf_propagation(h0, hks, cflds, dt):
     """
-    Time evolution of a system controlled by time-dependent fields.
+    Calculate the time evolution of a system controlled by time-dependent
+    fields.
 
     Parameters
     ----------
@@ -247,11 +218,40 @@ def tf_propagation(h0, hks, cflds, dt):
         Description of returned object.
 
     """
-    def tf_time_slice(cf_t):
-        return tf_dU_of_t(h0, hks, cf_t, dt)
+    dUs = []
+    for ii in range(cflds[0].shape[0]):
+        cf_t = []
+        for fields in cflds:
+            cf_t.append(tf.cast(fields[ii], tf.complex128))
+        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+    return dUs
 
-    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
-    return tf.map_fn(tf_time_slice, cflds)
+#def tf_propagation(h0, hks, cflds, dt):
+#    """
+#    Time evolution of a system controlled by time-dependent fields.
+#
+#    Parameters
+#    ----------
+#    h0 : tf.tensor
+#        Drift Hamiltonian.
+#    hks : list of tf.tensor
+#        List of control Hamiltonians.
+#    cflds : list
+#        List of control fields, one per control Hamiltonian.
+#    dt : float
+#        Length of one time slice.
+#
+#    Returns
+#    -------
+#    type
+#        Description of returned object.
+#
+#    """
+#    def tf_time_slice(cf_t):
+#        return tf_dU_of_t(h0, hks, cf_t, dt)
+#
+#    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
+#    return tf.map_fn(tf_time_slice, cflds)
 
 # EXPERIMENTAL BATCH PROPAGATION BELOW
 
