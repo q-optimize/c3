@@ -5,6 +5,7 @@ import json
 import pickle
 import numpy as np
 import tensorflow as tf
+import c3po.display
 from c3po.optimizer import Optimizer
 import matplotlib.pyplot as plt
 
@@ -14,8 +15,8 @@ class C3(Optimizer):
 
     def __init__(
         self,
-        fom,
         dir_path,
+        fom,
         sampling,
         batch_size,
         opt_map,
@@ -25,29 +26,20 @@ class C3(Optimizer):
         algorithm_with_grad=None,
     ):
         """Initiliase."""
+        super().__init__(
+            dir_path=dir_path,
+            algorithm_no_grad=algorithm_no_grad,
+            algorithm_with_grad=algorithm_with_grad
+            )
         self.fom = fom
-        self.dir_path = dir_path
         self.sampling = sampling
         self.batch_size = batch_size
         self.opt_map = opt_map
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
-        super().__init__()
-
-        if algorithm_with_grad:
-            self.algorithm = algorithm_with_grad
-            self.grad = True
-        elif algorithm_no_grad:
-            self.algorithm = algorithm_no_grad
-            self.grad = False
-        else:
-            raise ValueError("You need to pass an algorithm call")
-
         self.logfile_name = self.dir_path + 'learn_model.log'
         self.optim_status = {}
 
-    def set_exp(self, exp):
-        self.exp = exp
 
     def read_data(self, datafile):
         with open(datafile, 'rb+') as file:
@@ -74,16 +66,6 @@ class C3(Optimizer):
                 Thank you."""
             )
         return measurements  # list(set(learn_from) - set(measurements))
-
-    def start_log(self):
-        self.start_time = time.time()
-        start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-        with open(self.logfile_name, 'a') as logfile:
-            logfile.write("Starting optimization at ")
-            logfile.write(start_time_str)
-            logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.opt_map))
-            logfile.write("\n")
 
     def learn_model(self):
         print(f"Saving as:\n{self.logfile_name}")
@@ -213,7 +195,7 @@ class C3(Optimizer):
             plt.close(fig)
         fig, axs = self.sim.plot_dynamics(self.sim.ket_0, sequences[0])
         l, r = axs.get_xlim()
-        axs.plot(r, fid, 'x')
+        axs.plot(r, m_val, 'kx')
         fig.savefig(
             self.dir_path
             + 'dynamics_seq/'

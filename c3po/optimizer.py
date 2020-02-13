@@ -1,28 +1,36 @@
 """Optimizer object, where the optimal control is done."""
 
-import os
-import random
 import time
 import json
 import c3po
-import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
-import tensorflow_probability as tfp
 from platform import python_version
-
-from c3po.tf_utils import tf_abs, log_setup
-from scipy.optimize import minimize as minimize
-import cma.evolution_strategy as cmaes
-# from nevergrad.optimization import registry as algo_registry
-# TODO make callback fucntions take U_dict
-
+from c3po.tf_utils import log_setup
+from c3po.algorithms import lbfgs
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        dir_path,
+        algorithm_no_grad=None,
+        algorithm_with_grad=None,
+    ):
+        self.dir_path = dir_path
+        if algorithm_with_grad:
+            self.algorithm = algorithm_with_grad
+            self.grad = True
+        elif algorithm_no_grad:
+            self.algorithm = algorithm_no_grad
+            self.grad = False
+        else:
+            raise Exception("No algorithm passed. Using default LBFGS")
+            self.algorithm = lbfgs
+            self.grad = True
         self.log_setup()
+
+    def set_exp(self, exp):
+        self.exp = exp
 
     def log_setup(self):
         string = self.algorithm.__name__ + '-' \
@@ -34,495 +42,15 @@ class Optimizer:
         logdir = log_setup(self.dir_path, string)
         return logdir
 
-    def write_config(self, filename):
-        # TODO This will need to be moved to the top level script. Problem
-        # Class or similar.
-        cfg = {}
-        cfg['title'] = "Majestic C3 config file"
-        cfg['date'] = time.asctime(time.localtime())
-        cfg['python_version'] = python_version()
-        cfg['c3_version'] = c3po.__version__
-
-        # Optimizer specifc code follows
-        cfg['optimizer'] = {}
-        cfg['optimizer']['gateset'] = self.gateset.write_config()
-        cfg['optimizer']['sim'] = self.sim.write_config()
-        cfg['optimizer']['exp'] = self.exp.write_config()
-        for key in self.cfg_keys:
-            cfg['optimizer'][key] = self.__dict__[key]
-
-        with open(filename, "w") as cfg_file:
-            json.dump(cfg, cfg_file)
-
-    def load_config(self, filename):
-        with open(filename, "r") as cfg_file:
-            cfg = json.loads(cfg_file.read(1))
-        for key in cfg:
-            if key == 'gateset':
-                self.gateset.load_config(cfg[key])
-            elif key == 'sim':
-                self.sim.load_config(cfg[key])
-            elif key == 'exp':
-                self.exp.load_config(cfg[key])
-            else:
-                self.__dict__[key] = cfg[key]
-
-    def goal_run(self, current_params):
-        self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
-        U_dict = self.sim.get_gates()
-        goal = self.eval_func(U_dict)
-        self.optim_status['params'] = [
-            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = float(goal.numpy())
-        self.log_parameters()
-        return goal
-
-    def goal_run_with_grad(self, current_params):
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            self.gateset.set_parameters(
-                current_params, self.opt_map, scaled=True
-            )
-            U_dict = self.sim.get_gates()
-            goal = self.eval_func(U_dict)
-
-        grad = t.gradient(goal, current_params)
-        gradients = grad.numpy().flatten()
-        self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = [
-            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = float(goal.numpy())
-        self.optim_status['gradient'] = gradients.tolist()
-        self.log_parameters()
-        return goal
-
-    def eval_goal(self, current_params, measurements):
-        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-        batch_size = len(measurements)
-        ipar = 1
-        exp_values = []
-        sim_values = []
-        stds = []
-        for m in measurements:
-            gateset_params = m['params']
-            self.gateset.set_parameters(
-                gateset_params, self.gateset_opt_map, scaled=False
-            )
-            self.logfile.write(
-                "\n  Parameterset {} of {}:  {}".format(
-                    ipar,
-                    batch_size,
-                    self.gateset.get_parameters(
-                        self.gateset_opt_map, to_str=True
-                    )
-                )
-            )
-            ipar += 1
-            U_dict = self.sim.get_gates()
-            seqs = [seq['gate_seq'] for seq in m['seqs']]
-            values = self.eval_func(U_dict, seqs)
-            for indx in range(len(m['seqs'])):
-                exp_val = m['seqs'][indx]['result']
-                std = m['seqs'][indx]['result_std']
-                sim_val = float(values[indx].numpy())
-                exp_values.append(exp_val)
-                stds.append(std)
-                self.logfile.write(
-                    f"\n  Sequence {indx} of {len(m['seqs'])}:\n"
-                )
-                self.logfile.write(
-                    f"  Simulation:  {sim_val:8.5f}"
-                )
-                self.logfile.write(
-                    f"  Experiment: {exp_val:8.5f} std: {std:8.5f}"
-                )
-                self.logfile.write(
-                    f"  Diff: {exp_val-sim_val:8.5f}\n"
-                )
-                self.logfile.flush()
-            sim_values.extend(values)
-
-        exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=0)
-        stds = tf.constant(stds, dtype=tf.float64)
-        goal = self.fom(exp_values, sim_values, stds)
-        self.logfile.write(
-            "Finished batch with {}: {}\n".format(
-                self.fom.__name__,
-                float(goal.numpy())
-            )
-        )
-        for cb_fom in self.callback_foms:
-            self.logfile.write(
-                "Finished batch with {}: {}\n".format(
-                    cb_fom.__name__,
-                    float(cb_fom(exp_values, sim_values, stds).numpy())
-                )
-            )
-        self.logfile.flush()
-
-        for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values, stds)
-            fig.savefig(
-                self.data_path
-                + cb_fig.__name__ + '/'
-                + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal.numpy(), 3))
-                + '.png'
-            )
-            plt.close(fig)
-
-        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, seq)
-        l, r = axs.get_xlim()
-        axs.plot(r, fid, 'x')
-        fig.savefig(
-            self.data_path
-            + 'dynamics_seq/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal.numpy(), 3))
-            + '.png'
-        )
-        plt.close(fig)
-
-        fig, axs = self.sim.plot_dynamics(
-            self.sim.ket_0,
-            ['X90p','Y90p','X90p','Y90p']
-        )
-        fig.savefig(
-            self.data_path
-            + 'dynamics_xyxy/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal.numpy(), 3))
-            + '.png'
-        )
-        plt.close(fig)
-
-        c3po.display.plot_learning(self.data_path)
-
-        self.optim_status['params'] = [
-            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = float(goal.numpy())
-        return goal
-
-    def goal_run_n(self, current_params, measurements):
-        goal = self.eval_goal(current_params, measurements)
-        return goal
-
-    def goal_run_n_with_grad(self, current_params, measurements):
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            goal = self.eval_goal(current_params, measurements)
-
-        grad = t.gradient(goal, current_params)
-        gradients = grad.numpy().flatten()
-        self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['gradient'] = gradients.tolist()
-        self.log_parameters()
-        return goal
-
-    def lookup_gradient(self, x):
-        key = str(x)
-        return self.gradients.pop(key)
-
-
-# TODO fix error when JSONing fucntion types
-
-# TODO desing change? make simulator / optimizer communicate with ask and tell?
-    def lbfgs(self, x0, goal, options):
-        # TODO fix error when JSONing fucntion types
-        options['disp'] = True
-        # Run the initial point explictly or it'll be ignored by callback
-        if "rotate_data" in options.keys():
-            res = minimize(
-                lambda x: float(goal(x).numpy()),
-                x0,
-                jac=self.lookup_gradient,
-                method='L-BFGS-B',
-                options=options
-            )
-        else:
-            res = minimize(
-                lambda x: float(goal(x).numpy()),
-                x0,
-                jac=self.lookup_gradient,
-                method='L-BFGS-B',
-                options=options
-            )
-        return res.x
-
-    def optimize_controls(
-        self,
-        sim,
-        gateset,
-        opt_map,
-        opt_name,
-        fid_func,
-        callbacks=[],
-        settings={},
-        other_funcs={}
-    ):
-        """
-        Apply a search algorightm to your gateset given a fidelity function.
-
-        Parameters
-        ----------
-        simulator : class Simulator
-            simulator class carrying all relevant informatioFn:
-            - experiment object with model and generator
-            - gateset object with pulse information for each gate
-
-        opt_map : list
-            Specifies which parameters will be optimized
-
-        algorithm : str
-            Specification of the optimizer to be used, i.e. cmaes, powell, ...
-
-        calib_name : str
-
-        eval_func : function
-            Takes the dictionary of gates and outputs a fidelity value of which
-            we want to find the minimum
-
-        settings : dict
-            Special settings for the desired optimizer
-
-        other_funcs : dict of functions
-            All functions that will be calculated from U_dict and stored
-
-        """
-        # TODO Separate gateset from the simulation here.
-        x0 = gateset.get_parameters(opt_map, scaled=True)
-        self.init_values = x0
-        self.sim = sim
-        self.gateset = gateset
-        self.opt_map = opt_map
-        self.opt_name = opt_name
-        self.fid_func = fid_func
-        self.callbacks = callbacks
-        self.optim_status = {}
-        self.evaluation = 1
-
-        # TODO log physical values, not tf values
-
-        self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as:\n{self.logfile_name}")
-        start_time = time.time()
-        with open(self.logfile_name, 'a') as self.logfile:
-            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-            self.logfile.write("Starting optimization at")
-            self.logfile.write(start_time_str)
-            self.logfile.write(f"\n {self.opt_map}\n")
-            self.logfile.flush()
-            if self.algorithm == 'cmaes':
-                self.cmaes(
-                    x0,
-                    self.goal_run,
-                    settings
-                )
-
-            elif self.algorithm == 'lbfgs':
-                x_best = self.lbfgs(
-                    x0,
-                    self.goal_run_with_grad,
-                    options=settings
-                )
-
-            self.gateset.set_parameters(
-                x_best, self.opt_map, scaled=True
-            )
-            end_time = time.time()
-            self.logfile.write("Started at ")
-            self.logfile.write(start_time_str)
-            self.logfile.write(
-                f"Finished at {time.asctime(time.localtime())}\n"
-            )
-            self.logfile.write(
-                f"Total runtime:{end_time-start_time}\n\n"
-            )
-            self.logfile.flush()
-
-        # TODO decide if gateset object should have history and implement
-        # TODO save while setting if you pass a save name
-        # pseudocode: controls.save_params_to_history(calib_name)
-
-    def learn_model(
-        self,
-        exp,
-        sim,
-        eval_func,
-        fom,
-        callback_foms=[],
-        callback_figs=[],
-        opt_name='learn_model',
-        settings={}
-    ):
-        # TODO allow for specific data from optimizer to be used for learning
-        x0 = exp.get_parameters(self.opt_map, scaled=True)
-        self.exp = exp
-        self.sim = sim
-        self.eval_func = eval_func
-        self.fom = fom
-        self.callback_foms = callback_foms
-        self.callback_figs = callback_figs
-        for cb_fig in callback_figs:
-            os.makedirs(self.data_path + cb_fig.__name__)
-        os.makedirs(self.data_path + 'dynamics_seq/')
-        os.makedirs(self.data_path + 'dynamics_xyxy/')
-        self.opt_name = opt_name
-        self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as:\n{self.logfile_name}")
-        self.optim_status = {}
-        self.evaluation = 0
-
-        with open(self.logfile_name, 'a') as self.logfile:
-            start_time = time.time()
-            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-            self.logfile.write("Starting optimization at ")
-            self.logfile.write(start_time_str)
-            self.logfile.write("Optimization parameters:\n\n")
-            self.logfile.write(json.dumps(self.opt_map))
-            self.logfile.write("\n")
-
-            learn_from = self.learn_from['seqs_grouped_by_param_set']
-            # TODO put optmizer specific code here
-            if self.sampling == 'random':
-                measurements = random.sample(learn_from, self.batch_size)
-            elif self.sampling == 'even':
-                n = int(len(learn_from) / self.batch_size)
-                measurements = learn_from[::n]
-            elif self.sampling == 'from_start':
-                measurements = learn_from[:self.batch_size]
-            elif self.sampling == 'from_end':
-                measurements = learn_from[-self.batch_size:]
-            elif self.sampling == 'ALL':
-                measurements = learn_from
-            elif self.sampling == 'rotating':
-                pass
-            else:
-                raise(
-                    """Unspecified sampling method.\n
-                    Select from 'from_end'  'even', 'random' , 'from_start'.
-                    Thank you."""
-                )
-            if self.algorithm == 'cmaes':
-                x_best = self.cmaes(
-                    x0,
-                    lambda x: self.goal_run_n(
-                        tf.constant(x),
-                        measurements,
-                    ),
-                    settings
-                )
-
-            elif self.algorithm == 'lbfgs':
-                x_best = self.lbfgs(
-                    x0,
-                    lambda x: self.goal_run_n_with_grad(
-                        tf.constant(x),
-                        measurements
-                    ),
-                    options=settings
-                )
-
-            elif self.algorithm == 'lbfgs-rotating':
-                left = 0
-                right = 10
-                settings['maxiter'] = 5
-                current_x = x0
-                while right<len(learn_from):
-                    self.logfile.write(f"\n\nSelecting data {left}:{right}\n")
-                    measurements = learn_from[left:right]
-                    current_x = self.lbfgs(
-                        current_x,
-                        lambda x: self.goal_run_n_with_grad(tf.constant(x),
-                            measurements
-                        ),
-                        options=settings
-                    )
-                    left = right
-                    right = min(left+10,len(learn_from))
-
-            elif self.algorithm == 'oneplusone':
-                x_best = self.oneplusone(
-                    tf.constant(x0),
-                    self.goal_run_n,
-                    options=settings
-                )
-
-            elif self.algorithm == 'keras-SDG':
-                vars = tf.Variable(x0)
-                self.keras_vars = vars
-                optimizer = tf.keras.optimizers.SGD(learning_rate=0.1)
-                optimizer.minimize(self.goal_run_n_keras, var_list=[vars])
-                x_best = vars.numpy()
-
-            elif self.algorithm == 'keras-Adam':
-                vars = tf.Variable(x0)
-                optimizer = tf.keras.optimizers.Adam(learning_rate=0.1)
-                optimizer.minimize(self.goal_run_n(vars), var_list=[vars])
-                x_best = vars.numpy()
-
-            else:
-                raise Exception(
-                    "I don't know the selected optimization algorithm."
-                )
-            self.exp.set_parameters(
-                x_best, self.opt_map, scaled=True
-            )
-            end_time = time.time()
-            self.logfile.write(
-                f"Finished at {time.asctime(time.localtime())}\n"
-            )
-            self.logfile.write(
-                f"Total runtime: {end_time-start_time}\n\n"
-            )
-            self.logfile.flush()
-
-    def model_1d_sweep(
-        self,
-        exp,
-        sim,
-        eval_func,
-        opt_name='model_sweep',
-        num=50,
-    ):
-        from progressbar import ProgressBar, Percentage, Bar, ETA
-        import matplotlib.pyplot as plt
-
-        self.exp = exp
-        self.sim = sim
-        self.eval_func = eval_func
-        self.opt_name = opt_name
-        self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as:\n{self.logfile_name}")
-        self.optim_status = {}
-        self.evaluation = 1
-
-        with open(self.logfile_name, 'a') as self.logfile:
-            X = np.linspace(-1, 1, num)
-            rms = []
-            widgets = [
-                'Sweep: ',
-                Percentage(),
-                ' ',
-                Bar(marker='=', left='[', right=']'),
-                ' ',
-                ETA()
-            ]
-            pbar = ProgressBar(widgets=widgets, maxval=X.shape[0])
-            pbar.start()
-            ii = 0
-            for val in pbar(range(X.shape[0])):
-                rms.append(self.goal_run_n([X[ii]]))
-                pbar.update(ii)
-                ii += 1
-            pbar.finish()
-            plt.figure()
-            plt.plot(X, rms, 'x')
-            plt.show()
+    def start_log(self):
+        self.start_time = time.time()
+        start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
+        with open(self.logfile_name, 'a') as logfile:
+            logfile.write("Starting optimization at ")
+            logfile.write(start_time_str)
+            logfile.write("Optimization parameters:\n")
+            logfile.write(json.dumps(self.opt_map))
+            logfile.write("\n")
 
     def log_parameters(self):
         if self.optim_status['goal'] < self.current_best_goal:
@@ -537,161 +65,26 @@ class Optimizer:
         self.evaluation += 1
         self.logfile.flush()
 
-    def confirm_model(
-        self,
-        exp,
-        sim,
-        eval_func,
-        confirm_params,
-        fom,
-        callback_foms=[],
-    ):
-        self.opt_name = "confirm"
-        self.logfile_name = self.data_path + self.opt_name + '.log'
-        print(f"Saving as:\n{self.logfile_name}")
-        self.optim_status = {}
-        self.evaluation = 0
-        with open(self.logfile_name, 'a') as self.logfile:
-            self.fom = fom
-            self.callback_foms = callback_foms
-            self.exp = exp
-            self.sim = sim
-            self.eval_func = eval_func
-            learn_from = self.learn_from['seqs_grouped_by_param_set']
-            self.exp.set_parameters(confirm_params, self.opt_map, scaled=False)
+    def write_config(self, filename):
+        with open(filename, "w") as cfg_file:
+            json.dump(self.__dict__, cfg_file)
 
-            if self.sampling == 'random':
-                raise ValueError('do not know which sequences to exclude')
-            elif self.sampling == 'even':
-                n = int(len(learn_from) / self.batch_size)
-                measurements = []
-                for indx in np.arange(len(learn_from)):
-                    if indx % n != 0:
-                        measurements.append(learn_from[indx])
-
-            elif self.sampling == 'from_start':
-                measurements = learn_from[self.batch_size:]
-            elif self.sampling == 'from_end':
-                measurements = learn_from[:-self.batch_size]
-            elif self.sampling == 'ALL':
-                raise ValueError('Already verified')
+    def load_config(self, filename):
+        with open(filename, "r") as cfg_file:
+            cfg = json.loads(cfg_file.read(1))
+        for key in cfg:
+            if key == 'gateset':
+                self.gateset.load_config(cfg[key])
+            elif key == 'sim':
+                self.sim.load_config(cfg[key])
+            elif key == 'exp':
+                self.exp.load_config(cfg[key])
             else:
-                raise(
-                    """Unspecified sampling method.\n
-                    Select from 'from_end'  'even', 'random' , 'from_start'.
-                    Thank you."""
-                )
-            batch_size = len(measurements)
-            ipar = 1
-            used_seqs = 0
-            for m in measurements:
-                gateset_params = m['params']
-                self.gateset.set_parameters(
-                    gateset_params, self.gateset_opt_map, scaled=False
-                )
-                self.logfile.write(
-                    "\n  Parameterset {} of {}:  {}".format(
-                        ipar,
-                        batch_size,
-                        self.gateset.get_parameters(
-                            self.gateset_opt_map, to_str=True
-                        )
-                    )
-                )
-                ipar += 1
-                U_dict = self.sim.get_gates()
-                iseq = 1
-                fids = []
-                sims = []
-                stds = []
-                for this_seq in m['seqs']:
-                    seq = this_seq['gate_seq']
-                    fid = this_seq['result']
-                    std = this_seq['result_std']
+                self.__dict__[key] = cfg[key]
 
-                    if (self.skip_bad_points and fid > 0.25):
-                        self.logfile.write(
-                            f"\n  Skipped point with infidelity>0.25.\n"
-                        )
-                        iseq += 1
-                        continue
 
-                    this_goal = self.eval_func(U_dict, seq)
-                    self.logfile.write(
-                        f"\n  Sequence {iseq} of {len(m['seqs'])}:\n  {seq}\n"
-                    )
-                    iseq += 1
-                    self.logfile.write(
-                        f"  Simulation:  {float(this_goal.numpy()):8.5f}"
-                    )
-                    self.logfile.write(
-                        f"  Experiment: {fid:8.5f} std: {std:8.5f}"
-                    )
-                    self.logfile.write(
-                        f"  Diff: {fid-float(this_goal.numpy()):8.5f}\n"
-                    )
-                    self.logfile.flush()
-                    used_seqs += 1
+    def lookup_gradient(self, x):
+        key = str(x)
+        return self.gradients.pop(key)
 
-                    fids.append(fid)
-                    sims.append(this_goal)
-                    stds.append(std)
-
-                tmp_fids = tf.constant(fids, dtype=tf.float64)
-                tmp_sims = tf.concat(sims, axis=0)
-                tmp_stds = tf.constant(stds, dtype=tf.float64)
-                print(
-                    "Current {}: {}".format(
-                        self.fom.__name__,
-                        float(self.fom(tmp_fids, tmp_sims, tmp_stds).numpy())
-                    )
-                )
-                for cb_fom in self.callback_foms:
-                    print(
-                        "Current {}: {}".format(
-                            cb_fom.__name__,
-                            float(cb_fom(tmp_fids, tmp_sims, tmp_stds).numpy())
-                        )
-                    )
-                print("")
-
-                self.logfile.write(
-                    f"  Mean simulation fidelity: {float(np.mean(sims)):8.5f}"
-                )
-                self.logfile.write(
-                    f" std: {float(np.std(sims)):8.5f}\n"
-                )
-                self.logfile.write(
-                    f"  Mean experiment fidelity: {float(np.mean(fids)):8.5f}"
-                )
-                self.logfile.write(
-                    f" std: {float(np.std(fids)):8.5f}\n"
-                )
-                self.logfile.flush()
-
-            fids = tf.constant(fids, dtype=tf.float64)
-            sims = tf.concat(sims, axis=0)
-            stds = tf.constant(stds, dtype=tf.float64)
-            goal = self.fom(fids, sims, stds)
-            self.logfile.write(
-                "Finished batch with {}: {}\n".format(
-                    self.fom.__name__,
-                    float(goal.numpy())
-                )
-            )
-            for cb_fom in self.callback_foms:
-                self.logfile.write(
-                    "Finished batch with {}: {}\n".format(
-                        cb_fom.__name__,
-                        float(cb_fom(fids, sims, stds).numpy())
-                    )
-                )
-            self.logfile.flush()
-
-            self.optim_status['params'] = [
-                par.numpy().tolist()
-                for par in self.exp.get_parameters(self.opt_map)
-            ]
-            self.optim_status['goal'] = float(goal.numpy())
-            self.log_parameters()
-        return goal
+    # TODO fix error when JSONing fucntion types
