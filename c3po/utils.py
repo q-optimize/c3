@@ -43,9 +43,9 @@ def num3str(val):
         tmp = np.log10(v)
         idx = int(tmp // 3)
         if tmp < 0:
-            prefix = small_units[idx]
+            prefix = small_units[-(idx+1)]
         else:
             prefix = big_units[idx]
 
         ret.append(f"{sign * (10 ** (tmp % 3)):.3f}" + prefix)
-    return str(ret)
+    return ret
