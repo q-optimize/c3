@@ -84,7 +84,10 @@ class Quantity:
         val = self.numpy()
         if self.unit == "Hz 2pi":
             val = val / 2 / np.pi
-        return num3str(val) + self.unit
+        ret = ""
+        for q in num3str(val):
+            ret += q + self.unit + " "
+        return ret
 
     def numpy(self):
         return self.scale * (self.value.numpy() + 1) / 2 + self.offset
