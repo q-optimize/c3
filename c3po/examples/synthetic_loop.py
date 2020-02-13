@@ -21,9 +21,8 @@ from c3po.qt_utils import basis, xy_basis, perfect_gate
 from single_qubit import create_chip_model, create_generator, create_gates
 from c3po.tf_utils import tf_limit_gpu_memory
 
-tf_limit_gpu_memory(100)
 run_name = "synthetic_rnd_smpl"
-logdir = log_setup("/tmp/c3logs/", run_name=run_name)
+logdir = log_setup("/localdisk/c3logs/", run_name=run_name)
 
 with tf.device('/CPU:0'):
     # System
@@ -149,28 +148,6 @@ with tf.device('/CPU:0'):
     bra_yp = tf.constant(xy_basis(qubit_lvls, 'yp').T, dtype=tf.complex128)
     X90p = tf.constant(perfect_gate(qubit_lvls, 'X90p'), dtype=tf.complex128)
 
-    # TODO move fidelity experiments elsewhere
-    def state_transfer_infid(U_dict: dict):
-        U = U_dict['X90p']
-        ket_actual = tf.matmul(U, ket_0)
-        overlap = tf_abs(tf.matmul(bra_yp, ket_actual))
-        infid = 1 - overlap
-        return infid
-
-    def unitary_infid(U_dict: dict):
-        U = U_dict['X90p']
-        unit_fid = tf_abs(
-            tf.linalg.trace(tf.matmul(U, tf.linalg.adjoint(X90p))) / 2
-        )**2
-        infid = 1 - unit_fid
-        return infid
-
-    def pop_leak(U_dict: dict):
-        U = U_dict['X90p']
-        ket_actual = tf.matmul(U, ket_0)
-        overlap = tf_abs(tf.matmul(bra_2, ket_actual))
-        return overlap
-
     def match_calib(
         U_dict,
         seq: list,
@@ -198,22 +175,25 @@ with tf.device('/CPU:0'):
     ]
 
     def c3_openloop():
-        opt = Opt(data_path=logdir)
+        opt = Opt()
+        opt.data_path = logdir
+        opt.algorithm = 'lbfgs'
         opt.optimize_controls(
             sim=sim_wrong,
+            gateset=gates,
             opt_map=opt_map,
-            opt='lbfgs',
             opt_name='openloop',
             fid_func=unitary_infid
         )
 
     def c3_calibration(noise_level=0):
-        opt = Opt(data_path=logdir)
+        opt = Opt()
+        opt.data_path = logdir
         opt.noise_level = noise_level
+        opt.algorithm = 'cmaes'
         opt.optimize_controls(
             sim=sim_right,
             opt_map=opt_map,
-            opt='cmaes',
             # settings={},
             settings={'ftarget': 1e-4},
             opt_name='calibration',
@@ -230,7 +210,8 @@ with tf.device('/CPU:0'):
                 learn_from.append(
                     [line_dict['params'], [[['X90p'], line_dict['goal']]]]
                 )
-        opt = Opt(data_path=logdir)
+        opt = Opt()
+        opt.data_path = logdir
         opt.gateset_opt_map = opt_map
         opt.opt_map = exp_opt_map
         opt.sampling = sampling
@@ -242,6 +223,7 @@ with tf.device('/CPU:0'):
             exp_wrong,
             sim_wrong,
             eval_func=match_calib,
+            fom='rms',
             settings=settings
         )
 
@@ -271,8 +253,8 @@ with tf.device('/CPU:0'):
         )
 
 # Run the stuff
-    # c3_openloop()
-    # c3_calibration(noise_level=0)
-    # logfilename = logdir + "calibration.log"
-    # #  sampling = 'from_end'  'even', 'random', 'from_start'
-    # c3_learn_model(logfilename, sampling='random', batch_size=10)
+    c3_openloop()
+    c3_calibration(noise_level=0)
+    logfilename = logdir + "calibration.log"
+    #  sampling = 'from_end'  'even', 'random', 'from_start'
+    c3_learn_model(logfilename, sampling='random', batch_size=10)

@@ -14,10 +14,6 @@ import c3po.generator as generator
 import c3po.fidelities as fidelities
 
 
-# Limit graphics memory
-tf_limit_gpu_memory(100)  # to 100 MB
-
-
 # Gates
 def create_gates(t_final,
                  v_hz_conversion,
