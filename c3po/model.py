@@ -2,6 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
+import itertools
 from c3po.component import Quantity, Drive, Coupling
 from c3po.constants import kb, hbar
 from c3po.tf_utils import tf_state_to_dm, tf_vec_to_dm, tf_dm_to_vec
@@ -45,10 +46,14 @@ class Model:
         # Construct array with dimension of comps (only qubits & resonators)
         dims = []
         names = []
+        state_labels = []
         for subs in subsystems:
             dims.append(subs.hilbert_dim)
             names.append(subs.name)
+            state_labels.append(list(range(subs.hilbert_dim)))
         self.tot_dim = np.prod(dims)
+
+        self.state_labels = list(itertools.product(*state_labels))
 
         # Create anninhilation operators for physical comps
         ann_opers = []

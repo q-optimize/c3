@@ -64,21 +64,23 @@ class Generator:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
                 signal = v_to_hz.transform(signal, omega_lo+freq_offset)
+
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
-                # plt.figure()
-                # plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
-                # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
-                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
-                # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
-                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
-                # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], signal, '-')
-                # plt.title("Multiplex")
-                # plt.show()
+              #  plt.figure()
+              #  plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
+              #  plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
+              #  plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
+              #  plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
+              #  plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
+              #  plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
+              #  plt.show()
+              #  plt.figure()
+              #  plt.plot(lo_signal['ts'], signal, '-')
+              #  plt.title("Multiplex")
+              #  plt.show()
         self.signal = gen_signal
+        # TODO clean up output here: ts is redundant
         return gen_signal, lo_signal['ts']
 
     def readout_signal(self, phase):
@@ -203,6 +205,7 @@ class Volts_to_Hertz(Device):
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz."""
         v2hz = self.params['V_to_Hz'].get_value()
+        #TODO Fix scaling to be independent of drive frequency
         if 'offset' in self.params:
             offset = self.params['offset'].get_value()
             att = v2hz / (drive_frequency + offset)

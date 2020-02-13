@@ -120,7 +120,7 @@ class Simulator():
         self.U = U
         return U
 
-    def plot_dynamics(self, psi_init, seq):
+    def plot_dynamics(self, psi_init, seq, data_path="/tmp/c3figs/"):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
@@ -141,7 +141,7 @@ class Simulator():
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        data_path = "/localdisk/c3logs/recent/"
+        plt.legend(self.exp.model.state_labels)
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png', dpi=300)

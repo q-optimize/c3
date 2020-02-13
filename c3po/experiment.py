@@ -86,11 +86,13 @@ class Experiment:
 
     def print_parameters(self, opt_map=None):
         if opt_map is None:
-            opt_map = self.list_parameters()
+            opt_map = self.id_list
         for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
-            self.components[comp_id].print_parameter(par_id)
+            par = self.components[comp_id].params[par_id]
+            nice_id = f"{comp_id}-{par_id}"
+            print(f"{nice_id:22}: {par}")
 
 
 class Measurement:

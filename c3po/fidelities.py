@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import tensorflow_probability as tfp
 from scipy.optimize import curve_fit
 from c3po.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
-    tf_superoper_unitary_overlap, tf_unitary_overlap, evaluate_sequences, \
+    tf_superoper_unitary_overlap, tf_unitary_overlap, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
-    tf_dm_to_vect, tf_dmket_fid
+    tf_dm_to_vec, tf_dmket_fid
 from c3po.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
 

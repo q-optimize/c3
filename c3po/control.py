@@ -76,7 +76,7 @@ class GateSet:
             gate_instr = self.instructions[gate]
             par = gate_instr.comps[chan][comp].params[param]
             if scaled:
-                values.append(par.get_opt_value)
+                values.extend(par.get_opt_value())
             elif to_str:
                 values.append(str(par))
             else:

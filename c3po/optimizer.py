@@ -181,7 +181,9 @@ class Optimizer:
             )
             self.logfile.flush()
 
-        self.sim.plot_dynamics(self.sim.ket_0, seq)
+        self.sim.plot_dynamics(
+            self.sim.ket_0, seq, data_path=self.data_path
+        )
 
         fids = tf.constant(fids, dtype=tf.float64)
         sims = tf.concat(sims, axis=0)
@@ -291,22 +293,13 @@ class Optimizer:
         # TODO fix error when JSONing fucntion types
         options['disp'] = True
         # Run the initial point explictly or it'll be ignored by callback
-        if "rotate_data" in options.keys():
-            res = minimize(
-                lambda x: float(goal(x).numpy()),
-                x0,
-                jac=self.lookup_gradient,
-                method='L-BFGS-B',
-                options=options
-            )
-        else:
-            res = minimize(
-                lambda x: float(goal(x).numpy()),
-                x0,
-                jac=self.lookup_gradient,
-                method='L-BFGS-B',
-                options=options
-            )
+        res = minimize(
+            lambda x: float(goal(x).numpy()),
+            x0,
+            jac=self.lookup_gradient,
+            method='L-BFGS-B',
+            options=options
+        )
         return res.x
 
     def optimize_controls(
@@ -375,14 +368,18 @@ class Optimizer:
             if self.algorithm == 'cmaes':
                 self.cmaes(
                     x0,
-                    self.goal_run,
+                    lambda x: self.goal_run(
+                        tf.constant(x)
+                    ),
                     settings
                 )
 
             elif self.algorithm == 'lbfgs':
                 x_best = self.lbfgs(
-                    x0,
-                    self.goal_run_with_grad,
+                    tf.constant(x0),
+                    lambda x: self.goal_run_with_grad(
+                        tf.constant(x)
+                    ),
                     options=settings
                 )
 
@@ -534,6 +531,10 @@ class Optimizer:
                 f"Total runtime: {end_time-start_time}\n\n"
             )
             self.logfile.flush()
+            self.logfile.write(
+                "\n Final parameters:\n"
+            )
+            self.logfile.write(self.exp.print_parameters())
 
     def model_1d_sweep(
         self,
@@ -583,7 +584,7 @@ class Optimizer:
             self.current_best_goal = self.optim_status['goal']
             with open(self.data_path+'best_point', 'w') as best_point:
                 best_point.write(json.dumps(self.opt_map))
-                self.logfile.write("\n")
+                best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
