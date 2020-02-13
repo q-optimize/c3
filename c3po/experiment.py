@@ -85,14 +85,16 @@ class Experiment:
         self.model.update_model()
 
     def print_parameters(self, opt_map=None):
-        if opt_map is None:
+       ret = []
+       if opt_map is None:
             opt_map = self.id_list
-        for id in opt_map:
+       for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
             par = self.components[comp_id].params[par_id]
             nice_id = f"{comp_id}-{par_id}"
-            print(f"{nice_id:22}: {par}")
+            ret.append(f"{nice_id:22}: {par}\n")
+       return "".join(ret)
 
 
 class Measurement:

@@ -265,7 +265,8 @@ class Qubit(PhysicalComponent):
             Ls.append(L)
             if 'temp' in self.params:
                 freq_diff = np.array(
-                    [(self.params['freq'] + n*self.params['anharm'])
+                    [(self.params['freq'].get_value()
+                      + n*self.params['anharm'].get_value())
                         for n in range(self.hilbert_dim)]
                 )
                 beta = 1 / (self.params['temp'].get_value() * kb)
@@ -386,7 +387,8 @@ class Coupling(LineComponent):
         )
 
     def get_Hamiltonian(self):
-        return self.params['strength'] * self.Hs['strength']
+        strength = tf.cast(self.params['strength'].get_value(), tf.complex128)
+        return strength * self.Hs['strength']
 
 
 class Drive(LineComponent):

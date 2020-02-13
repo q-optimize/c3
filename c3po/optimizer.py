@@ -586,6 +586,11 @@ class Optimizer:
                 best_point.write(json.dumps(self.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
+                best_point.write(
+                    "\n Current parameters:\n"
+                )
+                best_point.write(self.exp.print_parameters())
+
         self.logfile.write(json.dumps(self.optim_status))
         self.logfile.write("\n")
         self.logfile.write(f"\nFinished evaluation {self.evaluation}\n")
