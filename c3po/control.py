@@ -171,14 +171,15 @@ class Envelope(InstructionComponent):
 
     def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times."""
+        t_final = self.params['t_final']
         if t_before:
             offset = self.shape(t_before, self.params)
             vals = self.shape(ts, self.params) - offset
+            mask = tf.cast(ts < t_final.numpy() - t_before, tf.float64)
         else:
             vals = self.shape(ts, self.params)
+            mask = tf.cast(ts < t_final.numpy(), tf.float64)
         # With the offset, we make sure the signal starts with amplitude 0.
-        t_final = self.params['t_final']
-        mask = tf.cast(ts<t_final.numpy(), tf.float64)
         return vals*mask
 
 
