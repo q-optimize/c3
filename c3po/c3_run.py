@@ -24,11 +24,20 @@ with open(datafile, 'rb+') as file:
 c3po.tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = c3po.parsers.create_experiment(exp_setup, learn_from)
+    if 'initial_point' in cfg:
+        with open(cfg['initial_point']) as init_file:
+            best = init_file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            pt = json.loads(best[1])
+            init_p = pt['params']
+            exp.set_parameters(init_p, best_exp_opt_map)
+            print("Loading previous best point.")
+
     opt = c3po.parsers.create_optimizer(opt_config)
     opt.set_exp(exp)
     opt.read_data(datafile)
-    dir = opt.logdir
 
+    dir = opt.logdir
     os.system('cp {} {}/{}'.format(__file__, dir, base(__file__)))
     os.system('cp {} {}/{}'.format(master_config, dir, base(master_config)))
     os.system('cp {} {}/{}'.format(exp_setup, dir, base(exp_setup)))
