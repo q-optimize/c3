@@ -3,7 +3,6 @@
 import numpy as np
 import tensorflow as tf
 from c3po.component import Drive, Coupling
-from c3po.tf_utils import tf_vec_to_dm
 
 class Model:
     """
@@ -103,7 +102,8 @@ class Model:
 
     def update_model(self):
         self.update_Hamiltonians()
-        self.update_Lindbladians()
+        if self.lindbladian:
+            self.update_Lindbladians()
         if self.dressed:
             self.update_dressed()
 
@@ -155,17 +155,18 @@ class Model:
                 self.control_Hs[key]),
                 self.transform
             )
-        for col_op in self.col_ops:
-            dressed_col_ops.append(
-                tf.matmul(tf.matmul(
-                    tf.linalg.adjoint(self.transform),
-                    col_op),
-                    self.transform
-                )
-            )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
-        self.dressed_col_ops = dressed_col_ops
+        if self.lindbladian:
+            for col_op in self.col_ops:
+                dressed_col_ops.append(
+                    tf.matmul(tf.matmul(
+                        tf.linalg.adjoint(self.transform),
+                        col_op),
+                        self.transform
+                    )
+                )
+            self.dressed_col_ops = dressed_col_ops
 
     def get_Frame_Rotation(
         self,
@@ -199,10 +200,3 @@ class Model:
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
         pass
-
-    def populations(self, state):
-        if self.lindbladian:
-            rho = tf_vec_to_dm(state)
-            return tf.math.real(tf.linalg.diag_part(rho))
-        else:
-            return tf.abs(state)**2

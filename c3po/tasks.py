@@ -1,9 +1,8 @@
-from c3po.c3objs import C3obj
+from c3po.c3objs import C3obj, Quantity
 import tensorflow as tf
-import numpy as np
-from c3po.component import Quantity as Qty
 from c3po.constants import kb, hbar
 from c3po.tf_utils import tf_state_to_dm, tf_dm_to_vec
+
 
 class Task(C3obj):
     """Task that is part of the measurement setup."""
@@ -20,15 +19,16 @@ class Task(C3obj):
             comment=comment
         )
 
+
 class InitialiseGround(Task):
     """Initialise the ground state with a given thermal distribution."""
 
     def __init__(
             self,
-            name: str = "",
+            name: str = "init_ground",
             desc: str = " ",
             comment: str = " ",
-            init_temp: Qty = None
+            init_temp: Quantity = None
     ):
         super().__init__(
             name=name,
@@ -54,22 +54,22 @@ class InitialiseGround(Task):
             return state
 
 
-class Confusion_Matrix(Task):
-    """Initialise the ground state with a given thermal distribution."""
+class ConfusionMatrix(Task):
+    """Do confused assignment."""
 
     def __init__(
             self,
-            name: str = "",
+            name: str = "conf_matrix",
             desc: str = " ",
             comment: str = " ",
-            confusion_row: Qty = None
+            confusion_row: Quantity = None
     ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment
         )
-        self.params['confusion_row'] = np.flat(confusion_row)
+        self.params['confusion_row'] = confusion_row
 
     def pop1(self, pops, lindbladian):
         if 'confusion_row' in self.params:
@@ -80,8 +80,28 @@ class Confusion_Matrix(Task):
             conf_matrix = self.params['confusion_matrix'].get_value()
         pops = tf.reshape(pops, [pops.shape[0], 1])
         pop1 = tf.matmul(conf_matrix, pops)[1]
-        if 'meas_offset' in self.params:
-            pop1 = pop1 - self.params['meas_offset'].get_value()
-        if 'meas_scale' in self.params:
-            pop1 = pop1 * self.params['meas_scale'].get_value()
+        return pop1
+
+class MeasurementRescale(Task):
+    """Rescale the result of the measurements."""
+
+    def __init__(
+            self,
+            name: str = "meas_rescale",
+            desc: str = " ",
+            comment: str = " ",
+            meas_offset: Quantity = None,
+            meas_scale: Quantity = None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment
+        )
+        self.params['meas_offset'] = meas_offset
+        self.params['meas_scale'] = meas_scale
+
+    def rescale(self, pop1):
+        pop1 = pop1 - self.params['meas_offset'].get_value()
+        pop1 = pop1 * self.params['meas_scale'].get_value()
         return pop1

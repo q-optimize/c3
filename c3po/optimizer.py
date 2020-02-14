@@ -2,21 +2,16 @@
 
 import time
 import json
-import c3po
-from platform import python_version
-from c3po.tf_utils import log_setup
-from c3po.algorithms import lbfgs
+import c3po.algorithms
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
 
     def __init__(
         self,
-        dir_path,
         algorithm_no_grad=None,
         algorithm_with_grad=None,
     ):
-        self.dir_path = dir_path
         if algorithm_with_grad:
             self.algorithm = algorithm_with_grad
             self.grad = True
@@ -25,22 +20,11 @@ class Optimizer:
             self.grad = False
         else:
             raise Exception("No algorithm passed. Using default LBFGS")
-            self.algorithm = lbfgs
+            self.algorithm = c3po.algorithms.lbfgs
             self.grad = True
-        self.log_setup()
 
     def set_exp(self, exp):
         self.exp = exp
-
-    def log_setup(self):
-        string = self.algorithm.__name__ + '-' \
-                 + self.sampling + '-' \
-                 + self.batch_size + '-' \
-                 + self.fom.__name__
-        datafile = self.datafile.split('.')[0]
-        string = string + '----[' + datafile + ']'
-        logdir = log_setup(self.dir_path, string)
-        return logdir
 
     def start_log(self):
         self.start_time = time.time()

@@ -108,7 +108,10 @@ class Qubit(PhysicalComponent):
     def init_Ls(self, ann_oper):
         self.collapse_ops['t1'] = ann_oper
         self.collapse_ops['temp'] = ann_oper.T.conj()
-        self.collapse_ops['t2star'] = 2 * ann_oper.T.conj() @ ann_oper
+        self.collapse_ops['t2star'] = 2 * tf.matmul(
+            ann_oper.T.conj(),
+            ann_oper
+        )
 
     def get_Lindbladian(self):
         Ls = []
@@ -119,13 +122,14 @@ class Qubit(PhysicalComponent):
             Ls.append(L)
             if 'temp' in self.params:
                 freq_diff = np.array(
-                    [(self.params['freq'] + n*self.params['anharm'])
+                    [(self.params['freq'].get_value()
+                      + n*self.params['anhar'].get_value())
                         for n in range(self.hilbert_dim)]
                 )
                 beta = 1 / (self.params['temp'].get_value() * kb)
                 det_bal = tf.exp(-hbar*freq_diff*beta)
                 det_bal_mat = tf.linalg.tensor_diag(det_bal)
-                L = gamma * (self.collapse_ops['L2'] @ det_bal_mat)
+                L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
                 Ls.append(L)
         if 't2star' in self.params:
             gamma = (0.5/self.params['t2star'].get_value())**0.5

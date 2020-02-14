@@ -1,5 +1,6 @@
 """Object that deals with the model learning."""
 
+import os
 import time
 import json
 import pickle
@@ -8,6 +9,7 @@ import tensorflow as tf
 import c3po.display
 from c3po.optimizer import Optimizer
 import matplotlib.pyplot as plt
+from c3po.utils import log_setup
 
 
 class C3(Optimizer):
@@ -27,7 +29,6 @@ class C3(Optimizer):
     ):
         """Initiliase."""
         super().__init__(
-            dir_path=dir_path,
             algorithm_no_grad=algorithm_no_grad,
             algorithm_with_grad=algorithm_with_grad
             )
@@ -37,13 +38,28 @@ class C3(Optimizer):
         self.opt_map = opt_map
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
-        self.logfile_name = self.dir_path + 'learn_model.log'
-        self.optim_status = {}
 
+        self.log_setup(dir_path)
+        self.logfile_name = self.logdir + 'learn_model.log'
+        self.optim_status = {}
+        self.gradients = {}
+        self.current_best_goal = 987654321
+        self.evaluation = 1
+
+    def log_setup(self, dir_path):
+        string = self.algorithm.__name__ + '-' \
+                 + self.sampling + '-' \
+                 + str(self.batch_size) + '-' \
+                 + self.fom.__name__
+        # datafile = self.datafile.split('.')[0]
+        # string = string + '----[' + datafile + ']'
+        self.logdir = log_setup(dir_path, string)
 
     def read_data(self, datafile):
         with open(datafile, 'rb+') as file:
-            self.learn_from = pickle.load(file)
+            data = pickle.load(file)
+            self.learn_from = data['seqs_grouped_by_param_set']
+            self.gateset_opt_map = data['opt_map']
 
     def select_from_data(self):
         learn_from = self.learn_from
@@ -68,6 +84,11 @@ class C3(Optimizer):
         return measurements  # list(set(learn_from) - set(measurements))
 
     def learn_model(self):
+        self.start_log()
+        for cb_fig in self.callback_figs:
+            os.makedirs(self.logdir + cb_fig.__name__)
+        os.makedirs(self.logdir + 'dynamics_seq')
+        os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"Saving as:\n{self.logfile_name}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         if self.grad:
@@ -98,14 +119,14 @@ class C3(Optimizer):
 
     def fct_to_min(self, x):
         current_params = tf.constant(x)
-        measurements = self.select_from_data(self.sampling)
+        measurements = self.select_from_data()
         goal = self.goal_run_n(current_params, measurements)
         self.log_parameters()
         return float(goal.numpy())
 
     def fct_to_min_with_grad(self, x):
         current_params = tf.constant(x)
-        measurements = self.select_from_data(self.sampling)
+        measurements = self.select_from_data()
         goal = self.goal_run_n_with_grad(current_params, measurements)
         self.log_parameters()
         return float(goal.numpy())
@@ -113,11 +134,12 @@ class C3(Optimizer):
     def goal_run_n_with_grad(self, current_params, measurements):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            goal = self.goal_run_n(self, current_params, measurements)
+            goal = self.goal_run_n(current_params, measurements)
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status['gradient'] = gradients.tolist()
+        return goal
 
     def goal_run_n(self, current_params, measurements):
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
@@ -129,19 +151,20 @@ class C3(Optimizer):
         for ipar in range(len(measurements)):
             m = measurements[ipar]
             gateset_params = m['params']
-            gateset__opt_map = m["opt_map"]
-            sequences = m['seqs']
-            m_vals = m['results']
-            m_stds = m['result_stds']
+            gateset_opt_map = self.gateset_opt_map
+            sequences = [seq['gate_seq'] for seq in m['seqs']]
+            # m_vals = m['results']
+            # m_stds = m['result_stds']
+            # sequences = m['seqs']
             num_seqs = len(sequences)
 
             self.exp.gateset.set_parameters(
-                gateset_params, gateset__opt_map, scaled=False
+                gateset_params, gateset_opt_map, scaled=False
             )
-            sim_vals = self.exp.evaluate()
+            sim_vals = self.exp.evaluate(sequences)
 
-            exp_values.extend(m_vals)
-            exp_stds.extend(m_stds)
+            # exp_values.extend(m_vals)
+            # exp_stds.extend(m_stds)
             sim_values.extend(sim_vals)
 
             with open(self.logfile_name, 'a') as logfile:
@@ -149,16 +172,18 @@ class C3(Optimizer):
                     "\n  Parameterset {} of {}:\n {}\n {}".format(
                         ipar,
                         batch_size,
-                        logfile.write(json.dumps(self.opt_map)),
-                        self.sim.gateset.get_parameters(
+                        json.dumps(self.gateset_opt_map),
+                        self.exp.gateset.get_parameters(
                             self.gateset_opt_map, to_str=True
                         ),
                     )
                 )
             for iseq in range(num_seqs):
-                m_val = m_vals[iseq]
-                m_std = m_stds[iseq]
-                sim_val = sim_vals[iseq].numpy()
+                m_val = m['seqs'][iseq]['result']
+                m_std = m['seqs'][iseq]['result_std']
+                exp_values.append(m_val)
+                exp_stds.append(m_std)
+                sim_val = float(sim_vals[iseq].numpy())
                 with open(self.logfile_name, 'a') as logfile:
                     logfile.write(
                         " Sequence {} of {}:\n".format(iseq, num_seqs)
@@ -186,37 +211,37 @@ class C3(Optimizer):
         for cb_fig in self.callback_figs:
             fig = cb_fig(exp_values, sim_values, exp_stds)
             fig.savefig(
-                self.dir_path
+                self.logdir
                 + cb_fig.__name__ + '/'
                 + 'eval:' + str(self.evaluation) + "__"
                 + self.fom.__name__ + str(round(goal.numpy(), 3))
                 + '.png'
             )
             plt.close(fig)
-        fig, axs = self.sim.plot_dynamics(self.sim.ket_0, sequences[0])
+        fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
         l, r = axs.get_xlim()
         axs.plot(r, m_val, 'kx')
         fig.savefig(
-            self.dir_path
+            self.logdir
             + 'dynamics_seq/'
             + 'eval:' + str(self.evaluation) + "__"
             + self.fom.__name__ + str(round(goal.numpy(), 3))
             + '.png'
         )
         plt.close(fig)
-        fig, axs = self.sim.plot_dynamics(
-            self.sim.ket_0,
-            ['X90p','Y90p','X90p','Y90p']
+        fig, axs = self.exp.plot_dynamics(
+            self.exp.psi_init,
+            ['X90p', 'Y90p', 'X90p', 'Y90p']
         )
         fig.savefig(
-            self.dir_path
+            self.logdir
             + 'dynamics_xyxy/'
             + 'eval:' + str(self.evaluation) + "__"
             + self.fom.__name__ + str(round(goal.numpy(), 3))
             + '.png'
         )
         plt.close(fig)
-        c3po.display.plot_learning(self.dir_path)
+        c3po.display.plot_learning(self.logdir)
 
         self.optim_status['params'] = [
             par.numpy().tolist()
@@ -228,12 +253,13 @@ class C3(Optimizer):
     def log_parameters(self):
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
-            with open(self.dir_path+'best_point', 'w') as best_point:
+            with open(self.logdir+'best_point', 'w') as best_point:
                 best_point.write(json.dumps(self.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
-        self.logfile.write(json.dumps(self.optim_status))
-        self.logfile.write("\n")
-        self.logfile.write(f"\nFinished evaluation {self.evaluation}\n")
-        self.evaluation += 1
-        self.logfile.flush()
+        with open(self.logfile_name, 'a') as logfile:
+            logfile.write(json.dumps(self.optim_status))
+            logfile.write("\n")
+            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
+            logfile.flush()
+            self.evaluation += 1

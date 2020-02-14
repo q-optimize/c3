@@ -1,49 +1,56 @@
-
+import json
 import c3po.estimators as estimators
 import c3po.display as display
+import c3po.algorithms as algorithms
+from runpy import run_path
 from c3po.c3 import C3
-from c3po.algorightms import cmaes, lbfgs
 
 
 def create_experiment(exp_setup, datafile):
-    import exp_setup.create_experiment
-    exp = exp_setup.create_experiment(datafile)
+    exp_namespace = run_path(exp_setup)
+    exp = exp_namespace['create_experiment'](datafile)
     return exp
 
 def create_optimizer(optimizer_config):
-    estimator = 'rms'
-    exp_opt_map = [
-        # ('Model', 'confusion_row'),
-        ('Model', 'meas_offset'),
-        ('Model', 'meas_scale'),
-        ('Model', 'init_temp'),
-        ('Q1', 'freq'),
-        ('Q1', 'anhar'),
-        ('Q1', 't1'),
-        ('Q1', 't2star'),
-        ('v_to_hz', 'V_to_Hz'),
-        # ('resp', 'rise_time')
-    ]
+    with open(optimizer_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+    estimator = cfg['estimator']
     estims = {
         'median': estimators.median_dist,
         'rms': estimators.rms_dist,
-        'stds': estimators.stds_dist,
+        'stds': estimators.exp_stds_dist,
         'gauss': estimators.neg_loglkh_gauss,
         'binom': estimators.neg_loglkh_binom,
-        'rms_stds': estimators.rms_stds_dist,
+        'rms_stds': estimators.rms_exp_stds_dist,
         'std_diffs': estimators.std_of_diffs,
     }
     fom = estims.pop(estimator)
     callback_foms = estims.values()
+    figs = {
+        'exp_vs_sim': display.exp_vs_sim,
+        'exp_vs_sim_2d_hist': display.exp_vs_sim_2d_hist
+    }
+    callback_figs = []
+    for key in cfg['callback_figs']:
+        callback_figs.append(figs[key])
+    exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
+    grad_algs = {'lbfgs': algorithms.lbfgs}
+    no_grad_algs = {'cmaes': algorithms.cmaes}
+    if cfg['algorithm'] in grad_algs.keys():
+        algorithm_with_grad = grad_algs[cfg['algorithm']]
+        algorithm_no_grad = None
+    elif cfg['algorithm'] in no_grad_algs.keys():
+        algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+        algorithm_with_grad = None
     opt = C3(
-        dir_path="/localdisk/c3logs/",
+        dir_path=cfg['dir_path'],
         fom=fom,
-        sampling='even',
-        batch_size=10,
+        sampling=cfg['sampling'],
+        batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
         callback_foms=callback_foms,
-        callback_figs=[display.exp_vs_sim, display.exp_vs_sim_2d_hist],
-        algorithm_no_grad=cmaes,
-        algorithm_with_grad=lbfgs,
+        callback_figs=callback_figs,
+        algorithm_no_grad=algorithm_no_grad,
+        algorithm_with_grad=algorithm_with_grad,
     )
     return opt

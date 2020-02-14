@@ -4,10 +4,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.tf_utils import tf_propagation
-from c3po.tf_utils import tf_propagation_lind
-from c3po.tf_utils import tf_matmul_left
-from c3po.tf_utils import tf_super
+import c3po.tf_utils as tf_utils
 
 
 class Experiment:
@@ -100,15 +97,21 @@ class Experiment:
 
     def evaluate(self, seqs):
         U_dict = self.get_gates()
-        psi_init = self.model.tasks["init_ground"].initialise()
+        psi_init = self.model.tasks["init_ground"].initialise(
+            self.model.drift_H,
+            self.model.lindbladian
+        )
+        self.psi_init = psi_init
         Us = self.evaluate_sequences(U_dict, seqs)
         pop1s = []
         for U in Us:
             psi_final = tf.matmul(U, psi_init)
-            pops = self.model.populations(psi_final, self.model.lindbladian)
-            pop1 = self.model.tasks["meas_err"].pop1(
-                pops, self.model.lindbladian
+            pops = self.populations(psi_final, self.model.lindbladian)
+            pop1 = self.model.tasks["conf_matrix"].pop1(
+                pops,
+                self.model.lindbladian
             )
+            pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
             pop1s.append(pop1)
         return pop1s
 
@@ -143,7 +146,7 @@ class Experiment:
                     framechanges
                 )
                 if self.model.lindbladian:
-                    SFR = tf_super(FR)
+                    SFR = tf_utils.tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
                 else:
@@ -171,7 +174,7 @@ class Experiment:
             Us = []
             for gate in sequence:
                 Us.append(gates[gate])
-            U.append(tf_matmul_left(Us))
+            U.append(tf_utils.tf_matmul_left(Us))
         return U
 
     def propagation(
@@ -191,12 +194,12 @@ class Experiment:
 
         if self.model.lindbladian:
             col_ops = self.model.get_Lindbladians()
-            dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
+            dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
-            dUs = tf_propagation(h0, hks, signals, dt)
+            dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
         self.dUs[gate] = dUs
         self.ts = ts
-        U = tf_matmul_left(dUs)
+        U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U
 
@@ -204,11 +207,11 @@ class Experiment:
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
-        pop_t = self.populations(psi_t)
+        pop_t = self.populations(psi_t, self.model.lindbladian)
         for gate in seq:
             for du in dUs[gate]:
                 psi_t = np.matmul(du.numpy(), psi_t)
-                pops = self.model.populations(psi_t)
+                pops = self.populations(psi_t, self.model.lindbladian)
                 pop_t = np.append(pop_t, pops, axis=1)
             if self.model.use_FR:
                 psi_t = tf.matmul(self.FR, psi_t)
@@ -222,3 +225,10 @@ class Experiment:
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         return fig, axs
+
+    def populations(self, state, lindbladian):
+        if lindbladian:
+            rho = tf_utils.tf_vec_to_dm(state)
+            return tf.math.real(tf.linalg.diag_part(rho))
+        else:
+            return tf.abs(state)**2

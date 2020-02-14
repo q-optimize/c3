@@ -1,5 +1,8 @@
 import types
 import json
+import copy
+import tensorflow as tf
+import numpy as np
 from c3po.control import Envelope, Carrier
 from c3po.c3objs import Quantity, C3obj
 import matplotlib.pyplot as plt

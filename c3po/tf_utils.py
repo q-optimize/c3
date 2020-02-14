@@ -6,6 +6,22 @@ from tensorflow.python.client import device_lib
 import os
 
 
+def tf_setup():
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            print(
+                len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs"
+            )
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            print(e)
+
+
 def tf_log_level_info():
     """Display the information about different log levels in tensorflow."""
     info = (
@@ -106,35 +122,7 @@ def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
 
 
-@tf.function
-def tf_expm(A, terms=24):
-    """
-    Matrix exponential by the series method.
 
-    Parameters
-    ----------
-    A : tf.tensor
-        Matrix to be exponentiated.
-    terms : int
-        Number of terms in the series.
-
-    Returns
-    -------
-    tf.tensor
-        expm(A)
-
-    """
-    r = tf.eye(A.shape[0], dtype=A.dtype)
-    A_powers = A
-    r += A
-
-    ii = 2
-    # TODO Change condition to fixed accuracy.
-    while ii < terms:
-        A_powers = tf.matmul(A_powers, A)
-        r += A_powers / np.math.factorial(ii)
-        ii += 1
-    return r
 
 
 @tf.function
