@@ -61,27 +61,33 @@ class C3(Optimizer):
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
 
-    def select_from_data(self):
+    def select_from_data(self, inverse=False):
         learn_from = self.learn_from
         sampling = self.sampling
+        batch_size = self.batch_size
+        total_size = len(learn_from)
+        all = np.arange(total_size)
         if sampling == 'random':
-            measurements = np.random.sample(learn_from, self.batch_size)
+            indeces = np.random.sample(all, batch_size)
         elif sampling == 'even':
-            n = int(len(learn_from) / self.batch_size)
-            measurements = learn_from[::n]
+            n = int(total_size / batch_size)
+            indeces = all[::n]
         elif sampling == 'from_start':
-            measurements = learn_from[:self.batch_size]
+            indeces = all[:batch_size]
         elif sampling == 'from_end':
-            measurements = learn_from[-self.batch_size:]
-        elif sampling == 'ALL':
-            measurements = learn_from
+            indeces = all[-batch_size:]
+        elif sampling == 'all':
+            indeces = all
         else:
             raise(
                 """Unspecified sampling method.\n
-                Select from 'from_end'  'even', 'random' , 'from_start', 'ALL'.
+                Select from 'from_end'  'even', 'random' , 'from_start', 'all'.
                 Thank you."""
             )
-        return measurements  # list(set(learn_from) - set(measurements))
+        if inverse:
+            return list(set(all) - set(indeces))
+        else:
+            return indeces
 
     def learn_model(self):
         self.start_log()
@@ -91,22 +97,24 @@ class C3(Optimizer):
         os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"Saving as:\n{self.logfile_name}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
-        if self.grad:
-            self.algorithm(
-                x0,
-                self.fct_to_min_with_grad,
-                self.lookup_gradient
-            )
-        elif self.grad:
-            self.algorithm(
-                x0,
-                self.fct_to_min
-            )
-        else:
-            raise ValueError("You need to pass an algorithm call")
-
-        # TODO deal with kears learning differently
-        self.exp.set_parameters(self.x_best, self.opt_map, scaled=True)
+        try:
+            # TODO deal with kears learning differently
+            if self.grad:
+                self.algorithm(
+                    x0,
+                    self.fct_to_min,
+                    self.lookup_gradient
+                )
+            elif self.grad:
+                self.algorithm(
+                    x0,
+                    self.fct_to_min
+                )
+        except KeyboardInterrupt:
+            pass
+        with open(self.logdir + 'best_point') as file:
+            best_params = json.loads(file.readlines()[1])['params']
+        self.exp.set_parameters(best_params, self.opt_map)
         self.end_time = time.time()
         with open(self.logfile_name, 'a') as logfile:
             logfile.write(
@@ -116,40 +124,47 @@ class C3(Optimizer):
                 f"Total runtime: {self.end_time-self.start_time}\n\n"
             )
             logfile.flush()
+        self.confirm()
+
+    def confirm(self):
+        self.logfile_name = self.logdir + 'confirm.log'
+        self.start_log()
+        print(f"\nSaving as:\n{self.logfile_name}")
+        measurements = self.select_from_data(inverse=True)
+        x_best = self.exp.get_parameters(self.opt_map, scaled=True)
+        self.evaluation = -1
+        self.goal_run_n(x_best, measurements)
 
     def fct_to_min(self, x):
         current_params = tf.constant(x)
-        measurements = self.select_from_data()
-        goal = self.goal_run_n(current_params, measurements)
+        indeces = self.select_from_data()
+        if self.grad:
+            goal = self.goal_run_n_with_grad(current_params, indeces)
+        else:
+            goal = self.goal_run_n(current_params, indeces)
         self.log_parameters()
         return float(goal.numpy())
 
-    def fct_to_min_with_grad(self, x):
-        current_params = tf.constant(x)
-        measurements = self.select_from_data()
-        goal = self.goal_run_n_with_grad(current_params, measurements)
-        self.log_parameters()
-        return float(goal.numpy())
-
-    def goal_run_n_with_grad(self, current_params, measurements):
+    def goal_run_n_with_grad(self, current_params, indeces):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            goal = self.goal_run_n(current_params, measurements)
+            goal = self.goal_run_n(current_params, indeces)
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status['gradient'] = gradients.tolist()
         return goal
 
-    def goal_run_n(self, current_params, measurements):
+    def goal_run_n(self, current_params, indeces):
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-        batch_size = len(measurements)
         exp_values = []
         exp_stds = []
         sim_values = []
 
-        for ipar in range(len(measurements)):
-            m = measurements[ipar]
+        count = 0
+        for ipar in indeces:
+            count += 1
+            m = self.learn_from[ipar]
             gateset_params = m['params']
             gateset_opt_map = self.gateset_opt_map
             sequences = [seq['gate_seq'] for seq in m['seqs']]
@@ -169,9 +184,10 @@ class C3(Optimizer):
 
             with open(self.logfile_name, 'a') as logfile:
                 logfile.write(
-                    "\n  Parameterset {} of {}:\n {}\n {}".format(
+                    "\n  Parameterset {}, #{} of {}:\n {}\n {}".format(
                         ipar,
-                        batch_size,
+                        count,
+                        len(indeces),
                         json.dumps(self.gateset_opt_map),
                         self.exp.gateset.get_parameters(
                             self.gateset_opt_map, to_str=True
@@ -248,6 +264,7 @@ class C3(Optimizer):
             for par in self.exp.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = goal_numpy
+        self.evaluation += 1
         return goal
 
     def log_parameters(self):
@@ -262,4 +279,3 @@ class C3(Optimizer):
             logfile.write("\n")
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             logfile.flush()
-            self.evaluation += 1
