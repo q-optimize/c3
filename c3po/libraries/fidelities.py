@@ -4,15 +4,13 @@
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import tensorflow_probability as tfp
 from scipy.optimize import curve_fit
-from c3po.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
+from c3po.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, evaluate_sequences, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
-    tf_dm_to_vect, tf_dmket_fid
-from c3po.qt_utils import basis, perfect_gate, perfect_cliffords, \
+    tf_dm_to_vect
+from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
-
 
 
 def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
@@ -129,7 +127,7 @@ def lindbladian_average_infid(U_dict: dict, gate: str, proj: bool):
 
 def epc_analytical(U_dict: dict, proj: bool):
     gate = list(U_dict.keys())[0]
-    U =  U_dict[gate]
+    U = U_dict[gate]
     num_gates = len(gate.split(':'))
     lvls = int(U.shape[0] ** (1/num_gates))
     fid_lvls = lvls
@@ -141,7 +139,11 @@ def epc_analytical(U_dict: dict, proj: bool):
     if proj:
         projection = 'wzeros'
         fid_lvls = 2 * num_gates
-    ideal_cliffords = perfect_cliffords(lvls, proj = projection, num_gates = num_gates)
+    ideal_cliffords = perfect_cliffords(
+        lvls,
+        proj=projection,
+        num_gates=num_gates
+    )
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
@@ -175,6 +177,7 @@ def lindbladian_epc_analytical(U_dict: dict, proj: bool):
     infid = 1 - tf_ave(fids)
     return infid
 
+
 def populations(state, lindbladian):
     if lindbladian:
         diag = []
@@ -185,6 +188,7 @@ def populations(state, lindbladian):
         return np.abs(diag)
     else:
         return np.abs(state)**2
+
 
 def population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
@@ -214,7 +218,7 @@ def RB(
        ):
     # print('Performing RB fit experiment.')
     gate = list(U_dict.keys())[0]
-    U =  U_dict[gate]
+    U = U_dict[gate]
     dim = int(U.shape[0])
     psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
@@ -261,6 +265,7 @@ def RB(
             r, A, B = solution
             fitted = True
         except Exception as message:
+            print(message)
             if logspace:
                 new_lengths = np.rint(
                             np.logspace(
@@ -377,6 +382,7 @@ def leakage_RB(
             r_leak, A_leak, B_leak = solution
             fitted = True
         except Exception as message:
+            print(message)
             if logspace:
                 new_lengths = np.rint(
                             np.logspace(
@@ -406,7 +412,6 @@ def leakage_RB(
                 surv_prob.append(pop0s)
                 comp_surv.append(pop_comps)
             lengths = np.append(lengths, new_lengths)
-
 
     def RB_surv(len, r, A, C):
         return A + B_leak * r_leak**(len) + C * r**(len)

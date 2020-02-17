@@ -3,21 +3,13 @@
 import types
 import numpy as np
 import tensorflow as tf
-from c3po.utils import num3str
-from c3po.hamiltonians import resonator, duffing
-from c3po.constants import kb, hbar
+from c3po.libraries.hamiltonians import resonator, duffing
+from c3po.libraries.constants import kb, hbar
 from c3po.c3objs import C3obj
 
+
 class PhysicalComponent(C3obj):
-    """
-    Represents the components making up a chip.
-
-    Parameters
-    ----------
-    hilbert_dim: int
-        dimension of the Hilbert space representing this physical component
-
-    """
+    """Represents the components making up a chip."""
 
     def __init__(
             self,
@@ -25,12 +17,12 @@ class PhysicalComponent(C3obj):
             desc: str = " ",
             comment: str = " ",
             hilbert_dim: int = 0,
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment
-            )
+        )
         self.hilbert_dim = hilbert_dim
         self.Hs = {}
         self.collapse_ops = {}

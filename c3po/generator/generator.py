@@ -3,7 +3,7 @@
 import copy
 import numpy as np
 import tensorflow as tf
-from c3po.control import Instruction
+from c3po.signal.gates import Instruction
 
 class Generator:
     """Generator, creates signal from digital to what arrives to the chip."""

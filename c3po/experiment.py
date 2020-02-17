@@ -4,7 +4,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import c3po.tf_utils as tf_utils
+import c3po.utils.tf_utils as tf_utils
 
 
 class Experiment:

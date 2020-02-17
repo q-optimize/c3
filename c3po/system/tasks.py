@@ -1,7 +1,7 @@
 from c3po.c3objs import C3obj, Quantity
 import tensorflow as tf
-from c3po.constants import kb, hbar
-from c3po.tf_utils import tf_state_to_dm, tf_dm_to_vec
+from c3po.libraries.constants import kb, hbar
+from c3po.utils.tf_utils import tf_state_to_dm, tf_dm_to_vec
 
 
 class Task(C3obj):
@@ -81,6 +81,7 @@ class ConfusionMatrix(Task):
         pops = tf.reshape(pops, [pops.shape[0], 1])
         pop1 = tf.matmul(conf_matrix, pops)[1]
         return pop1
+
 
 class MeasurementRescale(Task):
     """Rescale the result of the measurements."""
