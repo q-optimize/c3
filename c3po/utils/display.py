@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
 # rc('font',**{'family':'serif','serif':['Palatino']})
