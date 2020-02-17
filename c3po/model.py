@@ -2,11 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
-import itertools
-from c3po.component import Quantity, Drive, Coupling
-from c3po.constants import kb, hbar
-from c3po.tf_utils import tf_state_to_dm, tf_vec_to_dm, tf_dm_to_vec
-
+from c3po.component import Drive, Coupling
 
 class Model:
     """
@@ -33,8 +29,10 @@ class Model:
 
     """
 
-    def __init__(self, subsystems, couplings):
+    def __init__(self, subsystems, couplings, tasks):
         self.dressed = False
+        self.lindbladian = False
+        self.use_FR = True
         self.params = {}
         self.subsystems = {}
         for comp in subsystems:
@@ -84,6 +82,19 @@ class Model:
 
         self.update_model()
 
+        self.tasks = {}
+        for task in tasks:
+            self.tasks[task.name] = task
+
+    def set_dressed(self, dressed):
+        self.dressed = dressed
+
+    def set_lindbladian(self, lindbladian):
+        self.lindbladian = lindbladian
+
+    def set_FR(self, use_FR):
+        self.use_FR = use_FR
+
     def list_parameters(self):
         ids = []
         for key in self.params:
@@ -104,7 +115,8 @@ class Model:
 
     def update_model(self):
         self.update_Hamiltonians()
-        self.update_Lindbladians()
+        if self.lindbladian:
+            self.update_Lindbladians()
         if self.dressed:
             self.update_dressed()
 
@@ -156,17 +168,18 @@ class Model:
                 self.control_Hs[key]),
                 self.transform
             )
-        for col_op in self.col_ops:
-            dressed_col_ops.append(
-                tf.matmul(tf.matmul(
-                    tf.linalg.adjoint(self.transform),
-                    col_op),
-                    self.transform
-                )
-            )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
-        self.dressed_col_ops = dressed_col_ops
+        if self.lindbladian:
+            for col_op in self.col_ops:
+                dressed_col_ops.append(
+                    tf.matmul(tf.matmul(
+                        tf.linalg.adjoint(self.transform),
+                        col_op),
+                        self.transform
+                    )
+                )
+            self.dressed_col_ops = dressed_col_ops
 
     def get_Frame_Rotation(
         self,
@@ -200,51 +213,3 @@ class Model:
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
         pass
-
-    # From here there is temporary code that deals with initialization and
-    # measurement
-
-    @staticmethod
-    def populations(state, lindbladian):
-        if lindbladian:
-            rho = tf_vec_to_dm(state)
-            return tf.math.real(tf.linalg.diag_part(rho))
-        else:
-            return tf.abs(state)**2
-
-    def pop1_spam(self, state, lindbladian):
-        if 'confusion_row' in self.params:
-            row1 = self.params['confusion_row'].get_value()
-            if "Q2" in self.dims.keys():
-                row1 = tf.concat([row1]*self.dims["Q2"], 0)
-            row2 = tf.ones_like(row1) - row1
-            conf_matrix = tf.concat([[row1], [row2]], 0)
-        elif 'confusion_matrix' in self.params:
-            conf_matrix = self.params['confusion_matrix'].get_value()
-        pops = self.populations(state, lindbladian)
-        pops = tf.reshape(pops, [pops.shape[0], 1])
-        pop1 = tf.matmul(conf_matrix, pops)[1]
-        if 'meas_offset' in self.params:
-            pop1 = pop1 - self.params['meas_offset'].get_value()
-        if 'meas_scale' in self.params:
-            pop1 = pop1 * self.params['meas_scale'].get_value()
-        return pop1
-
-    def set_spam_param(self, name: str, quan: Quantity):
-        self.params[name] = quan
-
-    def initialise(self, lindbladian):
-        init_temp = tf.cast(
-            self.params['init_temp'].get_value(), dtype=tf.complex128
-        )
-        # TODO Deal with dressed basis for thermal state
-        diag = tf.linalg.diag_part(self.drift_H)
-        freq_diff = diag - diag[0]
-        beta = 1 / (init_temp * kb)
-        det_bal = tf.exp(-hbar * freq_diff * beta)
-        norm_bal = det_bal / tf.reduce_sum(det_bal)
-        state = tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
-        if lindbladian:
-            return tf_dm_to_vec(tf_state_to_dm(state))
-        else:
-            return state
