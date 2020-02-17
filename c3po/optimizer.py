@@ -36,19 +36,6 @@ class Optimizer:
             logfile.write(json.dumps(self.opt_map))
             logfile.write("\n")
 
-    def log_parameters(self):
-        if self.optim_status['goal'] < self.current_best_goal:
-            self.current_best_goal = self.optim_status['goal']
-            with open(self.data_path+'best_point', 'w') as best_point:
-                best_point.write(json.dumps(self.opt_map))
-                best_point.write("\n")
-                best_point.write(json.dumps(self.optim_status))
-        self.logfile.write(json.dumps(self.optim_status))
-        self.logfile.write("\n")
-        self.logfile.write(f"\nFinished evaluation {self.evaluation}\n")
-        self.evaluation += 1
-        self.logfile.flush()
-
     def write_config(self, filename):
         with open(filename, "w") as cfg_file:
             json.dump(self.__dict__, cfg_file)
@@ -65,7 +52,6 @@ class Optimizer:
                 self.exp.load_config(cfg[key])
             else:
                 self.__dict__[key] = cfg[key]
-
 
     def lookup_gradient(self, x):
         key = str(x)
