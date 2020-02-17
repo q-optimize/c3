@@ -86,20 +86,19 @@ class Experiment:
         self.model.update_model()
 
     def print_parameters(self, opt_map=None):
-       ret = []
-       if opt_map is None:
+        ret = []
+        if opt_map is None:
             opt_map = self.id_list
-       for id in opt_map:
+        for id in opt_map:
             comp_id = id[0]
             par_id = id[1]
             par = self.components[comp_id].params[par_id]
             nice_id = f"{comp_id}-{par_id}"
             ret.append(f"{nice_id:22}: {par}\n")
-       return "".join(ret)
-
+        return "".join(ret)
     # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
-    def evaluate(self, seqs):
+    def get_Us(self, seqs):
         U_dict = self.get_gates()
         psi_init = self.model.tasks["init_ground"].initialise(
             self.model.drift_H,
@@ -107,9 +106,13 @@ class Experiment:
         )
         self.psi_init = psi_init
         Us = self.evaluate_sequences(U_dict, seqs)
+        return Us
+
+    def evaluate(self, seqs):
+        Us = self.get_Us(seqs)
         pop1s = []
         for U in Us:
-            psi_final = tf.matmul(U, psi_init)
+            psi_final = tf.matmul(U, self.psi_init)
             pops = self.populations(psi_final, self.model.lindbladian)
             pop1 = self.model.tasks["conf_matrix"].pop1(
                 pops,
