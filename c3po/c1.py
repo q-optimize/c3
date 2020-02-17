@@ -1,12 +1,11 @@
-"""Object that deals with the model learning."""
+"""Object that deals with the open loop optimal control."""
 
-import time
+import os
 import json
-import pickle
-import numpy as np
-import tensorflow as tf
+import c3po.display
 from c3po.optimizer import Optimizer
 import matplotlib.pyplot as plt
+from c3po.utils import log_setup
 
 class C1(Optimizer):
     """Object that deals with the open loop optimal control."""
@@ -21,138 +20,77 @@ class C1(Optimizer):
     ):
         """Initiliase."""
         super().__init__(
-            dir_path=dir_path,
             algorithm_no_grad=algorithm_no_grad,
             algorithm_with_grad=algorithm_with_grad
             )
         self.opt_map = gateset_opt_map
         self.fid_func = fid_func
         self.callback_fids = callback_fids
-        super().__init__()
+        self.optim_status = {}
+        self.gradients = {}
+        self.evaluation = 1
+        self.log_setup(dir_path)
 
-    def goal_run(self, current_params):
-        self.gateset.set_parameters(current_params, self.opt_map, scaled=True)
-        U_dict = self.sim.get_gates()
-        goal = self.eval_func(U_dict)
-        self.optim_status['params'] = [
-            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = float(goal.numpy())
-        self.log_parameters()
-        return goal
+    def log_setup(self, dir_path):
+        string = self.fid_func.__name__
+        self.logdir = log_setup(dir_path, string)
+        self.logfile_name = self.logdir + 'open_loop.log'
 
-    def goal_run_with_grad(self, current_params):
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            self.gateset.set_parameters(
-                current_params, self.opt_map, scaled=True
-            )
-            U_dict = self.sim.get_gates()
-            goal = self.eval_func(U_dict)
-
-        grad = t.gradient(goal, current_params)
-        gradients = grad.numpy().flatten()
-        self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['params'] = [
-            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = float(goal.numpy())
-        self.optim_status['gradient'] = gradients.tolist()
-        self.log_parameters()
-        return goal
-
-
-    def optimize_controls(
-        self,
-        sim,
-        gateset,
-        opt_map,
-        opt_name,
-        fid_func,
-        callbacks=[],
-        settings={},
-        other_funcs={}
-    ):
+    def optimize_controls(self):
         """
         Apply a search algorightm to your gateset given a fidelity function.
-
-        Parameters
-        ----------
-        simulator : class Simulator
-            simulator class carrying all relevant informatioFn:
-            - experiment object with model and generator
-            - gateset object with pulse information for each gate
-
-        opt_map : list
-            Specifies which parameters will be optimized
-
-        algorithm : str
-            Specification of the optimizer to be used, i.e. cmaes, powell, ...
-
-        calib_name : str
-
-        eval_func : function
-            Takes the dictionary of gates and outputs a fidelity value of which
-            we want to find the minimum
-
-        settings : dict
-            Special settings for the desired optimizer
-
-        other_funcs : dict of functions
-            All functions that will be calculated from U_dict and stored
-
         """
-        # TODO Separate gateset from the simulation here.
-        x0 = gateset.get_parameters(opt_map, scaled=True)
-        self.init_values = x0
-        self.sim = sim
-        self.gateset = gateset
-        self.opt_map = opt_map
-        self.opt_name = opt_name
-        self.fid_func = fid_func
-        self.callbacks = callbacks
-        self.optim_status = {}
-        self.evaluation = 1
+        self.start_log()
 
-        # TODO log physical values, not tf values
-
-        self.logfile_name = self.data_path + self.opt_name + '.log'
         print(f"Saving as:\n{self.logfile_name}")
-        start_time = time.time()
-        with open(self.logfile_name, 'a') as self.logfile:
-            start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-            self.logfile.write("Starting optimization at")
-            self.logfile.write(start_time_str)
-            self.logfile.write(f"\n {self.opt_map}\n")
-            self.logfile.flush()
-            if self.algorithm == 'cmaes':
-                self.cmaes(
+        os.makedirs(self.logdir + 'dynamics_xyxy')
+        x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
+        try:
+            # TODO deal with kears learning differently
+            if self.grad:
+                self.algorithm(
                     x0,
-                    self.goal_run,
-                    settings
+                    self.fct_to_min,
+                    self.lookup_gradient
                 )
-
-            elif self.algorithm == 'lbfgs':
-                x_best = self.lbfgs(
+            else:
+                self.algorithm(
                     x0,
-                    self.goal_run_with_grad,
-                    options=settings
+                    self.fct_to_min
                 )
+        except KeyboardInterrupt:
+            pass
+        with open(self.logdir + 'best_point', 'r') as file:
+            best_params = json.loads(file.readlines()[1])['params']
+        self.exp.gateset.set_parameters(best_params, self.opt_map)
+        self.end_log()
 
-            self.gateset.set_parameters(
-                x_best, self.opt_map, scaled=True
-            )
-            end_time = time.time()
-            self.logfile.write("Started at ")
-            self.logfile.write(start_time_str)
-            self.logfile.write(
-                f"Finished at {time.asctime(time.localtime())}\n"
-            )
-            self.logfile.write(
-                f"Total runtime:{end_time-start_time}\n\n"
-            )
-            self.logfile.flush()
+    def goal_run(self, current_params):
+        self.exp.gateset.set_parameters(
+            current_params,
+            self.opt_map,
+            scaled=True
+        )
+        U_dict = self.exp.get_gates()
+        goal = self.eval_func(U_dict)
 
-        # TODO decide if gateset object should have history and implement
-        # TODO save while setting if you pass a save name
-        # pseudocode: controls.save_params_to_history(calib_name)
+        fig, axs = self.exp.plot_dynamics(
+            self.exp.psi_init,
+            ['X90p', 'Y90p', 'X90p', 'Y90p']
+        )
+        fig.savefig(
+            self.logdir +
+            + 'dynamics_xyxy/' +
+            + 'eval:' + str(self.evaluation) + "__" +
+            + self.fom.__name__ + str(round(goal.numpy(), 3)) +
+            + '.png'
+        )
+        plt.close(fig)
+        c3po.display.plot_OC_logs(self.logdir)
+
+        self.optim_status['params'] = [
+            par.numpy().tolist()
+            for par in self.exp.get_parameters(self.opt_map)
+        ]
+        self.optim_status['goal'] = float(goal.numpy())
+        return goal

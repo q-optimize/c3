@@ -3,6 +3,7 @@
 import time
 import json
 import c3po.algorithms
+import tensorflow as tf
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""
@@ -35,6 +36,55 @@ class Optimizer:
             logfile.write("Optimization parameters:\n")
             logfile.write(json.dumps(self.opt_map))
             logfile.write("\n")
+            logfile.flush()
+
+    def end_log(self):
+        self.end_time = time.time()
+        with open(self.logfile_name, 'a') as logfile:
+            logfile.write(
+                f"Finished at {time.asctime(time.localtime())}\n"
+            )
+            logfile.write(
+                f"Total runtime: {self.end_time-self.start_time}\n\n"
+            )
+            logfile.flush()
+
+    def log_parameters(self):
+        if self.optim_status['goal'] < self.current_best_goal:
+            self.current_best_goal = self.optim_status['goal']
+            with open(self.logdir+'best_point', 'w') as best_point:
+                best_point.write(json.dumps(self.opt_map))
+                best_point.write("\n")
+                best_point.write(json.dumps(self.optim_status))
+        with open(self.logfile_name, 'a') as logfile:
+            logfile.write(json.dumps(self.optim_status))
+            logfile.write("\n")
+            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
+            logfile.flush()
+
+    def fct_to_min(self, x):
+        current_params = tf.constant(x)
+        indeces = self.select_from_data()
+        if self.grad:
+            goal = self.goal_run_with_grad(current_params, indeces)
+        else:
+            goal = self.goal_run(current_params, indeces)
+        self.log_parameters()
+        return float(goal.numpy())
+
+    def goal_run_with_grad(self, current_params, indeces):
+        with tf.GradientTape() as t:
+            t.watch(current_params)
+            goal = self.goal_run_n(current_params, indeces)
+        grad = t.gradient(goal, current_params)
+        gradients = grad.numpy().flatten()
+        self.gradients[str(current_params.numpy())] = gradients
+        self.optim_status['gradient'] = gradients.tolist()
+        return goal
+
+    def lookup_gradient(self, x):
+        key = str(x)
+        return self.gradients.pop(key)
 
     def write_config(self, filename):
         with open(filename, "w") as cfg_file:
@@ -52,9 +102,5 @@ class Optimizer:
                 self.exp.load_config(cfg[key])
             else:
                 self.__dict__[key] = cfg[key]
-
-    def lookup_gradient(self, x):
-        key = str(x)
-        return self.gradients.pop(key)
 
     # TODO fix error when JSONing fucntion types

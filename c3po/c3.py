@@ -1,7 +1,6 @@
 """Object that deals with the model learning."""
 
 import os
-import time
 import json
 import pickle
 import numpy as np
@@ -116,15 +115,7 @@ class C3(Optimizer):
         with open(self.logdir + 'best_point', 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
-        self.end_time = time.time()
-        with open(self.logfile_name, 'a') as logfile:
-            logfile.write(
-                f"Finished at {time.asctime(time.localtime())}\n"
-            )
-            logfile.write(
-                f"Total runtime: {self.end_time-self.start_time}\n\n"
-            )
-            logfile.flush()
+        self.end_log()
         self.confirm()
 
     def confirm(self):
@@ -134,29 +125,9 @@ class C3(Optimizer):
         measurements = self.select_from_data(inverse=True)
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
-        self.goal_run_n(x_best, measurements)
+        self.goal_run(x_best, measurements)
 
-    def fct_to_min(self, x):
-        current_params = tf.constant(x)
-        indeces = self.select_from_data()
-        if self.grad:
-            goal = self.goal_run_n_with_grad(current_params, indeces)
-        else:
-            goal = self.goal_run_n(current_params, indeces)
-        self.log_parameters()
-        return float(goal.numpy())
-
-    def goal_run_n_with_grad(self, current_params, indeces):
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            goal = self.goal_run_n(current_params, indeces)
-        grad = t.gradient(goal, current_params)
-        gradients = grad.numpy().flatten()
-        self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['gradient'] = gradients.tolist()
-        return goal
-
-    def goal_run_n(self, current_params, indeces):
+    def goal_run(self, current_params, indeces):
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         exp_values = []
         exp_stds = []
@@ -251,10 +222,10 @@ class C3(Optimizer):
             ['X90p', 'Y90p', 'X90p', 'Y90p']
         )
         fig.savefig(
-            self.logdir
-            + 'dynamics_xyxy/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal.numpy(), 3))
+            self.logdir +
+            + 'dynamics_xyxy/' +
+            + 'eval:' + str(self.evaluation) + "__" +
+            + self.fom.__name__ + str(round(goal.numpy(), 3)) +
             + '.png'
         )
         plt.close(fig)
@@ -267,16 +238,3 @@ class C3(Optimizer):
         self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
         return goal
-
-    def log_parameters(self):
-        if self.optim_status['goal'] < self.current_best_goal:
-            self.current_best_goal = self.optim_status['goal']
-            with open(self.logdir+'best_point', 'w') as best_point:
-                best_point.write(json.dumps(self.opt_map))
-                best_point.write("\n")
-                best_point.write(json.dumps(self.optim_status))
-        with open(self.logfile_name, 'a') as logfile:
-            logfile.write(json.dumps(self.optim_status))
-            logfile.write("\n")
-            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
-            logfile.flush()
