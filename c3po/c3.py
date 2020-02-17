@@ -39,21 +39,22 @@ class C3(Optimizer):
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
 
-        self.log_setup(dir_path)
-        self.logfile_name = self.logdir + 'learn_model.log'
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 987654321
         self.evaluation = 1
+        self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
         string = self.algorithm.__name__ + '-' \
                  + self.sampling + '-' \
                  + str(self.batch_size) + '-' \
                  + self.fom.__name__
-        # datafile = self.datafile.split('.')[0]
+        # datafile = os.path.basename(self.datafile)
+        # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(dir_path, string)
+        self.logfile_name = self.logdir + 'learn_model.log'
 
     def read_data(self, datafile):
         with open(datafile, 'rb+') as file:
@@ -105,14 +106,14 @@ class C3(Optimizer):
                     self.fct_to_min,
                     self.lookup_gradient
                 )
-            elif self.grad:
+            else:
                 self.algorithm(
                     x0,
                     self.fct_to_min
                 )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point') as file:
+        with open(self.logdir + 'best_point', 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_time = time.time()
