@@ -97,8 +97,12 @@ class GateSet:
                 comp = par_id[1]
                 param = par_id[2]
                 gate_instr = self.instructions[gate]
+                par = gate_instr.comps[chan][comp].params[param]
                 try:
-                    gate_instr.comps[chan][comp].params[param].set_value(val)
+                    if scaled:
+                        par.set_opt_value(val)
+                    else:
+                        par.set_value(val)
                 except ValueError:
                     print("Value out of bounds")
                     print(f"Trying to set {par_id} to value {val}")
