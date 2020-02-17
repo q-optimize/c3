@@ -1,6 +1,5 @@
 """Experiment class that models the whole experiment."""
 
-import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -230,6 +229,7 @@ class Experiment:
     def populations(self, state, lindbladian):
         if lindbladian:
             rho = tf_utils.tf_vec_to_dm(state)
-            return tf.math.real(tf.linalg.diag_part(rho))
+            pops = tf.math.real(tf.linalg.diag_part(rho))
+            return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
             return tf.abs(state)**2
