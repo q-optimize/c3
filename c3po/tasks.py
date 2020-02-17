@@ -102,6 +102,6 @@ class MeasurementRescale(Task):
         self.params['meas_scale'] = meas_scale
 
     def rescale(self, pop1):
-        pop1 = pop1 - self.params['meas_offset'].get_value()
         pop1 = pop1 * self.params['meas_scale'].get_value()
+        pop1 = pop1 + self.params['meas_offset'].get_value()
         return pop1
