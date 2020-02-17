@@ -1,15 +1,16 @@
 import json
-import c3po.estimators as estimators
-import c3po.display as display
-import c3po.algorithms as algorithms
+import c3po.libraries.estimators as estimators
+import c3po.utils.display as display
+import c3po.libraries.algorithms as algorithms
 from runpy import run_path
-from c3po.c3 import C3
+from c3po.optimizers.c3 import C3
 
 
 def create_experiment(exp_setup, datafile):
     exp_namespace = run_path(exp_setup)
     exp = exp_namespace['create_experiment'](datafile)
     return exp
+
 
 def create_optimizer(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:

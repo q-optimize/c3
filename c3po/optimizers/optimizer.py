@@ -2,8 +2,8 @@
 
 import time
 import json
-import c3po.algorithms
 import tensorflow as tf
+import c3po.libraries.algorithms
 
 class Optimizer:
     """Optimizer object, where the optimal control is done."""

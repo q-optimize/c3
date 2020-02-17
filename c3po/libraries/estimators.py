@@ -1,9 +1,7 @@
 """Collection of estimator functions."""
 
-import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
-from c3po.tf_utils import tf_abs
 
 
 def median_dist(exp_values, sim_values, exp_stds):

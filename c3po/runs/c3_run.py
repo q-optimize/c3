@@ -4,8 +4,8 @@ import os
 import json
 import pickle
 import argparse
-import c3po.parsers
-import c3po.tf_utils
+import c3po.utils.parsers as parsers
+import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 from os.path import basename as base
 
@@ -21,10 +21,10 @@ datafile = cfg['datafile']
 with open(datafile, 'rb+') as file:
     learn_from = pickle.load(file)
 
-c3po.tf_utils.tf_setup()
+tf_utils.tf_setup()
 with tf.device('/CPU:0'):
-    exp = c3po.parsers.create_experiment(exp_setup, learn_from)
-    opt = c3po.parsers.create_optimizer(opt_config)
+    exp = parsers.create_experiment(exp_setup, learn_from)
+    opt = parsers.create_optimizer(opt_config)
     opt.set_exp(exp)
     opt.read_data(datafile)
     dir = opt.logdir

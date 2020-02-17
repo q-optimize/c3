@@ -5,10 +5,10 @@ import json
 import pickle
 import numpy as np
 import tensorflow as tf
-import c3po.display
-from c3po.optimizer import Optimizer
+import c3po.utils.display as display
+from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
-from c3po.utils import log_setup
+from c3po.utils.utils import log_setup
 
 
 class C3(Optimizer):
@@ -229,7 +229,7 @@ class C3(Optimizer):
             + '.png'
         )
         plt.close(fig)
-        c3po.display.plot_learning(self.logdir)
+        display.plot_learning(self.logdir)
 
         self.optim_status['params'] = [
             par.numpy().tolist()

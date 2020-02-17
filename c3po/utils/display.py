@@ -10,6 +10,7 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
     plt.scatter(exps, sims)
@@ -17,6 +18,7 @@ def exp_vs_sim(exps, sims, stds):
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
     return fig
+
 
 def exp_vs_sim_2d_hist(exps, sims, stds):
     # example in
@@ -38,9 +40,10 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     plt.colorbar()
     return fig
 
+
 def get_sim_exp_std_diff(logfilename=""):
     if logfilename == "":
-        #logfilename = "/tmp/c3logs/recent/confirm.log"
+        # logfilename = "/tmp/c3logs/recent/confirm.log"
         logfilename = "/tmp/c3logs/recent/learn_model.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
@@ -76,6 +79,7 @@ def plot_exp_vs_sim(logfilename=""):
     plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
     fig = exp_vs_sim_2d_hist(exps, sims, stds)
     plt.savefig(data_path+"exp_vs_sim_2d_hist.png", dpi=300)
+
 
 def plot_exp_vs_err(logfilename=""):
     plt.figure()
@@ -178,7 +182,7 @@ def plot_OC_logs(logfolder=""):
             plt.subplot(nrows, ncols, ii)
             plt.plot(its, parameters[key])
             plt.grid()
-            plt.title(key.replace('_', '\_'))
+            plt.title(key.replace('_', '\\_'))
             plt.ylabel(units[key])
             plt.xlabel("Iteration")
             ii += 1
@@ -282,7 +286,7 @@ def plot_learning(logfolder=""):
             plt.subplot(nrows, ncols, ii)
             plt.plot(its, parameters[key])
             plt.grid()
-            plt.title(key.replace('_', '\_'))
+            plt.title(key.replace('_', '\\_'))
             plt.ylabel(units[key])
             ii += 1
         plt.subplot(nrows, ncols, ii)
@@ -353,7 +357,7 @@ def plot_foms(logfolder=""):
             fom_id = 0
         elif split[0:2] == ['Finished', 'batch']:
             foms[batch][fom_id] = float(split[4])
-            names[fom_id] = split[3].split(":")[0].replace('_', '\_')
+            names[fom_id] = split[3].split(":")[0].replace('_', '\\_')
             fom_id += 1
     plt.semilogy(np.array(foms))
     plt.legend(names)

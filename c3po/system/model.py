@@ -3,7 +3,8 @@
 import numpy as np
 import itertools
 import tensorflow as tf
-from c3po.component import Drive, Coupling
+from c3po.system.chip import Drive, Coupling
+
 
 class Model:
     """

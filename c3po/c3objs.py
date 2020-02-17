@@ -2,7 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
-from c3po.utils import num3str
+from c3po.utils.utils import num3str
 
 
 class C3obj:

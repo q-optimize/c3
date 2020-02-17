@@ -1,4 +1,5 @@
 """Library of Hamiltonian functions."""
+
 import numpy as np
 
 
@@ -121,6 +122,7 @@ def y_drive(a):
     """
     a_dag = a.T.conj()
     return 1.0j * (a_dag - a)
+
 
 def z_drive(a):
     """
