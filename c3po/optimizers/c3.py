@@ -127,7 +127,8 @@ class C3(Optimizer):
         self.evaluation = -1
         self.goal_run(x_best, measurements)
 
-    def goal_run(self, current_params, indeces):
+    def goal_run(self, current_params):
+        indeces = self.select_from_data()
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         exp_values = []
         exp_stds = []

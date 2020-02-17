@@ -64,18 +64,17 @@ class Optimizer:
 
     def fct_to_min(self, x):
         current_params = tf.constant(x)
-        indeces = self.select_from_data()
         if self.grad:
-            goal = self.goal_run_with_grad(current_params, indeces)
+            goal = self.goal_run_with_grad(current_params)
         else:
-            goal = self.goal_run(current_params, indeces)
+            goal = self.goal_run(current_params)
         self.log_parameters()
         return float(goal.numpy())
 
-    def goal_run_with_grad(self, current_params, indeces):
+    def goal_run_with_grad(self, current_params):
         with tf.GradientTape() as t:
             t.watch(current_params)
-            goal = self.goal_run(current_params, indeces)
+            goal = self.goal_run(current_params)
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
