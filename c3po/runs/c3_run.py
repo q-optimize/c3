@@ -4,8 +4,8 @@ import os
 import json
 import pickle
 import argparse
-import c3po.parsers
-import c3po.tf_utils
+import c3po.utils.parsers as parsers
+import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 from os.path import basename as base
 
@@ -21,9 +21,9 @@ datafile = cfg['datafile']
 with open(datafile, 'rb+') as file:
     learn_from = pickle.load(file)
 
-c3po.tf_utils.tf_setup()
+tf_utils.tf_setup()
 with tf.device('/CPU:0'):
-    exp = c3po.parsers.create_experiment(exp_setup, learn_from)
+    exp = parsers.create_experiment(exp_setup, learn_from)
     if 'initial_point' in cfg:
         with open(cfg['initial_point']) as init_file:
             best = init_file.readlines()
@@ -33,7 +33,7 @@ with tf.device('/CPU:0'):
             exp.set_parameters(init_p, best_exp_opt_map)
             print("Loading previous best point.")
 
-    opt = c3po.parsers.create_optimizer(opt_config)
+    opt = parsers.create_optimizer(opt_config)
     opt.set_exp(exp)
     opt.read_data(datafile)
 

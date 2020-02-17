@@ -5,7 +5,7 @@ import json
 import pickle
 import numpy as np
 import tensorflow as tf
-from c3po.optimizer import Optimizer
+from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 
 class C1(Optimizer):

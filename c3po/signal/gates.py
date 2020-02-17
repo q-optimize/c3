@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from c3po.pulse import InstructionComponent
+from c3po.signal.pulse import InstructionComponent
 
 
 class GateSet:
