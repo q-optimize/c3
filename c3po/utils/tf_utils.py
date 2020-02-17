@@ -95,29 +95,6 @@ def tf_limit_gpu_memory(memory_limit):
 
 
 @tf.function
-def tf_unitary_overlap(A, B):
-    """
-    Unitary overlap between two matrices in Tensorflow(tm).
-
-    Parameters
-    ----------
-    A : Tensor
-        Description of parameter `A`.
-    B : Tensor
-        Description of parameter `B`.
-
-    Returns
-    -------
-    type
-        Description of returned object.
-
-    """
-    overlap = tf.linalg.trace(
-        tf.matmul(tf.conj(tf.transpose(A)), B)) / tf.cast(B.shape[1], B.dtype)
-    return tf.cast(tf.conj(overlap) * overlap, tf.float64)
-
-
-@tf.function
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
 
@@ -537,6 +514,30 @@ def tf_dmket_fid(rho, psi):
 
 def tf_ketket_fid(psi1, psi2):
     return tf_abs(tf.matmul(psi1, psi2))
+
+
+def tf_unitary_overlap(A, B, lvls=None):
+    """
+    Unitary overlap between two matrices in Tensorflow(tm).
+    Parameters
+    ----------
+    A : Tensor
+        Description of parameter `A`.
+    B : Tensor
+        Description of parameter `B`.
+    Returns
+    -------
+    type
+        Description of returned object.
+    """
+    if lvls is None:
+        lvls = tf.cast(B.shape[0], B.dtype)
+    overlap = tf_abs(
+                tf.linalg.trace(
+                    tf.matmul(A, tf.linalg.adjoint(B))
+                    ) / lvls
+                )**2
+    return overlap
 
 
 def tf_superoper_unitary_overlap(A, B, lvls=None):
