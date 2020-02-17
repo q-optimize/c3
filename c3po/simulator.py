@@ -141,7 +141,7 @@ class Simulator():
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        plt.legend(self.exp.model.state_labels)
+        plt.legend(self.exp.model.state_labels, loc="center left")
         if not os.path.isdir(data_path):
             os.makedirs(data_path)
         fig.savefig(data_path+'dynamics.png', dpi=300)

@@ -21,9 +21,11 @@ def exp_vs_sim(exps, sims, stds):
 def exp_vs_sim_2d_hist(exps, sims, stds):
     # example in
     # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html
+    n_bins = 40
     fig = plt.figure()
-    H, xedges, yedges = np.histogram2d(exps, sims, bins=40)
-    H = H.T
+    n_exps, _ = np.histogram(exps, bins=n_bins)
+    H, xedges, yedges = np.histogram2d(exps, sims, bins=n_bins)
+    H = (H.T / n_exps)
     plt.imshow(
         H,
         origin='lower',
@@ -33,6 +35,7 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
+    plt.colorbar()
     return fig
 
 def get_sim_exp_std_diff(logfilename=""):
@@ -71,6 +74,8 @@ def plot_exp_vs_sim(logfilename=""):
     if data_path == "/":
         data_path = "./"
     plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
+    fig = exp_vs_sim_2d_hist(exps, sims, stds)
+    plt.savefig(data_path+"exp_vs_sim_2d_hist.png", dpi=300)
 
 def plot_exp_vs_err(logfilename=""):
     plt.figure()
@@ -92,6 +97,18 @@ def plot_exp_vs_errstd(logfilename=""):
     plt.title('Exp vs Diff (in std)')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim/Exp fidelity diff (in std)')
+    plt.show(block=False)
+
+def plot_exp_vs_std(logfilename=""):
+    plt.figure()
+    sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
+    errs = []
+    for indx in range(len(diffs)):
+        errs.append(diffs[indx]/stds[indx])
+    plt.scatter(exps, stds)
+    plt.title('Exp vs std')
+    plt.xlabel('Exp fidelity')
+    plt.ylabel('Exp fidelity std')
     plt.show(block=False)
 
 
