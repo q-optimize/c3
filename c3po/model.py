@@ -1,6 +1,7 @@
 """The model class, containing information on the system and its modelling."""
 
 import numpy as np
+import itertools
 import tensorflow as tf
 from c3po.component import Drive, Coupling
 
