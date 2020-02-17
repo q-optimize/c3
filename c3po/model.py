@@ -82,6 +82,15 @@ class Model:
         for task in tasks:
             self.tasks[task.name] = task
 
+    def set_dressed(self, dressed):
+        self.dressed = dressed
+
+    def set_lindbladian(self, lindbladian):
+        self.lindbladian = lindbladian
+
+    def set_FR(self, use_FR):
+        self.use_FR = use_FR
+
     def list_parameters(self):
         ids = []
         for key in self.params:
