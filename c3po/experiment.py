@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import c3po.utils.tf_utils as tf_utils
 
 
+# TODO add case where one only wants to pass a list of quantity objects?
 class Experiment:
     """
     It models all of the behaviour of the physical experiment.
