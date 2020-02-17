@@ -61,6 +61,14 @@ class C3(Optimizer):
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
 
+    def load_best(self, init_point):
+        with open(init_point) as init_file:
+            best = init_file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            init_p = json.loads(best[1])['params']
+            self.exp.set_parameters(init_p, best_exp_opt_map)
+            print("Loading previous best point.")
+
     def select_from_data(self, inverse=False):
         learn_from = self.learn_from
         sampling = self.sampling
@@ -223,10 +231,10 @@ class C3(Optimizer):
             ['X90p', 'Y90p', 'X90p', 'Y90p']
         )
         fig.savefig(
-            self.logdir +
-            + 'dynamics_xyxy/' +
-            + 'eval:' + str(self.evaluation) + "__" +
-            + self.fom.__name__ + str(round(goal.numpy(), 3)) +
+            self.logdir
+            + 'dynamics_xyxy/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal.numpy(), 3))
             + '.png'
         )
         plt.close(fig)

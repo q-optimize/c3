@@ -1,42 +1,35 @@
-"""Object that deals with the open loop optimal control."""
+"""Object that deals with the closed loop optimal control."""
 
-import os
 import json
-import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
-import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
 
 
-class C1(Optimizer):
-    """Object that deals with the open loop optimal control."""
+class C2(Optimizer):
+    """Object that deals with the closed loop optimal control."""
 
     def __init__(
         self,
         dir_path,
-        fid_func,
+        eval_func,
         gateset_opt_map,
-        callback_fids=[],
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm_no_grad
     ):
         """Initiliase."""
         super().__init__(
             algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=algorithm_with_grad
+            algorithm_with_grad=None
             )
+        self.eval_func = eval_func
         self.opt_map = gateset_opt_map
-        self.fid_func = fid_func
-        self.callback_fids = callback_fids
         self.optim_status = {}
-        self.gradients = {}
         self.evaluation = 1
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        string = self.fid_func.__name__ + self.algorithm.__name__
+        string = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, string)
-        self.logfile_name = self.logdir + 'open_loop.log'
+        self.logfile_name = self.logdir + 'closed_loop.log'
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -51,27 +44,15 @@ class C1(Optimizer):
         Apply a search algorightm to your gateset given a fidelity function.
         """
         self.start_log()
-
         print(f"Saving as:\n{self.logfile_name}")
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
-            # TODO deal with kears learning differently
-            if self.grad:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min,
-                    self.lookup_gradient
-                )
-            else:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min
-                )
+            self.algorithm(
+                x0,
+                self.fct_to_min
+            )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point', 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
-        self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
 
     def goal_run(self, current_params):
@@ -80,13 +61,11 @@ class C1(Optimizer):
             self.opt_map,
             scaled=True
         )
-        U_dict = self.exp.get_gates()
-        goal = self.fid_func(U_dict)
-        # display.plot_OC_logs(self.logdir)
-
+        params = self.exp.gateset.get_parameters(self.opt_map, scaled=False)
+        goal = self.eval_func(params)
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = float(goal.numpy())
+        self.optim_status['goal'] = float(goal)
         return goal

@@ -1,15 +1,17 @@
 import copy
 import numpy as np
-from c3po.model import Model as Mdl
+from c3po.system.model import Model as Mdl
 from c3po.c3objs import Quantity as Qty
 from c3po.experiment import Experiment as Exp
-from c3po.generator import Generator as Gnr
-import c3po.component as component
-import c3po.devices as devices
-import c3po.hamiltonians as hamiltonians
-import c3po.control as control
-import c3po.envelopes as envelopes
-import c3po.tasks as tasks
+from c3po.generator.generator import Generator as Gnr
+import c3po.signal.gates as gates
+import c3po.system.chip as chip
+import c3po.generator.devices as devices
+import c3po.libraries.hamiltonians as hamiltonians
+import c3po.signal.pulse as pulse
+import c3po.libraries.envelopes as envelopes
+import c3po.system.tasks as tasks
+
 
 def create_experiment():
     lindblad = False
@@ -22,8 +24,8 @@ def create_experiment():
         unit='K'
     )
 
-    #### MAKE MODEL
-    q1 = component.Qubit(
+    # ### MAKE MODEL
+    q1 = chip.Qubit(
         name="Q1",
         desc="Qubit 1",
         comment="The one and only qubit in this chip",
@@ -33,7 +35,7 @@ def create_experiment():
             max=5.3e9 * 2 * np.pi
         ),
         anhar=Qty(
-            value=-3e6 * 2 * np.pi,
+            value=-300e6 * 2 * np.pi,
             min=-350e6 * 2 * np.pi,
             max=-250e6 * 2 * np.pi
         ),
@@ -52,7 +54,7 @@ def create_experiment():
         ),
         temp=init_temp,
     )
-    drive = component.Drive(
+    drive = chip.Drive(
         name="d1",
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
@@ -89,7 +91,7 @@ def create_experiment():
     model = Mdl(phys_components, line_components, task_list)
     model.set_lindbladian(lindblad)
 
-    #### MAKE GENERATOR
+    # ### MAKE GENERATOR
     sim_res = 60e9
     awg_res = 1e9
 
@@ -125,7 +127,7 @@ def create_experiment():
     generator = Gnr(device_list)
     generator.devices['awg'].options = 'drag'
 
-    #### MAKE GATESET
+    # ### MAKE GATESET
     t_final = 4e-9
     buffer_time = 2e-9
 
@@ -165,7 +167,7 @@ def create_experiment():
             max=3.0
         ),
     }
-    gauss_env = control.Envelope(
+    gauss_env = pulse.Envelope(
         name="gauss",
         desc="Gaussian comp 1 of signal 1",
         params=gauss_params,
@@ -185,12 +187,12 @@ def create_experiment():
             unit='rad'
         )
     }
-    carr = control.Carrier(
+    carr = pulse.Carrier(
         name="carrier",
         desc="Frequency of the local oscillator",
         params=carrier_parameters
     )
-    X90p = control.Instruction(
+    X90p = gates.Instruction(
         name="X90p",
         t_start=0.0,
         t_end=t_final+buffer_time,
@@ -199,12 +201,12 @@ def create_experiment():
     X90p.add_component(gauss_env, "d1")
     X90p.add_component(carr, "d1")
 
-    nodrive_env = control.Envelope(
+    nodrive_env = pulse.Envelope(
         name="nodrive_env",
         params=gauss_params,
         shape=envelopes.no_drive
     )
-    QId = control.Instruction(
+    QId = gates.Instruction(
         name="QId",
         t_start=0.0,
         t_end=t_final+buffer_time,
@@ -213,7 +215,7 @@ def create_experiment():
     QId.add_component(nodrive_env, "d1")
     QId.add_component(carr, "d1")
 
-    gateset = control.GateSet()
+    gateset = gates.GateSet()
     gateset.add_instruction(QId)
     gateset.add_instruction(X90p)
 
@@ -227,6 +229,6 @@ def create_experiment():
     gateset.add_instruction(Y90m)
     gateset.add_instruction(Y90p)
 
-    #### MAKE EXPERIMENT
+    # ### MAKE EXPERIMENT
     exp = Exp(model=model, generator=generator, gateset=gateset)
     return exp

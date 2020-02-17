@@ -2,17 +2,77 @@ import json
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
+import c3po.libraries.fidelities as fidelities
 from runpy import run_path
+from c3po.optimizers.c1 import C1
+from c3po.optimizers.c2 import C2
 from c3po.optimizers.c3 import C3
 
 
-def create_experiment(exp_setup, datafile):
+def create_experiment(exp_setup, datafile=''):
     exp_namespace = run_path(exp_setup)
-    exp = exp_namespace['create_experiment'](datafile)
+    if datafile:
+        exp = exp_namespace['create_experiment'](datafile)
+    else:
+        exp = exp_namespace['create_experiment']()
     return exp
 
 
-def create_optimizer(optimizer_config):
+def create_c1_opt(optimizer_config):
+    with open(optimizer_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+
+    def unit_X90p(U_dict):
+        return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+
+    def avfid_X90p(U_dict):
+        return fidelities.average_infid(U_dict, 'X90p', proj=True)
+
+    fids = {
+        'unitary_infid': unit_X90p,
+        'average_infid': avfid_X90p
+    }
+    fid = cfg['fid_func']
+    fid_func = fids.pop(fid)
+    callback_fids = fids.values()
+    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
+    grad_algs = {'lbfgs': algorithms.lbfgs}
+    no_grad_algs = {'cmaes': algorithms.cmaes}
+    if cfg['algorithm'] in grad_algs.keys():
+        algorithm_with_grad = grad_algs[cfg['algorithm']]
+        algorithm_no_grad = None
+    elif cfg['algorithm'] in no_grad_algs.keys():
+        algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+        algorithm_with_grad = None
+    opt = C1(
+        dir_path=cfg['dir_path'],
+        fid_func=fid_func,
+        gateset_opt_map=gateset_opt_map,
+        callback_fids=callback_fids,
+        algorithm_no_grad=algorithm_no_grad,
+        algorithm_with_grad=algorithm_with_grad,
+    )
+    return opt
+
+
+def create_c2_opt(optimizer_config):
+    with open(optimizer_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read)
+    exp_eval_namespace = run_path(cfg['eval_func'])
+    eval_func = exp_eval_namespace['eval_func']
+    gateset_opt_map = [tuple(a) for a in cfg['gateset_opt_map']]
+    no_grad_algs = {'cmaes': algorithms.cmaes}
+    algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+    opt = C2(
+        dir_path=cfg['dir_path'],
+        eval_func=eval_func,
+        gateset_opt_map=gateset_opt_map,
+        algorithm_no_grad=algorithm_no_grad,
+    )
+    return opt
+
+
+def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
     estimator = cfg['estimator']

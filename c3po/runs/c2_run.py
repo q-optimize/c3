@@ -1,4 +1,4 @@
-"""Base run for c3 code."""
+"""Base run for c1 code."""
 
 import os
 import json
@@ -24,9 +24,8 @@ with open(datafile, 'rb+') as file:
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup, learn_from)
-    opt = parsers.create_c3_opt(opt_config)
+    opt = parsers.create_c1_opt(opt_config)
     opt.set_exp(exp)
-    opt.read_data(datafile)
     dir = opt.logdir
 
     if 'initial_point' in cfg:
@@ -40,4 +39,4 @@ with tf.device('/CPU:0'):
     os.system('cp {} {}/{}'.format(opt_config, dir, base(opt_config)))
     os.system('ln -s {} {}/{}'.format(datafile, dir, base(datafile)))
 
-    opt.learn_model()
+    opt.optimize_controls()
