@@ -81,6 +81,7 @@ def plot_exp_vs_sim(logfilename=""):
     plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
     fig = exp_vs_sim_2d_hist(exps, sims, stds)
     plt.savefig(data_path+"exp_vs_sim_2d_hist.png", dpi=300)
+    return fig
 
 
 def plot_exp_vs_err(logfilename=""):
@@ -104,6 +105,7 @@ def plot_exp_vs_errstd(logfilename=""):
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim/Exp fidelity diff (in std)')
     plt.show(block=False)
+
 
 def plot_exp_vs_std(logfilename=""):
     plt.figure()

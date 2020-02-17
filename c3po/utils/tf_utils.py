@@ -122,9 +122,6 @@ def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
 
 
-
-
-
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     """
@@ -152,7 +149,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
         ii += 1
-    terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
+    # terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     # dU = tf_expm(-1j * h * dt, terms)
     dU = tf.linalg.expm(-1j * h * dt)
     return dU
@@ -178,7 +175,7 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
+    # terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
     # TODO test eyeballing of the number of terms in the taylor expansion
     # dU = tf_expm(lind_op * dt, terms)
     dU = tf.linalg.expm(lind_op * dt)
@@ -215,7 +212,7 @@ def tf_propagation(h0, hks, cflds, dt):
         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
     return dUs
 
-#def tf_propagation(h0, hks, cflds, dt):
+# def tf_propagation(h0, hks, cflds, dt):
 #    """
 #    Time evolution of a system controlled by time-dependent fields.
 #
@@ -299,27 +296,27 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
         return dUs
 
 
-# # MATRIX MULTIPLICATION FUCNTIONS
-# def evaluate_sequences(
-#     U_dict: dict,
-#     sequences: list
-# ):
-#     """
-#     Sequences are assumed to be given in the correct order (left to right).
-#
-#         e.g.
-#         ['X90p','Y90p'] --> U = X90p x Y90p
-#     """
-#     gates = U_dict
-#     # TODO deal with the case where you only evaluate one sequence
-#     U = []
-#     for sequence in sequences:
-#         Us = []
-#         for gate in sequence:
-#             Us.append(gates[gate])
-#         U.append(tf_matmul_right(Us))
-#         #### WARNING WARNING ^^ look there, it says right WARNING
-#     return U
+# MATRIX MULTIPLICATION FUCNTIONS
+def evaluate_sequences(
+    U_dict: dict,
+    sequences: list
+):
+    """
+    Sequences are assumed to be given in the correct order (left to right).
+
+        e.g.
+        ['X90p','Y90p'] --> U = X90p x Y90p
+    """
+    gates = U_dict
+    # TODO deal with the case where you only evaluate one sequence
+    U = []
+    for sequence in sequences:
+        Us = []
+        for gate in sequence:
+            Us.append(gates[gate])
+        U.append(tf_matmul_left(Us))
+        # ### WARNING WARNING ^^ look there, it says right WARNING
+    return U
 
 
 def tf_matmul_left(dUs):

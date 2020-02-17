@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from c3po.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, tf_dm_to_vec, \
-    tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm
+    tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
+    evaluate_sequences
 from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
 
@@ -201,7 +202,7 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
     lvls = int(np.sqrt(U.shape[0]))
     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-    dv_0 = tf_dm_to_vect(tf_state_to_dm(psi_0))
+    dv_0 = tf_dm_to_vec(tf_state_to_dm(psi_0))
     dv_actual = tf.matmul(U, dv_0)
     return populations(dv_actual, lindbladian=True)[lvl]
 
