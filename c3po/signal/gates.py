@@ -107,6 +107,24 @@ class GateSet:
                     print("Value out of bounds")
                     print(f"Trying to set {par_id} to value {val}")
 
+    def print_parameters(self, opt_map=None):
+        ret = []
+        if opt_map is None:
+            opt_map = self.id_list
+        for indx in range(len(opt_map)):
+            ids = opt_map[indx]
+            for id in ids:
+                gate = id[0]
+                par_id = id[1:4]
+                chan = par_id[0]
+                comp = par_id[1]
+                param = par_id[2]
+                gate_instr = self.instructions[gate]
+                par = gate_instr.comps[chan][comp].params[param]
+            nice_id = gate + "-" + "-".join(par_id)
+            ret.append(f"{nice_id:28}: {par}\n")
+        return "".join(ret)
+
 
 class Instruction():
     """

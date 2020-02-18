@@ -41,6 +41,7 @@ class C3obj:
     def print_parameter(self, par_id):
         print(self.params[par_id])
 
+
 class Quantity:
     """
     Represents any parameter used in the model or the pulse speficiation. For

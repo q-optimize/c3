@@ -43,6 +43,7 @@ class C2(Optimizer):
         """
         self.start_log()
         print(f"Saving as:\n{self.logfile_name}")
+        self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
             self.algorithm(
@@ -59,11 +60,14 @@ class C2(Optimizer):
             self.opt_map,
             scaled=True
         )
+        # There could be more processing happening here, i.e. the exp could
+        # generate signals for an experiment and send those to eval_func.
         params = self.exp.gateset.get_parameters(self.opt_map, scaled=False)
         goal = self.eval_func(params)
         self.optim_status['params'] = [
             par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+            for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal)
+        self.evaluation += 1
         return goal

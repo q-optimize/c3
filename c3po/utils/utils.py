@@ -27,8 +27,8 @@ def replace_symlink(path, alias):
 
 
 def num3str(val):
-    big_units = ['', 'K', 'M', 'G', 'T', 'P']
-    small_units = ['m', 'mu', 'n', 'p', 'f']
+    big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
+    small_units = ['m', 'mu', 'n', 'p', 'f', 'a', 'z']
     ret = []
     if not hasattr(val, "__iter__"):
         val = np.array([val])

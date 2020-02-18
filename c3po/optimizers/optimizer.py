@@ -17,7 +17,7 @@ class Optimizer:
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
-        self.evaluation = 1
+        self.evaluation = 0
         if algorithm_with_grad:
             self.algorithm = algorithm_with_grad
             self.grad = True
@@ -61,6 +61,8 @@ class Optimizer:
                 best_point.write(json.dumps(self.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
+                best_point.write("\n")
+                best_point.write(self.nice_print(self.opt_map))
         with open(self.logfile_name, 'a') as logfile:
             logfile.write(json.dumps(self.optim_status))
             logfile.write("\n")

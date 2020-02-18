@@ -15,13 +15,14 @@ args = parser.parse_args()
 master_config = args.master_config
 with open(master_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
-exp_setup = cfg['experiment_setup']
+exp_setup = cfg['exp_setup']
 opt_config = cfg['optimizer_config']
 
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
-    opt = parsers.create_synthetic_c2_opt(opt_config, exp)
+    opt = parsers.create_synthetic_c2_opt(opt_config)
+    opt.set_exp(exp)
     dir = opt.logdir
 
     if 'initial_point' in cfg:

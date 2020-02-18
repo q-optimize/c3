@@ -15,7 +15,7 @@ args = parser.parse_args()
 master_config = args.master_config
 with open(master_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
-exp_setup = cfg['experiment_setup']
+exp_setup = cfg['exp_setup']
 opt_config = cfg['optimizer_config']
 datafile = cfg['datafile']
 with open(datafile, 'rb+') as file:

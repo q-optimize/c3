@@ -46,7 +46,7 @@ class C1(Optimizer):
         Apply a search algorightm to your gateset given a fidelity function.
         """
         self.start_log()
-
+        self.nice_print = self.exp.gateset.print_parameters
         print(f"Saving as:\n{self.logfile_name}")
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
@@ -84,4 +84,5 @@ class C1(Optimizer):
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal.numpy())
+        self.evaluation += 1
         return goal

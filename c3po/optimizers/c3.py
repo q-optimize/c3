@@ -95,6 +95,7 @@ class C3(Optimizer):
 
     def learn_model(self):
         self.start_log()
+        self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')

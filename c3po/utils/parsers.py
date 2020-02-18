@@ -57,10 +57,10 @@ def create_c1_opt(optimizer_config):
 
 def create_c2_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read)
+        cfg = json.loads(cfg_file.read())
     exp_eval_namespace = run_path(cfg['eval_func'])
     eval_func = exp_eval_namespace['eval_func']
-    gateset_opt_map = [tuple(a) for a in cfg['gateset_opt_map']]
+    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
     no_grad_algs = {'cmaes': algorithms.cmaes}
     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
     opt = C2(
@@ -72,31 +72,22 @@ def create_c2_opt(optimizer_config):
     return opt
 
 
-def create_synthetic_c2_opt(optimizer_config, exp):
+def create_synthetic_c2_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read)
-
-    def unit_X90p(U_dict):
-        return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
-
-    def avfid_X90p(U_dict):
-        return fidelities.average_infid(U_dict, 'X90p', proj=True)
-
-    fids = {
-        'unitary_infid': unit_X90p,
-        'average_infid': avfid_X90p
-    }
-    eval_func = fids.pop(cfg['fid_func'])
-    gateset_opt_map = [tuple(a) for a in cfg['gateset_opt_map']]
+        cfg = json.loads(cfg_file.read())
+    exp_eval_namespace = run_path(cfg['eval_func'])
+    exp_right = exp_eval_namespace['exp_right']
+    eval_func = exp_eval_namespace['eval_func']
+    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
     no_grad_algs = {'cmaes': algorithms.cmaes}
     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
     opt = C2(
         dir_path=cfg['dir_path'],
-        eval_func=None,
+        eval_func=lambda p: eval_func(p, exp_right, gateset_opt_map),
         gateset_opt_map=gateset_opt_map,
         algorithm_no_grad=algorithm_no_grad,
     )
-    return opt, eval_func
+    return opt
 
 
 def create_c3_opt(optimizer_config):
