@@ -14,6 +14,10 @@ class Optimizer:
         algorithm_no_grad=None,
         algorithm_with_grad=None,
     ):
+        self.optim_status = {}
+        self.gradients = {}
+        self.current_best_goal = 9876543210.123456789
+        self.evaluation = 1
         if algorithm_with_grad:
             self.algorithm = algorithm_with_grad
             self.grad = True
