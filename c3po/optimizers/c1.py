@@ -1,10 +1,8 @@
 """Object that deals with the open loop optimal control."""
 
-import os
 import json
 import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
-import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
 
 
@@ -28,9 +26,6 @@ class C1(Optimizer):
         self.opt_map = gateset_opt_map
         self.fid_func = fid_func
         self.callback_fids = callback_fids
-        self.optim_status = {}
-        self.gradients = {}
-        self.evaluation = 1
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
@@ -86,7 +81,7 @@ class C1(Optimizer):
 
         self.optim_status['params'] = [
             par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+            for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal.numpy())
         return goal

@@ -38,10 +38,6 @@ class C3(Optimizer):
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
 
-        self.optim_status = {}
-        self.gradients = {}
-        self.current_best_goal = 987654321
-        self.evaluation = 1
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):

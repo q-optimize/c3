@@ -22,8 +22,6 @@ class C2(Optimizer):
             )
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
-        self.optim_status = {}
-        self.evaluation = 1
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):

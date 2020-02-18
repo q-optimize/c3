@@ -72,6 +72,33 @@ def create_c2_opt(optimizer_config):
     return opt
 
 
+def create_synthetic_c2_opt(optimizer_config, exp):
+    with open(optimizer_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read)
+
+    def unit_X90p(U_dict):
+        return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+
+    def avfid_X90p(U_dict):
+        return fidelities.average_infid(U_dict, 'X90p', proj=True)
+
+    fids = {
+        'unitary_infid': unit_X90p,
+        'average_infid': avfid_X90p
+    }
+    eval_func = fids.pop(cfg['fid_func'])
+    gateset_opt_map = [tuple(a) for a in cfg['gateset_opt_map']]
+    no_grad_algs = {'cmaes': algorithms.cmaes}
+    algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+    opt = C2(
+        dir_path=cfg['dir_path'],
+        eval_func=None,
+        gateset_opt_map=gateset_opt_map,
+        algorithm_no_grad=algorithm_no_grad,
+    )
+    return opt, eval_func
+
+
 def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())

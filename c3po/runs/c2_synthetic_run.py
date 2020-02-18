@@ -21,8 +21,7 @@ opt_config = cfg['optimizer_config']
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
-    opt = parsers.create_c2_opt(opt_config)
-    opt.set_exp(exp)
+    opt = parsers.create_synthetic_c2_opt(opt_config, exp)
     dir = opt.logdir
 
     if 'initial_point' in cfg:

@@ -17,6 +17,7 @@ def create_experiment():
     lindblad = False
     qubit_lvls = 4
     freq = 5.2e9 * 2 * np.pi
+    anhar = -300e6 * 2 * np.pi
     init_temp = Qty(
         value=0.06,
         min=0.0,
@@ -35,7 +36,7 @@ def create_experiment():
             max=5.3e9 * 2 * np.pi
         ),
         anhar=Qty(
-            value=-300e6 * 2 * np.pi,
+            value=anhar,
             min=-350e6 * 2 * np.pi,
             max=-250e6 * 2 * np.pi
         ),
@@ -79,7 +80,7 @@ def create_experiment():
     )
     meas_scale = Qty(
         value=1.07,
-        min=1.0,
+        min=0.9,
         max=1.2
     )
     conf_matrix = tasks.ConfusionMatrix(confusion_row=confusion_row)
@@ -102,9 +103,9 @@ def create_experiment():
     v_to_hz = devices.Volts_to_Hertz(
         name='v_to_hz',
         V_to_Hz=Qty(
-            value=1e9,
-            min=0.8e9,
-            max=3e9,
+            value=1,
+            min=0.8,
+            max=3,
             unit='rad/V'
         )
     )
@@ -117,7 +118,7 @@ def create_experiment():
         rise_time=Qty(
             value=0.3e-9,
             min=0.05e-9,
-            max=0.5e-9,
+            max=0.6e-9,
             unit='s'
         ),
         resolution=sim_res
@@ -162,9 +163,9 @@ def create_experiment():
             unit='Hz 2pi'
         ),
         'delta': Qty(
-            value=-0.5,
-            min=-3.0,
-            max=3.0
+            value=0.5 / anhar,
+            min=3.0 / anhar,
+            max=-3.0 / anhar
         ),
     }
     gauss_env = pulse.Envelope(

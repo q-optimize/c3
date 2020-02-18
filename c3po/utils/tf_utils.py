@@ -292,7 +292,7 @@ def evaluate_sequences(
         for gate in sequence:
             Us.append(gates[gate])
         U.append(tf_matmul_left(Us))
-        # ### WARNING WARNING ^^ look there, it says right WARNING
+        # ### WARNING WARNING ^^ look there, it says left WARNING
     return U
 
 
@@ -343,7 +343,7 @@ def tf_matmul_n(tensor_list):
     Multiply a list of tensors as binary tree.
 
     """
-    # TODO does it multiply from the left
+    # TODO does it multiply from the left?
     ln = len(tensor_list)
     if (ln == 1):
         return tensor_list[0]
