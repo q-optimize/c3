@@ -125,7 +125,7 @@ class C3(Optimizer):
         self.confirm()
 
     def confirm(self):
-        self.logdir + self.logname = self.logdir + 'confirm.log'
+        self.logname = 'confirm.log'
         self.start_log()
         print(f"\nSaving as:\n{self.logdir + self.logname}")
         measurements = self.select_from_data(inverse=True)
