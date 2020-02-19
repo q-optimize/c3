@@ -1,6 +1,7 @@
 """Object that deals with the closed loop optimal control."""
 
 import json
+import pickle
 from c3po.optimizers.optimizer import Optimizer
 from c3po.utils.utils import log_setup
 
@@ -43,6 +44,7 @@ class C2(Optimizer):
         Apply a search algorightm to your gateset given a fidelity function.
         """
         self.start_log()
+        self.picklefilename = self.logdir + "learn_from.pickle"
         print(f"Saving as:\n{self.logfile_name}")
         self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
@@ -54,6 +56,13 @@ class C2(Optimizer):
         except KeyboardInterrupt:
             pass
         self.end_log()
+        with open(self.picklefilename, "rb") as file:
+            measurements = pickle.load(file)
+        learn_from = {}
+        learn_from['seqs_grouped_by_param_set'] = measurements
+        learn_from['opt_map'] = self.opt_map
+        with open(self.picklefilename, "wb+") as file:
+            pickle.dump(learn_from, file)
 
     def goal_run(self, current_params):
         self.exp.gateset.set_parameters(
@@ -64,11 +73,22 @@ class C2(Optimizer):
         # There could be more processing happening here, i.e. the exp could
         # generate signals for an experiment and send those to eval_func.
         params = self.exp.gateset.get_parameters(self.opt_map, scaled=False)
-        goal = self.eval_func(params)
+
+        goal, results, results_std, seqs = self.eval_func(params)
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal)
         self.evaluation += 1
+        self.log_pickle(params, seqs, results, results_std)
         return goal
+
+        def log_pickle(self, params, seqs, results, results_std):
+            m = {}
+            m['params'] = params
+            m['seqs'] = seqs
+            m['results'] = results
+            m['result_stds'] = results_std
+            with open(self.picklefilename, "ab+") as file:
+                pickle.dump(m, file)
