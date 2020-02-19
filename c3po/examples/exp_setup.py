@@ -135,8 +135,8 @@ def create_experiment():
     gauss_params = {
         'amp': Qty(
             value=0.5 * np.pi,
-            min=0.1 * np.pi,
-            max=1 * np.pi,
+            min=0.3 * np.pi,
+            max=0.7 * np.pi,
         ),
         't_final': Qty(
             value=t_final,
@@ -164,8 +164,8 @@ def create_experiment():
         ),
         'delta': Qty(
             value=0.5 / anhar,
-            min=3.0 / anhar,
-            max=-3.0 / anhar
+            min=1.5 / anhar,
+            max=0.0 / anhar
         ),
     }
     gauss_env = pulse.Envelope(

@@ -29,8 +29,9 @@ class C1(Optimizer):
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        string = self.fid_func.__name__ + self.algorithm.__name__
-        self.logdir = log_setup(dir_path, string)
+        self.dir_path = dir_path
+        self.string = 'c1' + self.fid_func.__name__ + self.algorithm.__name__
+        self.logdir = log_setup(dir_path, self.string)
         self.logfile_name = self.logdir + 'open_loop.log'
 
     def load_best(self, init_point):

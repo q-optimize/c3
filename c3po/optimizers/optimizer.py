@@ -1,5 +1,6 @@
 """Optimizer object, where the optimal control is done."""
 
+import os
 import time
 import json
 import tensorflow as tf
@@ -28,6 +29,13 @@ class Optimizer:
             raise Exception("No algorithm passed. Using default LBFGS")
             self.algorithm = c3po.algorithms.lbfgs
             self.grad = True
+
+    def replace_logdir(self, new_logdir):
+        old_logdir = self.logdir
+        self.logdir = new_logdir
+        self.logfile_name = self.logdir + os.path.basename(self.logfile_name)
+        os.remove(self.dir_path + self.string)
+        os.rmdir(old_logdir)
 
     def set_exp(self, exp):
         self.exp = exp

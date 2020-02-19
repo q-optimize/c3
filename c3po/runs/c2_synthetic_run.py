@@ -1,8 +1,7 @@
-"""Base run for c1 code."""
+"""Synthetic base run for c2 code."""
 
 import os
 import json
-import pickle
 import argparse
 import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils

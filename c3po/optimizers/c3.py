@@ -41,14 +41,15 @@ class C3(Optimizer):
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        string = self.algorithm.__name__ + '-' \
+        self.dir_path = dir_path
+        self.string = self.algorithm.__name__ + '-' \
                  + self.sampling + '-' \
                  + str(self.batch_size) + '-' \
                  + self.fom.__name__
         # datafile = os.path.basename(self.datafile)
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
-        self.logdir = log_setup(dir_path, string)
+        self.logdir = log_setup(dir_path, self.string)
         self.logfile_name = self.logdir + 'learn_model.log'
 
     def read_data(self, datafile):

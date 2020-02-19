@@ -1,4 +1,4 @@
-"""Base run for c1 code."""
+"""Base run for c2 code."""
 
 import os
 import json
