@@ -145,10 +145,9 @@ class C3(Optimizer):
             m = self.learn_from[ipar]
             gateset_params = m['params']
             gateset_opt_map = self.gateset_opt_map
-            sequences = [seq['gate_seq'] for seq in m['seqs']]
-            # m_vals = m['results']
-            # m_stds = m['result_stds']
-            # sequences = m['seqs']
+            m_vals = m['results']
+            m_stds = m['result_stds']
+            sequences = m['seqs']
             num_seqs = len(sequences)
 
             self.exp.gateset.set_parameters(
@@ -162,7 +161,7 @@ class C3(Optimizer):
 
             with open(self.logfile_name, 'a') as logfile:
                 logfile.write(
-                    "\n  Parameterset {}, #{} of {}:\n {}\n {}".format(
+                    "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
                         ipar,
                         count,
                         len(indeces),
@@ -173,8 +172,8 @@ class C3(Optimizer):
                     )
                 )
             for iseq in range(num_seqs):
-                m_val = m['seqs'][iseq]['result']
-                m_std = m['seqs'][iseq]['result_std']
+                m_val = m_vals[iseq]
+                m_std = m_stds[iseq]
                 exp_values.append(m_val)
                 exp_stds.append(m_std)
                 sim_val = float(sim_vals[iseq].numpy())

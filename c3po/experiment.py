@@ -95,7 +95,7 @@ class Experiment:
             par_id = id[1]
             par = self.components[comp_id].params[par_id]
             nice_id = f"{comp_id}-{par_id}"
-            ret.append(f"{nice_id:22}: {par}\n")
+            ret.append(f"{nice_id:32}: {par}\n")
         return "".join(ret)
     # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
