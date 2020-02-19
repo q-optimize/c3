@@ -32,7 +32,7 @@ class C1(Optimizer):
         self.dir_path = dir_path
         self.string = 'c1' + self.fid_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, self.string)
-        self.logfile_name = self.logdir + 'open_loop.log'
+        self.logname = 'open_loop.log '
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -48,7 +48,7 @@ class C1(Optimizer):
         """
         self.start_log()
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"Saving as:\n{self.logfile_name}")
+        print(f"Saving as:\n{self.logdir + self.logname}")
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently

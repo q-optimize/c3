@@ -50,7 +50,7 @@ class C3(Optimizer):
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(dir_path, self.string)
-        self.logfile_name = self.logdir + 'learn_model.log'
+        self.logname = 'learn_model.log'
 
     def read_data(self, datafile):
         with open(datafile, 'rb+') as file:
@@ -101,7 +101,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"Saving as:\n{self.logfile_name}")
+        print(f"Saving as:\n{self.logdir + self.logname}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -125,9 +125,9 @@ class C3(Optimizer):
         self.confirm()
 
     def confirm(self):
-        self.logfile_name = self.logdir + 'confirm.log'
+        self.logdir + self.logname = self.logdir + 'confirm.log'
         self.start_log()
-        print(f"\nSaving as:\n{self.logfile_name}")
+        print(f"\nSaving as:\n{self.logdir + self.logname}")
         measurements = self.select_from_data(inverse=True)
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
@@ -160,7 +160,7 @@ class C3(Optimizer):
             # exp_stds.extend(m_stds)
             sim_values.extend(sim_vals)
 
-            with open(self.logfile_name, 'a') as logfile:
+            with open(self.logdir + self.logname, 'a') as logfile:
                 logfile.write(
                     "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
                         ipar,
@@ -178,7 +178,7 @@ class C3(Optimizer):
                 exp_values.append(m_val)
                 exp_stds.append(m_std)
                 sim_val = float(sim_vals[iseq].numpy())
-                with open(self.logfile_name, 'a') as logfile:
+                with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
                         " Sequence {} of {}:\n".format(iseq, num_seqs)
                     )
@@ -194,7 +194,7 @@ class C3(Optimizer):
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())
 
-        with open(self.logfile_name, 'a') as logfile:
+        with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("Finished batch with\n")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:

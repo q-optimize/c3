@@ -33,7 +33,6 @@ class Optimizer:
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
         self.logdir = new_logdir
-        self.logfile_name = self.logdir + os.path.basename(self.logfile_name)
         os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
@@ -43,7 +42,7 @@ class Optimizer:
     def start_log(self):
         self.start_time = time.time()
         start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-        with open(self.logfile_name, 'a') as logfile:
+        with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
@@ -53,7 +52,7 @@ class Optimizer:
 
     def end_log(self):
         self.end_time = time.time()
-        with open(self.logfile_name, 'a') as logfile:
+        with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(
                 f"Finished at {time.asctime(time.localtime())}\n"
             )
@@ -71,7 +70,7 @@ class Optimizer:
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
-        with open(self.logfile_name, 'a') as logfile:
+        with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(json.dumps(self.optim_status))
             logfile.write("\n")
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")

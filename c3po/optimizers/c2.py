@@ -29,7 +29,7 @@ class C2(Optimizer):
         self.dir_path = dir_path
         self.string = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, self.string)
-        self.logfile_name = self.logdir + 'closed_loop.log'
+        self.logname = 'closed_loop.log'
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -45,7 +45,7 @@ class C2(Optimizer):
         """
         self.start_log()
         self.picklefilename = self.logdir + "learn_from.pickle"
-        print(f"Saving as:\n{self.logfile_name}")
+        print(f"Saving as:\n{self.logdir + self.logname}")
         self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:

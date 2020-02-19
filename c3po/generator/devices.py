@@ -374,7 +374,7 @@ class AWG(Device):
         )
 
         self.options = ""
-        self.logfile_name = logdir + "awg.log"
+        self.logdir + self.logname = logdir + "awg.log"
         # TODO move the options pwc & drag to the instruction object
         self.signal = {}
         self.amp_tot_sq = None
@@ -509,7 +509,7 @@ class AWG(Device):
 
     def log_shapes(self):
         # TODO log shapes in the generator instead
-        with open(self.logfile_name, 'a') as logfile:
+        with open(self.logdir + self.logname, 'a') as logfile:
             signal = {}
             for key in self.signal:
                 signal[key] = self.signal[key].numpy().tolist()
