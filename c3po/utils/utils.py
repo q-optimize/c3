@@ -21,8 +21,10 @@ def log_setup(data_path, run_name=None):
 
 
 def replace_symlink(path, alias):
-    if os.path.isdir(alias):
+    try:
         os.remove(alias)
+    except FileNotFoundError:
+        pass
     os.symlink(path, alias)
 
 
