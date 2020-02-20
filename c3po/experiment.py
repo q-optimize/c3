@@ -102,12 +102,7 @@ class Experiment:
 
     def get_Us(self, seqs):
         U_dict = self.get_gates()
-        psi_init = self.model.tasks["init_ground"].initialise(
-            self.model.drift_H,
-            self.model.lindbladian
-        )
-        self.psi_init = psi_init
-        Us = self.evaluate_sequences(U_dict, seqs)
+        Us = tf_utils.evaluate_sequences(U_dict, seqs)
         return Us
 
     # def evaluate(self, seqs):
@@ -119,6 +114,11 @@ class Experiment:
 
     def evaluate(self, seqs):
         Us = self.get_Us(seqs)
+        psi_init = self.model.tasks["init_ground"].initialise(
+            self.model.drift_H,
+            self.model.lindbladian
+        )
+        self.psi_init = psi_init
         pop1s = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
@@ -171,27 +171,6 @@ class Experiment:
             gates[gate] = U
             self.unitaries = gates
         return gates
-
-    @staticmethod
-    def evaluate_sequences(
-        U_dict: dict,
-        sequences: list
-    ):
-        """
-        Sequences are assumed to be given in the correct order (left to right).
-
-            e.g.
-            ['X90p','Y90p','Xp'] --> U = X90p x Y90p x Xp
-        """
-        gates = U_dict
-        # TODO deal with the case where you only evaluate one sequence
-        U = []
-        for sequence in sequences:
-            Us = []
-            for gate in sequence:
-                Us.append(gates[gate])
-            U.append(tf_utils.tf_matmul_left(Us))
-        return U
 
     def propagation(
         self,

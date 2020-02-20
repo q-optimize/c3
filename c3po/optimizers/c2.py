@@ -2,6 +2,7 @@
 
 import json
 import pickle
+import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 from c3po.utils.utils import log_setup
 
@@ -32,12 +33,15 @@ class C2(Optimizer):
         self.dir_path = dir_path
         self.string = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, self.string)
-        self.logname = 'closed_loop.log'
+        self.logname = 'calibration.log'
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
             best = init_file.readlines()
-            best_gateset_opt_map = [tuple(a) for a in json.loads(best[0])]
+            best_gateset_opt_map = [
+                [tuple(par) for par in set]
+                for set in json.loads(best[0])
+            ]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
             print("\nLoading previous best point.")
@@ -93,6 +97,7 @@ class C2(Optimizer):
         self.optim_status['goal'] = float(goal)
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std)
+        # display.plot_calibration(self.logdir)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std):

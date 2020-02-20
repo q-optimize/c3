@@ -90,9 +90,11 @@ class Model:
 
     def set_dressed(self, dressed):
         self.dressed = dressed
+        self.update_model()
 
     def set_lindbladian(self, lindbladian):
         self.lindbladian = lindbladian
+        self.update_model()
 
     def set_FR(self, use_FR):
         self.use_FR = use_FR

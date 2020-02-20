@@ -74,9 +74,10 @@ class Optimizer:
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
         with open(self.logdir + self.logname, 'a') as logfile:
+            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
+            # logfile.write(json.dumps(self.optim_status, indent=2))
             logfile.write(json.dumps(self.optim_status))
             logfile.write("\n")
-            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             logfile.flush()
 
     def fct_to_min(self, x):

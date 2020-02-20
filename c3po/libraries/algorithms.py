@@ -17,15 +17,19 @@ def lbfgs(x0, goal_fun, grad_fun):
 
 def cmaes(x0, goal_fun):
     settings = {}
-    es = cma.CMAEvolutionStrategy(x0, 0.2, settings)
+    es = cma.CMAEvolutionStrategy(x0, 0.05, settings)
+    iter = 0
     while not es.stop():
         samples = es.ask()
+        if iter == 0:
+            samples.append(x0)
         solutions = []
         for sample in samples:
             goal = goal_fun(sample)
             solutions.append(goal)
         es.tell(samples, solutions)
         es.disp()
+        iter += 1
 
 
 def oneplusone(x0, goal_fun):

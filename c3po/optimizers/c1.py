@@ -39,7 +39,10 @@ class C1(Optimizer):
     def load_best(self, init_point):
         with open(init_point) as init_file:
             best = init_file.readlines()
-            best_gateset_opt_map = [tuple(a) for a in json.loads(best[0])]
+            best_gateset_opt_map = [
+                [tuple(par) for par in set]
+                for set in json.loads(best[0])
+            ]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
             print("\nLoading previous best point.")
@@ -80,12 +83,23 @@ class C1(Optimizer):
         )
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict)
+        goal_numpy = float(goal.numpy())
         # display.plot_OC_logs(self.logdir)
+
+        with open(self.logdir + self.logname, 'a') as logfile:
+            logfile.write(f"Evaluation {self.evaluation} returned:\n")
+            logfile.write(
+                "{}: {}\n".format(self.fid_func.__name__, goal_numpy)
+            )
+            for cal in self.callback_fids:
+                val = float(cal(U_dict).numpy())
+                logfile.write("{}: {}\n".format(cal.__name__, val))
+            logfile.flush()
 
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = float(goal.numpy())
+        self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
         return goal

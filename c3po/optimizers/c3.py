@@ -50,7 +50,7 @@ class C3(Optimizer):
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(dir_path, self.string)
-        self.logname = 'learn_model.log'
+        self.logname = 'model_learn.log'
 
     def read_data(self, datafile):
         with open(datafile, 'rb+') as file:
@@ -182,10 +182,10 @@ class C3(Optimizer):
                     logfile.write(
                         " Sequence {} of {}:\n".format(iseq, num_seqs)
                     )
-                    logfile.write(f" Simulation:  {sim_val:8.5f}")
-                    logfile.write(f" Experiment: {m_val:8.5f}")
-                    logfile.write(f" Std: {m_std:8.5f}")
-                    logfile.write(f" Diff: {m_val-sim_val:8.5f}\n")
+                    logfile.write(f"  Simulation: {sim_val:8.5f}")
+                    logfile.write(f"  Experiment: {m_val:8.5f}")
+                    logfile.write(f"  Std: {m_std:8.5f}")
+                    logfile.write(f"  Diff: {m_val-sim_val:8.5f}\n")
                     logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
@@ -212,29 +212,29 @@ class C3(Optimizer):
                 + '.png'
             )
             plt.close(fig)
-        # fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
-        # l, r = axs.get_xlim()
-        # axs.plot(r, m_val, 'kx')
-        # fig.savefig(
-        #     self.logdir
-        #     + 'dynamics_seq/'
-        #     + 'eval:' + str(self.evaluation) + "__"
-        #     + self.fom.__name__ + str(round(goal_numpy, 3))
-        #     + '.png'
-        # )
-        # plt.close(fig)
-        # fig, axs = self.exp.plot_dynamics(
-        #     self.exp.psi_init,
-        #     ['X90p', 'Y90p', 'X90p', 'Y90p']
-        # )
-        # fig.savefig(
-        #     self.logdir
-        #     + 'dynamics_xyxy/'
-        #     + 'eval:' + str(self.evaluation) + "__"
-        #     + self.fom.__name__ + str(round(goal_numpy, 3))
-        #     + '.png'
-        # )
-        # plt.close(fig)
+        fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
+        l, r = axs.get_xlim()
+        axs.plot(r, m_val, 'kx')
+        fig.savefig(
+            self.logdir
+            + 'dynamics_seq/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal_numpy, 3))
+            + '.png'
+        )
+        plt.close(fig)
+        fig, axs = self.exp.plot_dynamics(
+            self.exp.psi_init,
+            ['X90p', 'Y90p', 'X90p', 'Y90p']
+        )
+        fig.savefig(
+            self.logdir
+            + 'dynamics_xyxy/'
+            + 'eval:' + str(self.evaluation) + "__"
+            + self.fom.__name__ + str(round(goal_numpy, 3))
+            + '.png'
+        )
+        plt.close(fig)
         display.plot_learning(self.logdir)
 
         self.optim_status['params'] = [

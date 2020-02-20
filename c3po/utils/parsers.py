@@ -22,20 +22,46 @@ def create_c1_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
+    def lind_unit_X90p(U_dict):
+        return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+
     def unit_X90p(U_dict):
         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+
+    def unit_Y90p(U_dict):
+        return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
+
+    def unit_X90m(U_dict):
+        return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
+
+    def unit_Y90m(U_dict):
+        return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
 
     def avfid_X90p(U_dict):
         return fidelities.average_infid(U_dict, 'X90p', proj=True)
 
+    def lind_avfid_X90p(U_dict):
+        return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+
     fids = {
         'unitary_infid': unit_X90p,
-        'average_infid': avfid_X90p
+        'lind_unitary_infid': lind_unit_X90p,
+        # 'unitary_infid_Y90p': unit_Y90p,
+        # 'unitary_infid_X90m': unit_X90m,
+        # 'unitary_infid_Y90m': unit_Y90m,
+        'average_infid': avfid_X90p,
+        'lind_average_infid': lind_avfid_X90p
     }
     fid = cfg['fid_func']
-    fid_func = fids.pop(fid)
-    callback_fids = fids.values()
-    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
+    cb_fids = cfg['callback_fids']
+    fid_func = fids[fid]
+    callback_fids = []
+    for cb_fid in cb_fids:
+        callback_fids.append(fids[cb_fid])
+    gateset_opt_map = [
+        [tuple(par) for par in set]
+        for set in cfg['gateset_opt_map']
+    ]
     grad_algs = {'lbfgs': algorithms.lbfgs}
     no_grad_algs = {'cmaes': algorithms.cmaes}
     if cfg['algorithm'] in grad_algs.keys():
@@ -60,7 +86,10 @@ def create_c2_opt(optimizer_config, eval_func_path):
         cfg = json.loads(cfg_file.read())
     exp_eval_namespace = run_path(eval_func_path)
     eval_func = exp_eval_namespace['eval_func']
-    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
+    gateset_opt_map = [
+        [tuple(par) for par in set]
+        for set in cfg['gateset_opt_map']
+    ]
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
         eval = lambda p: eval_func(p, exp_right, gateset_opt_map)

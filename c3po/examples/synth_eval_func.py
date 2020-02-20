@@ -15,14 +15,19 @@ import c3po.libraries.envelopes as envelopes
 import c3po.system.tasks as tasks
 import c3po.utils.qt_utils as qt_utils
 
-freq_error = 0.01e9 * 2 * np.pi
-anhar_error = 0.01e9 * 2 * np.pi
+# freq_error = 0.01e9 * 2 * np.pi
+# anhar_error = 0.01e9 * 2 * np.pi
+# t1_error = 10e-6
 
 lindblad = False
-qubit_lvls = 4
+qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
-init_temp = 0.06
+init_temp = 0.05
+meas_offset = -0.02
+meas_scale = 1.02
+t_final = 10e-9
+buffer_time = 2e-9
 
 # ### MAKE MODEL
 q1 = chip.Qubit(
@@ -30,14 +35,16 @@ q1 = chip.Qubit(
     desc="Qubit 1",
     comment="The one and only qubit in this chip",
     freq=Qty(
-        value=freq + freq_error,
+        value=freq,
         min=5.15e9 * 2 * np.pi,
-        max=5.8e9 * 2 * np.pi
+        max=5.4e9 * 2 * np.pi,
+        unit='rad'
     ),
     anhar=Qty(
         value=anhar,
         min=-350e6 * 2 * np.pi,
-        max=-250e6 * 2 * np.pi
+        max=-250e6 * 2 * np.pi,
+        unit='rad'
     ),
     hilbert_dim=qubit_lvls,
     t1=Qty(
@@ -73,17 +80,17 @@ one_zeros = np.array([0] * qubit_lvls)
 zero_ones = np.array([1] * qubit_lvls)
 one_zeros[0] = 1
 zero_ones[0] = 0
-val = one_zeros * 0.995 + zero_ones * 0.01
+val = one_zeros * 1.0 + zero_ones * 0.0
 min = one_zeros * 0.95 + zero_ones * 0.0
 max = one_zeros * 1.0 + zero_ones * 0.05
 confusion_row = Qty(value=val, min=min, max=max)
 meas_offset = Qty(
-    value=-0.03,
+    value=meas_offset,
     min=-0.1,
     max=0.05
 )
 meas_scale = Qty(
-    value=1.07,
+    value=meas_scale,
     min=0.9,
     max=1.2
 )
@@ -140,14 +147,11 @@ generator = Gnr(device_list)
 generator.devices['awg'].options = 'drag'
 
 # ### MAKE GATESET
-t_final = 4e-9
-buffer_time = 2e-9
-
 gauss_params = {
     'amp': Qty(
         value=0.5 * np.pi,
-        min=0.1 * np.pi,
-        max=1 * np.pi,
+        min=0.3 * np.pi,
+        max=0.7 * np.pi,
     ),
     't_final': Qty(
         value=t_final,
@@ -175,8 +179,8 @@ gauss_params = {
     ),
     'delta': Qty(
         value=0.5 / anhar,
-        min=3.0 / anhar,
-        max=-3.0 / anhar
+        min=1.5 / anhar,
+        max=0.0 / anhar
     ),
 }
 gauss_env = pulse.Envelope(
@@ -237,6 +241,9 @@ X90m = copy.deepcopy(X90p)
 X90m.name = "X90m"
 Y90m = copy.deepcopy(X90p)
 Y90m.name = "Y90m"
+Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 gateset.add_instruction(X90m)
 gateset.add_instruction(Y90m)
 gateset.add_instruction(Y90p)
@@ -257,9 +264,9 @@ exp_right = Exp(model=model, generator=generator, gateset=gateset)
 #     return goal, results, results_std, seqs
 
 def eval_func(params, exp_right, opt_map):
-    shots = 100
+    shots = 500
     RB_number = 20
-    RB_length = 50
+    RB_length = 30
     exp_right.gateset.set_parameters(params, opt_map, scaled=False)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
     pop1s = exp_right.evaluate(seqs)

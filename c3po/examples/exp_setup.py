@@ -15,10 +15,14 @@ import c3po.system.tasks as tasks
 
 def create_experiment():
     lindblad = False
-    qubit_lvls = 4
+    qubit_lvls = 3
     freq = 5.2e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
-    init_temp = 0.06
+    init_temp = 0.05
+    meas_offset = -0.02
+    meas_scale = 1.02
+    t_final = 10e-9
+    buffer_time = 2e-9
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
@@ -71,17 +75,17 @@ def create_experiment():
     zero_ones = np.array([1] * qubit_lvls)
     one_zeros[0] = 1
     zero_ones[0] = 0
-    val = one_zeros * 0.995 + zero_ones * 0.01
+    val = one_zeros * 1.0 + zero_ones * 0.0
     min = one_zeros * 0.95 + zero_ones * 0.0
     max = one_zeros * 1.0 + zero_ones * 0.05
     confusion_row = Qty(value=val, min=min, max=max)
     meas_offset = Qty(
-        value=-0.03,
+        value=meas_offset,
         min=-0.1,
         max=0.05
     )
     meas_scale = Qty(
-        value=1.07,
+        value=meas_scale,
         min=0.9,
         max=1.2
     )
@@ -138,9 +142,6 @@ def create_experiment():
     generator.devices['awg'].options = 'drag'
 
     # ### MAKE GATESET
-    t_final = 4e-9
-    buffer_time = 2e-9
-
     gauss_params = {
         'amp': Qty(
             value=0.5 * np.pi,
@@ -235,6 +236,9 @@ def create_experiment():
     X90m.name = "X90m"
     Y90m = copy.deepcopy(X90p)
     Y90m.name = "Y90m"
+    Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+    Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
     gateset.add_instruction(X90m)
     gateset.add_instruction(Y90m)
     gateset.add_instruction(Y90p)

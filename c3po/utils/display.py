@@ -131,9 +131,9 @@ def plot_distribution(logfilename=""):
 
 
 def plot_OC_logs(logfolder=""):
-    logfilename = logfolder + "openloop.log"
+    logfilename = logfolder + "open_loop.log"
     if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/openloop.log"
+        logfilename = "/tmp/c3logs/recent/open_loop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -234,7 +234,7 @@ def plot_calibration(logfolder=""):
 def plot_learning(logfolder=""):
     if not logfolder:
         logfolder = "/tmp/c3logs/recent/"
-    logfilename = logfolder + 'learn_model.log'
+    logfilename = logfolder + 'model_learn.log'
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
