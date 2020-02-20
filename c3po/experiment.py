@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import c3po.utils.tf_utils as tf_utils
+import c3po.libraries.fidelities as fidelities
 
 
 # TODO add case where one only wants to pass a list of quantity objects?
@@ -108,6 +109,13 @@ class Experiment:
         self.psi_init = psi_init
         Us = self.evaluate_sequences(U_dict, seqs)
         return Us
+
+    # def evaluate(self, seqs):
+    #     def unit_X90p(U_dict):
+    #         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+    #     U_dict = self.get_gates()
+    #     results = [unit_X90p(U_dict)]
+    #     return results
 
     def evaluate(self, seqs):
         Us = self.get_Us(seqs)

@@ -18,12 +18,7 @@ def create_experiment():
     qubit_lvls = 4
     freq = 5.2e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
-    init_temp = Qty(
-        value=0.06,
-        min=0.0,
-        max=0.12,
-        unit='K'
-    )
+    init_temp = 0.06
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
@@ -33,12 +28,14 @@ def create_experiment():
         freq=Qty(
             value=freq,
             min=5.15e9 * 2 * np.pi,
-            max=5.3e9 * 2 * np.pi
+            max=5.4e9 * 2 * np.pi,
+            unit='rad'
         ),
         anhar=Qty(
             value=anhar,
             min=-350e6 * 2 * np.pi,
-            max=-250e6 * 2 * np.pi
+            max=-250e6 * 2 * np.pi,
+            unit='rad'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
@@ -53,7 +50,12 @@ def create_experiment():
             max=50e-6,
             unit='s'
         ),
-        temp=init_temp,
+        temp=Qty(
+            value=init_temp,
+            min=0.0,
+            max=0.12,
+            unit='K'
+        )
     )
     drive = chip.Drive(
         name="d1",
@@ -84,7 +86,14 @@ def create_experiment():
         max=1.2
     )
     conf_matrix = tasks.ConfusionMatrix(confusion_row=confusion_row)
-    init_ground = tasks.InitialiseGround(init_temp=init_temp)
+    init_ground = tasks.InitialiseGround(
+        init_temp=Qty(
+            value=init_temp,
+            min=0.0,
+            max=0.12,
+            unit='K'
+        )
+    )
     meas_rescale = tasks.MeasurementRescale(
         meas_offset=meas_offset,
         meas_scale=meas_scale)

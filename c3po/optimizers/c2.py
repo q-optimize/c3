@@ -25,6 +25,9 @@ class C2(Optimizer):
         self.opt_map = gateset_opt_map
         self.log_setup(dir_path)
 
+    def set_eval_func(self, eval_func):
+        self.eval_func = eval_func
+
     def log_setup(self, dir_path):
         self.dir_path = dir_path
         self.string = self.eval_func.__name__ + self.algorithm.__name__
@@ -37,7 +40,7 @@ class C2(Optimizer):
             best_gateset_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
-            print("Loading previous best point.")
+            print("\nLoading previous best point.")
 
     def optimize_controls(self):
         """
@@ -45,7 +48,7 @@ class C2(Optimizer):
         """
         self.start_log()
         self.picklefilename = self.logdir + "learn_from.pickle"
-        print(f"Saving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{self.logdir + self.logname}")
         self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
@@ -55,9 +58,17 @@ class C2(Optimizer):
             )
         except KeyboardInterrupt:
             pass
+        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
+            best_params = json.loads(file.readlines()[1])['params']
+        self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
+        measurements = []
         with open(self.picklefilename, "rb") as file:
-            measurements = pickle.load(file)
+            while True:
+                try:
+                    measurements.append(pickle.load(file))
+                except EOFError:
+                    break
         learn_from = {}
         learn_from['seqs_grouped_by_param_set'] = measurements
         learn_from['opt_map'] = self.opt_map
@@ -84,11 +95,11 @@ class C2(Optimizer):
         self.log_pickle(params, seqs, results, results_std)
         return goal
 
-        def log_pickle(self, params, seqs, results, results_std):
-            m = {}
-            m['params'] = params
-            m['seqs'] = seqs
-            m['results'] = results
-            m['result_stds'] = results_std
-            with open(self.picklefilename, "ab+") as file:
-                pickle.dump(m, file)
+    def log_pickle(self, params, seqs, results, results_std):
+        m = {}
+        m['params'] = params
+        m['seqs'] = seqs
+        m['results'] = results
+        m['result_stds'] = results_std
+        with open(self.picklefilename, "ab") as file:
+            pickle.dump(m, file)

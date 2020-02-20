@@ -374,7 +374,8 @@ class AWG(Device):
         )
 
         self.options = ""
-        self.logdir + self.logname = logdir + "awg.log"
+        self.logdir = logdir
+        self.logname = "awg.log"
         # TODO move the options pwc & drag to the instruction object
         self.signal = {}
         self.amp_tot_sq = None

@@ -17,11 +17,12 @@ with open(master_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
 exp_setup = cfg['exp_setup']
 opt_config = cfg['optimizer_config']
+eval_func = cfg['eval_func']
 
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
-    opt = parsers.create_c2_opt(opt_config)
+    opt = parsers.create_c2_opt(opt_config, eval_func)
     opt.set_exp(exp)
     dir = opt.logdir
 
@@ -34,5 +35,6 @@ with tf.device('/CPU:0'):
     os.system('cp {} {}/{}'.format(master_config, dir, base(master_config)))
     os.system('cp {} {}/{}'.format(exp_setup, dir, base(exp_setup)))
     os.system('cp {} {}/{}'.format(opt_config, dir, base(opt_config)))
+    os.system('cp {} {}/{}'.format(eval_func, dir, base(eval_func)))
 
     opt.optimize_controls()

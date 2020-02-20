@@ -11,7 +11,10 @@ def log_setup(data_path, run_name=None):
     pwd = data_path + time.strftime(
         "%Y_%m_%d_T_%H_%M_%S", time.localtime()
     )
-    os.makedirs(pwd)
+    try:
+        os.makedirs(pwd)
+    except FileExistsError:
+        pass
     recent = data_path + 'recent'
     replace_symlink(pwd, recent)
     if run_name is not None:

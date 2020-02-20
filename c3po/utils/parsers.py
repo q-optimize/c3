@@ -55,35 +55,22 @@ def create_c1_opt(optimizer_config):
     return opt
 
 
-def create_c2_opt(optimizer_config):
+def create_c2_opt(optimizer_config, eval_func_path):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
-    exp_eval_namespace = run_path(cfg['eval_func'])
+    exp_eval_namespace = run_path(eval_func_path)
     eval_func = exp_eval_namespace['eval_func']
     gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
+    if 'exp_right' in exp_eval_namespace:
+        exp_right = exp_eval_namespace['exp_right']
+        eval = lambda p: eval_func(p, exp_right, gateset_opt_map)
+    else:
+        eval = eval_func
     no_grad_algs = {'cmaes': algorithms.cmaes}
     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
     opt = C2(
         dir_path=cfg['dir_path'],
-        eval_func=eval_func,
-        gateset_opt_map=gateset_opt_map,
-        algorithm_no_grad=algorithm_no_grad,
-    )
-    return opt
-
-
-def create_synthetic_c2_opt(optimizer_config):
-    with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
-    exp_eval_namespace = run_path(cfg['eval_func'])
-    exp_right = exp_eval_namespace['exp_right']
-    eval_func = exp_eval_namespace['eval_func']
-    gateset_opt_map = [[tuple(a)] for a in cfg['gateset_opt_map']]
-    no_grad_algs = {'cmaes': algorithms.cmaes}
-    algorithm_no_grad = no_grad_algs[cfg['algorithm']]
-    opt = C2(
-        dir_path=cfg['dir_path'],
-        eval_func=lambda p: eval_func(p, exp_right, gateset_opt_map),
+        eval_func=eval,
         gateset_opt_map=gateset_opt_map,
         algorithm_no_grad=algorithm_no_grad,
     )

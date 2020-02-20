@@ -37,7 +37,7 @@ class C3(Optimizer):
         self.opt_map = opt_map
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
-
+        self.inverse = False
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
@@ -64,9 +64,9 @@ class C3(Optimizer):
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
-            print("Loading previous best point.")
+            print("\nLoading previous best point.")
 
-    def select_from_data(self, inverse=False):
+    def select_from_data(self):
         learn_from = self.learn_from
         sampling = self.sampling
         batch_size = self.batch_size
@@ -89,7 +89,7 @@ class C3(Optimizer):
                 Select from 'from_end'  'even', 'random' , 'from_start', 'all'.
                 Thank you."""
             )
-        if inverse:
+        if self.inverse:
             return list(set(all) - set(indeces))
         else:
             return indeces
@@ -101,7 +101,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"Saving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{self.logdir + self.logname}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -118,7 +118,7 @@ class C3(Optimizer):
                 )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point', 'r') as file:
+        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_log()
@@ -126,12 +126,12 @@ class C3(Optimizer):
 
     def confirm(self):
         self.logname = 'confirm.log'
+        self.inverse = True
         self.start_log()
         print(f"\nSaving as:\n{self.logdir + self.logname}")
-        measurements = self.select_from_data(inverse=True)
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
-        self.goal_run(x_best, measurements)
+        self.goal_run(x_best)
 
     def goal_run(self, current_params):
         indeces = self.select_from_data()
@@ -208,33 +208,33 @@ class C3(Optimizer):
                 self.logdir
                 + cb_fig.__name__ + '/'
                 + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal.numpy(), 3))
+                + self.fom.__name__ + str(round(goal_numpy, 3))
                 + '.png'
             )
             plt.close(fig)
-        fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
-        l, r = axs.get_xlim()
-        axs.plot(r, m_val, 'kx')
-        fig.savefig(
-            self.logdir
-            + 'dynamics_seq/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal.numpy(), 3))
-            + '.png'
-        )
-        plt.close(fig)
-        fig, axs = self.exp.plot_dynamics(
-            self.exp.psi_init,
-            ['X90p', 'Y90p', 'X90p', 'Y90p']
-        )
-        fig.savefig(
-            self.logdir
-            + 'dynamics_xyxy/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal.numpy(), 3))
-            + '.png'
-        )
-        plt.close(fig)
+        # fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
+        # l, r = axs.get_xlim()
+        # axs.plot(r, m_val, 'kx')
+        # fig.savefig(
+        #     self.logdir
+        #     + 'dynamics_seq/'
+        #     + 'eval:' + str(self.evaluation) + "__"
+        #     + self.fom.__name__ + str(round(goal_numpy, 3))
+        #     + '.png'
+        # )
+        # plt.close(fig)
+        # fig, axs = self.exp.plot_dynamics(
+        #     self.exp.psi_init,
+        #     ['X90p', 'Y90p', 'X90p', 'Y90p']
+        # )
+        # fig.savefig(
+        #     self.logdir
+        #     + 'dynamics_xyxy/'
+        #     + 'eval:' + str(self.evaluation) + "__"
+        #     + self.fom.__name__ + str(round(goal_numpy, 3))
+        #     + '.png'
+        # )
+        # plt.close(fig)
         display.plot_learning(self.logdir)
 
         self.optim_status['params'] = [

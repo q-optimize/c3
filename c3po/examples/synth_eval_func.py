@@ -1,5 +1,6 @@
 import copy
 import numpy as np
+import tensorflow as tf
 from c3po.system.model import Model as Mdl
 from c3po.c3objs import Quantity as Qty
 from c3po.experiment import Experiment as Exp
@@ -12,18 +13,16 @@ import c3po.libraries.fidelities as fidelities
 import c3po.signal.pulse as pulse
 import c3po.libraries.envelopes as envelopes
 import c3po.system.tasks as tasks
+import c3po.utils.qt_utils as qt_utils
 
+freq_error = 0.01e9 * 2 * np.pi
+anhar_error = 0.01e9 * 2 * np.pi
 
 lindblad = False
 qubit_lvls = 4
-freq = 5.3e9 * 2 * np.pi
+freq = 5.2e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
-init_temp = Qty(
-    value=0.06,
-    min=0.0,
-    max=0.12,
-    unit='K'
-)
+init_temp = 0.06
 
 # ### MAKE MODEL
 q1 = chip.Qubit(
@@ -31,7 +30,7 @@ q1 = chip.Qubit(
     desc="Qubit 1",
     comment="The one and only qubit in this chip",
     freq=Qty(
-        value=freq,
+        value=freq + freq_error,
         min=5.15e9 * 2 * np.pi,
         max=5.8e9 * 2 * np.pi
     ),
@@ -53,7 +52,12 @@ q1 = chip.Qubit(
         max=50e-6,
         unit='s'
     ),
-    temp=init_temp,
+    temp=Qty(
+        value=init_temp,
+        min=0.0,
+        max=0.12,
+        unit='K'
+    )
 )
 drive = chip.Drive(
     name="d1",
@@ -84,7 +88,14 @@ meas_scale = Qty(
     max=1.2
 )
 conf_matrix = tasks.ConfusionMatrix(confusion_row=confusion_row)
-init_ground = tasks.InitialiseGround(init_temp=init_temp)
+init_ground = tasks.InitialiseGround(
+    init_temp=Qty(
+        value=init_temp,
+        min=0.0,
+        max=0.12,
+        unit='K'
+    )
+)
 meas_rescale = tasks.MeasurementRescale(
     meas_offset=meas_offset,
     meas_scale=meas_scale)
@@ -234,10 +245,33 @@ gateset.add_instruction(Y90p)
 exp_right = Exp(model=model, generator=generator, gateset=gateset)
 
 
+# def eval_func(params, exp_right, opt_map):
+#     def unit_X90p(U_dict):
+#         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+#     exp_right.gateset.set_parameters(params, opt_map, scaled=False)
+#     U_dict = exp_right.get_gates()
+#     goal = float(unit_X90p(U_dict).numpy())
+#     seqs = [['X90p']]
+#     results = [goal]
+#     results_std = [0.03]
+#     return goal, results, results_std, seqs
+
 def eval_func(params, exp_right, opt_map):
-    def unit_X90p(U_dict):
-        return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+    shots = 100
+    RB_number = 20
+    RB_length = 50
     exp_right.gateset.set_parameters(params, opt_map, scaled=False)
-    U_dict = exp_right.get_gates()
-    goal = unit_X90p(U_dict)
-    return goal
+    seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
+    pop1s = exp_right.evaluate(seqs)
+    results = []
+    results_std = []
+    for p1 in pop1s:
+        draws = tf.keras.backend.random_binomial(
+            [shots],
+            p=p1,
+            dtype=tf.float64,
+        )
+        results.append(np.mean(draws))
+        results_std.append(np.std(draws))
+    goal = np.mean(results)
+    return goal, results, results_std, seqs

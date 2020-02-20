@@ -30,9 +30,11 @@ class C1(Optimizer):
 
     def log_setup(self, dir_path):
         self.dir_path = dir_path
-        self.string = 'c1' + self.fid_func.__name__ + self.algorithm.__name__
+        self.string = (
+            'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
+        )
         self.logdir = log_setup(dir_path, self.string)
-        self.logname = 'open_loop.log '
+        self.logname = 'open_loop.log'
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -40,7 +42,7 @@ class C1(Optimizer):
             best_gateset_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
-            print("Loading previous best point.")
+            print("\nLoading previous best point.")
 
     def optimize_controls(self):
         """
@@ -48,7 +50,7 @@ class C1(Optimizer):
         """
         self.start_log()
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"Saving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{self.logdir + self.logname}")
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -65,7 +67,7 @@ class C1(Optimizer):
                 )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point', 'r') as file:
+        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()

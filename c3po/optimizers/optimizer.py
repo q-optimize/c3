@@ -33,6 +33,7 @@ class Optimizer:
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
         self.logdir = new_logdir
+        os.remove(self.dir_path + 'recent')
         os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
@@ -64,7 +65,9 @@ class Optimizer:
     def log_parameters(self):
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
-            with open(self.logdir+'best_point', 'w') as best_point:
+            with open(
+                self.logdir + 'best_point_' + self.logname, 'w'
+            ) as best_point:
                 best_point.write(json.dumps(self.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
@@ -83,7 +86,9 @@ class Optimizer:
         else:
             goal = self.goal_run(current_params)
         self.log_parameters()
-        return float(goal.numpy())
+        if isinstance(goal, tf.Tensor):
+            goal = float(goal.numpy())
+        return goal
 
     def goal_run_with_grad(self, current_params):
         with tf.GradientTape() as t:
