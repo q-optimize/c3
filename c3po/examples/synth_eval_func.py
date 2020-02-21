@@ -15,14 +15,12 @@ import c3po.libraries.envelopes as envelopes
 import c3po.system.tasks as tasks
 import c3po.utils.qt_utils as qt_utils
 
-# freq_error = 0.01e9 * 2 * np.pi
-# anhar_error = 0.01e9 * 2 * np.pi
-# t1_error = 10e-6
 
-lindblad = False
+lindblad = True
 qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
+t1 = 30e-6
 init_temp = 0.05
 meas_offset = -0.02
 meas_scale = 1.02
@@ -48,7 +46,7 @@ q1 = chip.Qubit(
     ),
     hilbert_dim=qubit_lvls,
     t1=Qty(
-        value=30e-6,
+        value=t1,
         min=10e-6,
         max=60e-6,
         unit='s'

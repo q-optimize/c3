@@ -14,15 +14,24 @@ import c3po.system.tasks as tasks
 
 
 def create_experiment():
-    lindblad = False
+    freq_error = 0.0e9 * 2 * np.pi
+    anhar_error = 0.05e9 * 2 * np.pi
+    t1_error = 50e-6
+    temp_err = 0.04
+    meas_scl_error = 0.04
+    meas_off_error = -0.03
+
+    lindblad = True
     qubit_lvls = 3
     freq = 5.2e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
+    t1 = 30e-6
     init_temp = 0.05
     meas_offset = -0.02
     meas_scale = 1.02
     t_final = 10e-9
     buffer_time = 2e-9
+
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
@@ -30,22 +39,22 @@ def create_experiment():
         desc="Qubit 1",
         comment="The one and only qubit in this chip",
         freq=Qty(
-            value=freq,
+            value=freq + freq_error,
             min=5.15e9 * 2 * np.pi,
             max=5.4e9 * 2 * np.pi,
             unit='rad'
         ),
         anhar=Qty(
-            value=anhar,
-            min=-350e6 * 2 * np.pi,
-            max=-250e6 * 2 * np.pi,
+            value=anhar + anhar_error,
+            min=-380e6 * 2 * np.pi,
+            max=-220e6 * 2 * np.pi,
             unit='rad'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
-            value=30e-6,
+            value=t1 + t1_error,
             min=10e-6,
-            max=60e-6,
+            max=90e-6,
             unit='s'
         ),
         t2star=Qty(
@@ -55,7 +64,7 @@ def create_experiment():
             unit='s'
         ),
         temp=Qty(
-            value=init_temp,
+            value=init_temp + temp_err,
             min=0.0,
             max=0.12,
             unit='K'
@@ -80,19 +89,19 @@ def create_experiment():
     max = one_zeros * 1.0 + zero_ones * 0.05
     confusion_row = Qty(value=val, min=min, max=max)
     meas_offset = Qty(
-        value=meas_offset,
+        value=meas_offset + meas_off_error,
         min=-0.1,
         max=0.05
     )
     meas_scale = Qty(
-        value=meas_scale,
+        value=meas_scale + meas_scl_error,
         min=0.9,
         max=1.2
     )
     conf_matrix = tasks.ConfusionMatrix(confusion_row=confusion_row)
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
-            value=init_temp,
+            value=init_temp + temp_err,
             min=0.0,
             max=0.12,
             unit='K'
