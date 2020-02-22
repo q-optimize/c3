@@ -20,14 +20,15 @@ lindblad = True
 qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
-t1 = 30e-6
+t1 = 80e-6
 init_temp = 0.05
 meas_offset = -0.02
 meas_scale = 1.02
-t_final = 10e-9
-buffer_time = 2e-9
+t_final = 5e-9
+buffer_time = 1e-9
+sim_res = 60e9
+awg_res = 1e9
 
-# ### MAKE MODEL
 q1 = chip.Qubit(
     name="Q1",
     desc="Qubit 1",
@@ -40,15 +41,15 @@ q1 = chip.Qubit(
     ),
     anhar=Qty(
         value=anhar,
-        min=-350e6 * 2 * np.pi,
-        max=-250e6 * 2 * np.pi,
+        min=-380e6 * 2 * np.pi,
+        max=-220e6 * 2 * np.pi,
         unit='rad'
     ),
     hilbert_dim=qubit_lvls,
     t1=Qty(
         value=t1,
         min=10e-6,
-        max=60e-6,
+        max=90e-6,
         unit='s'
     ),
     t2star=Qty(
@@ -109,9 +110,6 @@ model = Mdl(phys_components, line_components, task_list)
 model.set_lindbladian(lindblad)
 
 # ### MAKE GENERATOR
-sim_res = 60e9
-awg_res = 1e9
-
 lo = devices.LO(name='lo', resolution=sim_res)
 awg = devices.AWG(name='awg', resolution=awg_res)
 mixer = devices.Mixer(name='mixer')
@@ -145,6 +143,7 @@ generator = Gnr(device_list)
 generator.devices['awg'].options = 'drag'
 
 # ### MAKE GATESET
+gateset = gates.GateSet()
 gauss_params = {
     'amp': Qty(
         value=0.5 * np.pi,
@@ -214,24 +213,22 @@ X90p = gates.Instruction(
 )
 X90p.add_component(gauss_env, "d1")
 X90p.add_component(carr, "d1")
-
-nodrive_env = pulse.Envelope(
-    name="nodrive_env",
-    params=gauss_params,
-    shape=envelopes.no_drive
-)
-QId = gates.Instruction(
-    name="QId",
-    t_start=0.0,
-    t_end=t_final+buffer_time,
-    channels=["d1"]
-)
-QId.add_component(nodrive_env, "d1")
-QId.add_component(carr, "d1")
-
-gateset = gates.GateSet()
-gateset.add_instruction(QId)
 gateset.add_instruction(X90p)
+
+# nodrive_env = pulse.Envelope(
+#     name="nodrive_env",
+#     params=gauss_params,
+#     shape=envelopes.no_drive
+# )
+# QId = gates.Instruction(
+#     name="QId",
+#     t_start=0.0,
+#     t_end=t_final+buffer_time,
+#     channels=["d1"]
+# )
+# QId.add_component(nodrive_env, "d1")
+# QId.add_component(carr, "d1")
+# gateset.add_instruction(QId)
 
 Y90p = copy.deepcopy(X90p)
 Y90p.name = "Y90p"

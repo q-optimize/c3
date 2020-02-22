@@ -141,11 +141,12 @@ class Experiment:
             U = self.propagation(signal, ts, gate)
             if self.model.use_FR:
                 # TODO change LO freq to at the level of a line
-                lo_freqs = {}
+                freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    lo_freqs[line] = tf.cast(
-                        ctrls['carrier'].params['freq'].get_value(),
+                    freqs[line] = tf.cast(
+                        ctrls['carrier'].params['freq'].get_value()
+                        + ctrls['gauss'].params['freq_offset'].get_value(),
                         tf.complex128
                     )
                     framechanges[line] = tf.cast(
@@ -158,7 +159,7 @@ class Experiment:
                 )
                 FR = self.model.get_Frame_Rotation(
                     t_final,
-                    lo_freqs,
+                    freqs,
                     framechanges
                 )
                 if self.model.lindbladian:
