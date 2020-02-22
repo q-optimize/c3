@@ -1,6 +1,6 @@
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
-from nevergrad.optimization import registry as algo_registry
+# from nevergrad.optimization import registry as algo_registry
 
 
 def lbfgs(x0, goal_fun, grad_fun):
@@ -32,20 +32,20 @@ def cmaes(x0, goal_fun):
         iter += 1
 
 
-def oneplusone(x0, goal_fun):
-    optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
-    while True:
-        # TODO make this logging happen elsewhere
-        # self.logfile.write(f"Batch {self.evaluation}\n")
-        # self.logfile.flush()
-        tmp = optimizer.ask()
-        samples = tmp.args
-        solutions = []
-        for sample in samples:
-            goal = goal_fun(sample)
-            solutions.append(goal)
-        optimizer.tell(tmp, solutions)
-
-    # TODO deal with storing best value elsewhere
-    # recommendation = optimizer.provide_recommendation()
-    # return recommendation.args[0]
+# def oneplusone(x0, goal_fun):
+#     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+#     while True:
+#         # TODO make this logging happen elsewhere
+#         # self.logfile.write(f"Batch {self.evaluation}\n")
+#         # self.logfile.flush()
+#         tmp = optimizer.ask()
+#         samples = tmp.args
+#         solutions = []
+#         for sample in samples:
+#             goal = goal_fun(sample)
+#             solutions.append(goal)
+#         optimizer.tell(tmp, solutions)
+#
+#     # TODO deal with storing best value elsewhere
+#     # recommendation = optimizer.provide_recommendation()
+#     # return recommendation.args[0]
