@@ -39,7 +39,8 @@ def create_c1_opt(optimizer_config):
         return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
     RB_number = 20
     RB_length = 20
-    lindbladina = False
+    lindbladian = False
+    shots = 300
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
     def orbit_no_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
@@ -59,7 +60,7 @@ def create_c1_opt(optimizer_config):
         return fidelities.leakage_RB(U_dict,
             logspace=True, lindbladian=lindbladian)[0]
     def epc_ana(U_dict):
-        return fidelities.epc_analytical(U_dict, proj=False)
+        return fidelities.epc_analytical(U_dict, proj=True)
 
     fids = {
         'unitary_infid': unit_X90p,
@@ -70,9 +71,9 @@ def create_c1_opt(optimizer_config):
         'average_infid': avfid_X90p,
         'lind_average_infid': lind_avfid_X90p,
         'orbit_no_noise': orbit_no_noise,
-        'orbit_seq_noise': orbit_no_noise,
-        'orbit_shot_noise': orbit_no_noise,
-        'orbit_seq_shot_noise': orbit_no_noise,
+        'orbit_seq_noise': orbit_seq_noise,
+        'orbit_shot_noise': orbit_shot_noise,
+        'orbit_seq_shot_noise': orbit_seq_shot_noise,
         'epc_RB': epc_RB,
         'epc_leakage_RB': epc_leakage_RB,
         'epc_ana': epc_ana
