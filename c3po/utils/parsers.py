@@ -3,6 +3,7 @@ import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
 import c3po.libraries.fidelities as fidelities
+import c3po.utils.qt_utils as qt_utils
 from runpy import run_path
 from c3po.optimizers.c1 import C1
 from c3po.optimizers.c2 import C2
@@ -24,24 +25,41 @@ def create_c1_opt(optimizer_config):
 
     def lind_unit_X90p(U_dict):
         return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
-
     def unit_X90p(U_dict):
         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
-
     def unit_Y90p(U_dict):
         return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
-
     def unit_X90m(U_dict):
         return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
-
     def unit_Y90m(U_dict):
         return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
-
     def avfid_X90p(U_dict):
         return fidelities.average_infid(U_dict, 'X90p', proj=True)
-
     def lind_avfid_X90p(U_dict):
         return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+    RB_number = 20
+    RB_length = 20
+    lindbladina = False
+    seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
+    def orbit_no_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs)
+    def orbit_seq_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            RB_number=RB_number, RB_length=RB_length)
+    def orbit_shot_noise(U_dict):
+        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+            seqs=seqs, shots=shots)
+    def orbit_seq_shot_noise(U_dict):
+        return fidelities.orbit_infid(U_dict,lindbladian=lindbladian,
+            shots=shots, RB_number=RB_number, RB_length=RB_length)
+    def epc_RB(U_dict):
+        return fidelities.RB(U_dict, logspace=True, lindbladian=lindbladian)[0]
+    def epc_leakage_RB(U_dict):
+        return fidelities.leakage_RB(U_dict,
+            logspace=True, lindbladian=lindbladian)[0]
+    def epc_ana(U_dict):
+        return fidelities.epc_analytical(U_dict, proj=False)
 
     fids = {
         'unitary_infid': unit_X90p,
@@ -50,7 +68,14 @@ def create_c1_opt(optimizer_config):
         # 'unitary_infid_X90m': unit_X90m,
         # 'unitary_infid_Y90m': unit_Y90m,
         'average_infid': avfid_X90p,
-        'lind_average_infid': lind_avfid_X90p
+        'lind_average_infid': lind_avfid_X90p,
+        'orbit_no_noise': orbit_no_noise,
+        'orbit_seq_noise': orbit_no_noise,
+        'orbit_shot_noise': orbit_no_noise,
+        'orbit_seq_shot_noise': orbit_no_noise,
+        'epc_RB': epc_RB,
+        'epc_leakage_RB': epc_leakage_RB,
+        'epc_ana': epc_ana
     }
     fid = cfg['fid_func']
     cb_fids = cfg['callback_fids']
