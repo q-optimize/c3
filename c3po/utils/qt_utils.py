@@ -139,31 +139,30 @@ def inverseC(sequence):
             return i
 
 
-C1 = X90p @ X90m
-C2 = Y90p @ X90p
-C3 = X90m @ Y90m
-C4 = Y90p @ X90p @ X90p
+C1 = X90m @ X90p
+C2 = X90p @ Y90p
+C3 = Y90m @ X90m
+C4 = X90p @ X90p @ Y90p
 C5 = X90m
-C6 = X90p @ Y90m @ X90m
+C6 = X90m @ Y90m @ X90p
 C7 = X90p @ X90p
-C8 = Y90m @ X90m
-C9 = X90p @ Y90m
+C8 = X90m @ Y90m
+C9 = Y90m @ X90p
 C10 = Y90m
 C11 = X90p
 C12 = X90p @ Y90p @ X90p
 C13 = Y90p @ Y90p
-C14 = Y90m @ X90p
-C15 = X90p @ Y90p
-C16 = Y90m @ X90p @ X90p
-C17 = X90p @ Y90p @ Y90p
+C14 = X90p @ Y90m
+C15 = Y90p @ X90p
+C16 = X90p @ X90p @ Y90m
+C17 = Y90p @ Y90p @ X90p
 C18 = X90p @ Y90m @ X90p
-C19 = X90p @ X90p @ Y90p @ Y90p
-C20 = Y90p @ X90m
-C21 = X90m @ Y90p
+C19 = Y90p @ Y90p @ X90p @ X90p
+C20 = X90m @ Y90p
+C21 = Y90p @ X90m
 C22 = Y90p
-C23 = X90m @ Y90p @ Y90p
-C24 = X90p @ Y90p @ X90m
-
+C23 = Y90p @ Y90p @ X90m
+C24 = X90m @ Y90p @ X90p
 
 def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
     # TODO make perfect clifford more general by making it take a decomposition
@@ -179,30 +178,30 @@ def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
         x90m = perfect_gate(lvls, 'X90m:Id', proj)
         y90m = perfect_gate(lvls, 'Y90m:Id', proj)
 
-    C1 = x90p @ x90m
-    C2 = y90p @ x90p
-    C3 = x90m @ y90m
-    C4 = y90p @ x90p @ x90p
+    C1 = x90m @ x90p
+    C2 = x90p @ y90p
+    C3 = y90m @ x90m
+    C4 = x90p @ x90p @ y90p
     C5 = x90m
-    C6 = x90p @ y90m @ x90m
+    C6 = x90m @ y90m @ x90p
     C7 = x90p @ x90p
-    C8 = y90m @ x90m
-    C9 = x90p @ y90m
+    C8 = x90m @ y90m
+    C9 = y90m @ x90p
     C10 = y90m
     C11 = x90p
     C12 = x90p @ y90p @ x90p
     C13 = y90p @ y90p
-    C14 = y90m @ x90p
-    C15 = x90p @ y90p
-    C16 = y90m @ x90p @ x90p
-    C17 = x90p @ y90p @ y90p
+    C14 = x90p @ y90m
+    C15 = y90p @ x90p
+    C16 = x90p @ x90p @ y90m
+    C17 = y90p @ y90p @ x90p
     C18 = x90p @ y90m @ x90p
-    C19 = x90p @ x90p @ y90p @ y90p
-    C20 = y90p @ x90m
-    C21 = x90m @ y90p
+    C19 = y90p @ y90p @ x90p @ x90p
+    C20 = x90m @ y90p
+    C21 = y90p @ x90m
     C22 = y90p
-    C23 = x90m @ y90p @ y90p
-    C24 = x90p @ y90p @ x90m
+    C23 = y90p @ y90p @ x90m
+    C24 = x90m @ y90p @ x90p
 
     cliffords = [C1, C2, C3, C4, C5, C6, C7, C8, C9, C10, C11, C12, C13,
                  C14, C15, C16, C17, C18, C19, C20, C21, C22, C23, C24]
