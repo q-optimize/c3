@@ -147,7 +147,7 @@ class C3(Optimizer):
             gateset_params = m['params']
             gateset_opt_map = self.gateset_opt_map
             m_vals = m['results']
-            m_stds = m['result_stds']
+            m_stds = m['results_std']
             sequences = m['seqs']
             num_seqs = len(sequences)
 
