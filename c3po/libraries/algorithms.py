@@ -17,7 +17,7 @@ def lbfgs(x0, goal_fun, grad_fun):
 
 def cmaes(x0, goal_fun):
     settings = {}
-    es = cma.CMAEvolutionStrategy(x0, 0.05, settings)
+    es = cma.CMAEvolutionStrategy(x0, 0.1, settings)
     iter = 0
     while not es.stop():
         samples = es.ask()
