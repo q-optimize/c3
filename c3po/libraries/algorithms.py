@@ -26,13 +26,13 @@ def cmaes(x0, goal_fun, options={}):
     iter = 0
     while not es.stop():
         samples = es.ask()
-        if init_point & iter == 0:
+        if init_point and iter == 0:
             samples.insert(0,x0)
             print('adding initial point to sample')
         solutions = []
         for sample in samples:
             goal = goal_fun(sample)
-            if 'error' in options:
+            if 'noise' in options:
                 goal = goal + (np.random.randn() * noise)
             solutions.append(goal)
         es.tell(samples, solutions)
