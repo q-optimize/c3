@@ -131,10 +131,10 @@ def inverseC(sequence):
     for cliff in sequence:
         gate_str = 'C'+str(cliff)
         gate = eval(gate_str)
-        operation = operation @ gate
+        operation = gate @ operation
     for i in range(1, 25):
         inv = eval('C'+str(i))
-        trace = np.trace(operation @ inv)
+        trace = np.trace(inv @ operation)
         if abs(2 - abs(trace)) < 0.0001:
             return i
 
