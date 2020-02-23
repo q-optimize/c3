@@ -21,7 +21,7 @@
       "title": "The Dir_path Schema",
       "default": "",
       "examples": [
-        "/localdisk/c3logs/"
+        "/home/froy/c3logs/"
       ],
       "pattern": "^(.*)$"
     },
