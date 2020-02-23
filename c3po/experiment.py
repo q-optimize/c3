@@ -144,9 +144,14 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
+                    if gate == "QId":
+                        offset = 0
+                    else:
+                        offset = ctrls['gauss'].params['freq_offset'].get_value()
+
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
-                        + ctrls['gauss'].params['freq_offset'].get_value(),
+                        + offset,
                         tf.complex128
                     )
                     framechanges[line] = tf.cast(
