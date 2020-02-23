@@ -1,4 +1,5 @@
 import json
+import random
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
@@ -24,7 +25,8 @@ def create_c1_opt(
     lindblad,
     RB_number,
     RB_length,
-    shots
+    shots,
+    noise
 ):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
@@ -58,16 +60,21 @@ def create_c1_opt(
             RB_number=RB_number, RB_length=RB_length)
     def orbit_shot_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=seqs, shots=shots)
+            seqs=seqs, shots=shots, noise=noise)
     def orbit_seq_shot_noise(U_dict):
         return fidelities.orbit_infid(U_dict,lindbladian=lindblad,
-            shots=shots, RB_number=RB_number, RB_length=RB_length)
+            shots=shots, noise=noise,
+            RB_number=RB_number, RB_length=RB_length)
     def epc_RB(U_dict):
         return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad)[0]
     def epc_leakage_RB(U_dict):
         return fidelities.leakage_RB(U_dict,
             logspace=True, lindbladian=lindblad)[0]
-
+    seqs100 = qt_utils.single_length_RB(RB_number=100, RB_length=RB_length)
+    def maw_orbit(U_dict):
+        sampled_seqs = random.sample(seqs100, k=RB_number)
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+            seqs=sampled_seqs, shots=shots, noise=noise)
 
     fids = {
         'unitary_infid': unit_X90p,
@@ -79,6 +86,7 @@ def create_c1_opt(
         'orbit_seq_noise': orbit_seq_noise,
         'orbit_shot_noise': orbit_shot_noise,
         'orbit_seq_shot_noise': orbit_seq_shot_noise,
+        'maw_orbit': maw_orbit,
         'epc_RB': epc_RB,
         'epc_leakage_RB': epc_leakage_RB,
         'epc_ana': epc_ana

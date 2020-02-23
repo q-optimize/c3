@@ -1,5 +1,6 @@
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
+import numpy as np
 # from nevergrad.optimization import registry as algo_registry
 
 
@@ -16,6 +17,8 @@ def lbfgs(x0, goal_fun, grad_fun, options={}):
 
 
 def cmaes(x0, goal_fun, options={}):
+    if 'noise' in options:
+        noise = float(options.pop('noise'))
     settings = options
     es = cma.CMAEvolutionStrategy(x0, 0.1, settings)
     iter = 0
@@ -26,6 +29,8 @@ def cmaes(x0, goal_fun, options={}):
         solutions = []
         for sample in samples:
             goal = goal_fun(sample)
+            if 'error' in options:
+                goal = goal + (np.random.randn() * noise)
             solutions.append(goal)
         es.tell(samples, solutions)
         es.disp()
