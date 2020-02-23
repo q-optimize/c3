@@ -14,7 +14,7 @@ import c3po.system.tasks as tasks
 
 
 def create_experiment():
-    freq_error = 0.02e9 * 2 * np.pi
+    freq_error = 0.03e9 * 2 * np.pi
     anhar_error = 0.05e9 * 2 * np.pi
     t1_error = -50e-6
     temp_err = 0.04
@@ -24,6 +24,7 @@ def create_experiment():
     lindblad = True
     qubit_lvls = 3
     freq = 5.2e9 * 2 * np.pi
+    lo_freq = 5.22e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
     t1 = 80e-6
     init_temp = 0.05
@@ -194,7 +195,7 @@ def create_experiment():
     )
     carrier_parameters = {
         'freq': Qty(
-            value=freq,
+            value=lo_freq,
             min=5e9 * 2 * np.pi,
             max=5.5e9 * 2 * np.pi,
             unit='Hz 2pi'
