@@ -19,57 +19,62 @@ def create_experiment(exp_setup, datafile=''):
     return exp
 
 
-def create_c1_opt(optimizer_config):
+def create_c1_opt(
+    optimizer_config,
+    lindblad,
+    RB_number,
+    RB_length,
+    shots
+):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
-    def lind_unit_X90p(U_dict):
-        return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
-    def unit_X90p(U_dict):
-        return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
-    def unit_Y90p(U_dict):
-        return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
-    def unit_X90m(U_dict):
-        return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
-    def unit_Y90m(U_dict):
-        return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
-    def avfid_X90p(U_dict):
-        return fidelities.average_infid(U_dict, 'X90p', proj=True)
-    def lind_avfid_X90p(U_dict):
-        return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
-    RB_number = 20
-    RB_length = 20
-    lindbladian = False
-    shots = 300
+    if lindblad:
+        def unit_X90p(U_dict):
+            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+        def avfid_X90p(U_dict):
+            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+        def epc_ana(U_dict):
+            return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
+    else:
+        def unit_X90p(U_dict):
+            return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+        # def unit_Y90p(U_dict):
+        #     return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
+        # def unit_X90m(U_dict):
+        #     return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
+        # def unit_Y90m(U_dict):
+        #     return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
+        def avfid_X90p(U_dict):
+            return fidelities.average_infid(U_dict, 'X90p', proj=True)
+        def epc_ana(U_dict):
+            return fidelities.epc_analytical(U_dict, proj=True)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
     def orbit_no_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
             seqs=seqs)
     def orbit_seq_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
             RB_number=RB_number, RB_length=RB_length)
     def orbit_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindbladian,
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
             seqs=seqs, shots=shots)
     def orbit_seq_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict,lindbladian=lindbladian,
+        return fidelities.orbit_infid(U_dict,lindbladian=lindblad,
             shots=shots, RB_number=RB_number, RB_length=RB_length)
     def epc_RB(U_dict):
-        return fidelities.RB(U_dict, logspace=True, lindbladian=lindbladian)[0]
+        return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad)[0]
     def epc_leakage_RB(U_dict):
         return fidelities.leakage_RB(U_dict,
-            logspace=True, lindbladian=lindbladian)[0]
-    def epc_ana(U_dict):
-        return fidelities.epc_analytical(U_dict, proj=True)
+            logspace=True, lindbladian=lindblad)[0]
+
 
     fids = {
         'unitary_infid': unit_X90p,
-        'lind_unitary_infid': lind_unit_X90p,
         # 'unitary_infid_Y90p': unit_Y90p,
         # 'unitary_infid_X90m': unit_X90m,
         # 'unitary_infid_Y90m': unit_Y90m,
         'average_infid': avfid_X90p,
-        'lind_average_infid': lind_avfid_X90p,
         'orbit_no_noise': orbit_no_noise,
         'orbit_seq_noise': orbit_seq_noise,
         'orbit_shot_noise': orbit_shot_noise,
