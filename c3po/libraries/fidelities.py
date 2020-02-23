@@ -210,7 +210,7 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
 def RB(
        U_dict,
        min_length: int = 5,
-       max_length: int = 100,
+       max_length: int = 500,
        num_lengths: int = 20,
        num_seqs: int = 30,
        logspace=False,
@@ -323,7 +323,7 @@ def RB(
 def leakage_RB(
    U_dict,
    min_length: int = 5,
-   max_length: int = 100,
+   max_length: int = 500,
    num_lengths: int = 20,
    num_seqs: int = 30,
    logspace=False,
@@ -417,21 +417,56 @@ def leakage_RB(
         return A + B_leak * r_leak**(len) + C * r**(len)
     bounds = (0, 1)
     init_guess = [0.9, 0.5, 0.5]
-    surv_means = np.mean(surv_prob, axis=1)
-    surv_stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
-    solution, cov = curve_fit(RB_surv,
-                              lengths,
-                              surv_means,
-                              sigma=surv_stds,
-                              bounds=bounds,
-                              p0=init_guess)
-    r, A, C = solution
+
+    fitted = False
+    while not fitted:
+        try:
+            surv_means = np.mean(surv_prob, axis=1)
+            surv_stds = np.std(surv_prob, axis=1) / np.sqrt(len(surv_prob[0]))
+            solution, cov = curve_fit(RB_surv,
+                                      lengths,
+                                      surv_means,
+                                      sigma=surv_stds,
+                                      bounds=bounds,
+                                      p0=init_guess)
+            r, A, C = solution
+            fitted = True
+        except Exception as message:
+            print(message)
+            if logspace:
+                new_lengths = np.rint(
+                            np.logspace(
+                                np.log10(max_length + min_length),
+                                np.log10(max_length * 2),
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            else:
+                new_lengths = np.rint(
+                            np.linspace(
+                                max_length + min_length,
+                                max_length*2,
+                                num=num_lengths
+                                )
+                            ).astype(int)
+            max_length = max_length * 2
+            for L in new_lengths:
+                seqs = single_length_RB(num_seqs, L)
+                Us = evaluate_sequences(U_dict, seqs)
+                pop0s = []
+                pop_comps = []
+                for U in Us:
+                    pops = populations(tf.matmul(U, psi_init), lindbladian)
+                    pop0s.append(float(pops[0]))
+                    pop_comps.append(float(pops[0]))
+                surv_prob.append(pop0s)
+                comp_surv.append(pop_comps)
+            lengths = np.append(lengths, new_lengths)
 
     leakage = (1-A_leak)*(1-r_leak)
     seepage = A_leak*(1-r_leak)
     fid = 0.5*(r+1-leakage)
     epc = 1 - fid
-
     return epc, leakage, seepage, r_leak, A_leak, B_leak, r, A, C
 
 
