@@ -27,7 +27,7 @@ def cmaes(x0, goal_fun, options={}):
     while not es.stop():
         samples = es.ask()
         if init_point & iter == 0:
-            samples.append(x0)
+            samples.insert(0,x0)
             print('adding initial point to sample')
         solutions = []
         for sample in samples:
