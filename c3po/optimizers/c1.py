@@ -1,6 +1,7 @@
 """Object that deals with the open loop optimal control."""
 
 import json
+import tensorflow as tf
 import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 from c3po.utils.utils import log_setup
@@ -17,6 +18,7 @@ class C1(Optimizer):
         callback_fids=[],
         algorithm_no_grad=None,
         algorithm_with_grad=None,
+        options={}
     ):
         """Initiliase."""
         super().__init__(
@@ -26,6 +28,7 @@ class C1(Optimizer):
         self.opt_map = gateset_opt_map
         self.fid_func = fid_func
         self.callback_fids = callback_fids
+        self.options = options
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
@@ -61,12 +64,14 @@ class C1(Optimizer):
                 self.algorithm(
                     x0,
                     self.fct_to_min,
-                    self.lookup_gradient
+                    self.lookup_gradient,
+                    self.options
                 )
             else:
                 self.algorithm(
                     x0,
-                    self.fct_to_min
+                    self.fct_to_min,
+                    self.options
                 )
         except KeyboardInterrupt:
             pass
@@ -87,12 +92,14 @@ class C1(Optimizer):
         # display.plot_OC_logs(self.logdir)
 
         with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write(f"Evaluation {self.evaluation} returned:\n")
+            logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write(
-                "{}: {}\n".format(self.fid_func.__name__, goal_numpy)
+                "goal: {}: {}\n".format(self.fid_func.__name__, goal_numpy)
             )
             for cal in self.callback_fids:
-                val = float(cal(U_dict).numpy())
+                val = cal(U_dict)
+                if isinstance(val, tf.Tensor):
+                    val = float(val.numpy())
                 logfile.write("{}: {}\n".format(cal.__name__, val))
             logfile.flush()
 

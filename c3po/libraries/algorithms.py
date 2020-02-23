@@ -3,9 +3,9 @@ import cma.evolution_strategy as cma
 # from nevergrad.optimization import registry as algo_registry
 
 
-def lbfgs(x0, goal_fun, grad_fun):
+def lbfgs(x0, goal_fun, grad_fun, options={}):
     # TODO print from the log not from hear
-    options = {'disp': True}
+    options.update({'disp': True})
     minimize(
         goal_fun,
         x0,
@@ -15,8 +15,8 @@ def lbfgs(x0, goal_fun, grad_fun):
     )
 
 
-def cmaes(x0, goal_fun):
-    settings = {}
+def cmaes(x0, goal_fun, options={}):
+    settings = options
     es = cma.CMAEvolutionStrategy(x0, 0.1, settings)
     iter = 0
     while not es.stop():
