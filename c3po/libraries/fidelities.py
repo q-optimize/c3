@@ -495,9 +495,13 @@ def orbit_infid(
                 p=p1,
                 dtype=tf.float64,
             )
+            # if noise:
+            #     vals = vals + (np.random.randn(shots) * noise)
             infid = tf.reduce_mean(vals)
         else:
             infid = p1
+            # if noise:
+            #     infid = infid + (np.random.randn() * noise)
         if noise:
             infid = infid + (np.random.randn() * noise)
 
