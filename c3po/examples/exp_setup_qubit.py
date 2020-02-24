@@ -22,7 +22,7 @@ def create_experiment():
     meas_off_error = -0.04
 
     lindblad = True
-    qubit_lvls = 3
+    qubit_lvls = 2
     freq = 5.2e9 * 2 * np.pi
     lo_freq = 5.22e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
