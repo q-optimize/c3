@@ -212,8 +212,9 @@ def create_c2_opt(optimizer_config, eval_func_path):
         eval_func=eval,
         gateset_opt_map=gateset_opt_map,
         algorithm_no_grad=algorithm_no_grad,
+        options=options
     )
-    return opt
+    return opt, exp_right
 
 
 def create_c3_opt(optimizer_config):
