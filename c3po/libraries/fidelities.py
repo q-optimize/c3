@@ -476,7 +476,8 @@ def orbit_infid(
     RB_length: int = 20,
     lindbladian=False,
     shots: int = None,
-    seqs=None
+    seqs=None,
+    noise=None
 ):
     if not seqs:
         seqs = single_length_RB(RB_number=RB_number, RB_length=RB_length)
@@ -489,14 +490,20 @@ def orbit_infid(
         pop0 = tf_abs(psi_actual[0])**2
         p1 = 1 - pop0
         if shots:
-            infid = tf.reduce_sum(
-                tf.keras.backend.random_binomial(
-                    [shots],
-                    p=p1,
-                    dtype=tf.float64,
-                )
-            )/shots
+            vals = tf.keras.backend.random_binomial(
+                [shots],
+                p=p1,
+                dtype=tf.float64,
+            )
+            # if noise:
+            #     vals = vals + (np.random.randn(shots) * noise)
+            infid = tf.reduce_mean(vals)
         else:
             infid = p1
+            # if noise:
+            #     infid = infid + (np.random.randn() * noise)
+        if noise:
+            infid = infid + (np.random.randn() * noise)
+
         infids.append(infid)
     return tf_ave(infids)

@@ -15,7 +15,8 @@ class C2(Optimizer):
         dir_path,
         eval_func,
         gateset_opt_map,
-        algorithm_no_grad
+        algorithm_no_grad,
+        options={}
     ):
         """Initiliase."""
         super().__init__(
@@ -24,6 +25,7 @@ class C2(Optimizer):
             )
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
+        self.options = options
         self.log_setup(dir_path)
 
     def set_eval_func(self, eval_func):
@@ -58,7 +60,8 @@ class C2(Optimizer):
         try:
             self.algorithm(
                 x0,
-                self.fct_to_min
+                self.fct_to_min,
+                self.options
             )
         except KeyboardInterrupt:
             pass
@@ -105,6 +108,6 @@ class C2(Optimizer):
         m['params'] = params
         m['seqs'] = seqs
         m['results'] = results
-        m['result_stds'] = results_std
+        m['results_std'] = results_std
         with open(self.picklefilename, "ab") as file:
             pickle.dump(m, file)

@@ -113,11 +113,16 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops['t1']
             Ls.append(L)
             if 'temp' in self.params:
-                freq_diff = np.array(
-                    [(self.params['freq'].get_value()
-                      + n*self.params['anhar'].get_value())
-                        for n in range(self.hilbert_dim)]
-                )
+                if self.hilbert_dim > 2:
+                    freq_diff = np.array(
+                        [(self.params['freq'].get_value()
+                          + n*self.params['anhar'].get_value())
+                            for n in range(self.hilbert_dim)]
+                    )
+                else:
+                    freq_diff = np.array(
+                        [self.params['freq'].get_value(), 0]
+                    )
                 beta = 1 / (self.params['temp'].get_value() * kb)
                 det_bal = tf.exp(-hbar*freq_diff*beta)
                 det_bal_mat = tf.linalg.tensor_diag(det_bal)

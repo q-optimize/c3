@@ -19,6 +19,7 @@ import c3po.utils.qt_utils as qt_utils
 lindblad = True
 qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
+lo_freq = 5.22e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
 t1 = 80e-6
 init_temp = 0.05
@@ -188,7 +189,7 @@ gauss_env = pulse.Envelope(
 )
 carrier_parameters = {
     'freq': Qty(
-        value=freq,
+        value=lo_freq,
         min=5e9 * 2 * np.pi,
         max=5.5e9 * 2 * np.pi,
         unit='Hz 2pi'
