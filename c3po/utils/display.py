@@ -237,6 +237,18 @@ def plot_learning(logfolder=""):
     logfilename = logfolder + 'model_learn.log'
     with open(logfilename, "r") as filename:
         log = filename.readlines()
+
+    synthetic_model = logfolder + 'real_model_params.log'
+
+    use_synthetic = os.path.isfile(synthetic_model())
+
+    if use_synthetic:
+        with open(synthetic_model, "r") as filename:
+            synth_model = filename.readlines()
+        real_params = json.loads(synth_model[1])['params']
+        real_parameters = {}
+        synth_opt_map = json.loads(synth_model[0])
+
     goal_function = []
     parameters = {}
     opt_map = json.loads(log[3])
@@ -278,6 +290,10 @@ def plot_learning(logfolder=""):
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
                     parameters[p_name].append(p_val)
+                    if use_synthetic:
+                        real_parameters[p_name].append(
+                            real_params[synth_opt_map.index(opt_map[iparam])]
+                        )
                     units[p_name] = unit
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
@@ -289,6 +305,8 @@ def plot_learning(logfolder=""):
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
             plt.plot(its, parameters[key])
+            if use_synthetic:
+                plt.plot(its, real_parameters[key] * len(its))
             plt.grid()
             plt.title(key.replace('_', '\\_'))
             plt.ylabel(units[key])
