@@ -108,6 +108,6 @@ class C2(Optimizer):
         m['params'] = params
         m['seqs'] = seqs
         m['results'] = results
-        m['result_stds'] = results_std
+        m['results_std'] = results_std
         with open(self.picklefilename, "ab") as file:
             pickle.dump(m, file)
