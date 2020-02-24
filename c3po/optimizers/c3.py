@@ -147,7 +147,7 @@ class C3(Optimizer):
             gateset_params = m['params']
             gateset_opt_map = self.gateset_opt_map
             m_vals = m['results']
-            m_stds = m['result_stds']
+            m_stds = m['results_std']
             sequences = m['seqs']
             num_seqs = len(sequences)
 
@@ -163,7 +163,7 @@ class C3(Optimizer):
             with open(self.logdir + self.logname, 'a') as logfile:
                 logfile.write(
                     "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
-                        ipar,
+                        ipar + 1,
                         count,
                         len(indeces),
                         json.dumps(self.gateset_opt_map),
@@ -180,7 +180,7 @@ class C3(Optimizer):
                 sim_val = float(sim_vals[iseq].numpy())
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
-                        " Sequence {} of {}:\n".format(iseq, num_seqs)
+                        " Sequence {} of {}:\n".format(iseq + 1, num_seqs)
                     )
                     logfile.write(f"  Simulation: {sim_val:8.5f}")
                     logfile.write(f"  Experiment: {m_val:8.5f}")
