@@ -42,7 +42,7 @@ with tf.device('/CPU:0'):
         os.system('cp {} {}{}'.format(c1_init_point, c1_dir, 'init_point'))
     c1_opt.optimize_controls()
 
-    c2_opt = parsers.create_c2_opt(c2_config, eval_func)
+    c2_opt, exp_right = parsers.create_c2_opt(c2_config, eval_func)
     c2_opt.set_exp(exp)
     c2_dir = dir + 'c2/'
     os.makedirs(c2_dir)
@@ -67,6 +67,16 @@ with tf.device('/CPU:0'):
         c3_opt.replace_logdir(c3_dir)
         c3_datafile = dir + 'c2/learn_from.pickle'
         c3_opt.read_data(c3_datafile)
+        real = {'params': [
+            par.numpy().tolist()
+            for par in exp_right.get_parameters(c3_opt.opt_map)]
+        }
+        with open(c3_dir + "real_model_params.log", 'w') as real_file:
+            real_file.write(json.dumps(c3_opt.opt_map))
+            real_file.write("\n")
+            real_file.write(json.dumps(c3_opt.optim_status))
+            real_file.write("\n")
+            real_file.write(exp_right.print_parameters(c3_opt.opt_map))
         os.system('cp {} {}{}'.format(c3_config, c3_dir, base(c3_config)))
         os.system('cp {} {}{}'.format(exp_setup, c3_dir, base(exp_setup)))
         c3_opt.learn_model()
