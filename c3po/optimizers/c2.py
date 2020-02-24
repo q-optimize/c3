@@ -100,7 +100,7 @@ class C2(Optimizer):
         self.optim_status['goal'] = float(goal)
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std)
-        # display.plot_calibration(self.logdir)
+        display.plot_C2(self.logdir)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std):

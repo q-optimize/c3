@@ -89,7 +89,7 @@ class C1(Optimizer):
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict)
         goal_numpy = float(goal.numpy())
-        # display.plot_OC_logs(self.logdir)
+        display.plot_C1(self.logdir)
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
