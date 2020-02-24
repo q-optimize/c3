@@ -54,11 +54,14 @@ with tf.device('/CPU:0'):
     c2_opt.optimize_controls()
 
     for indx in range(len(exp_setups)):
-        exp_setup = exp_setups[indx]
         c3_config = c3_configs[indx]
         c3_opt = parsers.create_c3_opt(c3_config)
+        exp_setup = exp_setups[indx]
         exp = parsers.create_experiment(exp_setup)
         c3_opt.set_exp(exp)
+        if indx != 0:
+            c3_init_point = c3_dir + 'best_point_model_learn.log'
+            c3_opt.load_best(c3_init_point)
         c3_dir = dir + 'c3_' + str(indx) + '/'
         os.makedirs(c3_dir)
         c3_opt.replace_logdir(c3_dir)
