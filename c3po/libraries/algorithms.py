@@ -19,6 +19,7 @@ def lbfgs(x0, goal_fun, grad_fun, options={}):
 def cmaes(x0, goal_fun, options={}):
     if 'noise' in options:
         noise = float(options.pop('noise'))
+    init_point = False
     if 'init_point' in options:
         init_point = bool(options.pop('init_point'))
     settings = options
