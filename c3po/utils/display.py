@@ -14,6 +14,36 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
+def unit_conversion(desc, param):
+    # TODO Get right units from the log
+    if desc == 'freq_offset':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 'xy_angle':
+        p_val = param / np.pi
+        unit = '$\\pi$'
+    elif desc == 'freq':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 'anhar':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 't1' or desc == 't2star':
+        p_val = param
+        unit = 's'
+    elif desc == 'V_to_Hz':
+        p_val = param
+        unit = 'Hz/V'
+    elif desc == 'rise_time':
+        p_val = param
+        unit = 's'
+    else:
+        p_val = param
+        unit = ""
+    value, prefix = eng_num(p_val)
+    return value, prefix+unit
+
+
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
     plt.scatter(exps, sims)
@@ -131,7 +161,7 @@ def plot_distribution(logfilename=""):
     return diffs
 
 
-def plot_OC_logs(logfolder=""):
+def plot_C1(logfolder=""):
     logfilename = logfolder + "open_loop.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/open_loop.log"
@@ -150,7 +180,7 @@ def plot_OC_logs(logfolder=""):
                     param = point['params'][iparam]
                     unit = ''
                     p_name = ''
-                    for desc in opt_map[iparam]:
+                    for desc in opt_map[iparam][0]:
                         p_name += ' ' + desc
                     if desc == 'freq_offset':
                         p_val = param / 1e6 / 2 / np.pi
@@ -181,7 +211,7 @@ def plot_OC_logs(logfolder=""):
     if n_params > 0:
         nrows = np.ceil(np.sqrt(n_params + 1))
         ncols = np.ceil((n_params + 1) / nrows)
-        plt.figure(figsize=(6 * ncols, 5 * nrows))
+        fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
@@ -196,26 +226,34 @@ def plot_OC_logs(logfolder=""):
         plt.grid()
         plt.xlabel("Iteration")
         plt.semilogy(its, goal_function)
+        plt.tight_layout()
+        plt.savefig(logfolder + "open_loop.png")
+        plt.close(fig)
 
 
-def plot_calibration(logfolder=""):
+def plot_C2(logfolder=""):
     logfilename = logfolder + "calibration.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/calibration.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
-    batch = -1
+    batch = 0
+    with open(logfolder+"c2.cfg", "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+        batch_size = cfg['options']['popsize']
+    eval = 0
     for line in log[5:]:
         if line[0] == "{":
+            if not eval % batch_size:
+                batch = int(eval / batch_size)
+                goal_function.append([])
+            eval += 1
             point = json.loads(line)
             if 'goal' in point.keys():
                 goal_function[batch].append(point['goal'])
-        elif line[0] == "B":
-            goal_function.append([])
-            batch += 1
 
-    plt.figure()
+    fig = plt.figure()
     plt.title("Calibration")
     means = []
     for ii in range(len(goal_function)):
@@ -230,39 +268,11 @@ def plot_calibration(logfolder=""):
     plt.axis('tight')
     plt.ylabel('Goal function')
     plt.xlabel('Iterations')
+    plt.savefig(logfolder + "closed_loop.png")
+    plt.close(fig)
 
 
-def unit_conversion(desc, param):
-    # TODO Get right units from the log
-    if desc == 'freq_offset':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'xy_angle':
-        p_val = param / np.pi
-        unit = '$\\pi$'
-    elif desc == 'freq':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'anhar':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 't1' or desc == 't2star':
-        p_val = param
-        unit = 's'
-    elif desc == 'V_to_Hz':
-        p_val = param
-        unit = 'Hz/V'
-    elif desc == 'rise_time':
-        p_val = param
-        unit = 's'
-    else:
-        p_val = param
-        unit = ""
-    value, prefix = eng_num(p_val)
-    return value, prefix+unit
-
-
-def plot_learning(logfolder=""):
+def plot_C3(logfolder=""):
     if not logfolder:
         logfolder = "/tmp/c3logs/recent/"
     logfilename = logfolder + 'model_learn.log'
