@@ -102,7 +102,8 @@ def get_sim_exp_std_diff(logfilename=""):
 def plot_exp_vs_sim(logfilename=""):
     plt.figure()
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
-    plt.scatter(exps, sims)
+    pixel_size = (72./300) ** 2
+    plt.scatter(exps, sims, s=pixel_size)
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
     plt.ylabel('Sim fidelity')
