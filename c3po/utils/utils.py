@@ -31,26 +31,31 @@ def replace_symlink(path, alias):
     os.symlink(path, alias)
 
 
-def num3str(val):
+def eng_num(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'mu', 'n', 'p', 'f', 'a', 'z']
+    sign = 1
+    if val == 0:
+        return 0, ""
+    if val < 0:
+        val = -val
+        sign = -1
+    tmp = np.log10(val)
+    idx = int(tmp // 3)
+    if tmp < 0:
+        prefix = small_units[-(idx+1)]
+    else:
+        prefix = big_units[idx]
+
+    return sign * (10 ** (tmp % 3)), prefix
+
+
+def num3str(val):
     ret = []
     if not hasattr(val, "__iter__"):
         val = np.array([val])
     for idx in range(val.shape[0]):
         v = val[idx]
-        sign = 1
-        if v == 0:
-            return "0"
-        if v < 0:
-            v = -v
-            sign = -1
-        tmp = np.log10(v)
-        idx = int(tmp // 3)
-        if tmp < 0:
-            prefix = small_units[-(idx+1)]
-        else:
-            prefix = big_units[idx]
-
-        ret.append(f"{sign * (10 ** (tmp % 3)):.3f}" + prefix)
+        num, prefix = eng_num(v)
+        ret.append(f"{num:.3f}" + prefix)
     return ret

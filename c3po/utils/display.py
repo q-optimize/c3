@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
+from c3po.utils.utils import eng_num
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
@@ -231,6 +232,36 @@ def plot_calibration(logfolder=""):
     plt.xlabel('Iterations')
 
 
+def unit_conversion(desc, param):
+    # TODO Get right units from the log
+    if desc == 'freq_offset':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 'xy_angle':
+        p_val = param / np.pi
+        unit = '$\\pi$'
+    elif desc == 'freq':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 'anhar':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 't1' or desc == 't2star':
+        p_val = param
+        unit = 's'
+    elif desc == 'V_to_Hz':
+        p_val = param
+        unit = 'Hz/V'
+    elif desc == 'rise_time':
+        p_val = param
+        unit = 's'
+    else:
+        p_val = param
+        unit = ""
+    value, prefix = eng_num(p_val)
+    return value, prefix+unit
+
+
 def plot_learning(logfolder=""):
     if not logfolder:
         logfolder = "/tmp/c3logs/recent/"
@@ -240,7 +271,7 @@ def plot_learning(logfolder=""):
 
     synthetic_model = logfolder + 'real_model_params.log'
 
-    use_synthetic = os.path.isfile(synthetic_model())
+    use_synthetic = os.path.isfile(synthetic_model)
 
     if use_synthetic:
         with open(synthetic_model, "r") as filename:
@@ -264,36 +295,19 @@ def plot_learning(logfolder=""):
                     p_name = ''
                     for desc in opt_map[iparam]:
                         p_name += ' ' + desc
-                    if desc == 'freq_offset':
-                        p_val = param / 1e6 / 2 / np.pi
-                        unit = '[MHz]'
-                    elif desc == 'xy_angle':
-                        p_val = param / np.pi
-                        unit = '[$\\pi$]'
-                    elif desc == 'freq':
-                        p_val = param / 1e9 / 2 / np.pi
-                        unit = '[GHz]'
-                    elif desc == 'anhar':
-                        p_val = param / 1e6 / 2 / np.pi
-                        unit = '[MHz]'
-                    elif desc == 't1' or desc == 't2star':
-                        p_val = param / 1e-6
-                        unit = '[$\\mu$s]'
-                    elif desc == 'V_to_Hz':
-                        p_val = param / 1e6
-                        unit = '[MHz/V]'
-                    elif desc == 'rise_time':
-                        p_val = param / 1e-9
-                        unit = '[ns]'
-                    else:
-                        p_val = param
+                    p_val, unit = unit_conversion(desc, param)
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
+                        real_parameters[p_name] = []
                     parameters[p_name].append(p_val)
                     if use_synthetic:
-                        real_parameters[p_name].append(
-                            real_params[synth_opt_map.index(opt_map[iparam])]
+                        real_value, _ = unit_conversion(
+                            desc,
+                            real_params[
+                                synth_opt_map.index(opt_map[iparam])
+                            ]
                         )
+                        real_parameters[p_name].append(real_value)
                     units[p_name] = unit
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
@@ -304,9 +318,9 @@ def plot_learning(logfolder=""):
         ii = 1
         for key in parameters.keys():
             plt.subplot(nrows, ncols, ii)
-            plt.plot(its, parameters[key])
+            plt.plot(its, parameters[key], color='tab:blue')
             if use_synthetic:
-                plt.plot(its, real_parameters[key] * len(its))
+                plt.plot(its, real_parameters[key], "--", color='tab:red')
             plt.grid()
             plt.title(key.replace('_', '\\_'))
             plt.ylabel(units[key])
