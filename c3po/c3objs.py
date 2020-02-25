@@ -124,28 +124,28 @@ class Quantity:
         return ret
 
     def numpy(self):
-        return self.scale * (self.value.numpy() + 1) / 2 + self.offset
+        return self.scale * np.arcsin(self.value.numpy()) * 2 / np.pi + self.offset
 
     def get_value(self, val=None):
         if val is None:
             val = self.value
-        return self.scale * (val + 1) / 2 + self.offset
+        return self.scale * (tf.asin(val) * 2 / np.pi) + self.offset
 
     def set_value(self, val):
         # setting can be numpyish
-        tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
+        tmp = (np.array(val) - self.offset) / self.scale
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
             raise ValueError()
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tf.constant(tmp, dtype=tf.float64)
+            self.value = tf.sin(
+                (tf.constant(tmp, dtype=tf.float64)) * np.pi / 2
+            )
 
     def get_opt_value(self):
-        return self.value.numpy().flatten()
+        return tf.asin(self.value.numpy().flatten()) * 2 / np.pi
 
     def set_opt_value(self, val):
-        self.value = tf.acos(tf.cos(
-            (tf.reshape(val, self.shape) + 1) * np.pi / 2
-        )) / np.pi * 2 - 1
+        self.value = tf.sin(tf.reshape(val, self.shape) * np.pi / 2)
