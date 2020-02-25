@@ -183,26 +183,7 @@ def plot_C1(logfolder=""):
                     p_name = ''
                     for desc in opt_map[iparam][0]:
                         p_name += ' ' + desc
-                    if desc == 'freq_offset':
-                        p_val = param / 1e6 / 2 / np.pi
-                        unit = '[MHz]'
-                    elif desc == 'xy_angle':
-                        p_val = param / np.pi
-                        unit = '[$\\pi$]'
-                    elif desc == 'freq':
-                        p_val = param / 1e9 / 2 / np.pi
-                        unit = '[GHz]'
-                    elif desc == 'anhar':
-                        p_val = param / 1e6 / 2 / np.pi
-                        unit = '[MHz]'
-                    elif desc == 'V_to_Hz':
-                        p_val = param / 1e6
-                        unit = '[MHz/V]'
-                    elif desc == 'rise_time':
-                        p_val = param / 1e-9
-                        unit = '[ns]'
-                    else:
-                        p_val = param
+                    p_val, unit = unit_conversion(desc, param)
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
                     parameters[p_name].append(p_val)
@@ -220,7 +201,7 @@ def plot_C1(logfolder=""):
             plt.grid()
             plt.title(key.replace('_', '\\_'))
             plt.ylabel(units[key])
-            plt.xlabel("Iteration")
+            plt.xlabel("Evaluation")
             ii += 1
         plt.subplot(nrows, ncols, ii)
         plt.title("Goal")
@@ -268,7 +249,7 @@ def plot_C2(logfolder=""):
     plt.plot(range(1, len(goal_function)+1), means, color="tab:red")
     plt.axis('tight')
     plt.ylabel('Goal function')
-    plt.xlabel('Iterations')
+    plt.xlabel('Evaluation')
     plt.savefig(logfolder + "closed_loop.png")
     plt.close(fig)
 
@@ -335,12 +316,14 @@ def plot_C3(logfolder=""):
                 plt.plot(its, real_parameters[key], "--", color='tab:red')
             plt.grid()
             plt.title(key.replace('_', '\\_'))
+            plt.xlabel('Evaluation')
             plt.ylabel(units[key])
             ii += 1
         plt.subplot(nrows, ncols, ii)
         plt.title("Goal")
         plt.grid()
         plt.semilogy(its, goal_function)
+        plt.xlabel('Evaluation')
         plt.tight_layout()
         plt.savefig(logfolder + "learn_model.png")
         plt.close(fig)
