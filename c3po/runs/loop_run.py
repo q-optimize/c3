@@ -10,6 +10,7 @@ from os.path import basename as base
 
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
+parser.add_argument("--double", nargs='?', const=True, default=False)
 args = parser.parse_args()
 master_config = args.master_config
 with open(master_config, "r") as cfg_file:
@@ -46,6 +47,19 @@ for indx in range(len(exp_setups)):
     exp_setup = exp_setups[indx]
     os.system('cp {} {}{}'.format(c3_config, c3_dir, base(c3_config)))
     os.system('cp {} {}{}'.format(exp_setup, c3_dir, base(exp_setup)))
+if args.double:
+    c4_dir = dir + 'c4/'
+    os.makedirs(c4_dir)
+    os.system('cp {} {}{}'.format(c1_config, c4_dir, base(c1_config)))
+    exp_setup = exp_setups[-1]
+    os.system('cp {} {}{}'.format(exp_setup, c4_dir, base(exp_setup)))
+    if 'initial_point' in cfg:
+        c1_init_point = cfg['initial_point']
+        os.system('cp {} {}{}'.format(c1_init_point, c4_dir, 'init_point'))
+    c5_dir = dir + 'c5/'
+    os.makedirs(c5_dir)
+    os.system('cp {} {}{}'.format(c2_config, c5_dir, base(c2_config)))
+    os.system('cp {} {}{}'.format(eval_func, c5_dir, base(eval_func)))
 
 with tf.device('/CPU:0'):
     c1_opt = parsers.create_c1_opt(c1_dir + base(c1_config))
@@ -90,3 +104,22 @@ with tf.device('/CPU:0'):
             real_file.write("\n")
             real_file.write(exp_right.print_parameters(c3_opt.opt_map))
         c3_opt.learn_model()
+
+    if args.double:
+        c4_opt = parsers.create_c1_opt(c4_dir + base(c1_config))
+        exp = parsers.create_experiment(c4_dir + base(exp_setups[-1]))
+        c4_opt.set_exp(exp)
+        c4_opt.replace_logdir(c4_dir)
+        if 'initial_point' in cfg:
+            c4_opt.load_best(c4_dir + 'init_point')
+        c4_opt.optimize_controls()
+
+        c5_opt, exp_right = parsers.create_c2_opt(
+            c5_dir + base(c2_config),
+            c5_dir + base(eval_func)
+        )
+        c5_opt.set_exp(exp)
+        c5_opt.replace_logdir(c5_dir)
+        c5_init_point = dir + 'c4/best_point_open_loop.log'
+        c5_opt.load_best(c5_init_point)
+        c5_opt.optimize_controls()
