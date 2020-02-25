@@ -3,6 +3,7 @@
 import numpy as np
 import itertools
 import tensorflow as tf
+import c3po.utils.tf_utils as tf_utils
 from c3po.system.chip import Drive, Coupling
 
 
@@ -35,6 +36,7 @@ class Model:
         self.dressed = False
         self.lindbladian = False
         self.use_FR = True
+        self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems = {}
         for comp in subsystems:
@@ -98,6 +100,9 @@ class Model:
 
     def set_FR(self, use_FR):
         self.use_FR = use_FR
+
+    def set_dephasing_strength(self, dephasing_strength):
+        self.dephasing_strength = dephasing_strength
 
     def list_parameters(self):
         ids = []
@@ -191,13 +196,13 @@ class Model:
         freqs: dict,
         framechanges: dict
     ):
-        # freqs need to be ordered the same as the names of the qubits
         ones = tf.ones(self.tot_dim, dtype=tf.complex128)
         FR = tf.linalg.diag(ones)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
             qubit = self.couplings[line].connected[0]
+            # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[qubit]
             num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper),
@@ -217,3 +222,28 @@ class Model:
     def get_qubit_freqs(self):
         # TODO figure how to get the correct dressed frequencies
         pass
+
+    def get_dephasing_channel(self, t_final, amps):
+        ones = tf.ones(self.tot_dim, dtype=tf.complex128)
+        Id = tf_utils.tf_super(tf.linalg.diag(ones))
+        deph_ch = Id
+        for line in amps.keys():
+            amp = amps[line]
+            qubit = self.couplings[line].connected[0]
+            # TODO extend this to multiple qubits
+            ann_oper = self.ann_opers[qubit]
+            num_oper = tf.constant(
+                np.matmul(ann_oper.T.conj(), ann_oper),
+                dtype=tf.complex128
+            )
+            Z = tf_utils.tf_super(
+                tf.linalg.expm(
+                    1.0j * num_oper * tf.constant(np.pi, dtype=tf.complex128)
+                )
+            )
+            p = t_final * amp * self.dephasing_strength
+            if p.numpy() > 1:
+                print('dephasing stength: ', p)
+                raise ValueError('strengh of dephasing channels > 1')
+            deph_ch = deph_ch * ((1-p) * Id + p * Z)
+        return deph_ch
