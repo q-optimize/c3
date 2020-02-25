@@ -309,7 +309,8 @@ def plot_C3(logfolder=""):
                     p_val, unit = unit_conversion(desc, param)
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
-                        real_parameters[p_name] = []
+                        if use_synthetic:
+                            real_parameters[p_name] = []
                     parameters[p_name].append(p_val)
                     if use_synthetic:
                         real_value, _ = unit_conversion(
