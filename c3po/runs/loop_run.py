@@ -91,8 +91,10 @@ with tf.device('/CPU:0'):
         c3_datafile = dir + 'c2/learn_from.pickle'
         c3_opt.read_data(c3_datafile)
         if indx != 0:
-            c3_init_point = c3_dirs[indx-1] + 'best_point_model_learn.log'
-            c3_opt.load_best(c3_init_point)
+            print('Do you want to use the best point form the previous model?')
+            if utils.ask_yn():
+                c3_init_point = c3_dirs[indx-1] + 'best_point_model_learn.log'
+                c3_opt.load_best(c3_init_point)
         real = {'params': [
             par.numpy().tolist()
             for par in exp_right.get_parameters(c3_opt.opt_map)]
