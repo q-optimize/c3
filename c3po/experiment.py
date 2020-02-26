@@ -182,12 +182,14 @@ class Experiment:
                 else:
                     amps = {}
                     for line, ctrls in instr.comps.items():
+                        # amp = self.generator.devices['awg'].get_average_amp()
                         amp = ctrls['gauss'].params['amp'].get_value()
                         amps[line] = tf.cast(amp, tf.complex128)
-                    t_final = tf.constant(
-                        instr.t_end - instr.t_start,
-                        dtype=tf.complex128
-                    )
+                    # t_final = tf.constant(
+                    #     instr.t_end - instr.t_start,
+                    #     dtype=tf.complex128
+                    # )
+                    t_final = ctrls['gauss'].params['t_final'].get_value()
                     dephasing_channel = self.model.get_dephasing_channel(
                         t_final,
                         amps
