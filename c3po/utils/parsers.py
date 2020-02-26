@@ -231,7 +231,7 @@ def create_c3_opt(optimizer_config):
         'rms_stds': estimators.rms_exp_stds_dist,
         'std_diffs': estimators.std_of_diffs,
     }
-    fom = estims.pop(estimator)
+    fom = estims[estimator]
     callback_foms = estims.values()
     callback_foms = []
     for cb_fom in cb_foms:
