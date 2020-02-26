@@ -270,11 +270,11 @@ class Response(Device):
         return convolution
 
     def process(self, iq_signal):
-        n_ts = int(self.params['rise_time'].get_value() * self.resolution)
+        n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(
-            tf.constant(0.0, dtype=tf.float64),
-            int(self.params['rise_time'].get_value()),
-            n_ts
+            0.0,
+            self.params['rise_time'].get_value(),
+            tf.cast(n_ts, dtype=tf.int32)
         )
         cen = tf.cast(
             (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
