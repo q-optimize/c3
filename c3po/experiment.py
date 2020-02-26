@@ -123,10 +123,13 @@ class Experiment:
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
             pops = self.populations(psi_final, self.model.lindbladian)
-            pop1 = self.model.tasks["conf_matrix"].pop1(
-                pops,
-                self.model.lindbladian
-            )
+            if "conf_matrix" in self.model.tasks:
+                pop1 = self.model.tasks["conf_matrix"].pop1(
+                    pops,
+                    self.model.lindbladian
+                )
+            else:
+                pop1 = pops[1]
             pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
             pop1s.append(pop1)
         return pop1s
