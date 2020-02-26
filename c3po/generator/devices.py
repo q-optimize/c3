@@ -502,6 +502,12 @@ class AWG(Device):
         return {"inphase": inphase, "quadrature": quadrature}, freq_offset
         # TODO decide when and where to return/store params scaled or not
 
+    def get_average_amp(self):
+        In = self.get_I()
+        Qu = self.get_Q()
+        av = tf.reduce_mean(tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2))
+        return av
+
     def get_I(self):
         return self.amp_tot * self.signal['inphase']
 
