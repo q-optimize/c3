@@ -14,59 +14,57 @@ import c3po.system.tasks as tasks
 
 
 def create_experiment():
-    freq_error = 0.01e9 * 2 * np.pi
-    anhar_error = -0.06e9 * 2 * np.pi
-    t1_error = -20e-6
-    temp_err = 0.05
-    meas_scl_error = 0.01
-    meas_off_error = -0.04
 
     lindblad = True
-    qubit_lvls = 2
-    freq = 5.2e9 * 2 * np.pi
-    lo_freq = 5.22e9 * 2 * np.pi
-    anhar = -300e6 * 2 * np.pi
-    t1 = 80e-6
-    init_temp = 0.05
-    meas_offset = -0.02
-    meas_scale = 1.02
-    t_final = 5e-9
-    buffer_time = 1e-9
-    sim_res = 60e9
-    awg_res = 1e9
+    qubit_lvls = 3
+    freq = 5.22e9 * 2 * np.pi  # WRONG FREQ by 20MHz
+    anhar = -310e6 * 2 * np.pi  # WRONG ANHAR by 10Mhz
+    t1 = 20e-6  # WRONG T1 by 5mus
+    t2star = 60e-6  # WRONG T2star by 10mus
+    init_temp = 0.06  # Too hot by 10mK
+    meas_offset = -0.04  # Overcorrect by 0.02
+    meas_scale = 1.05  # Overscale by 0.03
+    p_meas_0_as_0 = 1.0  # Perfect measurement (true)
+    p_meas_1and2_as_0 = 0.0  # Perfect measurement (true)
 
-    # ### MAKE MODEL
+    lo_freq = 5.21e9 * 2 * np.pi
+    t_final = 4e-9
+    buffer_time = 2e-9
+    sim_res = 100e9
+    awg_res = 2e9
+
+     ### MAKE MODEL
     q1 = chip.Qubit(
         name="Q1",
         desc="Qubit 1",
         comment="The one and only qubit in this chip",
         freq=Qty(
-            value=freq + freq_error,
+            value=freq,
             min=5.15e9 * 2 * np.pi,
             max=5.4e9 * 2 * np.pi,
             unit='rad'
         ),
         anhar=Qty(
-            value=anhar + anhar_error,
+            value=anhar,
             min=-380e6 * 2 * np.pi,
             max=-220e6 * 2 * np.pi,
             unit='rad'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
-            value=t1 + t1_error,
-            min=10e-6,
+            value=t1,
+            min=1e-6,
             max=90e-6,
             unit='s'
         ),
         t2star=Qty(
-            value=25e-6,
+            value=t2star,
             min=10e-6,
-            max=50e-6,
+            max=90e-6,
             unit='s'
         ),
         temp=Qty(
-            value=init_temp + temp_err,
+            value=init_temp,
             min=0.0,
             max=0.12,
             unit='K'
@@ -86,24 +84,24 @@ def create_experiment():
     zero_ones = np.array([1] * qubit_lvls)
     one_zeros[0] = 1
     zero_ones[0] = 0
-    val = one_zeros * 1.0 + zero_ones * 0.0
+    val = one_zeros * p_meas_0_as_0 + zero_ones * p_meas_1and2_as_0
     min = one_zeros * 0.95 + zero_ones * 0.0
     max = one_zeros * 1.0 + zero_ones * 0.05
     confusion_row = Qty(value=val, min=min, max=max)
     meas_offset = Qty(
-        value=meas_offset + meas_off_error,
+        value=meas_offset,
         min=-0.1,
         max=0.05
     )
     meas_scale = Qty(
-        value=meas_scale + meas_scl_error,
+        value=meas_scale,
         min=0.9,
         max=1.2
     )
     conf_matrix = tasks.ConfusionMatrix(confusion_row=confusion_row)
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
-            value=init_temp + temp_err,
+            value=init_temp,
             min=0.0,
             max=0.12,
             unit='K'
@@ -176,7 +174,7 @@ def create_experiment():
             unit='rad'
         ),
         'freq_offset': Qty(
-            value=0e6 * 2 * np.pi,
+            value=10e6 * 2 * np.pi,
             min=-100 * 1e6 * 2 * np.pi,
             max=100 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
