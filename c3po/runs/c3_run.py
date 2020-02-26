@@ -23,7 +23,7 @@ with open(datafile, 'rb+') as file:
 
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
-    exp = parsers.create_experiment(exp_setup, learn_from)
+    exp = parsers.create_experiment(exp_setup)
     opt = parsers.create_c3_opt(opt_config)
     opt.set_exp(exp)
     opt.read_data(datafile)
@@ -39,5 +39,8 @@ with tf.device('/CPU:0'):
     os.system('cp {} {}/{}'.format(exp_setup, dir, base(exp_setup)))
     os.system('cp {} {}/{}'.format(opt_config, dir, base(opt_config)))
     os.system('ln -s {} {}/{}'.format(datafile, dir, base(datafile)))
+    if 'real_params' in cfg:
+        real_params = cfg['real_params']
+        os.system('cp {} {}/{}'.format(real_params, dir, base(real_params)))
 
     opt.learn_model()
