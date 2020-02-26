@@ -498,7 +498,7 @@ class AWG(Device):
         self.amp_tot = norm
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
-        self.log_shapes()
+        # self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}, freq_offset
         # TODO decide when and where to return/store params scaled or not
 
