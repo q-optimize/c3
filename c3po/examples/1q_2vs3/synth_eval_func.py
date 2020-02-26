@@ -21,8 +21,8 @@ qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
 lo_freq = 5.22e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
-t1 = 20e-6
-t2star = 50e-6
+t1 = 10e-6
+t2star = 20e-6
 init_temp = 0.05
 meas_offset = -0.02
 meas_scale = 1.02
@@ -62,7 +62,7 @@ q1 = chip.Qubit(
     t2star=Qty(
         value=t2star,
         min=10e-6,
-        max=90e-6,
+        max=50e-6,
         unit='s'
     ),
     temp=Qty(
@@ -176,7 +176,7 @@ gauss_params = {
         unit='rad'
     ),
     'freq_offset': Qty(
-        value=10e6 * 2 * np.pi,
+        value=0e6 * 2 * np.pi,
         min=-100 * 1e6 * 2 * np.pi,
         max=100 * 1e6 * 2 * np.pi,
         unit='Hz 2pi'

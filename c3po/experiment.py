@@ -174,6 +174,25 @@ class Experiment:
                 else:
                     U = tf.matmul(FR, U)
                     self.FR = FR
+            if self.model.dephasing_strength != 0.0:
+                if not self.model.lindbladian:
+                    raise ValueError(
+                        'Dephasing can only be added when lindblad is on.'
+                    )
+                else:
+                    amps = {}
+                    for line, ctrls in instr.comps.items():
+                        amp = ctrls['gauss'].params['amp'].get_value()
+                        amps[line] = tf.cast(amp, tf.complex128)
+                    t_final = tf.constant(
+                        instr.t_end - instr.t_start,
+                        dtype=tf.complex128
+                    )
+                    dephasing_channel = self.model.get_dephasing_channel(
+                        t_final,
+                        amps
+                    )
+                    U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
             self.unitaries = gates
         return gates

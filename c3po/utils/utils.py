@@ -59,3 +59,23 @@ def num3str(val):
         num, prefix = eng_num(v)
         ret.append(f"{num:.3f}" + prefix)
     return ret
+
+
+def ask_yn():
+    asking = True
+    text = input("(y/n): ")
+    if text == 'y' or text == 'HELL YEAH':
+        asking = False
+        boolean = True
+    elif text == 'n' or text == 'FUCK NO':
+        asking = False
+        boolean = False
+    while asking:
+        text = input("Please write y or n and press enter: ")
+        if text == 'y' or text == 'HELL YEAH':
+            asking = False
+            boolean = True
+        elif text == 'n' or text == 'FUCK NO':
+            asking = False
+            boolean = False
+    return boolean

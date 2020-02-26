@@ -11,6 +11,9 @@ from os.path import basename as base
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 parser.add_argument("--double", nargs='?', const=True, default=False)
+parser.add_argument("--next", default='restart',
+    choices=['continue', 'restart', 'ask']
+)
 args = parser.parse_args()
 master_config = args.master_config
 with open(master_config, "r") as cfg_file:
@@ -90,7 +93,15 @@ with tf.device('/CPU:0'):
         c3_opt.replace_logdir(c3_dir)
         c3_datafile = dir + 'c2/learn_from.pickle'
         c3_opt.read_data(c3_datafile)
+        load_best = False
         if indx != 0:
+            if args.next == 'continue':
+                load_best = True
+            if args.next == 'ask':
+                print('\nDo you want to use the best point form the previous model?')
+                if utils.ask_yn():
+                    load_best = True
+        if load_best:
             c3_init_point = c3_dirs[indx-1] + 'best_point_model_learn.log'
             c3_opt.load_best(c3_init_point)
         real = {'params': [

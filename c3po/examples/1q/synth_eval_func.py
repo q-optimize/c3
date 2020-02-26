@@ -15,25 +15,27 @@ import c3po.libraries.envelopes as envelopes
 import c3po.system.tasks as tasks
 import c3po.utils.qt_utils as qt_utils
 
+shots = 500
+RB_number = 20
+RB_length = 35
 
 lindblad = True
 qubit_lvls = 3
 freq = 5.2e9 * 2 * np.pi
-lo_freq = 5.22e9 * 2 * np.pi
 anhar = -300e6 * 2 * np.pi
-t1 = 20e-6
+t1 = 15e-6
 t2star = 50e-6
 init_temp = 0.05
 meas_offset = -0.02
 meas_scale = 1.02
-t_final = 4e-9
+p_meas_0_as_0 = 1.0
+p_meas_1and2_as_0 = 0.0
+
+lo_freq = 5.21e9 * 2 * np.pi
+t_final = 4e-92
 buffer_time = 2e-9
 sim_res = 100e9
 awg_res = 2e9
-
-shots = 500
-RB_number = 20
-RB_length = 40
 
 # ### MAKE MODEL
 q1 = chip.Qubit(
@@ -86,7 +88,7 @@ one_zeros = np.array([0] * qubit_lvls)
 zero_ones = np.array([1] * qubit_lvls)
 one_zeros[0] = 1
 zero_ones[0] = 0
-val = one_zeros * 1.0 + zero_ones * 0.0
+val = one_zeros * p_meas_0_as_0 + zero_ones * p_meas_1and2_as_0
 min = one_zeros * 0.95 + zero_ones * 0.0
 max = one_zeros * 1.0 + zero_ones * 0.05
 confusion_row = Qty(value=val, min=min, max=max)

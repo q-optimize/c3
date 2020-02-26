@@ -16,18 +16,18 @@ import c3po.system.tasks as tasks
 def create_experiment():
     freq_error = 10e6 * 2 * np.pi
     anhar_error = 3e6 * 2 * np.pi
-    t1_error = -5e-6
-    temp_err = 10e-3
-    meas_scl_error = 0.03
-    meas_off_error = -0.02
+    t1_error = 10e-6
+    temp_err = 0.02
+    meas_scl_error = 0.0
+    meas_off_error = 0.0
 
     lindblad = True
     qubit_lvls = 3
     freq = 5.2e9 * 2 * np.pi
     lo_freq = 5.22e9 * 2 * np.pi
     anhar = -300e6 * 2 * np.pi
-    t1 = 20e-6
-    t2star = 50e-6
+    t1 = 10e-6
+    t2star = 20e-6
     init_temp = 0.05
     meas_offset = -0.02
     meas_scale = 1.02
@@ -63,7 +63,7 @@ def create_experiment():
         t2star=Qty(
             value=t2star,
             min=10e-6,
-            max=90e-6,
+            max=50e-6,
             unit='s'
         ),
         temp=Qty(
@@ -177,7 +177,7 @@ def create_experiment():
             unit='rad'
         ),
         'freq_offset': Qty(
-            value=10e6 * 2 * np.pi,
+            value=0e6 * 2 * np.pi,
             min=-100 * 1e6 * 2 * np.pi,
             max=100 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'

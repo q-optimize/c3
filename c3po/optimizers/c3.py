@@ -131,7 +131,10 @@ class C3(Optimizer):
         print(f"\nSaving as:\n{self.logdir + self.logname}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
-        self.goal_run(x_best)
+        try:
+            self.goal_run(x_best)
+        except KeyboardInterrupt:
+            pass
 
     def goal_run(self, current_params):
         indeces = self.select_from_data()
