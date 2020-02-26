@@ -221,6 +221,7 @@ def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
     estimator = cfg['estimator']
+    cb_foms = cfg['callback_est']
     estims = {
         'median': estimators.median_dist,
         'rms': estimators.rms_dist,
@@ -232,6 +233,9 @@ def create_c3_opt(optimizer_config):
     }
     fom = estims.pop(estimator)
     callback_foms = estims.values()
+    callback_foms = []
+    for cb_fom in cb_foms:
+        callback_foms.append(estims[cb_fom])
     figs = {
         'exp_vs_sim': display.exp_vs_sim,
         'exp_vs_sim_2d_hist': display.exp_vs_sim_2d_hist
