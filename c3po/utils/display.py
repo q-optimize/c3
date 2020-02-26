@@ -243,7 +243,7 @@ def plot_C2(logfolder=""):
         for pt in goal_function[ii]:
             plt.scatter(ii+1, pt, color='tab:blue')
     ax = plt.gca()
-    ax.set_yscale('log')
+    # ax.set_yscale('log')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid()
     plt.plot(range(1, len(goal_function)+1), means, color="tab:red")
