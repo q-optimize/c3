@@ -305,7 +305,7 @@ def plot_C3(logfolder=""):
                             real_parameters[p_name] = []
                     parameters[p_name].append(param * scaling[p_name])
                     if use_synthetic:
-                        real_value, _ = real_params[
+                        real_value = real_params[
                                 synth_opt_map.index(opt_map[iparam])
                             ]
                         real_parameters[p_name].append(
