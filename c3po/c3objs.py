@@ -145,7 +145,7 @@ class Quantity:
             )
 
     def get_opt_value(self):
-        return tf.asin(self.value.numpy().flatten()) * 2 / np.pi
+        return np.arcsin(self.value.numpy().flatten()) * 2 / np.pi
 
     def set_opt_value(self, val):
         self.value = tf.sin(tf.reshape(val, self.shape) * np.pi / 2)
