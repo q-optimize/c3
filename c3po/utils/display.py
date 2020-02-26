@@ -37,6 +37,9 @@ def unit_conversion(desc, param):
     elif desc == 'rise_time':
         p_val = param
         unit = 's'
+    elif desc == 'init_temp':
+        p_val = param
+        unit = 'K'
     else:
         p_val = param
         unit = ""
@@ -170,24 +173,27 @@ def plot_C1(logfolder=""):
         log = filename.readlines()
     goal_function = []
     parameters = {}
+    scaling = {}
+    units = {}
     opt_map = json.loads(log[3])
     for line in log[4:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
                 goal_function.append(point['goal'])
-                units = {}
                 for iparam in range(len(point['params'])):
                     param = point['params'][iparam]
                     unit = ''
                     p_name = ''
-                    for desc in opt_map[iparam][0]:
+                    for desc in opt_map[iparam]:
                         p_name += ' ' + desc
-                    p_val, unit = unit_conversion(desc, param)
+                    if p_name not in scaling:
+                        p_val, unit = unit_conversion(desc, param)
+                        scaling[p_name] = p_val / param
+                        units[p_name] = unit
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
-                    parameters[p_name].append(p_val)
-                    units[p_name] = unit
+                    parameters[p_name].append(param * scaling[p_name])
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
     if n_params > 0:
@@ -274,34 +280,38 @@ def plot_C3(logfolder=""):
 
     goal_function = []
     parameters = {}
+    scaling = {}
+    units = {}
     opt_map = json.loads(log[3])
     for line in log[4:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
                 goal_function.append(point['goal'])
-                units = {}
+
                 for iparam in range(len(point['params'])):
                     param = point['params'][iparam]
                     unit = ''
                     p_name = ''
                     for desc in opt_map[iparam]:
                         p_name += ' ' + desc
-                    p_val, unit = unit_conversion(desc, param)
+                    if p_name not in scaling:
+                        p_val, unit = unit_conversion(desc, param)
+                        scaling[p_name] = p_val / param
+                        units[p_name] = unit
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
                         if use_synthetic:
                             real_parameters[p_name] = []
-                    parameters[p_name].append(p_val)
+                    parameters[p_name].append(param * scaling[p_name])
                     if use_synthetic:
-                        real_value, _ = unit_conversion(
-                            desc,
-                            real_params[
+                        real_value, _ = real_params[
                                 synth_opt_map.index(opt_map[iparam])
                             ]
+                        real_parameters[p_name].append(
+                            real_value * scaling[p_name]
                         )
-                        real_parameters[p_name].append(real_value)
-                    units[p_name] = unit
+
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
     if n_params > 0:
