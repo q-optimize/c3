@@ -252,6 +252,9 @@ def create_c3_opt(optimizer_config):
     elif cfg['algorithm'] in no_grad_algs.keys():
         algorithm_no_grad = no_grad_algs[cfg['algorithm']]
         algorithm_with_grad = None
+    options = {}
+    if 'options' in cfg:
+        options = cfg['options']
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
@@ -262,5 +265,6 @@ def create_c3_opt(optimizer_config):
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
+        options=options
     )
     return opt
