@@ -186,6 +186,7 @@ def plot_C1(logfolder=""):
                     unit = ''
                     p_name = ''
                     for desc in opt_map[iparam]:
+                        desc = desc[0]
                         p_name += ' ' + desc
                     if p_name not in scaling:
                         p_val, unit = unit_conversion(desc, param)
