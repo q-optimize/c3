@@ -25,7 +25,7 @@ c3_configs = cfg['c3_configs']
 eval_func = cfg['eval_func']
 
 tf_utils.tf_setup()
-dir = utils.log_setup("/home/users/froy/c3loop/")
+dir = utils.log_setup("/localdisk/c3loop/")
 print(dir)
 os.system('cp {} {}/{}'.format(__file__, dir, base(__file__)))
 os.system('cp {} {}/{}'.format(master_config, dir, base(master_config)))

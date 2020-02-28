@@ -1,13 +1,13 @@
 """Base run for c3 code."""
 
-import os
 import json
 import pickle
 import argparse
 import c3po.utils.parsers as parsers
+from c3po.utils.utils import replace_symlink as ln
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
-from os.path import basename as base
+from shutil import copy2 as cp2
 
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
@@ -32,12 +32,12 @@ with tf.device('/CPU:0'):
     if 'initial_point' in cfg:
         init_point = cfg['initial_point']
         opt.load_best(init_point)
-        os.system('cp {} {}/{}'.format(init_point, dir, 'init_point'))
+        cp2(init_point, dir)
 
-    os.system('cp {} {}/{}'.format(__file__, dir, base(__file__)))
-    os.system('cp {} {}/{}'.format(master_config, dir, base(master_config)))
-    os.system('cp {} {}/{}'.format(exp_setup, dir, base(exp_setup)))
-    os.system('cp {} {}/{}'.format(opt_config, dir, base(opt_config)))
-    os.system('ln -s {} {}/{}'.format(datafile, dir, base(datafile)))
+    cp2(__file__, dir)
+    cp2(master_config, dir)
+    cp2(exp_setup, dir)
+    cp2(opt_config, dir)
+    ln(datafile, dir+"model_learn.log")
 
     opt.learn_model()
