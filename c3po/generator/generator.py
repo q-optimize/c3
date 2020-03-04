@@ -6,6 +6,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from c3po.signal.gates import Instruction
 
+
 class Generator:
     """Generator, creates signal from digital to what arrives to the chip."""
 
@@ -64,16 +65,41 @@ class Generator:
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
                 # plt.figure()
-                # plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
-                # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
-                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
-                # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
-                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
-                # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
-                # plt.show()
+                # plt.plot(awg.ts/1e-9, awg_signal['inphase']/1e-3, 'x', label='AWG', color="tab:red")
+                # # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
+                # plt.plot(lo_signal['ts']/1e-9, flat_signal['inphase']/1e-3, '-', label='interp', color="tab:blue")
+                # plt.xlabel("Time[ns]")
+                # plt.ylabel("Pulse amplitude[mV]")
+                # plt.grid()
+                # plt.savefig("/home/users/niwitt/awg.png", dpi=300)
                 # plt.figure()
-                # plt.plot(lo_signal['ts'], signal, '-')
-                # plt.title("Multiplex")
+                # # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
+                # plt.plot(lo_signal['ts']/1e-9, conv_signal['inphase']/1e-3, 'g-', label='convolved')
+                # plt.xlabel("Time[ns]")
+                # plt.ylabel("Pulse amplitude[mV]")
+                # plt.grid()
+                # plt.savefig("/home/users/niwitt/awg_smooth.png", dpi=300)
+                # plt.figure()
+                # plt.plot(awg.ts/1e-9, awg_signal['inphase']/1e-3, 'x', label='AWG', color="tab:red")
+                # # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
+                # plt.plot(lo_signal['ts']/1e-9, flat_signal['inphase']/1e-3, '-', label='interp', color="tab:blue")
+                # # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
+                # plt.plot(lo_signal['ts']/1e-9, conv_signal['inphase']/1e-3, 'g-', label='convolved')
+                # plt.xlabel("Time[ns]")
+                # plt.ylabel("Pulse amplitude[mV]")
+                # plt.grid()
+                # plt.legend(
+                #     ["AWG samples", "upsampled", "convolution"]
+                # )
+                # plt.savefig("/home/users/niwitt/awg_combined.png", dpi=300)
+                # plt.figure()
+                # # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
+                # plt.plot(lo_signal['ts']/1e-9, signal/1e6, '-')
+                # plt.title("Mixed with local oscillator")
+                # plt.xlabel("Time[ns]")
+                # plt.ylabel("Pulse amplitude[MHz]")
+                # plt.grid()
+                # plt.savefig("/home/users/niwitt/iq_mixer.png", dpi=300)
                 # plt.show()
         self.signal = gen_signal
         # TODO clean up output here: ts is redundant

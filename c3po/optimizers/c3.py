@@ -238,7 +238,7 @@ class C3(Optimizer):
             + '.png'
         )
         plt.close(fig)
-        display.plot_C3(self.logdir)
+        display.plot_C3([self.logdir])
 
         self.optim_status['params'] = [
             par.numpy().tolist()
