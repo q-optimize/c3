@@ -123,10 +123,13 @@ class Experiment:
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
             pops = self.populations(psi_final, self.model.lindbladian)
-            pop1 = self.model.tasks["conf_matrix"].pop1(
-                pops,
-                self.model.lindbladian
-            )
+            if "conf_matrix" in self.model.tasks:
+                pop1 = self.model.tasks["conf_matrix"].pop1(
+                    pops,
+                    self.model.lindbladian
+                )
+            else:
+                pop1 = pops[1]
             pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
             pop1s.append(pop1)
         return pop1s
@@ -182,12 +185,14 @@ class Experiment:
                 else:
                     amps = {}
                     for line, ctrls in instr.comps.items():
+                        # amp = self.generator.devices['awg'].get_average_amp()
                         amp = ctrls['gauss'].params['amp'].get_value()
                         amps[line] = tf.cast(amp, tf.complex128)
-                    t_final = tf.constant(
-                        instr.t_end - instr.t_start,
-                        dtype=tf.complex128
-                    )
+                    # t_final = tf.constant(
+                    #     instr.t_end - instr.t_start,
+                    #     dtype=tf.complex128
+                    # )
+                    t_final = ctrls['gauss'].params['t_final'].get_value()
                     dephasing_channel = self.model.get_dephasing_channel(
                         t_final,
                         amps

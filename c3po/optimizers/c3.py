@@ -25,6 +25,7 @@ class C3(Optimizer):
         callback_figs=[],
         algorithm_no_grad=None,
         algorithm_with_grad=None,
+        options={}
     ):
         """Initiliase."""
         super().__init__(
@@ -38,6 +39,7 @@ class C3(Optimizer):
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
+        self.options = options
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
@@ -114,7 +116,8 @@ class C3(Optimizer):
             else:
                 self.algorithm(
                     x0,
-                    self.fct_to_min
+                    self.fct_to_min,
+                    self.options
                 )
         except KeyboardInterrupt:
             pass

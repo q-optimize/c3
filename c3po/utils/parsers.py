@@ -221,6 +221,7 @@ def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
     estimator = cfg['estimator']
+    cb_foms = cfg['callback_est']
     estims = {
         'median': estimators.median_dist,
         'rms': estimators.rms_dist,
@@ -230,8 +231,11 @@ def create_c3_opt(optimizer_config):
         'rms_stds': estimators.rms_exp_stds_dist,
         'std_diffs': estimators.std_of_diffs,
     }
-    fom = estims.pop(estimator)
+    fom = estims[estimator]
     callback_foms = estims.values()
+    callback_foms = []
+    for cb_fom in cb_foms:
+        callback_foms.append(estims[cb_fom])
     figs = {
         'exp_vs_sim': display.exp_vs_sim,
         'exp_vs_sim_2d_hist': display.exp_vs_sim_2d_hist
@@ -248,6 +252,9 @@ def create_c3_opt(optimizer_config):
     elif cfg['algorithm'] in no_grad_algs.keys():
         algorithm_no_grad = no_grad_algs[cfg['algorithm']]
         algorithm_with_grad = None
+    options = {}
+    if 'options' in cfg:
+        options = cfg['options']
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
@@ -258,5 +265,6 @@ def create_c3_opt(optimizer_config):
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
+        options=options
     )
     return opt
