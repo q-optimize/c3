@@ -218,7 +218,7 @@ def plot_C1(logfolder=""):
         plt.close(fig)
 
 
-def plot_C2(logfolder=""):
+def plot_C2(cfgfolder="", logfolder=""):
     logfilename = logfolder + "calibration.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/calibration.log"
@@ -226,7 +226,7 @@ def plot_C2(logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = 0
-    with open(logfolder+"c2.cfg", "r") as cfg_file:
+    with open(cfgfolder+"c2.cfg", "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
         batch_size = cfg['options']['popsize']
     eval = 0

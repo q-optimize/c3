@@ -113,18 +113,22 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops['t1']
             Ls.append(L)
             if 'temp' in self.params:
-                if self.hilbert_dim > 2:
-                    freq_diff = np.array(
-                        [(self.params['freq'].get_value()
-                          + n*self.params['anhar'].get_value())
-                            for n in range(self.hilbert_dim)]
-                    )
-                else:
-                    freq_diff = np.array(
-                        [self.params['freq'].get_value(), 0]
-                    )
+                # NICO: I don't really understand what is supposed to happen
+                # here? For detailed balance, can't we use the Hamiltonian?
+                # if self.hilbert_dim > 2:
+                #     freq_diff = np.array(
+                #         [(self.params['freq'].get_value()
+                #           + n*self.params['anhar'].get_value())
+                #             for n in range(self.hilbert_dim)]
+                #     )
+                # else:
+                #     freq_diff = np.array(
+                #         [self.params['freq'].get_value(), 0]
+                #     )
+                freq_diff, _ = tf.linalg.eig(self.get_Hamiltonian())
+
                 beta = 1 / (self.params['temp'].get_value() * kb)
-                det_bal = tf.exp(-hbar*freq_diff*beta)
+                det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
                 det_bal_mat = tf.linalg.tensor_diag(det_bal)
                 L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
                 Ls.append(L)

@@ -35,7 +35,7 @@ shots = 500
 RB_number = 20
 RB_length = 40
 
-# ### MAKE MODEL
+# ### MAKE THE REAL MODEL
 q1 = chip.Qubit(
     name="Q1",
     desc="Qubit 1",
@@ -72,6 +72,51 @@ q1 = chip.Qubit(
         unit='K'
     )
 )
+q2 = chip.Qubit(
+    name="Q2",
+    desc="Qubit 2",
+    comment="The one and only qubit in this chip",
+    freq=Qty(
+        value=5.3e9 * 2 * np.pi,
+        min=5.15e9 * 2 * np.pi,
+        max=5.4e9 * 2 * np.pi,
+        unit='rad'
+    ),
+    anhar=Qty(
+        value=anhar,
+        min=-380e6 * 2 * np.pi,
+        max=-220e6 * 2 * np.pi,
+        unit='rad'
+    ),
+    hilbert_dim=qubit_lvls,
+    t1=Qty(
+        value=t1,
+        min=1e-6,
+        max=90e-6,
+        unit='s'
+    ),
+    t2star=Qty(
+        value=t2star,
+        min=10e-6,
+        max=90e-6,
+        unit='s'
+    ),
+    temp=Qty(
+        value=init_temp,
+        min=0.0,
+        max=0.12,
+        unit='K'
+    )
+)
+
+q1q2 = chip.Coupling(
+    name="Q1-Q2",
+    desc="coupling",
+    comment="Coupling qubit 1 to qubit 2",
+    connected=["Q1", "Q2"],
+    hamiltonian_func=hamiltonians.int_XX
+)
+
 drive = chip.Drive(
     name="d1",
     desc="Drive 1",
@@ -79,11 +124,11 @@ drive = chip.Drive(
     connected=["Q1"],
     hamiltonian_func=hamiltonians.x_drive
 )
-phys_components = [q1]
-line_components = [drive]
+phys_components = [q1, q2]
+line_components = [drive, q1q2]
 
-one_zeros = np.array([0] * qubit_lvls)
-zero_ones = np.array([1] * qubit_lvls)
+one_zeros = np.array([0] * qubit_lvls ** 2)
+zero_ones = np.array([1] * qubit_lvls ** 2)
 one_zeros[0] = 1
 zero_ones[0] = 0
 val = one_zeros * 1.0 + zero_ones * 0.0

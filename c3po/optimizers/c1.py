@@ -1,5 +1,6 @@
 """Object that deals with the open loop optimal control."""
 
+import os
 import json
 import tensorflow as tf
 import c3po.utils.display as display
@@ -56,7 +57,7 @@ class C1(Optimizer):
         """
         self.start_log()
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"\nSaving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
