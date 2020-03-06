@@ -71,6 +71,7 @@ class Quantity:
         symbol: str = '\\alpha',
         unit: str = 'a.u.'
     ):
+        value = np.array(value)
         self.offset = np.array(min)
         self.scale = np.abs(np.array(max) - np.array(min))
         # TODO if setting is out of bounds this double breaks
@@ -79,7 +80,7 @@ class Quantity:
         self.unit = unit
         if hasattr(value, "shape"):
             self.shape = value.shape
-            self.length = np.prod(value.shape)
+            self.length = int(np.prod(value.shape))
         else:
             self.shape = ()
             self.length = 1
