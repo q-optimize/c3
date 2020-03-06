@@ -18,6 +18,7 @@ class GateSet:
     def add_instruction(self, instr):
         # TODO make this use ___dict___ ?
         self.instructions[instr.name] = instr
+        self.update_par_lens()
 
     def list_parameters(self):
         par_list = []
@@ -28,6 +29,23 @@ class GateSet:
                     for par in instr.comps[chan][comp].params:
                         par_list.append([(gate, chan, comp, par)])
         return par_list
+
+    def update_par_lens(self):
+        opt_map = self.list_parameters()
+        id_list = []
+        par_lens = []
+        for ids in opt_map:
+            for id in ids:
+                id_list.append(id)
+                gate = id[0]
+                chan = id[1]
+                comp = id[2]
+                param = id[3]
+                gate_instr = self.instructions[gate]
+                par = gate_instr.comps[chan][comp].params[param]
+                par_lens.append(par.length)
+        self.par_lens = par_lens
+        self.id_list = id_list
 
     def get_parameters(self, opt_map=None, scaled=False, to_str=False):
         """
@@ -84,28 +102,36 @@ class GateSet:
     def set_parameters(self, values: list, opt_map: list, scaled=False):
         """Set the values in the original instruction class."""
         # TODO catch key errors
+        val_indx = 0
         for indx in range(len(opt_map)):
             ids = opt_map[indx]
             for id in ids:
+                id_indx = self.id_list.index(id)
+                par_len = self.par_lens[id_indx]
                 gate = id[0]
                 par_id = id[1:4]
-                val = values[indx]
-                if len(id) == 5:
-                    fct = id[4]
-                    val = fct(val)
                 chan = par_id[0]
                 comp = par_id[1]
                 param = par_id[2]
                 gate_instr = self.instructions[gate]
                 par = gate_instr.comps[chan][comp].params[param]
-                try:
-                    if scaled:
-                        par.set_opt_value(val)
-                    else:
+                if scaled:
+                    val = values[val_indx:val_indx+par_len]
+                    par.set_opt_value(val)
+                else:
+                    try:
+                        val = values[val_indx]
+                        if len(id) == 5:
+                            fct = id[4]
+                            val = fct(val)
                         par.set_value(val)
-                except ValueError:
-                    print("Value out of bounds")
-                    print(f"Trying to set {par_id} to value {val}")
+                    except ValueError:
+                        print("Value out of bounds")
+                        print(f"Trying to set {id} to value {val}")
+            if scaled:
+                val_indx += par_len
+            else:
+                val_indx += 1
 
     def print_parameters(self, opt_map=None):
         ret = []
