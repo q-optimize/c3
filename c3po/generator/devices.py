@@ -426,6 +426,7 @@ class AWG(Device):
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
                 inphase = tf.add_n(inphase_comps, name="inphase")
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
+                freq_offset = 0.0
 
             elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:
@@ -499,7 +500,7 @@ class AWG(Device):
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
         # self.log_shapes()
-        return {"inphase": inphase, "quadrature": quadrature}, freq_offset
+        return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/store params scaled or not
 
     def get_average_amp(self):

@@ -52,14 +52,14 @@ class Generator:
                 gen_signal[chan] = {}
                 channel = instr.comps[chan]
                 lo_signal, omega_lo = lo.create_signal(channel, t_start, t_end)
-                awg_signal, freq_offset = awg.create_IQ(channel, t_start, t_end)
+                awg_signal = awg.create_IQ(channel, t_start, t_end)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 if "resp" in self.devices:
                     conv_signal = resp.process(flat_signal)
                 else:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
-                signal = v_to_hz.transform(signal, omega_lo+freq_offset)
+                signal = v_to_hz.transform(signal, omega_lo)
 
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
