@@ -7,6 +7,7 @@ import c3po.utils.tf_utils as tf_utils
 import c3po.utils.utils as utils
 import tensorflow as tf
 from os.path import basename as base
+from shutil import copy2 as cp2
 
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
@@ -25,22 +26,23 @@ c3_configs = cfg['c3_configs']
 eval_func = cfg['eval_func']
 
 tf_utils.tf_setup()
-dir = utils.log_setup("/home/users/froy/c3loop/")
+dir = utils.log_setup("/localdisk/c3loop/")
 print(dir)
-os.system('cp {} {}/{}'.format(__file__, dir, base(__file__)))
-os.system('cp {} {}/{}'.format(master_config, dir, base(master_config)))
+cp2(__file__, dir)
+cp2(master_config, dir)
+cp2(master_config, dir)
 c1_dir = dir + 'c1/'
 os.makedirs(c1_dir)
-os.system('cp {} {}{}'.format(c1_config, c1_dir, base(c1_config)))
+cp2(c1_config, c1_dir)
 exp_setup = exp_setups[0]
-os.system('cp {} {}{}'.format(exp_setup, c1_dir, base(exp_setup)))
+cp2(exp_setup, c1_dir)
 if 'initial_point' in cfg:
     c1_init_point = cfg['initial_point']
-    os.system('cp {} {}{}'.format(c1_init_point, c1_dir, 'init_point'))
+    cp2(c1_init_point, c1_dir, 'init_point')
 c2_dir = dir + 'c2/'
 os.makedirs(c2_dir)
-os.system('cp {} {}{}'.format(c2_config, c2_dir, base(c2_config)))
-os.system('cp {} {}{}'.format(eval_func, c2_dir, base(eval_func)))
+cp2(c2_config, c2_dir)
+cp2(eval_func, c2_dir)
 c3_dirs = []
 for indx in range(len(exp_setups)):
     c3_dir = dir + 'c3_' + str(indx) + '/'
@@ -48,21 +50,21 @@ for indx in range(len(exp_setups)):
     os.makedirs(c3_dir)
     c3_config = c3_configs[indx]
     exp_setup = exp_setups[indx]
-    os.system('cp {} {}{}'.format(c3_config, c3_dir, base(c3_config)))
-    os.system('cp {} {}{}'.format(exp_setup, c3_dir, base(exp_setup)))
+    cp2(c3_config, c3_dir)
+    cp2(exp_setup, c3_dir)
 if args.double:
     c4_dir = dir + 'c4/'
     os.makedirs(c4_dir)
-    os.system('cp {} {}{}'.format(c1_config, c4_dir, base(c1_config)))
+    cp2(c1_config, c4_dir)
     exp_setup = exp_setups[-1]
-    os.system('cp {} {}{}'.format(exp_setup, c4_dir, base(exp_setup)))
+    cp2(exp_setup, c4_dir)
     if 'initial_point' in cfg:
         c1_init_point = cfg['initial_point']
-        os.system('cp {} {}{}'.format(c1_init_point, c4_dir, 'init_point'))
+        cp2(c1_init_point, c4_dir, 'init_point')
     c5_dir = dir + 'c5/'
     os.makedirs(c5_dir)
-    os.system('cp {} {}{}'.format(c2_config, c5_dir, base(c2_config)))
-    os.system('cp {} {}{}'.format(eval_func, c5_dir, base(eval_func)))
+    cp2(c2_config, c5_dir)
+    cp2(eval_func, c5_dir)
 
 with tf.device('/CPU:0'):
     c1_opt = parsers.create_c1_opt(c1_dir + base(c1_config))

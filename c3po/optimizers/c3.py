@@ -103,7 +103,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"\nSaving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -131,7 +131,7 @@ class C3(Optimizer):
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
-        print(f"\nSaving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
         try:
@@ -241,7 +241,7 @@ class C3(Optimizer):
             + '.png'
         )
         plt.close(fig)
-        display.plot_C3(self.logdir)
+        display.plot_C3([self.logdir])
 
         self.optim_status['params'] = [
             par.numpy().tolist()

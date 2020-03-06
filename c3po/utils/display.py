@@ -68,7 +68,8 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
         H,
         origin='lower',
         # interpolation='bilinear',
-        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        # extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        extent=[0, 1, 0, 1]
     )
     plt.title('Exp vs Sim')
     plt.xlabel('Exp fidelity')
@@ -167,8 +168,6 @@ def plot_distribution(logfilename=""):
 
 def plot_C1(logfolder=""):
     logfilename = logfolder + "open_loop.log"
-    if not os.path.isfile(logfilename):
-        logfilename = "/tmp/c3logs/recent/open_loop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
     goal_function = []
@@ -186,7 +185,6 @@ def plot_C1(logfolder=""):
                     unit = ''
                     p_name = ''
                     for desc in opt_map[iparam][0]:
-                        desc = desc
                         p_name += ' ' + desc
                     if p_name not in scaling:
                         p_val, unit = unit_conversion(desc, param)
@@ -226,7 +224,7 @@ def plot_C1(logfolder=""):
         plt.close(fig)
 
 
-def plot_C2(logfolder=""):
+def plot_C2(cfgfolder="", logfolder=""):
     logfilename = logfolder + "calibration.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/calibration.log"
@@ -234,7 +232,7 @@ def plot_C2(logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = 0
-    with open(logfolder+"c2.cfg", "r") as cfg_file:
+    with open(cfgfolder+"c2.cfg", "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
         batch_size = cfg['options']['popsize']
     eval = 0
@@ -267,85 +265,122 @@ def plot_C2(logfolder=""):
     plt.close(fig)
 
 
-def plot_C3(logfolder=""):
-    if not logfolder:
-        logfolder = "/tmp/c3logs/recent/"
-    logfilename = logfolder + 'model_learn.log'
-    with open(logfilename, "r") as filename:
-        log = filename.readlines()
+def plot_C3(logfolders):
+    logs = []
+    for logfolder in logfolders:
+        logfilename = logfolder + 'model_learn.log'
+        with open(logfilename, "r") as filename:
+            log = filename.readlines()
 
-    synthetic_model = logfolder + 'real_model_params.log'
+        synthetic_model = logfolder + 'real_model_params.log'
 
-    use_synthetic = os.path.isfile(synthetic_model)
+        use_synthetic = os.path.isfile(synthetic_model)
 
-    if use_synthetic:
-        with open(synthetic_model, "r") as filename:
-            synth_model = filename.readlines()
-        real_params = json.loads(synth_model[1])['params']
-        real_parameters = {}
-        synth_opt_map = json.loads(synth_model[0])
+        if use_synthetic:
+            with open(synthetic_model, "r") as filename:
+                synth_model = filename.readlines()
+            real_params = json.loads(synth_model[1])['params']
+            real_parameters = {}
+            synth_opt_map = json.loads(synth_model[0])
 
-    goal_function = []
-    parameters = {}
-    scaling = {}
-    units = {}
-    opt_map = json.loads(log[3])
-    for line in log[4:]:
-        if line[0] == "{":
-            point = json.loads(line)
-            if 'goal' in point.keys():
-                goal_function.append(point['goal'])
+        goal_function = []
+        parameters = {}
+        scaling = {}
+        units = {}
+        opt_map = json.loads(log[3])
+        for line in log[4:]:
+            if line[0] == "{":
+                point = json.loads(line)
+                if 'goal' in point.keys():
+                    goal_function.append(point['goal'])
 
-                for iparam in range(len(point['params'])):
-                    param = point['params'][iparam]
-                    unit = ''
-                    p_name = ''
-                    for desc in opt_map[iparam]:
-                        p_name += ' ' + desc
-                    if p_name not in scaling:
-                        p_val, unit = unit_conversion(desc, param)
-                        scaling[p_name] = p_val / param
-                        units[p_name] = unit
-                    if not(p_name in parameters.keys()):
-                        parameters[p_name] = []
+                    for iparam in range(len(point['params'])):
+                        param = point['params'][iparam]
+                        unit = ''
+                        p_name = ''
+                        for desc in opt_map[iparam]:
+                            p_name += ' ' + desc
+                        if p_name not in scaling:
+                            p_val, unit = unit_conversion(desc, param)
+                            scaling[p_name] = p_val / param
+                            units[p_name] = unit
+                        if not(p_name in parameters.keys()):
+                            parameters[p_name] = []
+                            if use_synthetic:
+                                real_parameters[p_name] = []
+                        parameters[p_name].append(param * scaling[p_name])
                         if use_synthetic:
-                            real_parameters[p_name] = []
-                    parameters[p_name].append(param * scaling[p_name])
-                    if use_synthetic:
-                        real_value = real_params[
-                                synth_opt_map.index(opt_map[iparam])
-                            ]
-                        real_parameters[p_name].append(
-                            real_value * scaling[p_name]
-                        )
+                            real_value = real_params[
+                                    synth_opt_map.index(opt_map[iparam])
+                                ]
+                            real_parameters[p_name].append(
+                                real_value * scaling[p_name]
+                            )
+        this_log = {
+            "parameters": parameters,
+            "units": units,
+            "goal_function": goal_function
+        }
+        if use_synthetic:
+            this_log["real_paramters"] = real_parameters
 
-    n_params = len(parameters.keys())
-    its = range(1, len(goal_function) + 1)
-    if n_params > 0:
-        nrows = np.ceil(np.sqrt(n_params))
-        ncols = np.ceil(n_params / nrows)
-        fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
-        ii = 1
-        for key in parameters.keys():
-            plt.subplot(nrows, ncols, ii)
-            plt.plot(its, parameters[key], color='tab:blue')
-            if use_synthetic:
-                plt.plot(its, real_parameters[key], "--", color='tab:red')
-            plt.grid()
-            plt.title(key.replace('_', '\\_'))
-            plt.xlabel('Evaluation')
-            plt.ylabel(units[key])
-            ii += 1
-        plt.tight_layout()
-        plt.savefig(logfolder + "learn_model.png")
-        fig = plt.figure()
-        plt.ylim([0.01, 0.4])
-        plt.title("Goal")
-        plt.grid()
-        plt.xlabel("Evaluations")
-        plt.plot(its, goal_function)
-        plt.savefig(logfolder + "goal.png")
-        plt.close(fig)
+        logs.append(this_log)
+
+    for log in logs:
+        parameters = log["parameters"]
+        units = log["units"]
+        goal_function = log["goal_function"]
+        if use_synthetic:
+            real_parameters = log["real_paramters"]
+        n_params = len(parameters.keys())
+        its = range(1, len(goal_function) + 1)
+        if n_params > 0:
+            nrows = np.ceil(np.sqrt(n_params))
+            ncols = np.ceil((n_params) / nrows)
+            fig = plt.figure(figsize=(6 * ncols, 4 * nrows))
+            ii = 1
+            for key in parameters.keys():
+                plt.subplot(nrows, ncols, ii)
+                plt.plot(its, parameters[key], color='tab:blue')
+                if use_synthetic:
+                    plt.plot(its, real_parameters[key], "--", color='tab:red')
+                plt.grid()
+                plt.title(key.replace('_', '\\_'))
+                plt.xlabel('Evaluation')
+                plt.ylabel(units[key])
+                ii += 1
+                plt.tight_layout()
+                plt.savefig(logfolder + "learn_model.png")
+                plt.close(fig)
+
+    fig = plt.figure()
+    plt.title("Goal")
+    plt.grid()
+    colors = ["tab:blue", "tab:red", "tab:green"]
+    line_names = ["simple", "intermediate", "full"]
+    idx = 0
+    leg_formatted = []
+    for log in logs:
+        goal_function = log["goal_function"]
+        its = range(1, len(goal_function) + 1)
+        c = colors.pop(0)
+        line =  plt.semilogx(
+            its, goal_function, color=c, label=line_names[idx]
+        )
+        leg_formatted.append(line)
+        idx += 1
+        plt.semilogx(its[-1], goal_function[-1], "x", color=c)
+    leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
+  #  for entry in leg:
+  #      leg_formatted.append(entry)
+  #      leg_formatted.append("converged")
+    plt.legend(leg_formatted)
+    plt.xlabel('Evaluation')
+    plt.ylabel('RMS model match')
+    plt.tight_layout()
+    plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
+    plt.close(fig)
+
 
 
 def plot_envelope_history(logfilename):

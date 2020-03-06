@@ -1,5 +1,6 @@
 """Object that deals with the closed loop optimal control."""
 
+import os
 import json
 import pickle
 import c3po.utils.display as display
@@ -54,7 +55,7 @@ class C2(Optimizer):
         """
         self.start_log()
         self.picklefilename = self.logdir + "learn_from.pickle"
-        print(f"\nSaving as:\n{self.logdir + self.logname}")
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
@@ -100,7 +101,7 @@ class C2(Optimizer):
         self.optim_status['goal'] = float(goal)
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std)
-        display.plot_C2(self.logdir)
+        display.plot_C2(self.dir_path, self.logdir)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std):
