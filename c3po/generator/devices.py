@@ -129,6 +129,7 @@ class Volts_to_Hertz(Device):
         if 'offset' in self.params:
             offset = self.params['offset'].get_value()
             att = v2hz / (drive_frequency + offset)
+            print("BE CAREFUL BEING STUPID, v2hz")
         else:
             att = v2hz
         self.signal = mixed_signal * att
@@ -403,16 +404,14 @@ class AWG(Device):
             quadrature_comps = []
 
             if (self.options == 'pwc'):
+                amp_tot_sq = 0
                 for key in channel:
                     comp = channel[key]
                     if isinstance(comp, Envelope):
-                        norm = 1
-                        inphase = tf.constant(comp.params['inphase'],
-                                              dtype=tf.float64)
-                        quadrature = tf.constant(comp.params['quadrature'],
-                                                 dtype=tf.float64)
-                        xy_angle = tf.constant(comp.params['xy_angle'],
-                                               dtype=tf.float64)
+                        amp_tot_sq += 1
+                        inphase = comp.params['inphase'].get_value()
+                        quadrature = comp.params['quadrature'].get_value()
+                        xy_angle = comp.params['xy_angle'].get_value()
                         phase = - xy_angle
                         inphase_comps.append(
                             inphase * tf.cos(phase)
@@ -426,6 +425,7 @@ class AWG(Device):
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
                 inphase = tf.add_n(inphase_comps, name="inphase")
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
+                freq_offset = 0.0
 
             elif (self.options == 'drag') or (self.options == 'IBM_drag'):
                 for key in channel:
@@ -499,14 +499,16 @@ class AWG(Device):
         self.signal['inphase'] = inphase / norm
         self.signal['quadrature'] = quadrature / norm
         # self.log_shapes()
-        return {"inphase": inphase, "quadrature": quadrature}, freq_offset
+        return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/store params scaled or not
 
     def get_average_amp(self):
         In = self.get_I()
         Qu = self.get_Q()
-        av = tf.reduce_mean(tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2))
-        return av
+        amp_per_bin = tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2)
+        av = tf.reduce_mean(amp_per_bin)
+        sum = tf.reduce_sum(amp_per_bin)
+        return av, sum
 
     def get_I(self):
         return self.amp_tot * self.signal['inphase']

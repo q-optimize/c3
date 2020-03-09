@@ -148,9 +148,11 @@ class Experiment:
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
                     if gate == "QId":
-                        offset = 0
-                    else:
+                        offset = 0.0
+                    elif "freq_offset" in ctrls['gauss'].params:
                         offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    else:
+                        offset = 0.0
 
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
@@ -185,14 +187,19 @@ class Experiment:
                 else:
                     amps = {}
                     for line, ctrls in instr.comps.items():
-                        # amp = self.generator.devices['awg'].get_average_amp()
-                        amp = ctrls['gauss'].params['amp'].get_value()
+                        amp, sum = self.generator.devices['awg'].get_average_amp()
+                        # amp = ctrls['gauss'].params['amp'].get_value()
+                        # amp = tf.constant(1.0)
                         amps[line] = tf.cast(amp, tf.complex128)
-                    # t_final = tf.constant(
-                    #     instr.t_end - instr.t_start,
+                    t_final = tf.constant(
+                        instr.t_end - instr.t_start,
+                        dtype=tf.complex128
+                    )
+                    # t_final = tf.cast(
+                    #     ctrls['gauss'].params['t_final'].get_value(),
                     #     dtype=tf.complex128
                     # )
-                    t_final = ctrls['gauss'].params['t_final'].get_value()
+                    # t_final = tf.constant(1.0, tf.complex128)
                     dephasing_channel = self.model.get_dephasing_channel(
                         t_final,
                         amps

@@ -188,7 +188,10 @@ def plot_C1(logfolder=""):
                         p_name += ' ' + desc
                     if p_name not in scaling:
                         p_val, unit = unit_conversion(desc, param)
-                        scaling[p_name] = p_val / param
+                        try:
+                            scaling[p_name] = p_val / param
+                        except ZeroDivisionError:
+                            scaling[p_name] = 1
                         units[p_name] = unit
                     if not(p_name in parameters.keys()):
                         parameters[p_name] = []
@@ -209,12 +212,15 @@ def plot_C1(logfolder=""):
             plt.xlabel("Evaluation")
             ii += 1
         plt.subplot(nrows, ncols, ii)
+        plt.savefig(logfolder + "open_loop.png")
+        plt.figure()
+        plt.ylim([0.2, 0.001])
         plt.title("Goal")
         plt.grid()
-        plt.xlabel("Iteration")
-        plt.semilogy(its, goal_function)
+        plt.xlabel("Evaluations")
+        plt.plot(its, goal_function)
         plt.tight_layout()
-        plt.savefig(logfolder + "open_loop.png")
+        plt.savefig(logfolder + "goal.png")
         plt.close(fig)
 
 
@@ -254,7 +260,7 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.plot(range(1, len(goal_function)+1), means, color="tab:red")
     plt.axis('tight')
     plt.ylabel('Goal function')
-    plt.xlabel('Evaluation')
+    plt.xlabel('Evaluations')
     plt.savefig(logfolder + "closed_loop.png")
     plt.close(fig)
 
@@ -374,6 +380,7 @@ def plot_C3(logfolders):
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
     plt.close(fig)
+
 
 
 def plot_envelope_history(logfilename):

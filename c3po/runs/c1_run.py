@@ -17,9 +17,20 @@ with open(master_config, "r") as cfg_file:
 exp_setup = cfg['exp_setup']
 opt_config = cfg['optimizer_config']
 
+
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
+
+    if 'adjust_exp' in cfg:
+        adjust_exp = cfg['adjust_exp']
+        with open(adjust_exp) as file:
+            best = file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            p = json.loads(best[1])['params']
+            exp.set_parameters(p, best_exp_opt_map)
+            print("\nLoading best experiment point.")
+
     opt = parsers.create_c1_opt(opt_config)
     opt.set_exp(exp)
     dir = opt.logdir

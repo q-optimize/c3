@@ -12,26 +12,32 @@ import c3po.signal.pulse as pulse
 import c3po.libraries.envelopes as envelopes
 import c3po.system.tasks as tasks
 
-lo_freq = 5.21e9 * 2 * np.pi
+shots = 500
+RB_number = 20
+RB_length = 40
+
+lo_freq = 5.202e9 * 2 * np.pi
 t_final = 4e-9
-buffer_time = 2e-9
-sim_res = 100e9
+buffer_time = 1e-9
+sim_res = 50e9
 awg_res = 2e9
+qubit_temp = 0.08
 
 lindblad = True
 qubit_lvls = 3
-rise_time = 0.3e-9  # exact because anyway it doesn't have a big effect
-v2hz = 1.0e9  # WRONG by 0.01Ghz
-freq = 5.21e9 * 2 * np.pi  # WRONG FREQ by 10MHz
-anhar = -305e6 * 2 * np.pi  # WRONG ANHAR by 5Mhz
-t1 = 25e-6
-t2star = 50e-6
-init_temp = 0.05
-meas_offset = -0.02
-meas_scale = 1.01
+rise_time = 0.0e-9
+v2hz = 1.01e9
+freq = 5.202e9 * 2 * np.pi
+anhar = -331e6 * 2 * np.pi
+t1 = 0.5e-6
+t2star = 3e-6
+init_temp = 0.0
+meas_offset = 0.0
+meas_scale = 1.00
 p_meas_0_as_0 = 1.0
-p_meas_1_as_0 = 0.01  # right
+p_meas_1_as_0 = 0.0
 p_meas_2_as_0 = 0.0
+
 
 
 def create_experiment():
@@ -43,26 +49,26 @@ def create_experiment():
         hilbert_dim=qubit_lvls,
         freq=Qty(
             value=freq,
-            min=5.18e9 * 2 * np.pi,
-            max=5.22e9 * 2 * np.pi,
+            min=5.19e9 * 2 * np.pi,
+            max=5.21e9 * 2 * np.pi,
             unit='rad'
         ),
         anhar=Qty(
             value=anhar,
-            min=-310e6 * 2 * np.pi,
-            max=-290e6 * 2 * np.pi,
+            min=-340e6 * 2 * np.pi,
+            max=-320e6 * 2 * np.pi,
             unit='rad'
         ),
         t1=Qty(
             value=t1,
-            min=15e-6,
-            max=35e-6,
+            min=0.01e-6,
+            max=100e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star,
-            min=40e-6,
-            max=60e-6,
+            min=0.01e-6,
+            max=100e-6,
             unit='s'
         ),
         temp=Qty(
@@ -82,6 +88,14 @@ def create_experiment():
     phys_components = [q1]
     line_components = [drive]
 
+    # if p_meas_1_as_0:
+    conf_matrix = tasks.ConfusionMatrix(
+        confusion_row=Qty(
+            value=[p_meas_0_as_0, p_meas_1_as_0, p_meas_2_as_0],
+            min=[0.95, 0.0, 0.0],
+            max=[1.0, 0.5, 0.5]
+        )
+    )
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
             value=init_temp,
@@ -98,21 +112,11 @@ def create_experiment():
         ),
         meas_scale=Qty(
             value=meas_scale,
-            min=0.9,
+            min=0.95,
             max=1.2
         )
     )
-    if p_meas_1_as_0:
-        conf_matrix = tasks.ConfusionMatrix(
-            confusion_row=Qty(
-                value=[p_meas_0_as_0, p_meas_1_as_0, p_meas_2_as_0],
-                min=[0.95, 0.0, 0.0],
-                max=[1.0, 0.5, 0.5]
-            )
-        )
-        task_list = [conf_matrix, init_ground, meas_rescale]
-    else:
-        task_list = [init_ground, meas_rescale]
+    task_list = [conf_matrix, init_ground, meas_rescale]
     model = Mdl(phys_components, line_components, task_list)
     model.set_lindbladian(lindblad)
 
@@ -144,7 +148,9 @@ def create_experiment():
             ),
             resolution=sim_res
         )
-    device_list = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
+        device_list = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
+    else:
+        device_list = [lo, awg, mixer, v_to_hz, dig_to_an]
     generator = Gnr(device_list)
     generator.devices['awg'].options = 'drag'
 
@@ -152,7 +158,7 @@ def create_experiment():
     gateset = gates.GateSet()
     gauss_params = {
         'amp': Qty(
-            value=0.5 * np.pi * 1e-9,
+            value=0.49 * np.pi * 1e-9,
             min=0.3 * np.pi * 1e-9,
             max=0.7 * np.pi * 1e-9,
         ),
@@ -176,14 +182,14 @@ def create_experiment():
         ),
         'freq_offset': Qty(
             value=0e6 * 2 * np.pi,
-            min=-100 * 1e6 * 2 * np.pi,
-            max=100 * 1e6 * 2 * np.pi,
+            min=-20 * 1e6 * 2 * np.pi,
+            max=20 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
-            value=0.5 / anhar,
-            min=1.5 / anhar,
-            max=0.0 / anhar
+            value=0.48 / anhar,
+            min=0.8 / anhar,
+            max=0.2 / anhar
         ),
     }
     gauss_env = pulse.Envelope(
@@ -237,5 +243,6 @@ def create_experiment():
     # ### MAKE EXPERIMENT
     exp = Exp(model=model, generator=generator, gateset=gateset)
     return exp
+
 
 # this comment allows me to collapse the def above

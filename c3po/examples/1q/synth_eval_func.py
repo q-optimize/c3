@@ -17,27 +17,32 @@ import c3po.utils.qt_utils as qt_utils
 
 shots = 500
 RB_number = 20
-RB_length = 35
+RB_length = 40
 
-lo_freq = 5.21e9 * 2 * np.pi
+shots = 500
+RB_number = 20
+RB_length = 40
+
+lo_freq = 5.202e9 * 2 * np.pi
 t_final = 4e-9
-buffer_time = 2e-9
-sim_res = 100e9
+buffer_time = 1e-9
+sim_res = 50e9
 awg_res = 2e9
+qubit_temp = 0.08
 
 lindblad = True
 qubit_lvls = 3
 rise_time = 0.3e-9
-v2hz = 1.01e9
+v2hz = 1.00e9
 freq = 5.20e9 * 2 * np.pi
-anhar = -300e6 * 2 * np.pi
-t1 = 25e-6
-t2star = 50e-6
-init_temp = 0.06
-meas_offset = -0.07
-meas_scale = 1.007
+anhar = -330e6 * 2 * np.pi
+t1 = 1e-6
+t2star = 2e-6
+init_temp = 0.08
+meas_offset = -0.03
+meas_scale = 1.04
 p_meas_0_as_0 = 1.0
-p_meas_1_as_0 = 0.01
+p_meas_1_as_0 = 0.0
 p_meas_2_as_0 = 0.0
 
 
@@ -62,14 +67,14 @@ def create_experiment():
         ),
         t1=Qty(
             value=t1,
-            min=1e-6,
-            max=90e-6,
+            min=0.01e-6,
+            max=100e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star,
-            min=10e-6,
-            max=90e-6,
+            min=0.01e-6,
+            max=100e-6,
             unit='s'
         ),
         temp=Qty(
@@ -89,6 +94,14 @@ def create_experiment():
     phys_components = [q1]
     line_components = [drive]
 
+    # if p_meas_1_as_0:
+    conf_matrix = tasks.ConfusionMatrix(
+        confusion_row=Qty(
+            value=[p_meas_0_as_0, p_meas_1_as_0, p_meas_2_as_0],
+            min=[0.95, 0.0, 0.0],
+            max=[1.0, 0.5, 0.5]
+        )
+    )
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
             value=init_temp,
@@ -105,21 +118,11 @@ def create_experiment():
         ),
         meas_scale=Qty(
             value=meas_scale,
-            min=0.9,
+            min=0.95,
             max=1.2
         )
     )
-    if p_meas_1_as_0:
-        conf_matrix = tasks.ConfusionMatrix(
-            confusion_row=Qty(
-                value=[p_meas_0_as_0, p_meas_1_as_0, p_meas_2_as_0],
-                min=[0.95, 0.0, 0.0],
-                max=[1.0, 0.5, 0.5]
-            )
-        )
-        task_list = [conf_matrix, init_ground, meas_rescale]
-    else:
-        task_list = [init_ground, meas_rescale]
+    task_list = [conf_matrix, init_ground, meas_rescale]
     model = Mdl(phys_components, line_components, task_list)
     model.set_lindbladian(lindblad)
 
@@ -159,7 +162,7 @@ def create_experiment():
     gateset = gates.GateSet()
     gauss_params = {
         'amp': Qty(
-            value=0.5 * np.pi * 1e-9,
+            value=0.49 * np.pi * 1e-9,
             min=0.3 * np.pi * 1e-9,
             max=0.7 * np.pi * 1e-9,
         ),
@@ -183,14 +186,14 @@ def create_experiment():
         ),
         'freq_offset': Qty(
             value=0e6 * 2 * np.pi,
-            min=-100 * 1e6 * 2 * np.pi,
-            max=100 * 1e6 * 2 * np.pi,
+            min=-20 * 1e6 * 2 * np.pi,
+            max=20 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
-            value=0.5 / anhar,
-            min=1.5 / anhar,
-            max=0.0 / anhar
+            value=0.48 / anhar,
+            min=0.8 / anhar,
+            max=0.2 / anhar
         ),
     }
     gauss_env = pulse.Envelope(
