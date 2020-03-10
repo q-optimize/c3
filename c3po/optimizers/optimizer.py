@@ -13,7 +13,7 @@ class Optimizer:
     def __init__(
         self,
         algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm_with_grad=None
     ):
         self.optim_status = {}
         self.gradients = {}
