@@ -1,5 +1,6 @@
 """Experiment class that models the whole experiment."""
 
+import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -233,17 +234,14 @@ class Experiment:
         self.ts = ts
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
-        if self.enable_plots:
-            psi_init = self.model.tasks["init_ground"].initialise(
-                self.model.drift_H,
-                self.model.lindbladian
-            )
-            self.plot_dynamics(psi_init, [gate])
         return U
 
     def set_enable_plots(self, flag, logdir):
         self.enable_plots = flag
         self.logdir = logdir
+        os.mkdir(self.logdir + "dynamics/")
+        self.plot_counter = 0
+
 
     def plot_dynamics(self, psi_init, seq):
         # TODO double check if it works well
@@ -257,44 +255,44 @@ class Experiment:
                 pops = self.populations(psi_t, self.model.lindbladian)
                 pop_t = np.append(pop_t, pops, axis=1)
             if self.model.use_FR:
-                # instr = self.gateset.instructions[gate]
-                # signal, ts = self.generator.generate_signals(instr)
-                # # TODO change LO freq to at the level of a line
-                # freqs = {}
-                # framechanges = {}
-                # for line, ctrls in instr.comps.items():
-                #     if gate == "QId":
-                #         offset = 0.0
-                #     elif "freq_offset" in ctrls['gauss'].params:
-                #         offset = ctrls['gauss'].params['freq_offset'].get_value()
-                #     else:
-                #         offset = 0.0
-                #
-                #     freqs[line] = tf.cast(
-                #         ctrls['carrier'].params['freq'].get_value()
-                #         + offset,
-                #         tf.complex128
-                #     )
-                #     framechanges[line] = tf.cast(
-                #         ctrls['carrier'].params['framechange'].get_value(),
-                #         tf.complex128
-                #     )
-                # t_final = tf.constant(
-                #     instr.t_end - instr.t_start,
-                #     dtype=tf.complex128
-                # )
-                # FR = self.model.get_Frame_Rotation(
-                #     t_final,
-                #     freqs,
-                #     framechanges
-                # )
-                # if self.model.lindbladian:
-                #     SFR = tf_utils.tf_super(FR)
-                #     U = tf.matmul(SFR, U)
-                #     self.FR = SFR
-                # else:
-                #     U = tf.matmul(FR, U)
-                #     self.FR = FR
+                instr = self.gateset.instructions[gate]
+                signal, ts = self.generator.generate_signals(instr)
+                # TODO change LO freq to at the level of a line
+                freqs = {}
+                framechanges = {}
+                for line, ctrls in instr.comps.items():
+                    if gate == "QId":
+                        offset = 0.0
+                    elif "freq_offset" in ctrls['gauss'].params:
+                        offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    else:
+                        offset = 0.0
+
+                    freqs[line] = tf.cast(
+                        ctrls['carrier'].params['freq'].get_value()
+                        + offset,
+                        tf.complex128
+                    )
+                    framechanges[line] = tf.cast(
+                        ctrls['carrier'].params['framechange'].get_value(),
+                        tf.complex128
+                    )
+                t_final = tf.constant(
+                    instr.t_end - instr.t_start,
+                    dtype=tf.complex128
+                )
+                FR = self.model.get_Frame_Rotation(
+                    t_final,
+                    freqs,
+                    framechanges
+                )
+                if self.model.lindbladian:
+                    SFR = tf_utils.tf_super(FR)
+                    U = tf.matmul(SFR, U)
+                    self.FR = SFR
+                else:
+                    U = tf.matmul(FR, U)
+                    self.FR = FR
                 psi_t = tf.matmul(self.FR, psi_t)
 
         fig, axs = plt.subplots(1, 1)
@@ -305,9 +303,10 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
+        plt.savefig(
+            self.logdir+f"dynamics/eval{self.plot_counter}_{seq[0]}.png", dpi=300
+        )
 
-        plt.show()
-        return fig, axs
 
     def populations(self, state, lindbladian):
         if lindbladian:

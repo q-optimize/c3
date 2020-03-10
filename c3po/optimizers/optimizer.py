@@ -73,6 +73,14 @@ class Optimizer:
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
+            if self.exp.enable_plots:
+                psi_init = self.exp.model.tasks["init_ground"].initialise(
+                    self.exp.model.drift_H,
+                    self.exp.model.lindbladian
+                )
+                for gate in self.exp.dUs.keys():
+                    self.exp.plot_dynamics(psi_init, [gate])
+                self.exp.plot_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             # logfile.write(json.dumps(self.optim_status, indent=2))
