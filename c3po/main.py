@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """Base run for c3 code."""
 
-# TODO Combine the runners into one
-
 
 import json
 import pickle
