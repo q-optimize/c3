@@ -381,6 +381,17 @@ def tf_ave(x: list):
     return tf.add_n(x)/len(x)
 
 
+def tf_diff(l):
+    """
+    Running difference of the input list l. Equivalent to np.diff, except it
+    returns the same shape by adding a 0 in the last entry.
+    """
+    dim = l.shape[0] - 1
+    diagonal = tf.constant([-1] * dim + [0], dtype=l.dtype)
+    offdiagonal = tf.constant([1] * dim, dtype=l.dtype)
+    proj = tf.linalg.diag(diagonal) + tf.linalg.diag(offdiagonal, k=1)
+    return tf.linalg.matvec(proj, l)
+
 # MATRIX FUNCTIONS
 @tf.function
 def tf_expm(A, terms):

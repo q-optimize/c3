@@ -5,6 +5,8 @@ import numpy as np
 import tensorflow as tf
 from c3po.libraries.hamiltonians import resonator, duffing
 from c3po.libraries.constants import kb, hbar
+from c3po.utils.tf_utils import tf_diff
+from c3po.utils.qt_utils import hilbert_space_kron as hskron
 from c3po.c3objs import C3obj
 
 
@@ -26,6 +28,9 @@ class PhysicalComponent(C3obj):
         self.hilbert_dim = hilbert_dim
         self.Hs = {}
         self.collapse_ops = {}
+
+    def set_subspace_index(self, index):
+        self.index = index
 
 
 class Qubit(PhysicalComponent):
@@ -105,7 +110,7 @@ class Qubit(PhysicalComponent):
             ann_oper
         )
 
-    def get_Lindbladian(self):
+    def get_Lindbladian(self, dims):
         Ls = []
         if 't1' in self.params:
             t1 = self.params['t1'].get_value()
@@ -113,23 +118,21 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops['t1']
             Ls.append(L)
             if 'temp' in self.params:
-                # NICO: I don't really understand what is supposed to happen
-                # here? For detailed balance, can't we use the Hamiltonian?
-                # if self.hilbert_dim > 2:
-                #     freq_diff = np.array(
-                #         [(self.params['freq'].get_value()
-                #           + n*self.params['anhar'].get_value())
-                #             for n in range(self.hilbert_dim)]
-                #     )
-                # else:
-                #     freq_diff = np.array(
-                #         [self.params['freq'].get_value(), 0]
-                #     )
-                freq_diff, _ = tf.linalg.eig(self.get_Hamiltonian())
-
+                if self.hilbert_dim > 2:
+                    freq_diff = np.array(
+                        [(self.params['freq'].get_value()
+                          + n*self.params['anhar'].get_value())
+                            for n in range(self.hilbert_dim)]
+                    )
+                else:
+                    freq_diff = np.array(
+                        [self.params['freq'].get_value(), 0]
+                    )
                 beta = 1 / (self.params['temp'].get_value() * kb)
                 det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
-                det_bal_mat = tf.linalg.tensor_diag(det_bal)
+                det_bal_mat = hskron(
+                    tf.linalg.tensor_diag(det_bal), self.index, dims
+                )
                 L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
                 Ls.append(L)
         if 't2star' in self.params:
@@ -236,10 +239,7 @@ class Coupling(LineComponent):
         self.hamiltonian_func = hamiltonian_func
         self.params['strength'] = strength
 
-    def init_Hs(self, ann_opers):
-        opers_list = [
-            ann_opers[conn_comp] for conn_comp in self.connected
-        ]
+    def init_Hs(self, opers_list):
         self.Hs['strength'] = tf.constant(
             self.hamiltonian_func(opers_list), dtype=tf.complex128
         )
@@ -277,12 +277,12 @@ class Drive(LineComponent):
             )
         self.hamiltonian_func = hamiltonian_func
 
-    def init_Hs(self, ann_opers: dict):
+    def init_Hs(self, ann_opers: list):
         hs = []
-        for key in self.connected:
+        for a in ann_opers:
             hs.append(
                 tf.constant(
-                    self.hamiltonian_func(ann_opers[key]), dtype=tf.complex128
+                    self.hamiltonian_func(a), dtype=tf.complex128
                 )
             )
         self.h = sum(hs)

@@ -68,7 +68,8 @@ def unitary_infid(U_dict: dict, gate: str, proj: bool):
     return infid
 
 
-def lindbladian_unitary_infid(U_dict: dict, gate: str, proj: bool):
+def lindbladian_unitary_infid(
+        U_dict: dict, gate: str, index, dims, proj: bool):
     # Here we deal with the projected case differently because it's not easy
     # to select the right section of the superoper
     U = U_dict[gate]
@@ -81,7 +82,7 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, proj: bool):
         fid_lvls = 2 * num_gates
     U_ideal = tf_super(
                tf.constant(
-                    perfect_gate(lvls, gate, projection),
+                    perfect_gate(gate, index, dims,  projection),
                     dtype=tf.complex128
                     )
                )
@@ -106,22 +107,22 @@ def average_infid(U_dict: dict, gate: str, proj: bool):
     return infid
 
 
-def lindbladian_average_infid(U_dict: dict, gate: str, proj: bool):
+def lindbladian_average_infid(
+        U_dict: dict, gate: str, index, dims, proj: bool
+):
     U = U_dict[gate]
     projection = 'fulluni'
     num_gates = len(gate.split(':'))
-    lvls = int(np.sqrt(U.shape[0]) ** (1/num_gates))
-    fid_lvls = lvls
     if proj:
         projection = 'wzeros'
         fid_lvls = 2 * num_gates
     U_ideal = tf_super(
                tf.constant(
-                    perfect_gate(lvls, gate, projection),
+                    perfect_gate(gate, index, dims, projection),
                     dtype=tf.complex128
                     )
                )
-    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
+    infid = 1 - tf_superoper_average_fidelity(U, U_ideal)
     return infid
 
 

@@ -18,6 +18,42 @@ Z = np.array([[1, 0],
              dtype=np.complex128)
 
 
+# MATH HELPERS
+def np_kron_n(mat_list):
+    tmp = mat_list[0]
+    for m in mat_list[1:]:
+        tmp = np.kron(tmp, m)
+    return tmp
+
+
+def hilbert_space_kron(op, indx, dims):
+    """
+    Extend an operator op on subspace indx to the full product hilbert space
+    given by dimensions in dims.
+    """
+    op_list = []
+    for indy in range(len(dims)):
+        qI = np.identity(dims[indy])
+        if indy == indx:
+            op_list.append(op)
+        else:
+            op_list.append(qI)
+    if indx > len(dims) - 1:
+        raise Warning(
+            f"Index {indx} is outside the Hilbert space dimensions {dims}. "
+        )
+    return(np_kron_n(op_list))
+
+def hilbert_space_dekron(op, indx, dims):
+    """
+    Partial trace of an operator to return equivalent subspace operator.
+    Inverse of hilbert_space_kron.
+    """
+    # TODO Partial trace, reducing operators and states to subspace.
+    pass
+
+
+
 def rotation(phase, xyz):
     """General Rotation."""
     rot = np.cos(phase/2) * Id - \
@@ -62,12 +98,15 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
-def perfect_gate(lvls: int, gates_str: str, proj: str = 'wzeros'):
+def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
+    kron_list = []
+    for dim in dims:
+        kron_list.append(np.eye(dim))
     kron_gate = 1
+    gate_num = 0
     for gate_str in gates_str.split(":"):
-        if gate_str == 'Id':
-            gate = Id
-        elif gate_str == 'X90p':
+        lvls = dims[index[gate_num]]
+        if gate_str == 'X90p':
             gate = X90p
         elif gate_str == 'X90m':
             gate = X90m
@@ -98,8 +137,9 @@ def perfect_gate(lvls: int, gates_str: str, proj: str = 'wzeros'):
         elif proj == 'fulluni':
             identity = np.eye(lvls - 2)
             gate = scipy_block_diag(gate, identity)
-        kron_gate = np.kron(kron_gate, gate)
-    return kron_gate
+        kron_list[index[gate_num]] = gate
+        gate_num += 1
+    return np_kron_n(kron_list)
 
 
 def perfect_CZ(lvls: int, proj: str = 'wzeros'):

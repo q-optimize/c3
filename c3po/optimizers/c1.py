@@ -15,6 +15,7 @@ class C1(Optimizer):
         self,
         dir_path,
         fid_func,
+        fid_subspace,
         gateset_opt_map,
         callback_fids=[],
         algorithm_no_grad=None,
@@ -28,6 +29,7 @@ class C1(Optimizer):
             )
         self.opt_map = gateset_opt_map
         self.fid_func = fid_func
+        self.fid_subspace = fid_subspace
         self.callback_fids = callback_fids
         self.options = options
         self.log_setup(dir_path)
@@ -58,6 +60,10 @@ class C1(Optimizer):
         self.start_log()
         self.nice_print = self.exp.gateset.print_parameters
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        index = []
+        for name in self.fid_subspace:
+            index.append(self.exp.model.names.index(name))
+        self.index = index
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -87,8 +93,9 @@ class C1(Optimizer):
             self.opt_map,
             scaled=True
         )
+        dims = self.exp.model.dims
         U_dict = self.exp.get_gates()
-        goal = self.fid_func(U_dict)
+        goal = self.fid_func(U_dict, self.index, dims)
         goal_numpy = float(goal.numpy())
         display.plot_C1(self.logdir)
 

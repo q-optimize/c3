@@ -4,8 +4,8 @@ import numpy as np
 import itertools
 import tensorflow as tf
 import c3po.utils.tf_utils as tf_utils
+import c3po.utils.qt_utils as qt_utils
 from c3po.system.chip import Drive, Coupling
-
 
 class Model:
     """
@@ -45,7 +45,7 @@ class Model:
         for comp in couplings:
             self.couplings[comp.name] = comp
 
-        # Construct array with dimension of comps (only qubits & resonators)
+        # HILBERT SPACE
         dims = []
         names = []
         state_labels = []
@@ -54,35 +54,35 @@ class Model:
             names.append(subs.name)
             state_labels.append(list(range(subs.hilbert_dim)))
         self.tot_dim = np.prod(dims)
-
+        self.names = names
         self.state_labels = list(itertools.product(*state_labels))
 
         # Create anninhilation operators for physical comps
         ann_opers = []
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
-            for indy in range(len(dims)):
-                qI = np.identity(dims[indy])
-                if indy < indx:
-                    a = np.kron(qI, a)
-                if indy > indx:
-                    a = np.kron(a, qI)
-            ann_opers.append(a)
+            ann_opers.append(
+                qt_utils.hilbert_space_kron(a, indx, dims)
+            )
 
-        self.dims = {}
-        self.ann_opers = {}
-        for indx in range(len(dims)):
-            self.dims[names[indx]] = dims[indx]
-            self.ann_opers[names[indx]] = ann_opers[indx]
+        self.dims = dims
+        self.ann_opers = ann_opers
 
         # Create drift Hamiltonian matrices and model parameter vector
+        indx = 0
         for subs in subsystems:
-            ann_oper = self.ann_opers[subs.name]
-            subs.init_Hs(ann_oper)
-            subs.init_Ls(ann_oper)
+            subs.init_Hs(ann_opers[indx])
+            subs.init_Ls(ann_opers[indx])
+            subs.set_subspace_index(indx)
+            indx += 1
 
         for line in couplings:
-            line.init_Hs(self.ann_opers)
+            conn = line.connected
+            opers_list = []
+            for sub in conn:
+                indx = names.index(sub)
+                opers_list.append(self.ann_opers[indx])
+            line.init_Hs(opers_list)
 
         self.update_model()
 
@@ -131,7 +131,8 @@ class Model:
 
     def update_Hamiltonians(self):
         control_Hs = {}
-        drift_H = tf.zeros([self.tot_dim, self.tot_dim], dtype=tf.complex128)
+        tot_dim = self.tot_dim
+        drift_H = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
         for sub in self.subsystems.values():
             drift_H += sub.get_Hamiltonian()
         for key, line in self.couplings.items():
@@ -146,7 +147,7 @@ class Model:
         """Return Lindbladian operators and their prefactors."""
         col_ops = []
         for subs in self.subsystems.values():
-            col_ops.append(subs.get_Lindbladian())
+            col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
     def update_drift_eigen(self, ordered=True):
@@ -196,14 +197,17 @@ class Model:
         freqs: dict,
         framechanges: dict
     ):
-        ones = tf.ones(self.tot_dim, dtype=tf.complex128)
+        tot_dim = self.tot_dim
+        ones = tf.ones(tot_dim, dtype=tf.complex128)
         FR = tf.linalg.diag(ones)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
-            ann_oper = self.ann_opers[qubit]
+            ann_oper = self.ann_opers[
+                self.names.index(qubit)
+            ]
             num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
@@ -224,7 +228,8 @@ class Model:
         pass
 
     def get_dephasing_channel(self, t_final, amps):
-        ones = tf.ones(self.tot_dim, dtype=tf.complex128)
+        tot_dim = self.tot_dim
+        ones = tf.ones(tot_dim, dtype=tf.complex128)
         Id = tf_utils.tf_super(tf.linalg.diag(ones))
         deph_ch = Id
         for line in amps.keys():

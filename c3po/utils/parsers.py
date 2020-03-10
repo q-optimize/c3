@@ -32,8 +32,10 @@ def create_c1_opt(optimizer_config):
         return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', proj=True)
     def unit_Y90p(U_dict):
         return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
-    def lind_avfid_X90p(U_dict):
-        return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+    def lind_avfid_X90p(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'X90p', index, dims, proj=True
+        )
     def avfid_X90p(U_dict):
         return fidelities.average_infid(U_dict, 'X90p', proj=True)
     def lind_epc_ana(U_dict):
@@ -75,6 +77,7 @@ def create_c1_opt(optimizer_config):
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
+        fid_subspace=cfg['fid_subspace'],
         gateset_opt_map=gateset_opt_map,
         callback_fids=callback_fids,
         algorithm_no_grad=algorithm_no_grad,

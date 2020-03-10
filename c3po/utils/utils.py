@@ -2,7 +2,7 @@ import time
 import os
 import numpy as np
 
-
+# SYSTEM AND SETUP
 def log_setup(data_path, run_name=None):
     # TODO make this plattform agnostic, i.e. work with Windows(tm)
     # TODO Add the name to fhe folder
@@ -31,6 +31,7 @@ def replace_symlink(path, alias):
     os.symlink(path, alias)
 
 
+# NICE PRINTNG FUNCTIONS
 def eng_num(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'mu', 'n', 'p', 'f', 'a', 'z']
@@ -61,6 +62,7 @@ def num3str(val):
     return ret
 
 
+# USER INTERACTION
 def ask_yn():
     asking = True
     text = input("(y/n): ")
@@ -79,3 +81,5 @@ def ask_yn():
             asking = False
             boolean = False
     return boolean
+
+
