@@ -72,6 +72,8 @@ def create_c1_opt(optimizer_config):
     options = {}
     if 'options' in cfg:
         options = cfg['options']
+    if 'plot_dynamics' in cfg:
+        plot_dynamics = cfg['plot_dynamics']
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
@@ -79,6 +81,7 @@ def create_c1_opt(optimizer_config):
         callback_fids=callback_fids,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
+        plot_dynamics=plot_dynamics,
         options=options
     )
     return opt
