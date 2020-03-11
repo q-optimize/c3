@@ -13,12 +13,16 @@ class Optimizer:
     def __init__(
         self,
         algorithm_no_grad=None,
-        algorithm_with_grad=None
+        algorithm_with_grad=None,
+        plot_dynamics=False,
+        plot_pulses=False
     ):
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
         self.evaluation = 0
+        self.plot_dynamics = plot_dynamics
+        self.plot_pulses = plot_pulses
         if algorithm_with_grad:
             self.algorithm = algorithm_with_grad
             self.grad = True
@@ -73,14 +77,23 @@ class Optimizer:
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
-            if self.exp.enable_plots:
+            if self.plot_dynamics:
                 psi_init = self.exp.model.tasks["init_ground"].initialise(
                     self.exp.model.drift_H,
                     self.exp.model.lindbladian
                 )
                 for gate in self.exp.dUs.keys():
                     self.exp.plot_dynamics(psi_init, [gate])
-                self.exp.plot_counter += 1
+                self.exp.dynamics_plot_counter += 1
+            if self.plot_pulses:
+                psi_init = self.exp.model.tasks["init_ground"].initialise(
+                    self.exp.model.drift_H,
+                    self.exp.model.lindbladian
+                )
+                for gate in self.exp.gateset.instructions.keys():
+                    instr = self.exp.gateset.instructions[gate]
+                    self.exp.plot_pulses(instr)
+                self.exp.pulses_plot_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             # logfile.write(json.dumps(self.optim_status, indent=2))
