@@ -112,17 +112,19 @@ def lindbladian_average_infid(
 ):
     U = U_dict[gate]
     projection = 'fulluni'
-    num_gates = len(gate.split(':'))
+    fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * num_gates
+        fid_lvls = 2 * len(index)
     U_ideal = tf_super(
                tf.constant(
                     perfect_gate(gate, index, dims, projection),
                     dtype=tf.complex128
                     )
                )
-    infid = 1 - tf_superoper_average_fidelity(U, U_ideal)
+    print(U)
+    print(U_ideal)
+    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
