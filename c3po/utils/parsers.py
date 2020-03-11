@@ -76,6 +76,8 @@ def create_c1_opt(optimizer_config):
         options = cfg['options']
     if 'plot_dynamics' in cfg:
         plot_dynamics = cfg['plot_dynamics']
+    else:
+        plot_dynamics = False
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
