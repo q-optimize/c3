@@ -98,6 +98,7 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
+
 def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
     # TODO index for now unused
     kron_list = []
@@ -108,7 +109,9 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
     # Note that the gates_str has to be explicit for all subspaces (and ordered)
     for gate_str in gates_str.split(":"):
         lvls = dims[gate_num]
-        if gate_str == 'X90p':
+        if gate_str == 'Id':
+            gate = Id
+        elif gate_str == 'X90p':
             gate = X90p
         elif gate_str == 'X90m':
             gate = X90m
@@ -127,9 +130,9 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
         elif gate_str == 'Zp':
             gate = Zp
         elif gate_str == 'CNOT':
-            NOT = perfect_gate('Xp', index, [lvls], proj)
+            NOT = 1j*perfect_gate('Xp', index, [lvls], proj)
             C = perfect_gate('Id', index, [lvls], proj)
-            cnot = scipy_block_diag(C, NOT)
+            gate = scipy_block_diag(C, NOT)
             gate_num += 1
             # We increase gate_num since CNOT is a two qubit gate
             lvls2 = dims[gate_num]
@@ -138,10 +141,10 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
                     pass
                 elif proj == 'wzeros':
                     zeros = np.zeros([lvls, lvls])
-                    cnot = scipy_block_diag(cnot, zeros)
+                    gate = scipy_block_diag(gate, zeros)
                 elif proj == 'fulluni':
                     identity = np.eye(lvls)
-                    cnot = scipy_block_diag(cnot, identity)
+                    gate = scipy_block_diag(gate, identity)
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
@@ -221,6 +224,7 @@ C21 = Y90p @ X90m
 C22 = Y90p
 C23 = Y90p @ Y90p @ X90m
 C24 = X90m @ Y90p @ X90p
+
 
 def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
     # TODO make perfect clifford more general by making it take a decomposition

@@ -108,7 +108,7 @@ def average_infid(U_dict: dict, gate: str, proj: bool):
 
 
 def lindbladian_average_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj: bool
 ):
     U = U_dict[gate]
     projection = 'fulluni'
@@ -122,8 +122,6 @@ def lindbladian_average_infid(
                     dtype=tf.complex128
                     )
                )
-    # print(U)
-    # print(U_ideal)
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 

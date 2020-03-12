@@ -294,13 +294,8 @@ class Experiment:
                     framechanges
                 )
                 if self.model.lindbladian:
-                    SFR = tf_utils.tf_super(FR)
-                    U = tf.matmul(SFR, U)
-                    self.FR = SFR
-                else:
-                    U = tf.matmul(FR, U)
-                    self.FR = FR
-                psi_t = tf.matmul(self.FR, psi_t)
+                    FR = tf_utils.tf_super(FR)
+                psi_t = tf.matmul(FR, psi_t)
 
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
