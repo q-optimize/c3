@@ -579,7 +579,6 @@ def tf_average_fidelity(A, B, lvls=None):
 def tf_superoper_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     lambda_super = tf.matmul(tf.linalg.adjoint(A), B)
     # get to choi decomposition
     lambda_choi = super_to_choi(lambda_super)
