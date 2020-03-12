@@ -130,6 +130,7 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
         elif gate_str == 'Zp':
             gate = Zp
         elif gate_str == 'CNOT':
+            # TODO: Fix the ideal CNOT construction.
             NOT = 1j*perfect_gate('Xp', index, [lvls], proj)
             C = perfect_gate('Id', index, [lvls], proj)
             gate = scipy_block_diag(C, NOT)
