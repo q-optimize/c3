@@ -21,12 +21,15 @@ class C1(Optimizer):
         algorithm_no_grad=None,
         algorithm_with_grad=None,
         plot_dynamics=False,
+        plot_pulses=False,
         options={}
     ):
         """Initiliase."""
         super().__init__(
             algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=algorithm_with_grad
+            algorithm_with_grad=algorithm_with_grad,
+            plot_dynamics=plot_dynamics,
+            plot_pulses=plot_pulses
             )
         self.opt_map = gateset_opt_map
         self.fid_func = fid_func
@@ -34,7 +37,6 @@ class C1(Optimizer):
         self.callback_fids = callback_fids
         self.options = options
         self.log_setup(dir_path)
-        self.plot_dynamics = plot_dynamics
 
 
     def log_setup(self, dir_path):
@@ -61,7 +63,8 @@ class C1(Optimizer):
         Apply a search algorightm to your gateset given a fidelity function.
         """
         self.start_log()
-        self.exp.set_enable_plots(self.plot_dynamics, self.logdir)
+        self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
+        self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.nice_print = self.exp.gateset.print_parameters
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         index = []

@@ -236,12 +236,19 @@ class Experiment:
         self.U = U
         return U
 
-    def set_enable_plots(self, flag, logdir):
-        self.enable_plots = flag
+    def set_enable_dynamics_plots(self, flag, logdir):
+        self.enable_dynamics_plots = flag
         self.logdir = logdir
-        os.mkdir(self.logdir + "dynamics/")
-        self.plot_counter = 0
+        if self.enable_dynamics_plots:
+            os.mkdir(self.logdir + "dynamics/")
+            self.dynamics_plot_counter = 0
 
+    def set_enable_pules_plots(self, flag, logdir):
+        self.enable_pulses_plots = flag
+        self.logdir = logdir
+        if self.enable_pulses_plots:
+            os.mkdir(self.logdir + "pulses/")
+            self.pulses_plot_counter = 0
 
     def plot_dynamics(self, psi_init, seq):
         # TODO double check if it works well
@@ -304,7 +311,110 @@ class Experiment:
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         plt.savefig(
-            self.logdir+f"dynamics/eval{self.plot_counter}_{seq[0]}.png", dpi=300
+            self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
+        )
+
+    def plot_pulses(self, instr):
+        # print(instr.name)
+        # print(instr.comps)
+        # print(self.generator.devices)
+        signal, ts = self.generator.generate_signals(instr)
+        awg = self.generator.devices["awg"]
+        awg_ts = awg.ts
+        inphase = awg.signal["inphase"]
+        quadrature = awg.signal["quadrature"]
+
+        if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/"):
+            os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/")
+        os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/" + str(instr.name) + "/")
+
+        fig, axs = plt.subplots(1, 1)
+        # ts = self.ts
+        # dt = ts[1] - ts[0]
+        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+        axs.plot(awg_ts / 1e-9, inphase/1e-3)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Pulse amplitude[mV]')
+        plt.savefig(
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_inphase_{list(instr.comps.keys())}.png", dpi=300
+        )
+
+        fig, axs = plt.subplots(1, 1)
+        axs.plot(awg_ts / 1e-9, quadrature/1e-3)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Pulse amplitude[mV]')
+        plt.savefig(
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_quadrature_{list(instr.comps.keys())}.png", dpi=300
+        )
+
+        dac = self.generator.devices["dac"]
+        dac_ts = dac.ts
+        inphase = dac.signal["inphase"]
+        quadrature = dac.signal["quadrature"]
+
+        fig, axs = plt.subplots(1, 1)
+        # ts = self.ts
+        # dt = ts[1] - ts[0]
+        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+        axs.plot(dac_ts / 1e-9, inphase/1e-3)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Pulse amplitude[mV]')
+        plt.savefig(
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/dac_inphase_{list(instr.comps.keys())}.png", dpi=300
+        )
+
+        fig, axs = plt.subplots(1, 1)
+        axs.plot(dac_ts / 1e-9, quadrature/1e-3)
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('Pulse amplitude[mV]')
+        plt.savefig(
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
+        )
+
+        if "resp" in self.generator.devices:
+            resp = self.generator.devices["resp"]
+            resp_ts = dac_ts
+            inphase = resp.signal["inphase"]
+            quadrature = resp.signal["quadrature"]
+
+            fig, axs = plt.subplots(1, 1)
+            # ts = self.ts
+            # dt = ts[1] - ts[0]
+            # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+            axs.plot(resp_ts / 1e-9, inphase/1e-3)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_inphase_{list(instr.comps.keys())}.png", dpi=300
+            )
+
+            fig, axs = plt.subplots(1, 1)
+            axs.plot(resp_ts / 1e-9, quadrature/1e-3)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
+            )
+
+
+
+        fig, axs = plt.subplots(1, 1)
+        # ts = self.ts
+        # dt = ts[1] - ts[0]
+        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+        axs.plot(ts / 1e-9, signal["d1"]["values"])
+        axs.grid()
+        axs.set_xlabel('Time [ns]')
+        axs.set_ylabel('signal')
+        d1 = "d1"
+        plt.savefig(
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
         )
 
 

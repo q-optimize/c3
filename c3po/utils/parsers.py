@@ -75,9 +75,23 @@ def create_c1_opt(optimizer_config):
     if 'options' in cfg:
         options = cfg['options']
     if 'plot_dynamics' in cfg:
-        plot_dynamics = cfg['plot_dynamics']
+        if cfg['plot_dynamics'] == "False":
+            plot_dynamics = False
+        elif cfg['plot_dynamics'] == "True":
+            plot_dynamics = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         plot_dynamics = False
+    if 'plot_pulses' in cfg:
+        if cfg['plot_pulses'] == "False":
+            plot_pulses = False
+        elif cfg['plot_pulses'] == "True":
+            plot_pulses = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_pulses'"))
+    else:
+        plot_pulses = False
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
@@ -87,6 +101,7 @@ def create_c1_opt(optimizer_config):
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
         plot_dynamics=plot_dynamics,
+        plot_pulses=plot_pulses,
         options=options
     )
     return opt

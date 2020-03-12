@@ -153,6 +153,9 @@ class Digital_to_Analog(Device):
             resolution=resolution
         )
 
+        self.signal = {}
+        self.ts = None
+
     def resample(self, awg_signal, t_start, t_end):
         """Resample the awg values to higher resolution."""
         ts = self.create_ts(t_start, t_end, centered=True)
@@ -174,6 +177,9 @@ class Digital_to_Analog(Device):
                             size=[1, new_dim],
                             method='nearest'),
                         shape=[new_dim])
+        self.ts = ts
+        self.signal['inphase'] = inphase
+        self.signal['quadrature'] = quadrature
         return {"inphase": inphase, "quadrature": quadrature}
 
 
