@@ -115,7 +115,13 @@ def create_experiment():
         desc="coupling",
         comment="Coupling qubit 1 to qubit 2",
         connected=["Q1", "Q2"],
-        hamiltonian_func=hamiltonians.int_XX
+        hamiltonian_func=hamiltonians.int_XX,
+        strength=Qty(
+            value=1e6 * 2 * np.pi,
+            min=0.0,
+            max=100 * 1e6 * 2 * np.pi,
+            unit='Hz'
+        )
     )
 
     drive = chip.Drive(
@@ -137,12 +143,12 @@ def create_experiment():
     max = one_zeros * 1.0 + zero_ones * 0.05
     confusion_row = Qty(value=val, min=min, max=max)
     meas_offset = Qty(
-        value=meas_offset,
+        value=meas_offset + meas_off_error,
         min=-0.1,
         max=0.05
     )
     meas_scale = Qty(
-        value=meas_scale,
+        value=meas_scale + meas_scl_error,
         min=0.9,
         max=1.2
     )
@@ -156,8 +162,8 @@ def create_experiment():
         )
     )
     meas_rescale = tasks.MeasurementRescale(
-        meas_offset=meas_offset + meas_off_error,
-        meas_scale=meas_scale + meas_scl_error
+        meas_offset=meas_offset,
+        meas_scale=meas_scale
     )
     task_list = [conf_matrix, init_ground, meas_rescale]
     model = Mdl(phys_components, line_components, task_list)
