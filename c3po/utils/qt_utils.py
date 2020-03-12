@@ -98,14 +98,16 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
-def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
+def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
+    # TODO index for now unused
     kron_list = []
-    for dim in dims:
-        kron_list.append(np.eye(dim))
+    # for dim in dims:
+    #     kron_list.append(np.eye(dim))
     kron_gate = 1
     gate_num = 0
+    # Note that the gates_str has to be explicit for all subspaces (and ordered)
     for gate_str in gates_str.split(":"):
-        lvls = dims[index[gate_num]]
+        lvls = dims[gate_num]
         if gate_str == 'X90p':
             gate = X90p
         elif gate_str == 'X90m':
@@ -124,6 +126,22 @@ def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
             gate = Z90m
         elif gate_str == 'Zp':
             gate = Zp
+        elif gate_str == 'CNOT':
+            NOT = perfect_gate('Xp', index, [lvls], proj)
+            C = perfect_gate('Id', index, [lvls], proj)
+            cnot = scipy_block_diag(C, NOT)
+            gate_num += 1
+            # We increase gate_num since CNOT is a two qubit gate
+            lvls2 = dims[gate_num]
+            for ii in range(2, lvls2):
+                if proj == 'compsub':
+                    pass
+                elif proj == 'wzeros':
+                    zeros = np.zeros([lvls, lvls])
+                    cnot = scipy_block_diag(cnot, zeros)
+                elif proj == 'fulluni':
+                    identity = np.eye(lvls)
+                    cnot = scipy_block_diag(cnot, identity)
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
@@ -137,7 +155,7 @@ def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
         elif proj == 'fulluni':
             identity = np.eye(lvls - 2)
             gate = scipy_block_diag(gate, identity)
-        kron_list[index[gate_num]] = gate
+        kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)
 
