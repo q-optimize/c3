@@ -105,14 +105,17 @@ def average_infid(U_dict: dict, gate: str):
 
 
 def lindbladian_average_infid(
-        U_dict: dict, gate: str, index, dims
+    U_dict: dict, gate: str, index, dims, proj: bool
 ):
-    U = U_dict[gate.split(":")[0]]
+    U = U_dict[gate]
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
+    if proj:
+        projection = 'wzeros'
+        fid_lvls = 2 * len(index)
     U_ideal = tf_super(
                tf.constant(
-                    perfect_gate(gate, index, dims),
+                    perfect_gate(gate, index, dims, projection),
                     dtype=tf.complex128
                     )
                )
