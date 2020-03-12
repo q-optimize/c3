@@ -98,7 +98,8 @@ def xy_basis(lvls: int, vect: str):
         return None
     return psi
 
-def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
+
+def perfect_gate(gates_str: str, index, dims):
     kron_list = []
     for dim in dims:
         kron_list.append(np.eye(dim))
@@ -106,7 +107,9 @@ def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
     gate_num = 0
     for gate_str in gates_str.split(":"):
         lvls = dims[index[gate_num]]
-        if gate_str == 'X90p':
+        if gate_str == 'Id':
+            gate = Id
+        elif gate_str == 'X90p':
             gate = X90p
         elif gate_str == 'X90m':
             gate = X90m
@@ -124,19 +127,16 @@ def perfect_gate(gates_str: str, index, dims,  proj: str = 'wzeros'):
             gate = Z90m
         elif gate_str == 'Zp':
             gate = Zp
+        elif gate_str == 'CNOT':
+            gate1 = X90p
+            gate2 = Id
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
                   "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
             return None
-        if proj == 'compsub':
-            pass
-        elif proj == 'wzeros':
-            zeros = np.zeros([lvls - 2, lvls - 2])
-            gate = scipy_block_diag(gate, zeros)
-        elif proj == 'fulluni':
-            identity = np.eye(lvls - 2)
-            gate = scipy_block_diag(gate, identity)
+        identity = np.eye(lvls - 2)
+        gate = scipy_block_diag(gate, identity)
         kron_list[index[gate_num]] = gate
         gate_num += 1
     return np_kron_n(kron_list)
@@ -203,6 +203,7 @@ C21 = Y90p @ X90m
 C22 = Y90p
 C23 = Y90p @ Y90p @ X90m
 C24 = X90m @ Y90p @ X90p
+
 
 def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
     # TODO make perfect clifford more general by making it take a decomposition

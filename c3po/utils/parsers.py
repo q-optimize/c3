@@ -34,7 +34,7 @@ def create_c1_opt(optimizer_config):
         return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
     def lind_avfid_X90p(U_dict, index, dims):
         return fidelities.lindbladian_average_infid(
-            U_dict, 'X90p', index, dims, proj=True
+            U_dict, 'X90p:Id', index, dims
         )
     def avfid_X90p(U_dict):
         return fidelities.average_infid(U_dict, 'X90p', proj=True)
