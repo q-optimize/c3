@@ -255,7 +255,6 @@ class Experiment:
         dUs = self.dUs
         psi_t = psi_init.numpy()
         pop_t = self.populations(psi_t, self.model.lindbladian)
-        self.model.use_FR = False
         for gate in seq:
             for du in dUs[gate]:
                 psi_t = np.matmul(du.numpy(), psi_t)
