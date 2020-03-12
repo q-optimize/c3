@@ -51,19 +51,19 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
 #     return overlap
 
 
-def unitary_infid(U_dict: dict, gate: str, proj: bool):
+def unitary_infid(
+        U_dict: dict, gate: str, index, dims, proj: bool
+):
     U = U_dict[gate]
     projection = 'fulluni'
-    num_gates = len(gate.split(':'))
-    lvls = int(U.shape[0] ** (1/num_gates))
-    fid_lvls = lvls
+    fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * num_gates
+        fid_lvls = 2 * len(index)
     U_ideal = tf.constant(
-                perfect_gate(lvls, gate, projection),
-                dtype=tf.complex128
-                )
+        perfect_gate(gate, index, dims, projection),
+        dtype=tf.complex128
+    )
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
 
@@ -74,32 +74,32 @@ def lindbladian_unitary_infid(
     # to select the right section of the superoper
     U = U_dict[gate]
     projection = 'fulluni'
-    num_gates = len(gate.split(':'))
-    lvls = int(np.sqrt(U.shape[0]) ** (1/num_gates))
-    fid_lvls = lvls
+    fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * num_gates
+        fid_lvls = 2 * len(index)
     U_ideal = tf_super(
-               tf.constant(
-                    perfect_gate(gate, index, dims,  projection),
-                    dtype=tf.complex128
-                    )
-               )
+        tf.constant(
+            perfect_gate(gate, index, dims,  projection),
+            dtype=tf.complex128
+        )
+    )
     infid = 1 - tf_superoper_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
-def average_infid(U_dict: dict, gate: str):
+def average_infid(
+        U_dict: dict, gate: str, index, dims, proj: bool):
     U = U_dict[gate]
     projection = 'fulluni'
-    num_gates = len(gate.split(':'))
-    lvls = int(U.shape[0] ** (1/num_gates))
-    fid_lvls = lvls
+    fid_lvls = np.prod([dims[i] for i in index])
+    if proj:
+        projection = 'wzeros'
+        fid_lvls = 2 * len(index)
     U_ideal = tf.constant(
-                perfect_gate(lvls, gate),
-                dtype=tf.complex128
-                )
+        perfect_gate(gate, index, dims, projection),
+        dtype=tf.complex128
+    )
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
@@ -114,11 +114,11 @@ def lindbladian_average_infid(
         projection = 'wzeros'
         fid_lvls = 2 * len(index)
     U_ideal = tf_super(
-               tf.constant(
-                    perfect_gate(gate, index, dims, projection),
-                    dtype=tf.complex128
-                    )
-               )
+        tf.constant(
+            perfect_gate(gate, index, dims, projection),
+            dtype=tf.complex128
+        )
+    )
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
