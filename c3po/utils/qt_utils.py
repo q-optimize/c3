@@ -100,6 +100,7 @@ def xy_basis(lvls: int, vect: str):
 
 
 def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
+    pad_gate = True
     # TODO index for now unused
     kron_list = []
     # for dim in dims:
@@ -131,34 +132,54 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
             gate = Zp
         elif gate_str == 'CNOT':
             # TODO: Fix the ideal CNOT construction.
-            NOT = 1j*perfect_gate('Xp', index, [lvls], proj)
-            C = perfect_gate('Id', index, [lvls], proj)
+            lvls2 = dims[gate_num + 1]
+            NOT = 1j*perfect_gate('Xp', index, [lvls2], proj)
+            C = perfect_gate('Id', index, [lvls2], proj)
             gate = scipy_block_diag(C, NOT)
-            gate_num += 1
             # We increase gate_num since CNOT is a two qubit gate
-            lvls2 = dims[gate_num]
-            for ii in range(2, lvls2):
+            for ii in range(2, lvls):
                 if proj == 'compsub':
                     pass
                 elif proj == 'wzeros':
-                    zeros = np.zeros([lvls, lvls])
+                    zeros = np.zeros([lvls2, lvls2])
                     gate = scipy_block_diag(gate, zeros)
                 elif proj == 'fulluni':
-                    identity = np.eye(lvls)
+                    identity = np.eye(lvls2)
                     gate = scipy_block_diag(gate, identity)
+            gate_num += 1
+            pad_gate = False
+        elif gate_str == 'CZ':
+            # TODO: Fix the ideal CNOT construction.
+            lvls2 = dims[gate_num + 1]
+            NOT = 1j*perfect_gate('Zp', index, [lvls2], proj)
+            C = perfect_gate('Id', index, [lvls2], proj)
+            gate = scipy_block_diag(C, NOT)
+            # We increase gate_num since CNOT is a two qubit gate
+            for ii in range(2, lvls):
+                if proj == 'compsub':
+                    pass
+                elif proj == 'wzeros':
+                    zeros = np.zeros([lvls2, lvls2])
+                    gate = scipy_block_diag(gate, zeros)
+                elif proj == 'fulluni':
+                    identity = np.eye(lvls2)
+                    gate = scipy_block_diag(gate, identity)
+            gate_num += 1
+            pad_gate = False
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
-                  "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
+                  "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\', \'CNOT\'")
             return None
-        if proj == 'compsub':
-            pass
-        elif proj == 'wzeros':
-            zeros = np.zeros([lvls - 2, lvls - 2])
-            gate = scipy_block_diag(gate, zeros)
-        elif proj == 'fulluni':
-            identity = np.eye(lvls - 2)
-            gate = scipy_block_diag(gate, identity)
+        if pad_gate:
+            if proj == 'compsub':
+                pass
+            elif proj == 'wzeros':
+                zeros = np.zeros([lvls - 2, lvls - 2])
+                gate = scipy_block_diag(gate, zeros)
+            elif proj == 'fulluni':
+                identity = np.eye(lvls - 2)
+                gate = scipy_block_diag(gate, identity)
         kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)
