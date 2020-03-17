@@ -1,4 +1,5 @@
 import json
+import numpy as np
 import random
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
@@ -9,6 +10,7 @@ from runpy import run_path
 from c3po.optimizers.c1 import C1
 from c3po.optimizers.c2 import C2
 from c3po.optimizers.c3 import C3
+from c3po.tasks.sensitivity import SET
 
 
 def create_experiment(exp_setup, datafile=''):
@@ -280,6 +282,16 @@ def create_c3_opt(optimizer_config):
     elif cfg['algorithm'] in no_grad_algs.keys():
         algorithm_no_grad = no_grad_algs[cfg['algorithm']]
         algorithm_with_grad = None
+    if 'plot_dynamics' in cfg:
+        if cfg['plot_dynamics'] == "False":
+            plot_dynamics = False
+        elif cfg['plot_dynamics'] == "True":
+            plot_dynamics = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+    else:
+        plot_dynamics = False
+    print("plot_dynamics>>> " + str(plot_dynamics))
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -293,6 +305,67 @@ def create_c3_opt(optimizer_config):
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
+        plot_dynamics = plot_dynamics,
         options=options
     )
     return opt
+
+def create_sensitivity_test(task_config):
+    with open(task_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+    estimator = cfg['estimator']
+    cb_foms = cfg['callback_est']
+    estims = {
+        'median': estimators.median_dist,
+        'rms': estimators.rms_dist,
+        'stds': estimators.exp_stds_dist,
+        'gauss': estimators.neg_loglkh_gauss,
+        'binom': estimators.neg_loglkh_binom,
+        'rms_stds': estimators.rms_exp_stds_dist,
+        'std_diffs': estimators.std_of_diffs,
+    }
+    fom = estims[estimator]
+    # callback_foms = estims.values()
+    callback_foms = []
+    # for cb_fom in cb_foms:
+    #     callback_foms.append(estims[cb_fom])
+    figs = {
+        'exp_vs_sim': display.exp_vs_sim,
+        'exp_vs_sim_2d_hist': display.exp_vs_sim_2d_hist
+    }
+    callback_figs = []
+    for key in cfg['callback_figs']:
+        callback_figs.append(figs[key])
+    exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
+    # grad_algs = {'lbfgs': algorithms.lbfgs}
+    # no_grad_algs = {'cmaes': algorithms.cmaes}
+    # if cfg['algorithm'] in grad_algs.keys():
+    #     algorithm_with_grad = grad_algs[cfg['algorithm']]
+    #     algorithm_no_grad = None
+    # elif cfg['algorithm'] in no_grad_algs.keys():
+    #     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+    #     algorithm_with_grad = None
+
+    sweep_map = []
+    for a in cfg['sweep_map']:
+        tmp = []
+        tmp.append(eval(a[2][0]))
+        tmp.append(eval(a[2][1]))
+        tmp.append(eval(a[2][2]))
+        sweep_map.append((a[0],a[1],tuple(tmp)))
+
+    options = {}
+    if 'options' in cfg:
+        options = cfg['options']
+    set = SET(
+        dir_path=cfg['dir_path'],
+        fom=fom,
+        sampling=cfg['sampling'],
+        batch_size=int(cfg['batch_size']),
+        opt_map=exp_opt_map,
+        sweep_map=sweep_map,
+        callback_foms=callback_foms,
+        callback_figs=callback_figs,
+        options=options
+    )
+    return set
