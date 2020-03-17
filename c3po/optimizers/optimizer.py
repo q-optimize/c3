@@ -4,6 +4,7 @@ import os
 import time
 import json
 import tensorflow as tf
+import numpy as np
 import c3po.libraries.algorithms
 
 
@@ -66,6 +67,21 @@ class Optimizer:
             )
             logfile.flush()
 
+    def log_best_unitary(self):
+        if self.optim_status['goal'] < self.current_best_goal:
+            self.current_best_goal = self.optim_status['goal']
+            with open(
+                self.logdir + 'best_point_' + self.logname, 'w'
+            ) as best_point:
+                U_dict = self.exp.U_dict
+                for gate, U in U_dict.items():
+                    best_point.write("\n")
+                    best_point.write(f"Re {gate}: \n")
+                    best_point.write(f"{np.round(np.real(U), 3)}\n")
+                    best_point.write("\n")
+                    best_point.write(f"Im {gate}: \n")
+                    best_point.write(f"{np.round(np.imag(U), 3)}\n")
+
     def log_parameters(self):
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
@@ -108,6 +124,8 @@ class Optimizer:
         else:
             goal = self.goal_run(current_params)
         self.log_parameters()
+        if "U_dict" in self.exp.__dict__.keys():
+            self.log_best_unitary()
         if isinstance(goal, tf.Tensor):
             goal = float(goal.numpy())
         return goal

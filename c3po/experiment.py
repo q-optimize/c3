@@ -103,6 +103,7 @@ class Experiment:
 
     def get_Us(self, seqs):
         U_dict = self.get_gates()
+        self.U_dict = U_dict
         Us = tf_utils.evaluate_sequences(U_dict, seqs)
         return Us
 
@@ -139,7 +140,7 @@ class Experiment:
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
-        for gate in self.gateset.instructions.keys():
+        for gate in self.opt_gates:
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
@@ -235,6 +236,9 @@ class Experiment:
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U
+
+    def set_opt_gates(self, opt_gates):
+        self.opt_gates = opt_gates
 
     def set_enable_dynamics_plots(self, flag, logdir):
         self.enable_dynamics_plots = flag

@@ -40,6 +40,14 @@ def create_c1_opt(optimizer_config):
         return fidelities.lindbladian_average_infid(
             U_dict, 'CZ', index, dims, proj=True
         )
+    def lind_avfid_CR(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'CR', index, dims, proj=True
+        )
+    def lind_avfid_CR90(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'CR90', index, dims, proj=True
+        )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
     def lind_epc_ana(U_dict, index, dims):
@@ -55,6 +63,8 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
         'average_infid': avfid_X90p,
         'lind_average_infid': lind_avfid_X90p,
+        'lind_average_infid_CR': lind_avfid_CR,
+        'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
         'lind_epc_ana': lind_epc_ana
     }
@@ -64,6 +74,7 @@ def create_c1_opt(optimizer_config):
     callback_fids = []
     for cb_fid in cb_fids:
         callback_fids.append(fids[cb_fid])
+    opt_gates = cfg['opt_gates']
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
@@ -102,6 +113,7 @@ def create_c1_opt(optimizer_config):
         fid_func=fid_func,
         fid_subspace=cfg['fid_subspace'],
         gateset_opt_map=gateset_opt_map,
+        opt_gates=opt_gates,
         callback_fids=callback_fids,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,

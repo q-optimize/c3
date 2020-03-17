@@ -44,6 +44,7 @@ def hilbert_space_kron(op, indx, dims):
         )
     return(np_kron_n(op_list))
 
+
 def hilbert_space_dekron(op, indx, dims):
     """
     Partial trace of an operator to return equivalent subspace operator.
@@ -51,7 +52,6 @@ def hilbert_space_dekron(op, indx, dims):
     """
     # TODO Partial trace, reducing operators and states to subspace.
     pass
-
 
 
 def rotation(phase, xyz):
@@ -99,7 +99,7 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
-def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
+def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'):
     pad_gate = True
     # TODO index for now unused
     kron_list = []
@@ -164,6 +164,22 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
                 elif proj == 'fulluni':
                     identity = np.eye(lvls2)
                     gate = scipy_block_diag(gate, identity)
+            gate_num += 1
+            pad_gate = False
+        elif gate_str == 'CR':
+            # TODO: Fix the ideal CNOT construction.
+            lvls2 = dims[gate_num + 1]
+            Z = 1j*perfect_gate('Zp', index, [lvls], proj)
+            X = perfect_gate('Xp', index, [lvls2], proj)
+            gate = np.kron(Z, X)
+            gate_num += 1
+            pad_gate = False
+        elif gate_str == 'CR90':
+            # TODO: Fix the ideal CNOT construction.
+            lvls2 = dims[gate_num + 1]
+            Z = 1j*perfect_gate('Z90p', index, [lvls], proj)
+            X = perfect_gate('X90p', index, [lvls2], proj)
+            gate = np.kron(Z, X)
             gate_num += 1
             pad_gate = False
         else:

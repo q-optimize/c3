@@ -100,8 +100,6 @@ def average_infid(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
     )
-    print(U)
-    print(U_ideal)
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
@@ -120,8 +118,6 @@ def lindbladian_average_infid(
         dtype=tf.complex128
     )
     U_ideal = tf_super(ideal)
-    print(U)
-    print(U_ideal)
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 

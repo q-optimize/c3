@@ -17,6 +17,7 @@ class C1(Optimizer):
         fid_func,
         fid_subspace,
         gateset_opt_map,
+        opt_gates,
         callback_fids=[],
         algorithm_no_grad=None,
         algorithm_with_grad=None,
@@ -32,12 +33,12 @@ class C1(Optimizer):
             plot_pulses=plot_pulses
             )
         self.opt_map = gateset_opt_map
+        self.opt_gates = opt_gates
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
         self.callback_fids = callback_fids
         self.options = options
         self.log_setup(dir_path)
-
 
     def log_setup(self, dir_path):
         self.dir_path = dir_path
@@ -65,6 +66,7 @@ class C1(Optimizer):
         self.start_log()
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
+        self.exp.set_opt_gates(self.opt_gates)
         self.nice_print = self.exp.gateset.print_parameters
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
         index = []
