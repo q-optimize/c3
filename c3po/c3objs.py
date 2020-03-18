@@ -69,7 +69,7 @@ class Quantity:
         min,
         max,
         symbol: str = '\\alpha',
-        unit: str = 'a.u.'
+        unit: str = 'I was too fucking lazy to put the right unit here.'
     ):
         value = np.array(value)
         self.offset = np.array(min)
