@@ -211,17 +211,14 @@ def plot_C1(logfolder=""):
             plt.ylabel(units[key])
             plt.xlabel("Evaluation")
             ii += 1
-        plt.subplot(nrows, ncols, ii)
+        plt.tight_layout()
         plt.savefig(logfolder + "open_loop.png")
         plt.figure()
-        plt.ylim([0.2, 0.001])
         plt.title("Goal")
         plt.grid()
         plt.xlabel("Evaluations")
-        plt.plot(its, goal_function)
-        plt.tight_layout()
+        plt.semilogy(its, goal_function)
         plt.savefig(logfolder + "goal.png")
-        plt.close(fig)
 
 
 def plot_C2(cfgfolder="", logfolder=""):
@@ -262,7 +259,6 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.ylabel('Goal function')
     plt.xlabel('Evaluations')
     plt.savefig(logfolder + "closed_loop.png")
-    plt.close(fig)
 
 
 def plot_C3(logfolders):
@@ -351,7 +347,6 @@ def plot_C3(logfolders):
                 ii += 1
                 plt.tight_layout()
                 plt.savefig(logfolder + "learn_model.png")
-                plt.close(fig)
 
     fig = plt.figure()
     plt.title("Goal")
@@ -379,7 +374,6 @@ def plot_C3(logfolders):
     plt.ylabel('RMS model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
-    plt.close(fig)
 
 
 
