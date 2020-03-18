@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from c3po.c3objs import Quantity as Qty
 
+
 def no_drive(t, params):
     """Do nothing."""
     return tf.zeros_like(t, dtype=tf.float64)
