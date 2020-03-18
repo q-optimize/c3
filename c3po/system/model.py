@@ -154,9 +154,8 @@ class Model:
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
             reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
-            e = tf.reshape(e, [e.shape[0], 1])
-            eigenframe = tf.matmul(reorder_matrix, e)
-            transform = tf.matmul(v, reorder_matrix)
+            eigenframe = tf.linalg.matvec(reorder_matrix, e)
+            transform = tf.matmul(tf.linalg.adjoint(reorder_matrix), v)
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
