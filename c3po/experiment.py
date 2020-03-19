@@ -132,7 +132,8 @@ class Experiment:
                 )
             else:
                 pop1 = pops[1]
-            pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
+            if "meas_rescale" in self.model.tasks:
+                pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
             pop1s.append(pop1)
         return pop1s
 
