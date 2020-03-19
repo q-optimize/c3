@@ -107,7 +107,7 @@ class SET():
 
     def goal_run(self, current_params):
         indeces = self.select_from_data()
-        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+        self.exp.set_parameters(current_params, self.opt_map, scaled=False)
         exp_values = []
         exp_stds = []
         sim_values = []
@@ -115,7 +115,8 @@ class SET():
         count = 0
         print("indices: " + str(len(indeces)))
         for ipar in indeces:
-            print("count: " + str(count))
+            if count % 100 == 0:
+                print("count: " + str(count))
             count += 1
             m = self.learn_from[ipar]
             gateset_params = m['params']
@@ -124,6 +125,12 @@ class SET():
             m_stds = m['results_std']
             sequences = m['seqs']
             num_seqs = len(sequences)
+
+            if count == 1:
+                print("gateset_opt_map:")
+                print(gateset_opt_map)
+            print("gateset_params:")
+            print(gateset_params)
 
             self.exp.gateset.set_parameters(
                 gateset_params, gateset_opt_map, scaled=False
@@ -238,17 +245,19 @@ class SET():
             n = int(s/delta)
             print(n)
             for i in range(n):
-                self.logname = 'confirm_' + i + '.log'
+                self.logname = 'confirm_' + str(i) + '.log'
                 self.inverse = True
                 self.start_log()
                 print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
 
+                tup = (tmp[0],tmp[1])
+                val = min + i * delta
+                print(tup)
+                print(val)
 
+                self.exp.set_parameters([val],[tup], scaled=False)
+                x_best = self.exp.get_parameters(scaled=False)
 
-
-                x_best = self.exp.get_parameters(scaled=True)
-
-                raise(Exception())
                 self.evaluation = -1
                 try:
                     self.goal_run(x_best)
