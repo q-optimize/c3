@@ -14,20 +14,32 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 
+nice_parameter_name = {
+    "amp": "Area",
+    "freq_offset": "$\\delta\\omega_d$",
+    "delta": "$\\Delta$"
+}
+
+
 def unit_conversion(desc, param):
     # TODO Get right units from the log
+    use_prefix = True
     if desc == 'freq_offset':
         p_val = param / 2 / np.pi
         unit = 'Hz'
-    elif desc == 'xy_angle':
+    elif desc == 'xy_angle' or desc == 'amp':
         p_val = param / np.pi
         unit = '$\\pi$'
+        use_prefix = False
     elif desc == 'freq':
         p_val = param / 2 / np.pi
         unit = 'Hz'
     elif desc == 'anhar':
         p_val = param / 2 / np.pi
         unit = 'Hz'
+    elif desc == 'delta':
+        p_val = param
+        unit = 's'
     elif desc == 't1' or desc == 't2star':
         p_val = param
         unit = 's'
@@ -43,8 +55,11 @@ def unit_conversion(desc, param):
     else:
         p_val = param
         unit = ""
-    value, prefix = eng_num(p_val)
-    return value, prefix+unit
+    if use_prefix:
+        value, prefix = eng_num(p_val)
+        return value, prefix+unit
+    else:
+        return p_val, unit
 
 
 def exp_vs_sim(exps, sims, stds):
@@ -185,7 +200,11 @@ def plot_C1(logfolder=""):
                     unit = ''
                     p_name = ''
                     for desc in opt_map[iparam][0]:
-                        p_name += ' ' + desc
+                        try:
+                            nice_name = nice_parameter_name[desc]
+                        except KeyError:
+                            nice_name = desc
+                        p_name += ' ' + nice_name
                     if p_name not in scaling:
                         p_val, unit = unit_conversion(desc, param)
                         try:
@@ -211,17 +230,14 @@ def plot_C1(logfolder=""):
             plt.ylabel(units[key])
             plt.xlabel("Evaluation")
             ii += 1
-        plt.subplot(nrows, ncols, ii)
+        plt.tight_layout()
         plt.savefig(logfolder + "open_loop.png")
         plt.figure()
-        plt.ylim([0.2, 0.001])
         plt.title("Goal")
         plt.grid()
         plt.xlabel("Evaluations")
-        plt.plot(its, goal_function)
-        plt.tight_layout()
+        plt.semilogy(its, goal_function)
         plt.savefig(logfolder + "goal.png")
-        plt.close(fig)
 
 
 def plot_C2(cfgfolder="", logfolder=""):
@@ -262,7 +278,6 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.ylabel('Goal function')
     plt.xlabel('Evaluations')
     plt.savefig(logfolder + "closed_loop.png")
-    plt.close(fig)
 
 
 def plot_C3(logfolders):
@@ -351,7 +366,6 @@ def plot_C3(logfolders):
                 ii += 1
                 plt.tight_layout()
                 plt.savefig(logfolder + "learn_model.png")
-                plt.close(fig)
 
     fig = plt.figure()
     plt.title("Goal")
@@ -379,7 +393,6 @@ def plot_C3(logfolders):
     plt.ylabel('RMS model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
-    plt.close(fig)
 
 
 

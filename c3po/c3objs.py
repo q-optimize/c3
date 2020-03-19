@@ -69,7 +69,8 @@ class Quantity:
         min,
         max,
         symbol: str = '\\alpha',
-        unit: str = 'a.u.'
+        unit: str = 'I was too fucking lazy to put the right unit here.\
+            ¯\\_( ͡° ͜ʖ ͡°)_/¯'
     ):
         value = np.array(value)
         self.offset = np.array(min)
@@ -117,10 +118,14 @@ class Quantity:
 
     def __str__(self):
         val = self.numpy()
+        use_prefix = True
         if self.unit == "Hz 2pi":
             val = val / 2 / np.pi
+        elif self.unit == "pi":
+            val = val / np.pi
+            use_prefix = False
         ret = ""
-        for q in num3str(val):
+        for q in num3str(val, use_prefix):
             ret += q + self.unit + " "
         return ret
 

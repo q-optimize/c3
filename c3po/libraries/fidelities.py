@@ -122,6 +122,27 @@ def lindbladian_average_infid(
     return infid
 
 
+def lindbladian_average_infid_set(
+    U_dict: dict, index, dims, proj=True
+):
+    infids = []
+    for gate, U in U_dict.items():
+        projection = 'fulluni'
+        fid_lvls = np.prod([dims[i] for i in index])
+        if proj:
+            projection = 'wzeros'
+            fid_lvls = 2 * len(index)
+        ideal = tf.constant(
+            perfect_gate(gate, index, dims, projection),
+            dtype=tf.complex128
+        )
+        U_ideal = tf_super(ideal)
+        infids.append(
+            1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
+        )
+    return tf.reduce_mean(infids)
+
+
 def epc_analytical(U_dict: dict, proj: bool):
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]

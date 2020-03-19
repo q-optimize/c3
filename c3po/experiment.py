@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import c3po.utils.tf_utils as tf_utils
-import c3po.libraries.fidelities as fidelities
 
 
 # TODO add case where one only wants to pass a list of quantity objects?
@@ -141,7 +140,11 @@ class Experiment:
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
-        for gate in self.opt_gates:
+        if "opt_gates" in self.__dict__:
+            gate_keys = self.opt_gates
+        else:
+            gate_keys = self.gateset.instructions.keys()
+        for gate in gate_keys:
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
@@ -255,7 +258,7 @@ class Experiment:
             os.mkdir(self.logdir + "pulses/")
             self.pulses_plot_counter = 0
 
-    def plot_dynamics(self, psi_init, seq):
+    def plot_dynamics(self, psi_init, seq, debug=False):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
@@ -309,9 +312,13 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        plt.savefig(
-            self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
-        )
+        plt.legend(self.model.state_labels)
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
+                )
 
     def plot_pulses(self, instr):
         # print(instr.name)

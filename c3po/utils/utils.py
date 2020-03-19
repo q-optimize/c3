@@ -2,6 +2,7 @@ import time
 import os
 import numpy as np
 
+
 # SYSTEM AND SETUP
 def log_setup(data_path, run_name=None):
     # TODO make this plattform agnostic, i.e. work with Windows(tm)
@@ -51,14 +52,17 @@ def eng_num(val):
     return sign * (10 ** (tmp % 3)), prefix
 
 
-def num3str(val):
+def num3str(val, use_prefix=True):
     ret = []
     if not hasattr(val, "__iter__"):
         val = np.array([val])
     for idx in range(val.shape[0]):
         v = val[idx]
-        num, prefix = eng_num(v)
-        ret.append(f"{num:.3f}" + prefix)
+        if use_prefix:
+            num, prefix = eng_num(v)
+            ret.append(f"{num:.3f} " + prefix)
+        else:
+            ret.append(f"{v:.3f} ")
     return ret
 
 
@@ -81,5 +85,3 @@ def ask_yn():
             asking = False
             boolean = False
     return boolean
-
-
