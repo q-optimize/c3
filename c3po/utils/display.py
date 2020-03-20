@@ -17,7 +17,8 @@ rc('text', usetex=True)
 nice_parameter_name = {
     "amp": "Area",
     "freq_offset": "$\\delta\\omega_d$",
-    "delta": "$\\Delta$"
+    "delta": "$\\Delta$",
+    "t_final": "$t_final$"
 }
 
 
@@ -226,7 +227,7 @@ def plot_C1(logfolder=""):
             plt.subplot(nrows, ncols, ii)
             plt.plot(its, parameters[key])
             plt.grid()
-            plt.title(key.replace('_', '\\_'))
+            plt.title(key)
             plt.ylabel(units[key])
             plt.xlabel("Evaluation")
             ii += 1
