@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Base run for c3 code."""
-
+import logging
+logging.getLogger('tensorflow').disabled = True
 
 import json
 import pickle
@@ -38,6 +39,7 @@ with tf.device('/CPU:0'):
     if 'initial_point' in cfg:
         init_point = cfg['initial_point']
         opt.load_best(init_point)
+        print(f"Loading initial point from : {init_point}")
 
     if 'real_params' in cfg:
         real_params = cfg['real_params']
