@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.linalg import block_diag as scipy_block_diag
+from scipy.linalg import expm
 
 # Pauli matrices
 Id = np.array([[1, 0],
@@ -17,6 +18,13 @@ Z = np.array([[1, 0],
               [0, -1]],
              dtype=np.complex128)
 
+# TODO Combine the above Pauli definitions with this dict. Move to constants.
+PAULIS = {
+    "X": X,
+    "Y": Y,
+    "Z": Z,
+    "Id": Id
+}
 
 # MATH HELPERS
 def np_kron_n(mat_list):
@@ -99,15 +107,33 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
-def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'):
-    pad_gate = True
+def pad_matrix(matrix, dim, padding):
+    """
+    Fills matrix dimsions with zeros or identity.
+    """
+    if padding == 'compsub':
+        return matrix
+    elif padding == 'wzeros':
+        zeros = np.zeros([dim, dim])
+        matrix = scipy_block_diag(matrix, zeros)
+    elif padding == 'fulluni':
+        identity = np.eye(dim)
+        matrix = scipy_block_diag(matrix, identity)
+    return matrix
+
+
+def perfect_gate(
+    gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
+):
+    do_pad_gate = True
     # TODO index for now unused
     kron_list = []
     # for dim in dims:
     #     kron_list.append(np.eye(dim))
     kron_gate = 1
     gate_num = 0
-    # Note that the gates_str has to be explicit for all subspaces (and ordered)
+    # Note that the gates_str has to be explicit for all subspaces
+    # (and ordered)
     for gate_str in gates_str.split(":"):
         lvls = dims[gate_num]
         if gate_str == 'Id':
@@ -138,16 +164,9 @@ def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
             gate = scipy_block_diag(C, NOT)
             # We increase gate_num since CNOT is a two qubit gate
             for ii in range(2, lvls):
-                if proj == 'compsub':
-                    pass
-                elif proj == 'wzeros':
-                    zeros = np.zeros([lvls2, lvls2])
-                    gate = scipy_block_diag(gate, zeros)
-                elif proj == 'fulluni':
-                    identity = np.eye(lvls2)
-                    gate = scipy_block_diag(gate, identity)
+                pad_matrix(gate, lvls2, proj)
             gate_num += 1
-            pad_gate = False
+            do_pad_gate = False
         elif gate_str == 'CZ':
             # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
@@ -156,16 +175,9 @@ def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
             gate = scipy_block_diag(C, NOT)
             # We increase gate_num since CNOT is a two qubit gate
             for ii in range(2, lvls):
-                if proj == 'compsub':
-                    pass
-                elif proj == 'wzeros':
-                    zeros = np.zeros([lvls2, lvls2])
-                    gate = scipy_block_diag(gate, zeros)
-                elif proj == 'fulluni':
-                    identity = np.eye(lvls2)
-                    gate = scipy_block_diag(gate, identity)
+                pad_matrix(gate, lvls2, proj)
             gate_num += 1
-            pad_gate = False
+            do_pad_gate = False
         elif gate_str == 'CR':
             # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
@@ -173,7 +185,7 @@ def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
             X = perfect_gate('Xp', index, [lvls2], proj)
             gate = np.kron(Z, X)
             gate_num += 1
-            pad_gate = False
+            do_pad_gate = False
         elif gate_str == 'CR90':
             # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
@@ -181,13 +193,13 @@ def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
             X = perfect_gate('X90p', index, [lvls2], proj)
             gate = np.kron(Z, X)
             gate_num += 1
-            pad_gate = False
+            do_pad_gate = False
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
                   "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\', \'CNOT\'")
             return None
-        if pad_gate:
+        if do_pad_gate:
             if proj == 'compsub':
                 pass
             elif proj == 'wzeros':
@@ -199,6 +211,21 @@ def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
         kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)
+
+def perfect_parametric_gate(paulis_str, ang, dims):
+    ps = []
+    p_list = paulis_str.split(":")
+    for idx in range(len(p_list)):
+        if p_list[idx] not in PAULIS:
+            raise KeyError(
+                f"Incorrect pauli matrix {p_list[idx]} in position {idx}.\
+                Select from {PAULIS.keys()}."
+            )
+        ps.append(
+                pad_matrix(PAULIS[p_list[idx]], dims[idx]-2, "wzeros")
+        )
+    gen = np_kron_n(ps)
+    return expm(-1.j/2 * ang * gen)
 
 
 def perfect_CZ(lvls: int, proj: str = 'wzeros'):
@@ -339,7 +366,9 @@ cliffords_decomp = [
                     ['X90p', 'Y90p', 'X90m']
                     ]
 
-cliffords_decomp_xId = [[gate + ':Id' for gate in clif] for clif in cliffords_decomp]
+cliffords_decomp_xId = [
+    [gate + ':Id' for gate in clif] for clif in cliffords_decomp
+]
 
 sum = 0
 for cd in cliffords_decomp:

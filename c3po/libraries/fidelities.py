@@ -69,7 +69,8 @@ def unitary_infid(
 
 
 def lindbladian_unitary_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool):
+        U_dict: dict, gate: str, index, dims, proj: bool
+    ):
     # Here we deal with the projected case differently because it's not easy
     # to select the right section of the superoper
     U = U_dict[gate]
@@ -86,6 +87,16 @@ def lindbladian_unitary_infid(
     )
     infid = 1 - tf_superoper_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
+
+
+def lindbladian_unitary_infid_set(
+    U_dict: dict, index, dims, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = lindbladian_unitary_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
 
 
 def average_infid(
@@ -126,20 +137,9 @@ def lindbladian_average_infid_set(
     U_dict: dict, index, dims, proj=True
 ):
     infids = []
-    for gate, U in U_dict.items():
-        projection = 'fulluni'
-        fid_lvls = np.prod([dims[i] for i in index])
-        if proj:
-            projection = 'wzeros'
-            fid_lvls = 2 * len(index)
-        ideal = tf.constant(
-            perfect_gate(gate, index, dims, projection),
-            dtype=tf.complex128
-        )
-        U_ideal = tf_super(ideal)
-        infids.append(
-            1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
-        )
+    for gate in U_dict.keys():
+        infid = lindbladian_average_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
     return tf.reduce_mean(infids)
 
 

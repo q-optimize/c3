@@ -65,10 +65,11 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid': lind_unit_X90p,
         'unitary_infid_Y90p': unit_Y90p,
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
+        'lind_unitrary_infid_set': fidelities.lindbladian_unitary_infid_set,
         'average_infid': avfid_X90p,
-        'lind_average_infid': fidelities.lindbladian_average_infid_set,
+        'lind_average_infid': lind_avfid_X90p,
+        'lind_average_infid_set': fidelities.lindbladian_average_infid_set,
         'lind_average_infid_CR': lind_avfid_CR,
-        'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
         'lind_epc_ana': lind_epc_ana
     }
@@ -137,7 +138,10 @@ def create_c1_opt_hk(
     noise
 ):
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        try:
+            cfg = json.loads(cfg_file.read())
+        except json.decoder.JSONDecodeError:
+            raise Error(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
         def unit_X90p(U_dict):
