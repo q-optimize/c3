@@ -1,5 +1,6 @@
 """The model class, containing information on the system and its modelling."""
 
+import warnings
 import numpy as np
 import itertools
 import tensorflow as tf
@@ -153,7 +154,11 @@ class Model:
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
-            reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
+            # FIXME Deal with the possibility of complex valued eigenvectors
+            warnings.warn(
+                "Deal with the possibility of complex valued eigenvectors"
+            )
+            reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
             transform = tf.matmul(tf.linalg.adjoint(reorder_matrix), v)
         else:
