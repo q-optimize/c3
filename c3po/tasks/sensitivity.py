@@ -105,9 +105,16 @@ class SET():
         else:
             return indeces
 
-    def goal_run(self, current_params):
+    def goal_run(self, tup, val):
         indeces = self.select_from_data()
-        self.exp.set_parameters(current_params, self.opt_map, scaled=False)
+        #self.exp.set_parameters(current_params, self.opt_map, scaled=False)
+        # print("tup: " + str(tup))
+        # print("val: " + str(val))
+        self.exp.set_parameters([val],[tup], scaled=False)
+        print("params>>> ")
+        params = self.exp.print_parameters(self.opt_map)
+        print(params)
+        print(len(params))
         exp_values = []
         exp_stds = []
         sim_values = []
@@ -126,15 +133,17 @@ class SET():
             sequences = m['seqs']
             num_seqs = len(sequences)
 
-            if count == 1:
-                print("gateset_opt_map:")
-                print(gateset_opt_map)
-            print("gateset_params:")
-            print(gateset_params)
+            # if count == 1:
+            #     print("gateset_opt_map:")
+            #     print(gateset_opt_map)
+            #     print(len(gateset_opt_map))
+            #print("gateset_params:")
+            #print(gateset_params)
 
             self.exp.gateset.set_parameters(
                 gateset_params, gateset_opt_map, scaled=False
             )
+
             sim_vals = self.exp.evaluate(sequences)
 
             # exp_values.extend(m_vals)
@@ -185,6 +194,9 @@ class SET():
                 val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
             logfile.flush()
+
+        with open(self.logdir + self.dfname, 'a') as datafile:
+            datafile.write(f"{val}\t{goal_numpy}\n")
         #
         # for cb_fig in self.callback_figs:
         #     fig = cb_fig(exp_values, sim_values, exp_stds)
@@ -246,6 +258,7 @@ class SET():
             print(n)
             for i in range(n):
                 self.logname = 'confirm_' + str(i) + '.log'
+                self.dfname = "data.dat"
                 self.inverse = True
                 self.start_log()
                 print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
@@ -255,11 +268,12 @@ class SET():
                 print(tup)
                 print(val)
 
-                self.exp.set_parameters([val],[tup], scaled=False)
-                x_best = self.exp.get_parameters(scaled=False)
+                # self.exp.set_parameters([val],[tup], scaled=False)
+                # x_best = self.exp.get_parameters(self.opt_map, scaled=False)
 
                 self.evaluation = -1
                 try:
-                    self.goal_run(x_best)
+                    #print("running ...")
+                    self.goal_run(tup, val)
                 except KeyboardInterrupt:
                     pass
