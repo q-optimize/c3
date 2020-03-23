@@ -238,7 +238,7 @@ def perfect_CZ(lvls: int, proj: str = 'wzeros'):
     return CZ
 
 
-def single_length_RB(RB_number, RB_length):
+def single_length_RB(RB_number, RB_length, padding=""):
     """Given a length and number of repetitions it compiles RB sequences."""
     S = []
     for seq_idx in range(RB_number):
@@ -246,7 +246,14 @@ def single_length_RB(RB_number, RB_length):
         seq = np.append(seq, inverseC(seq))
         seq_gates = []
         for cliff_num in seq:
-            seq_gates.extend(cliffords_decomp[cliff_num-1])
+            # TODO: General padding for n qubits
+            if padding == "left":
+                g = ["Id:" + c for c in cliffords_decomp[cliff_num-1]]
+            elif padding == "right":
+                g = [c + ":Id" for c in cliffords_decomp[cliff_num-1]]
+            else:
+                g = cliffords_decomp[cliff_num-1]
+            seq_gates.extend(g)
         S.append(seq_gates)
     return S
 

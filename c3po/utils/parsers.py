@@ -32,6 +32,10 @@ def create_c1_opt(optimizer_config):
         return fidelities.unitary_infid(U_dict, 'CZ', index, dims,  proj=True)
     def lind_unit_Y90p(U_dict, index, dims):
         return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', index, dims,  proj=True)
+    def lind_unit_CR(U_dict, index, dims):
+        return fidelities.lindbladian_unitary_infid(
+            U_dict, 'CR', index, dims,  proj=True
+        )
     def unit_Y90p(U_dict, index, dims):
         return fidelities.unitary_infid(
             U_dict, 'Y90p', index, dims, proj=True
@@ -65,7 +69,8 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid': lind_unit_X90p,
         'unitary_infid_Y90p': unit_Y90p,
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
-        'lind_unitrary_infid_set': fidelities.lindbladian_unitary_infid_set,
+        'lind_unitary_infid_set': fidelities.lindbladian_unitary_infid_set,
+        'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
         'lind_average_infid': lind_avfid_X90p,
         'lind_average_infid_set': fidelities.lindbladian_average_infid_set,

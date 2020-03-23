@@ -76,7 +76,13 @@ class Quantity:
         self.offset = np.array(min)
         self.scale = np.abs(np.array(max) - np.array(min))
         # TODO if setting is out of bounds this double breaks
-        self.set_value(value)
+        try:
+            self.set_value(value)
+        except ValueError:
+           raise ValueError(
+               f"Value has to be within {min:.3} .. {max:.3}"
+               f" but is {value:.3}."
+           )
         self.symbol = symbol
         self.unit = unit
         if hasattr(value, "shape"):
@@ -143,7 +149,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
-            raise ValueError()
+            raise ValueError
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)

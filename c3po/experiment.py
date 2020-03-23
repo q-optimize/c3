@@ -113,7 +113,7 @@ class Experiment:
     #     results = [unit_X90p(U_dict)]
     #     return results
 
-    def evaluate(self, seqs):
+    def evaluate(self, seqs, labels=None):
         Us = self.get_Us(seqs)
         psi_init = self.model.tasks["init_ground"].initialise(
             self.model.drift_H,
@@ -124,13 +124,16 @@ class Experiment:
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
             pops = self.populations(psi_final, self.model.lindbladian)
+            # TODO: Loop over all tasks in a general fashion
             if "conf_matrix" in self.model.tasks:
                 pop1 = self.model.tasks["conf_matrix"].pop1(
                     pops,
                     self.model.lindbladian
                 )
-            else:
-                pop1 = pops[1]
+            if labels is not None:
+                pop1 = 0
+                for l in labels:
+                    pop1 += pops[self.model.state_labels.index(l)]
             if "meas_rescale" in self.model.tasks:
                 pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
             pop1s.append(pop1)
@@ -408,8 +411,6 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
-
-
         fig, axs = plt.subplots(1, 1)
         # ts = self.ts
         # dt = ts[1] - ts[0]
@@ -418,7 +419,6 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('signal')
-        d1 = "d1"
         plt.savefig(
             self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
         )

@@ -18,7 +18,7 @@ nice_parameter_name = {
     "amp": "Area",
     "freq_offset": "$\\delta\\omega_d$",
     "delta": "$\\Delta$",
-    "t_final": "$t_final$"
+    "t_final": "$t_{final}$"
 }
 
 
@@ -219,8 +219,8 @@ def plot_C1(logfolder=""):
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
     if n_params > 0:
-        nrows = np.ceil(np.sqrt(n_params + 1))
-        ncols = np.ceil((n_params + 1) / nrows)
+        nrows = np.ceil(np.sqrt(n_params))
+        ncols = np.ceil((n_params) / nrows)
         fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
@@ -372,6 +372,7 @@ def plot_C3(logfolders):
     plt.title("Goal")
     plt.grid()
     colors = ["tab:blue", "tab:red", "tab:green"]
+    markers = ["x", "+", "."]
     line_names = ["simple", "intermediate", "full"]
     idx = 0
     leg_formatted = []
@@ -380,7 +381,8 @@ def plot_C3(logfolders):
         its = range(1, len(goal_function) + 1)
         c = colors.pop(0)
         line =  plt.semilogx(
-            its, goal_function, color=c, label=line_names[idx]
+            its, goal_function, marker=markers[idx], color=c,
+            label=line_names[idx]
         )
         leg_formatted.append(line)
         idx += 1
