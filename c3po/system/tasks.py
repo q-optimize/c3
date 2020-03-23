@@ -71,25 +71,28 @@ class ConfusionMatrix(Task):
             name: str = "conf_matrix",
             desc: str = " ",
             comment: str = " ",
-            confusion_row: Quantity = None
+            **confusion_rows
     ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment
         )
-        self.params['confusion_row'] = confusion_row
+        for qubit, conf_row in confusion_rows.items():
+            self.params['confusion_row_'+qubit] = conf_row
 
-    def pop1(self, pops, lindbladian):
-        if 'confusion_row' in self.params:
-            row1 = self.params['confusion_row'].get_value()
+    def confuse(self, pops, lindbladian):
+        # if 'confusion_row' in self.params:
+        conf_matrix = tf.constant([[1]], dtype=tf.float64)
+        for conf_row in self.params.values():
+            row1 = conf_row.get_value()
             row2 = tf.ones_like(row1) - row1
-            conf_matrix = tf.concat([[row1], [row2]], 0)
-        elif 'confusion_matrix' in self.params:
-            conf_matrix = self.params['confusion_matrix'].get_value()
-        pops = tf.reshape(pops, [pops.shape[0], 1])
-        pop1 = tf.matmul(conf_matrix, pops)[1]
-        return pop1
+            conf_mat = tf.concat([[row1], [row2]], 0)
+            conf_matrix = tf_utils.tf_kron(conf_matrix, conf_mat)
+        # elif 'confusion_matrix' in self.params:
+        #     conf_matrix = self.params['confusion_matrix'].get_value()
+        pops = tf.linalg.matvec(conf_matrix, pops)
+        return pops
 
 
 class MeasurementRescale(Task):
