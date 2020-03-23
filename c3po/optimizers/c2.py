@@ -51,7 +51,7 @@ class C2(Optimizer):
 
     def optimize_controls(self):
         """
-        Apply a search algorightm to your gateset given a fidelity function.
+        Apply a search algorithm to your gateset given a fidelity function.
         """
         self.start_log()
         self.picklefilename = self.logdir + "learn_from.pickle"
