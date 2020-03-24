@@ -364,10 +364,10 @@ def tf_log10(x):
 def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
     return tf.reshape(
-                tf.cast(
-                    tf.math.conj(x)*x,
-                    dtype=tf.float64),
-                shape=[1]
+        tf.cast(
+            tf.math.conj(x)*x,
+            dtype=tf.float64),
+        shape=[1]
     )
 
 
@@ -434,9 +434,9 @@ def tf_kron(A, B):
     dims = tf.shape(A)*tf.shape(B)
     tensordot = tf.tensordot(A, B, axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                dims
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        dims
+    )
     return reshaped
 
 
@@ -449,9 +449,9 @@ def tf_spre(A):
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(A, Id, axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                [dim**2, dim**2]
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        [dim**2, dim**2]
+    )
     return reshaped
 
 
@@ -462,9 +462,9 @@ def tf_spost(A):
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                [dim**2, dim**2]
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        [dim**2, dim**2]
+    )
     return reshaped
 
 
@@ -482,11 +482,11 @@ def tf_super(A):
 def super_to_choi(A):
     sqrt_shape = int(np.sqrt(A.shape[0]))
     A_choi = tf.reshape(
-                tf.transpose(
-                    tf.reshape(A, [sqrt_shape] * 4),
-                    perm=[3, 1, 2, 0]
-                    ),
-                A.shape
+        tf.transpose(
+            tf.reshape(A, [sqrt_shape] * 4),
+            perm=[3, 1, 2, 0]
+            ),
+        A.shape
     )
     return A_choi
 
@@ -511,16 +511,16 @@ def tf_dmdm_fid(rho, sigma):
     # TODO needs fixing
     rhosqrt = tf.linalg.sqrtm(rho)
     return tf.linalg.trace(
-                tf.linalg.sqrtm(
-                    tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
-                    )
-                )
+        tf.linalg.sqrtm(
+            tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
+        )
+    )
 
 
 def tf_dmket_fid(rho, psi):
     return tf.sqrt(
-            tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
-            )
+        tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
+    )
 
 
 def tf_ketket_fid(psi1, psi2):
@@ -544,10 +544,10 @@ def tf_unitary_overlap(A, B, lvls=None):
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
     overlap = tf_abs(
-                tf.linalg.trace(
-                    tf.matmul(A, tf.linalg.adjoint(B))
-                    ) / lvls
-                )**2
+        tf.linalg.trace(
+            tf.matmul(A, tf.linalg.adjoint(B))
+        ) / lvls
+    )**2
     return overlap
 
 
@@ -555,12 +555,12 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     overlap = tf_abs(
-                tf.sqrt(
-                    tf.linalg.trace(
-                        tf.matmul(A, tf.linalg.adjoint(B))
-                        )
-                    ) / lvls
-                )**2
+        tf.sqrt(
+            tf.linalg.trace(
+                tf.matmul(A, tf.linalg.adjoint(B))
+            )
+        ) / lvls
+    )**2
     return overlap
 
 
