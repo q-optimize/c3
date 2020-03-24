@@ -247,9 +247,9 @@ def single_length_RB(RB_number, RB_length, padding=""):
         seq_gates = []
         for cliff_num in seq:
             # TODO: General padding for n qubits
-            if padding == "left":
+            if padding == "right":
                 g = ["Id:" + c for c in cliffords_decomp[cliff_num-1]]
-            elif padding == "right":
+            elif padding == "left":
                 g = [c + ":Id" for c in cliffords_decomp[cliff_num-1]]
             else:
                 g = cliffords_decomp[cliff_num-1]
