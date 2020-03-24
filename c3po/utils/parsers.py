@@ -244,6 +244,8 @@ def create_c1_opt_hk(
 def create_c2_opt(optimizer_config, eval_func_path):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
+    qubit_label = cfg["target"]
+    state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
     exp_eval_namespace = run_path(eval_func_path)
     eval_func = exp_eval_namespace['eval_func']
     gateset_opt_map = [
@@ -252,7 +254,10 @@ def create_c2_opt(optimizer_config, eval_func_path):
     ]
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
-        eval = lambda p: eval_func(p, exp_right, gateset_opt_map)
+        def eval(p):
+            return eval_func(
+                p, exp_right, gateset_opt_map, qubit_label, state_label
+            )
     else:
         eval = eval_func
     no_grad_algs = {'cmaes': algorithms.cmaes}
@@ -273,6 +278,8 @@ def create_c2_opt(optimizer_config, eval_func_path):
 def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
+    qubit_label = cfg["target"]
+    state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']
     estims = {
@@ -314,10 +321,11 @@ def create_c3_opt(optimizer_config):
         sampling=cfg['sampling'],
         batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
+        state_label=state_label,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
-        options=options
+        options=options,
     )
     return opt

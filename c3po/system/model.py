@@ -50,13 +50,16 @@ class Model:
         dims = []
         names = []
         state_labels = []
+        comp_state_labels = []
         for subs in subsystems:
             dims.append(subs.hilbert_dim)
             names.append(subs.name)
             state_labels.append(list(range(subs.hilbert_dim)))
+            comp_state_labels.append([0, 1])
         self.tot_dim = np.prod(dims)
         self.names = names
         self.state_labels = list(itertools.product(*state_labels))
+        self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
         # Create anninhilation operators for physical comps
         ann_opers = []

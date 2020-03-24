@@ -120,24 +120,30 @@ class Experiment:
             self.model.lindbladian
         )
         self.psi_init = psi_init
-        pop1s = []
+
+        populations_final = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
-            pops = self.populations(psi_final, self.model.lindbladian)
+            pops = self.populations(
+                psi_final, self.model.lindbladian
+            )
             # TODO: Loop over all tasks in a general fashion
             if "conf_matrix" in self.model.tasks:
-                pop1 = self.model.tasks["conf_matrix"].pop1(
+                pops = self.model.tasks["conf_matrix"].confuse(
                     pops,
                     self.model.lindbladian
                 )
+
             if labels is not None:
-                pop1 = 0
+                pops_select = 0
                 for l in labels:
-                    pop1 += pops[self.model.state_labels.index(l)]
+                    pops_select += pops[self.model.comp_state_labels.index(l)]
+                pops = pops_select
+
             if "meas_rescale" in self.model.tasks:
-                pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
-            pop1s.append(pop1)
-        return pop1s
+                pops = self.model.tasks["meas_rescale"].rescale(pops)
+            populations_final.append(pops)
+        return populations_final
 
     def get_gates(self):
         gates = {}

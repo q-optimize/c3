@@ -21,6 +21,7 @@ class C3(Optimizer):
         sampling,
         batch_size,
         opt_map,
+        state_label=None,
         callback_foms=[],
         callback_figs=[],
         algorithm_no_grad=None,
@@ -36,6 +37,7 @@ class C3(Optimizer):
         self.sampling = sampling
         self.batch_size = batch_size
         self.opt_map = opt_map
+        self.state_label = state_label
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
@@ -160,7 +162,7 @@ class C3(Optimizer):
             self.exp.gateset.set_parameters(
                 gateset_params, gateset_opt_map, scaled=False
             )
-            sim_vals = self.exp.evaluate(sequences)
+            sim_vals = self.exp.evaluate(sequences, labels=self.state_label)
 
             # exp_values.extend(m_vals)
             # exp_stds.extend(m_stds)
@@ -218,30 +220,30 @@ class C3(Optimizer):
                 + '.png'
             )
             plt.close(fig)
-        fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
-        l, r = axs.get_xlim()
-        axs.plot(r, m_val, 'kx')
-        fig.savefig(
-            self.logdir
-            + 'dynamics_seq/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal_numpy, 3))
-            + '.png'
-        )
-        plt.close(fig)
-        fig, axs = self.exp.plot_dynamics(
-            self.exp.psi_init,
-            ['X90p', 'Y90p', 'X90p', 'Y90p']
-        )
-        fig.savefig(
-            self.logdir
-            + 'dynamics_xyxy/'
-            + 'eval:' + str(self.evaluation) + "__"
-            + self.fom.__name__ + str(round(goal_numpy, 3))
-            + '.png'
-        )
-        plt.close(fig)
-        display.plot_C3([self.logdir])
+        # fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
+        # l, r = axs.get_xlim()
+        # axs.plot(r, m_val, 'kx')
+        # fig.savefig(
+        #     self.logdir
+        #     + 'dynamics_seq/'
+        #     + 'eval:' + str(self.evaluation) + "__"
+        #     + self.fom.__name__ + str(round(goal_numpy, 3))
+        #     + '.png'
+        # )
+        # plt.close(fig)
+        # fig, axs = self.exp.plot_dynamics(
+        #     self.exp.psi_init,
+        #     ['X90p', 'Y90p', 'X90p', 'Y90p']
+        # )
+        # fig.savefig(
+        #     self.logdir
+        #     + 'dynamics_xyxy/'
+        #     + 'eval:' + str(self.evaluation) + "__"
+        #     + self.fom.__name__ + str(round(goal_numpy, 3))
+        #     + '.png'
+        # )
+        # plt.close(fig)
+        # display.plot_C3([self.logdir])
 
         self.optim_status['params'] = [
             par.numpy().tolist()

@@ -91,7 +91,7 @@ class ConfusionMatrix(Task):
             conf_matrix = tf_utils.tf_kron(conf_matrix, conf_mat)
         # elif 'confusion_matrix' in self.params:
         #     conf_matrix = self.params['confusion_matrix'].get_value()
-        pops = tf.linalg.matvec(conf_matrix, pops)
+        pops = tf.linalg.matmul(conf_matrix, pops)
         return pops
 
 

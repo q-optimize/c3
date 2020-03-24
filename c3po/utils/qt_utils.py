@@ -212,6 +212,7 @@ def perfect_gate(
         gate_num += 1
     return np_kron_n(kron_list)
 
+
 def perfect_parametric_gate(paulis_str, ang, dims):
     ps = []
     p_list = paulis_str.split(":")
@@ -236,6 +237,19 @@ def perfect_CZ(lvls: int, proj: str = 'wzeros'):
     elif proj == 'wzeros' or proj == 'fulluni':
         CZ[lvls+1,lvls+1] = -1
     return CZ
+
+
+def two_qubit_gate_tomography(gate):
+    """
+    Sequences to generate tomography for evaluating a two qubit gate.
+    """
+    S = []
+    # State preparation
+    sp00 = []
+    sp01 = ["Id:X90p", "Id:X90p"]
+    sp10 = ["X90p:Id", "X90p:Id"]
+    sp11 = ["X90p:X90p", "X90p:X90p"]
+    return S
 
 
 def single_length_RB(RB_number, RB_length, padding=""):
