@@ -19,6 +19,7 @@ nice_parameter_name = {
     "freq_offset": "$\\delta\\omega_d$",
     "delta": "$\\Delta$",
     "t_final": "$t_{final}$"
+    "xy_angle": "$\\alpha_{xy}$"
 }
 
 
