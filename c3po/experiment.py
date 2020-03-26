@@ -146,7 +146,6 @@ class Experiment:
         return populations_final
 
     def get_gates(self):
-        print("IT'S PRINTING 2")
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()

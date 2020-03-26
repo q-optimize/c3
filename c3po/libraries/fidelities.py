@@ -68,6 +68,17 @@ def unitary_infid(
     return infid
 
 
+def unitary_infid_set(
+    U_dict: dict, index, dims, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        np.set_printoptions(precision=2, linewidth=135)
+        infid = unitary_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+
 def lindbladian_unitary_infid(
         U_dict: dict, gate: str, index, dims, proj: bool
     ):
@@ -95,6 +106,8 @@ def lindbladian_unitary_infid_set(
     infids = []
     for gate in U_dict.keys():
         infid = lindbladian_unitary_infid(U_dict, gate, index, dims, proj)
+        print(f"Gate {gate} reported infidelity {infid}.")
+        print(U_dict[gate])
         infids.append(infid)
     return tf.reduce_mean(infids)
 

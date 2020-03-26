@@ -69,6 +69,7 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid': lind_unit_X90p,
         'unitary_infid_Y90p': unit_Y90p,
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
+        'unitary_infid_set': fidelities.unitary_infid_set,
         'lind_unitary_infid_set': fidelities.lindbladian_unitary_infid_set,
         'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
