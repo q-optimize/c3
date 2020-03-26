@@ -1,5 +1,6 @@
 from c3po.c3objs import C3obj, Quantity
 import tensorflow as tf
+import numpy as np
 import c3po.libraries.constants as constants
 import c3po.utils.tf_utils as tf_utils
 import c3po.utils.qt_utils as qt_utils
@@ -44,14 +45,14 @@ class InitialiseGround(Task):
         )
         diag = tf.linalg.diag_part(drift_H)
         dim = len(diag)
-        if init_temp:  # this checks that it's not zero
+        if abs(init_temp) > np.finfo(float).eps:  # this checks that it's not zero
             # TODO Deal with dressed basis for thermal state
             freq_diff = diag - diag[0]
             beta = 1 / (init_temp * constants.kb)
             det_bal = tf.exp(-constants.hbar * freq_diff * beta)
             norm_bal = det_bal / tf.reduce_sum(det_bal)
             state = tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
-        else:
+        else:np.finfo(float).eps
             state = tf.constant(
                 qt_utils.basis(dim, 0),
                 shape=[dim, 1],
