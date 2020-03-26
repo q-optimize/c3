@@ -52,7 +52,7 @@ class InitialiseGround(Task):
             det_bal = tf.exp(-constants.hbar * freq_diff * beta)
             norm_bal = det_bal / tf.reduce_sum(det_bal)
             state = tf.reshape(tf.sqrt(norm_bal), [norm_bal.shape[0], 1])
-        else:np.finfo(float).eps
+        else:
             state = tf.constant(
                 qt_utils.basis(dim, 0),
                 shape=[dim, 1],

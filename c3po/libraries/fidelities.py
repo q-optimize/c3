@@ -106,8 +106,6 @@ def lindbladian_unitary_infid_set(
     infids = []
     for gate in U_dict.keys():
         infid = lindbladian_unitary_infid(U_dict, gate, index, dims, proj)
-        print(f"Gate {gate} reported infidelity {infid}.")
-        print(U_dict[gate])
         infids.append(infid)
     return tf.reduce_mean(infids)
 
