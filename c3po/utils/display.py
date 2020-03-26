@@ -18,7 +18,7 @@ nice_parameter_name = {
     "amp": "Area",
     "freq_offset": "$\\delta\\omega_d$",
     "delta": "$\\Delta$",
-    "t_final": "$t_{final}$"
+    "t_final": "$t_{final}$",
     "xy_angle": "$\\alpha_{xy}$"
 }
 
