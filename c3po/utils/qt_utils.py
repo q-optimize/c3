@@ -157,7 +157,6 @@ def perfect_gate(
         elif gate_str == 'Zp':
             gate = Zp
         elif gate_str == 'CNOT':
-            # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
             NOT = 1j*perfect_gate('Xp', index, [lvls2], proj)
             C = perfect_gate('Id', index, [lvls2], proj)
@@ -168,12 +167,11 @@ def perfect_gate(
             gate_num += 1
             do_pad_gate = False
         elif gate_str == 'CZ':
-            # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
-            NOT = 1j*perfect_gate('Zp', index, [lvls2], proj)
+            Z = 1j*perfect_gate('Zp', index, [lvls2], proj)
             C = perfect_gate('Id', index, [lvls2], proj)
-            gate = scipy_block_diag(C, NOT)
-            # We increase gate_num since CNOT is a two qubit gate
+            gate = scipy_block_diag(C, Z)
+            # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
                 pad_matrix(gate, lvls2, proj)
             gate_num += 1
@@ -229,26 +227,14 @@ def perfect_parametric_gate(paulis_str, ang, dims):
     return expm(-1.j/2 * ang * gen)
 
 
-def perfect_CZ(lvls: int, proj: str = 'wzeros'):
-    Id = perfect_gate(lvls, 'Id', proj=proj)
-    CZ = np.kron(Id,Id)
-    if proj == 'compsub':
-        CZ[3,3] = -1
-    elif proj == 'wzeros' or proj == 'fulluni':
-        CZ[lvls+1,lvls+1] = -1
-    return CZ
-
-
 def two_qubit_gate_tomography(gate):
     """
     Sequences to generate tomography for evaluating a two qubit gate.
     """
-    S = []
-    # State preparation
-    sp00 = []
-    sp01 = ["Id:X90p", "Id:X90p"]
-    sp10 = ["X90p:Id", "X90p:Id"]
-    sp11 = ["X90p:X90p", "X90p:X90p"]
+    # THE 4 GATES
+    base = ["Id", "X90p", "Y90p", "X"]
+    base2 = [x + ":" + y for x in base for y in base]
+    S = [[x, gate, y] for x in base2 for y in base2]
     return S
 
 

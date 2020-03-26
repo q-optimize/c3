@@ -146,6 +146,7 @@ class Experiment:
         return populations_final
 
     def get_gates(self):
+        print("IT'S PRINTING 2")
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
@@ -162,13 +163,12 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    if gate == "QId":
-                        offset = 0.0
-                    elif "freq_offset" in ctrls['gauss'].params:
-                        offset = ctrls['gauss'].params['freq_offset'].get_value()
-                    else:
-                        offset = 0.0
-
+                    # TODO calculate properly the average frequency that each qubit sees
+                    offset = 0.0
+                    if "gauss" in ctrls:
+                        if ctrls['gauss'].params["amp"] != 0.0:
+                            offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
                         + offset,
