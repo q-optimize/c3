@@ -232,7 +232,7 @@ def two_qubit_gate_tomography(gate):
     Sequences to generate tomography for evaluating a two qubit gate.
     """
     # THE 4 GATES
-    base = ["Id", "X90p", "Y90p", "X"]
+    base = ["Id", "X90p", "Y90p", "Xp"]
     base2 = [x + ":" + y for x in base for y in base]
     S = [[x, gate, y] for x in base2 for y in base2]
     return S
