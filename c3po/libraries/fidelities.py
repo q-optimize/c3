@@ -125,6 +125,15 @@ def average_infid(
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
+def average_infid_set(
+    U_dict: dict, index, dims, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = average_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
 
 def lindbladian_average_infid(
     U_dict: dict, gate: str, index, dims, proj: bool

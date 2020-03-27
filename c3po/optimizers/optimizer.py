@@ -73,7 +73,7 @@ class Optimizer:
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
-                U_dict = self.exp.U_dict
+                U_dict = self.exp.unitaries
                 for gate, U in U_dict.items():
                     best_point.write("\n")
                     best_point.write(f"Re {gate}: \n")
@@ -93,14 +93,14 @@ class Optimizer:
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
-        if self.plot_dynamics:
-            psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
-            )
-            for gate in self.exp.dUs.keys():
-                self.exp.plot_dynamics(psi_init, [gate])
-            self.exp.dynamics_plot_counter += 1
+            if self.plot_dynamics:
+                psi_init = self.exp.model.tasks["init_ground"].initialise(
+                    self.exp.model.drift_H,
+                    self.exp.model.lindbladian
+                )
+                for gate in self.exp.dUs.keys():
+                    self.exp.plot_dynamics(psi_init, [gate])
+                self.exp.dynamics_plot_counter += 1
         if self.plot_pulses:
             psi_init = self.exp.model.tasks["init_ground"].initialise(
                 self.exp.model.drift_H,

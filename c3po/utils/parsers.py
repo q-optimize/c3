@@ -69,19 +69,27 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid': lind_unit_X90p,
         'unitary_infid_Y90p': unit_Y90p,
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
-        'unitary_infid_set': fidelities.unitary_infid_set,
-        'lind_unitary_infid_set': fidelities.lindbladian_unitary_infid_set,
         'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
         'lind_average_infid': lind_avfid_X90p,
-        'lind_average_infid_set': fidelities.lindbladian_average_infid_set,
         'lind_average_infid_CR': lind_avfid_CR,
         'epc_ana': epc_ana,
         'lind_epc_ana': lind_epc_ana
     }
     fid = cfg['fid_func']
     cb_fids = cfg['callback_fids']
-    fid_func = fids[fid]
+    try:
+        fid_func = fids[fid]
+    except KeyError:
+        print(
+            "Goal function not found in user specification. "
+            "Trying libraries..."
+        )
+        try:
+            fid_func = fidelities.__dict__[fid]
+        except KeyError:
+            raise Exception("Unkown goal function.")
+        print(f"Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
         callback_fids.append(fids[cb_fid])

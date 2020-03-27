@@ -57,7 +57,6 @@ class C1(Optimizer):
             ]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
-            print("\nLoading previous best point.")
 
     def optimize_controls(self):
         """
@@ -68,7 +67,7 @@ class C1(Optimizer):
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_opt_gates(self.opt_gates)
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        print(f"\nSaving as:    {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
             index.append(self.exp.model.names.index(name))

@@ -16,10 +16,18 @@ rc('text', usetex=True)
 
 nice_parameter_name = {
     "amp": "Area",
+    "freq": "$\\omega_q$",
+    "anhar": "$\\delta$",
+    "v_to_hz": "$\\Phi$",
+    "V_to_Hz": "",
     "freq_offset": "$\\delta\\omega_d$",
     "delta": "$\\Delta$",
     "t_final": "$t_{final}$",
-    "xy_angle": "$\\alpha_{xy}$"
+    "t1": "$T_{1}$",
+    "t1star": "$T_{2}^*$",
+    "xy_angle": "$\\alpha_{xy}$",
+    "Q1": "Qubit 1",
+    "Q2": "Qubit 2"
 }
 
 
@@ -67,9 +75,9 @@ def unit_conversion(desc, param):
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
     plt.scatter(exps, sims)
-    plt.title('Exp vs Sim')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Sim fidelity')
+    plt.title('Infidelity correlation')
+    plt.xlabel('Experiment')
+    plt.ylabel('Simulation')
     return fig
 
 
@@ -86,11 +94,12 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
         origin='lower',
         # interpolation='bilinear',
         # extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        extent=[0, 1, 0, 1]
+        extent=[0, 1, 0, 1],
+        aspect="equal"
     )
-    plt.title('Exp vs Sim')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Sim fidelity')
+    plt.title('Infidelity correlation')
+    plt.xlabel('Experiment')
+    plt.ylabel('Simulation')
     plt.colorbar()
     return fig
 
@@ -125,9 +134,9 @@ def plot_exp_vs_sim(logfilename=""):
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     pixel_size = (72./300) ** 2
     plt.scatter(exps, sims, s=pixel_size)
-    plt.title('Exp vs Sim')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Sim fidelity')
+    plt.title('Infidelity correlation')
+    plt.xlabel('Experiment')
+    plt.ylabel('Simulation')
     data_path = "/".join(logfilename.split("/")[:-1])+"/"
     if data_path == "/":
         data_path = "./"
@@ -220,8 +229,8 @@ def plot_C1(logfolder=""):
     n_params = len(parameters.keys())
     its = range(1, len(goal_function) + 1)
     if n_params > 0:
-        nrows = np.ceil(np.sqrt(n_params))
-        ncols = np.ceil((n_params) / nrows)
+        nrows = np.ceil(np.sqrt(n_params + 1))
+        ncols = np.ceil((n_params + 1) / nrows)
         fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
         ii = 1
         for key in parameters.keys():
@@ -316,6 +325,10 @@ def plot_C3(logfolders):
                         unit = ''
                         p_name = ''
                         for desc in opt_map[iparam]:
+                            try:
+                                nice_name = nice_parameter_name[desc]
+                            except KeyError:
+                                nice_name = desc
                             p_name += ' ' + desc
                         if p_name not in scaling:
                             p_val, unit = unit_conversion(desc, param)

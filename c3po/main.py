@@ -10,6 +10,12 @@ import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
+### TF CONFIG
+tf.config.threading.set_inter_op_parallelism_threads(
+    12
+)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 args = parser.parse_args()
@@ -37,9 +43,15 @@ with tf.device('/CPU:0'):
     dir = opt.logdir
 
     if 'initial_point' in cfg:
-        init_point = cfg['initial_point']
-        opt.load_best(init_point)
-        print(f"Loading initial point from : {init_point}")
+        try:
+            init_point = cfg['initial_point']
+            opt.load_best(init_point)
+            print(f"Loading initial point from : {init_point}")
+        except FileNotFoundError:
+            print(
+                f"No initial point found at {init_point}. "
+                "Continuing with default."
+            )
 
     if 'real_params' in cfg:
         real_params = cfg['real_params']

@@ -94,10 +94,9 @@ def tf_limit_gpu_memory(memory_limit):
             print(e)
 
 
-@tf.function
+
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
-
 
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
@@ -130,7 +129,6 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     # dU = tf_expm(-1j * h * dt, terms)
     dU = tf.linalg.expm(-1j * h * dt)
     return dU
-
 
 @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
@@ -249,7 +247,7 @@ def tf_propagation(h0, hks, cflds, dt):
 #     return dUs
 #
 #
-# @tf.function
+#
 # def tf_propagation_batch(h0, hks, cflds, dt, left):
 #     """
 #     """
@@ -260,7 +258,6 @@ def tf_propagation(h0, hks, cflds, dt):
 #             cf_t.append(tf.cast(fields[ii], tf.complex128))
 #         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
 #     return dUs
-
 
 def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
     with tf.name_scope('Propagation'):
@@ -274,6 +271,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
 
 
 # MATRIX MULTIPLICATION FUCNTIONS
+
 def evaluate_sequences(
     U_dict: dict,
     sequences: list
@@ -393,7 +391,7 @@ def tf_diff(l):
     return tf.linalg.matvec(proj, l)
 
 # MATRIX FUNCTIONS
-@tf.function
+
 def tf_expm(A, terms):
     """
     Matrix exponential by the series method.
@@ -442,7 +440,7 @@ def tf_kron(A, B):
 
 # SUPEROPER FUNCTIONS
 # TODO migrate all superoper functions to using tf_kron
-@tf.function
+
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
     Id = Id_like(A)
@@ -455,7 +453,7 @@ def tf_spre(A):
     return reshaped
 
 
-@tf.function
+
 def tf_spost(A):
     """Superoperator on the right of matrix A."""
     Id = Id_like(A)
@@ -468,7 +466,7 @@ def tf_spost(A):
     return reshaped
 
 
-@tf.function
+
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -478,7 +476,7 @@ def tf_super(A):
     return superA
 
 
-@tf.function
+
 def super_to_choi(A):
     sqrt_shape = int(np.sqrt(A.shape[0]))
     A_choi = tf.reshape(

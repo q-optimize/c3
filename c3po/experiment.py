@@ -100,12 +100,6 @@ class Experiment:
         return "".join(ret)
     # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
-    def get_Us(self, seqs):
-        U_dict = self.get_gates()
-        self.U_dict = U_dict
-        Us = tf_utils.evaluate_sequences(U_dict, seqs)
-        return Us
-
     # def evaluate(self, seqs):
     #     def unit_X90p(U_dict):
     #         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
@@ -114,7 +108,7 @@ class Experiment:
     #     return results
 
     def evaluate(self, seqs, labels=None):
-        Us = self.get_Us(seqs)
+        Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
         psi_init = self.model.tasks["init_ground"].initialise(
             self.model.drift_H,
             self.model.lindbladian

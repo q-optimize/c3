@@ -68,7 +68,6 @@ class C3(Optimizer):
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
-            print("\nLoading previous best point.")
 
     def select_from_data(self):
         learn_from = self.learn_from
@@ -105,7 +104,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        print(f"\nSaving as:    {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -133,7 +132,7 @@ class C3(Optimizer):
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        print(f"\nSaving as:    {os.path.abspath(self.logdir + self.logname)}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
         try:
@@ -162,6 +161,7 @@ class C3(Optimizer):
             self.exp.gateset.set_parameters(
                 gateset_params, gateset_opt_map, scaled=False
             )
+            self.exp.get_gates()
             sim_vals = self.exp.evaluate(sequences, labels=self.state_label)
 
             # exp_values.extend(m_vals)
