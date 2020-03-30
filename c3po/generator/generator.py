@@ -51,9 +51,9 @@ class Generator:
             t_end = instr.t_end
             for chan in instr.comps:
                 gen_signal[chan] = {}
-                channel = instr.comps[chan]
-                lo_signal, omega_lo = lo.create_signal(channel, t_start, t_end)
-                awg_signal = awg.create_IQ(channel, t_start, t_end)
+                components = instr.comps[chan]
+                lo_signal, omega_lo = lo.create_signal(components, t_start, t_end)
+                awg_signal = awg.create_IQ(chan, components, t_start, t_end)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 if "resp" in self.devices:
                     conv_signal = resp.process(flat_signal)
