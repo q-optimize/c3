@@ -56,6 +56,10 @@ def create_c1_opt(optimizer_config):
         return fidelities.lindbladian_average_infid(
             U_dict, 'CR90', index, dims, proj=True
         )
+    def avfid_CR90(U_dict, index, dims):
+        return fidelities.average_infid(
+            U_dict, 'CR90', index, dims, proj=True
+        )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
     def lind_epc_ana(U_dict, index, dims):
@@ -71,6 +75,7 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
         'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
+        'average_infid_CR90': avfid_CR90,
         'lind_average_infid': lind_avfid_X90p,
         'lind_average_infid_CR': lind_avfid_CR,
         'lind_average_infid_CR90': lind_avfid_CR90,
