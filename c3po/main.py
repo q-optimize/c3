@@ -10,11 +10,6 @@ import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
-### TF CONFIG
-tf.config.threading.set_inter_op_parallelism_threads(
-    12
-)
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
@@ -74,8 +69,6 @@ with tf.device('/CPU:0'):
         opt.optimize_controls()
 
     elif optim_type == "C3":
-        datafile = cfg['datafile']
-        with open(datafile, 'rb+') as file:
-            learn_from = pickle.load(file)
-        opt.read_data(datafile)
+        learn_from = []
+        opt.read_data(cfg['datafile'])
         opt.learn_model()
