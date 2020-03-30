@@ -329,8 +329,6 @@ class Experiment:
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
-        inphase = awg.signal["inphase"]
-        quadrature = awg.signal["quadrature"]
 
         if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/"):
             os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/")
@@ -340,21 +338,17 @@ class Experiment:
         # ts = self.ts
         # dt = ts[1] - ts[0]
         # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(awg_ts / 1e-9, inphase/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
+        for channel in instr.comps:
+            inphase = awg.signal[channel]["inphase"]
+            quadrature = awg.signal[channel]["quadrature"]
+            axs.plot(awg_ts / 1e-9, inphase/1e-3, label="I "+ channel)
+            axs.plot(awg_ts / 1e-9, quadrature/1e-3, label="Q "+ channel)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.legend()
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_inphase_{list(instr.comps.keys())}.png", dpi=300
-        )
-
-        fig, axs = plt.subplots(1, 1)
-        axs.plot(awg_ts / 1e-9, quadrature/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_quadrature_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_{list(instr.comps.keys())}.png", dpi=300
         )
 
         dac = self.generator.devices["dac"]

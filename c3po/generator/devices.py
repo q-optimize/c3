@@ -390,7 +390,7 @@ class AWG(Device):
 # TODO create DC function
 
     # TODO make AWG take offset from the previous point
-    def create_IQ(self, channel: dict, t_start: float, t_end: float):
+    def create_IQ(self, channel: str, components: dict, t_start: float, t_end: float):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
 
@@ -401,6 +401,7 @@ class AWG(Device):
 
         """
         with tf.name_scope("I_Q_generation"):
+            self.signal[channel] = {}
             ts = self.create_ts(t_start, t_end, centered=True)
             self.ts = ts
             dt = ts[1] - ts[0]
@@ -411,8 +412,8 @@ class AWG(Device):
 
             if (self.options == 'pwc'):
                 amp_tot_sq = 0
-                for key in channel:
-                    comp = channel[key]
+                for key in components:
+                    comp = components[key]
                     if isinstance(comp, Envelope):
                         amp_tot_sq += 1
                         inphase = comp.params['inphase'].get_value()
@@ -434,8 +435,8 @@ class AWG(Device):
                 freq_offset = 0.0
 
             elif (self.options == 'drag') or (self.options == 'IBM_drag'):
-                for key in channel:
-                    comp = channel[key]
+                for key in components:
+                    comp = components[key]
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp'].get_value()
@@ -476,8 +477,8 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
             else:
-                for key in channel:
-                    comp = channel[key]
+                for key in components:
+                    comp = components[key]
                     # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
@@ -502,8 +503,8 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.signal['inphase'] = inphase / norm
-        self.signal['quadrature'] = quadrature / norm
+        self.signal[channel]['inphase'] = inphase #/ norm
+        self.signal[channel]['quadrature'] = quadrature #/ norm
         # self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/store params scaled or not
