@@ -21,7 +21,7 @@ class C3(Optimizer):
         sampling,
         batch_size,
         opt_map,
-        state_label=None,
+        state_labels=None,
         callback_foms=[],
         callback_figs=[],
         algorithm_no_grad=None,
@@ -37,11 +37,12 @@ class C3(Optimizer):
         self.sampling = sampling
         self.batch_size = batch_size
         self.opt_map = opt_map
-        self.state_label = state_label
+        self.state_labels = state_labels
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
         self.options = options
+        self.learn_data = {}
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
@@ -56,11 +57,10 @@ class C3(Optimizer):
         self.logdir = log_setup(dir_path, self.string)
         self.logname = 'model_learn.log'
 
-    def read_data(self, datafile):
-        with open(datafile, 'rb+') as file:
-            data = pickle.load(file)
-            self.learn_from = data['seqs_grouped_by_param_set']
-            self.gateset_opt_map = data['opt_map']
+    def read_data(self, datafiles):
+        for target, datafile in datafiles.items():
+            with open(datafile, 'rb+') as file:
+                self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -72,7 +72,7 @@ class C3(Optimizer):
     def select_from_data(self):
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = self.batch_size
+        batch_size = np.floor(self.batch_size / len(self.learn_data.keys()))
         total_size = len(learn_from)
         all = np.arange(total_size)
         if sampling == 'random':
@@ -141,60 +141,72 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        indeces = self.select_from_data()
-        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         exp_values = []
         exp_stds = []
         sim_values = []
 
+        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         count = 0
-        for ipar in indeces:
-            count += 1
-            m = self.learn_from[ipar]
-            gateset_params = m['params']
-            gateset_opt_map = self.gateset_opt_map
-            m_vals = m['results']
-            m_stds = m['results_std']
-            sequences = m['seqs']
-            num_seqs = len(sequences)
 
-            self.exp.gateset.set_parameters(
-                gateset_params, gateset_opt_map, scaled=False
-            )
-            self.exp.get_gates()
-            sim_vals = self.exp.evaluate(sequences, labels=self.state_label)
+        for target, data in self.learn_data.items():
 
-            # exp_values.extend(m_vals)
-            # exp_stds.extend(m_stds)
-            sim_values.extend(sim_vals)
+            self.learn_from = data['seqs_grouped_by_param_set']
+            self.gateset_opt_map = data['opt_map']
+            indeces = self.select_from_data()
 
-            with open(self.logdir + self.logname, 'a') as logfile:
-                logfile.write(
-                    "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
-                        ipar + 1,
-                        count,
-                        len(indeces),
-                        json.dumps(self.gateset_opt_map),
-                        self.exp.gateset.get_parameters(
-                            self.gateset_opt_map, to_str=True
-                        ),
-                    )
+            for ipar in indeces:
+
+                count += 1
+                m = self.learn_from[ipar]
+                gateset_params = m['params']
+                gateset_opt_map = self.gateset_opt_map
+                m_vals = m['results']
+                m_stds = m['results_std']
+                sequences = m['seqs']
+                num_seqs = len(sequences)
+
+                self.exp.gateset.set_parameters(
+                    gateset_params, gateset_opt_map, scaled=False
                 )
-            for iseq in range(num_seqs):
-                m_val = m_vals[iseq]
-                m_std = m_stds[iseq]
-                exp_values.append(m_val)
-                exp_stds.append(m_std)
-                sim_val = float(sim_vals[iseq].numpy())
+                self.exp.get_gates()
+                sim_vals = self.exp.evaluate(
+                    sequences, labels=self.state_labels[target]
+                )
+
+                # exp_values.extend(m_vals)
+                # exp_stds.extend(m_stds)
+                sim_values.extend(sim_vals)
+
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
-                        " Sequence {} of {}:\n".format(iseq + 1, num_seqs)
+                        "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
+                            ipar + 1,
+                            count,
+                            len(indeces),
+                            json.dumps(self.gateset_opt_map),
+                            self.exp.gateset.get_parameters(
+                                self.gateset_opt_map, to_str=True
+                            ),
+                        )
                     )
-                    logfile.write(f"  Simulation: {sim_val:8.5f}")
-                    logfile.write(f"  Experiment: {m_val:8.5f}")
-                    logfile.write(f"  Std: {m_std:8.5f}")
-                    logfile.write(f"  Diff: {m_val-sim_val:8.5f}\n")
-                    logfile.flush()
+
+                for iseq in range(num_seqs):
+                    m_val = m_vals[iseq]
+                    m_std = m_stds[iseq]
+                    exp_values.append(m_val)
+                    exp_stds.append(m_std)
+                    sim_val = float(sim_vals[iseq].numpy())
+                    with open(self.logdir + self.logname, 'a') as logfile:
+                        # TODO: Fix sequence counting for multiple learn_from
+                        # files
+                        logfile.write(
+                            f" Sequence {iseq + 1} of {num_seqs}:\n"
+                        )
+                        logfile.write(f"  Simulation: {sim_val:8.5f}")
+                        logfile.write(f"  Experiment: {m_val:8.5f}")
+                        logfile.write(f"  Std: {m_std:8.5f}")
+                        logfile.write(f"  Diff: {m_val-sim_val:8.5f}\n")
+                        logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values = tf.concat(sim_values, axis=0)
@@ -220,31 +232,8 @@ class C3(Optimizer):
                 + '.png'
             )
             plt.close(fig)
-        # fig, axs = self.exp.plot_dynamics(self.exp.psi_init, sequences[0])
-        # l, r = axs.get_xlim()
-        # axs.plot(r, m_val, 'kx')
-        # fig.savefig(
-        #     self.logdir
-        #     + 'dynamics_seq/'
-        #     + 'eval:' + str(self.evaluation) + "__"
-        #     + self.fom.__name__ + str(round(goal_numpy, 3))
-        #     + '.png'
-        # )
-        # plt.close(fig)
-        # fig, axs = self.exp.plot_dynamics(
-        #     self.exp.psi_init,
-        #     ['X90p', 'Y90p', 'X90p', 'Y90p']
-        # )
-        # fig.savefig(
-        #     self.logdir
-        #     + 'dynamics_xyxy/'
-        #     + 'eval:' + str(self.evaluation) + "__"
-        #     + self.fom.__name__ + str(round(goal_numpy, 3))
-        #     + '.png'
-        # )
-        # plt.close(fig)
-        # display.plot_C3([self.logdir])
 
+        display.plot_C3([self.logdir])
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.get_parameters(self.opt_map)

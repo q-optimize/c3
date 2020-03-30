@@ -82,14 +82,16 @@ def create_c1_opt(optimizer_config):
         fid_func = fids[fid]
     except KeyError:
         print(
-            "Goal function not found in user specification. "
+            "C3:STATUS:Goal function not found in user specification. "
             "Trying libraries..."
         )
         try:
             fid_func = fidelities.__dict__[fid]
         except KeyError:
-            raise Exception("Unkown goal function.")
-        print(f"Found {fid} in libraries.")
+            raise Exception(
+                "C3:ERROR:Unkown goal function."
+            )
+        print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
         callback_fids.append(fids[cb_fid])
@@ -287,8 +289,11 @@ def create_c2_opt(optimizer_config, eval_func_path):
 def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
-    qubit_label = cfg["target"]
-    state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
+
+    state_labels={}
+    for target, labels in cfg["state_labels"].items():
+        state_labels[target] = [tuple(l) for l in labels]
+
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']
     estims = {
@@ -330,7 +335,7 @@ def create_c3_opt(optimizer_config):
         sampling=cfg['sampling'],
         batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
-        state_label=state_label,
+        state_labels=state_labels,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
