@@ -73,6 +73,7 @@ def create_c1_opt(optimizer_config):
         'average_infid': avfid_X90p,
         'lind_average_infid': lind_avfid_X90p,
         'lind_average_infid_CR': lind_avfid_CR,
+        'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
         'lind_epc_ana': lind_epc_ana
     }
