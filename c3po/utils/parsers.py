@@ -24,6 +24,7 @@ def create_c1_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
+    # TODO merge this and the opt_gates to get rid of definitions
     def lind_unit_X90p(U_dict, index, dims):
         return fidelities.lindbladian_unitary_infid(
             U_dict, 'CZ', index, dims,  proj=True
@@ -56,6 +57,10 @@ def create_c1_opt(optimizer_config):
         return fidelities.lindbladian_average_infid(
             U_dict, 'CR90', index, dims, proj=True
         )
+    def avfid_CR90(U_dict, index, dims):
+        return fidelities.average_infid(
+            U_dict, 'CR90', index, dims, proj=True
+        )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
     def lind_epc_ana(U_dict, index, dims):
@@ -71,6 +76,7 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
         'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
+        'average_infid_CR90': avfid_CR90,
         'lind_average_infid': lind_avfid_X90p,
         'lind_average_infid_CR': lind_avfid_CR,
         'lind_average_infid_CR90': lind_avfid_CR90,
@@ -256,8 +262,12 @@ def create_c1_opt_hk(
 def create_c2_opt(optimizer_config, eval_func_path):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
-    qubit_label = cfg["target"]
-    state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
+    qubit_label = None
+    state_label = None
+    if 'target' in cfg:
+        qubit_label = cfg["target"]
+        state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
+
     exp_eval_namespace = run_path(eval_func_path)
     eval_func = exp_eval_namespace['eval_func']
     gateset_opt_map = [
@@ -272,7 +282,10 @@ def create_c2_opt(optimizer_config, eval_func_path):
             )
     else:
         eval = eval_func
-    no_grad_algs = {'cmaes': algorithms.cmaes}
+    no_grad_algs = {
+        'cmaes': algorithms.cmaes,
+        'single_eval': algorithms.single_eval
+    }
     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
@@ -291,9 +304,10 @@ def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
-    state_labels={}
-    for target, labels in cfg["state_labels"].items():
-        state_labels[target] = [tuple(l) for l in labels]
+    state_labels={"all": None}
+    if "state_labels" in cfg:
+        for target, labels in cfg["state_labels"].items():
+            state_labels[target] = [tuple(l) for l in labels]
 
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']

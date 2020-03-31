@@ -4,6 +4,10 @@ import numpy as np
 # from nevergrad.optimization import registry as algo_registry
 
 
+def single_eval(x0, goal_fun, options={}):
+    goal_fun(x0)
+
+
 def lbfgs(x0, goal_fun, grad_fun, options={}):
     # TODO print from the log not from hear
     options.update({'disp': True})
