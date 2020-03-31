@@ -158,7 +158,7 @@ def create_c1_opt_hk(
         try:
             cfg = json.loads(cfg_file.read())
         except json.decoder.JSONDecodeError:
-            raise Error(f"Config {optimizer_config} is invalid.")
+            raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
         def unit_X90p(U_dict):

@@ -16,18 +16,26 @@ rc('text', usetex=True)
 
 nice_parameter_name = {
     "amp": "Area",
-    "freq": "$\\omega_q$",
-    "anhar": "$\\delta$",
+    "freq": "Frequency $\\omega_q$",
+    "anhar": "Anharmonicity $\\delta$",
     "v_to_hz": "$\\Phi$",
-    "V_to_Hz": "",
-    "freq_offset": "$\\delta\\omega_d$",
+    "V_to_Hz": "Line response",
+    "freq_offset": "Detuning $\\delta\\omega_d$",
     "delta": "$\\Delta$",
     "t_final": "$t_{final}$",
     "t1": "$T_{1}$",
-    "t1star": "$T_{2}^*$",
+    "t2star": "$T_{2}^*$",
     "xy_angle": "$\\alpha_{xy}$",
     "Q1": "Qubit 1",
-    "Q2": "Qubit 2"
+    "Q2": "Qubit 2",
+    "conf_matrix": "$M$",
+    "confusion_row_Q1": "Qubit 1",
+    "confusion_row_Q2": "Qubit 2",
+    "meas_rescale": "Readout",
+    "meas_offset": "offset",
+    "meas_scale": "scale",
+    "Q1-Q2": "coupling",
+    "strength": "strength $g$"
 }
 
 
@@ -42,6 +50,9 @@ def unit_conversion(desc, param):
         unit = '$\\pi$'
         use_prefix = False
     elif desc == 'freq':
+        p_val = param / 2 / np.pi
+        unit = 'Hz'
+    elif desc == 'strength':
         p_val = param / 2 / np.pi
         unit = 'Hz'
     elif desc == 'anhar':
@@ -64,10 +75,11 @@ def unit_conversion(desc, param):
         unit = 'K'
     else:
         p_val = param
+        use_prefix = False
         unit = ""
     if use_prefix:
         value, prefix = eng_num(p_val)
-        return value, prefix+unit
+        return value, " ["+prefix+unit+"]"
     else:
         return p_val, unit
 
@@ -88,7 +100,7 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     fig = plt.figure()
     n_exps, _ = np.histogram(exps, bins=n_bins)
     H, xedges, yedges = np.histogram2d(exps, sims, bins=n_bins)
-    H = (H.T / n_exps)
+    H = np.zeros_like(H) + (H.T / n_exps)
     plt.imshow(
         H,
         origin='lower',
@@ -291,7 +303,11 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders):
+def plot_C3(logfolders=["./"], change_thresh=1e-3):
+    """
+    Generates model learning plots. Default options assume the function is
+    called from inside a log folder. Otherwise a file location has to be given.
+    """
     logs = []
     for logfolder in logfolders:
         logfilename = logfolder + 'model_learn.log'
@@ -322,6 +338,8 @@ def plot_C3(logfolders):
 
                     for iparam in range(len(point['params'])):
                         param = point['params'][iparam]
+                        if type(param) is list:
+                            param=param[0]
                         unit = ''
                         p_name = ''
                         for desc in opt_map[iparam]:
@@ -329,7 +347,7 @@ def plot_C3(logfolders):
                                 nice_name = nice_parameter_name[desc]
                             except KeyError:
                                 nice_name = desc
-                            p_name += ' ' + desc
+                            p_name += ' ' + nice_name
                         if p_name not in scaling:
                             p_val, unit = unit_conversion(desc, param)
                             scaling[p_name] = p_val / param
@@ -343,6 +361,8 @@ def plot_C3(logfolders):
                             real_value = real_params[
                                     synth_opt_map.index(opt_map[iparam])
                                 ]
+                            if type(real_value) is list:
+                                real_value=real_value[0]
                             real_parameters[p_name].append(
                                 real_value * scaling[p_name]
                             )
@@ -362,6 +382,15 @@ def plot_C3(logfolders):
         goal_function = log["goal_function"]
         if use_synthetic:
             real_parameters = log["real_paramters"]
+
+        pars_to_delete = []
+        for key, par in parameters.items():
+            rel_change = np.max(np.abs(np.diff(par))) / par[0]
+            if rel_change < change_thresh:
+                pars_to_delete.append(key)
+        for key in pars_to_delete:
+            parameters.pop(key)
+
         n_params = len(parameters.keys())
         its = range(1, len(goal_function) + 1)
         if n_params > 0:
@@ -375,14 +404,14 @@ def plot_C3(logfolders):
                 if use_synthetic:
                     plt.plot(its, real_parameters[key], "--", color='tab:red')
                 plt.grid()
-                plt.title(key.replace('_', '\\_'))
                 plt.xlabel('Evaluation')
-                plt.ylabel(units[key])
+                plt.ylabel(key +units[key])
                 ii += 1
-                plt.tight_layout()
-                plt.savefig(logfolder + "learn_model.png")
 
-    fig = plt.figure()
+    plt.tight_layout()
+    plt.savefig(logfolder + "learn_model.png")
+
+    plt.figure()
     plt.title("Goal")
     plt.grid()
     colors = ["tab:blue", "tab:red", "tab:green"]
@@ -394,7 +423,7 @@ def plot_C3(logfolders):
         goal_function = log["goal_function"]
         its = range(1, len(goal_function) + 1)
         c = colors.pop(0)
-        line =  plt.semilogx(
+        line = plt.semilogx(
             its, goal_function, marker=markers[idx], color=c,
             label=line_names[idx]
         )
@@ -402,15 +431,11 @@ def plot_C3(logfolders):
         idx += 1
         plt.semilogx(its[-1], goal_function[-1], "x", color=c)
     leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
-  #  for entry in leg:
-  #      leg_formatted.append(entry)
-  #      leg_formatted.append("converged")
-    plt.legend(leg_formatted)
+    plt.legend(leg)
     plt.xlabel('Evaluation')
     plt.ylabel('RMS model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
-
 
 
 def plot_envelope_history(logfilename):
