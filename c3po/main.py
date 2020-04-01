@@ -26,7 +26,7 @@ with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
 
     if optim_type == "C1":
-        opt = parsers.create_c1_opt(opt_config)
+        opt = parsers.create_c1_opt(opt_config, exp.model.lindbladian)
     elif optim_type == "C2":
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)

@@ -20,7 +20,7 @@ def create_experiment(exp_setup, datafile=''):
     return exp
 
 
-def create_c1_opt(optimizer_config):
+def create_c1_opt(optimizer_config, lindblad):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -83,7 +83,10 @@ def create_c1_opt(optimizer_config):
         'epc_ana': epc_ana,
         'lind_epc_ana': lind_epc_ana
     }
-    fid = cfg['fid_func']
+    if lindblad:
+        fid = 'lindbladian' + cfg['fid_func']
+    else:
+        fid = cfg['fid_func']
     cb_fids = cfg['callback_fids']
     try:
         fid_func = fids[fid]
