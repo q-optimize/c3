@@ -156,14 +156,10 @@ class Model:
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
+        reorder_matrix = tf.cast(tf.round(tf.math.abs(v)), tf.complex128)
         if ordered:
-            # FIXME Deal with the possibility of complex valued eigenvectors
-            warnings.warn(
-                "Deal with the possibility of complex valued eigenvectors"
-            )
-            reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
-            transform = tf.matmul(tf.linalg.adjoint(reorder_matrix), v)
+            transform = tf.matmul(v, tf.transpose(reorder_matrix))
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v

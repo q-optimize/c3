@@ -277,12 +277,10 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    if gate == "QId":
-                        offset = 0.0
-                    elif "freq_offset" in ctrls['gauss'].params:
-                        offset = ctrls['gauss'].params['freq_offset'].get_value()
-                    else:
-                        offset = 0.0
+                    offset = 0.0
+                    if "gauss" in ctrls:
+                        if ctrls['gauss'].params["amp"] != 0.0:
+                            offset = ctrls['gauss'].params['freq_offset'].get_value()
 
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
