@@ -163,7 +163,8 @@ def lindbladian_average_infid_set(
     return tf.reduce_mean(infids)
 
 
-def epc_analytical(U_dict: dict, proj: bool):
+def epc_analytical(U_dict: dict, index, dims, proj: bool):
+    # TODO make this work with new index and dims
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     num_gates = len(gate.split(':'))
@@ -252,7 +253,8 @@ def RB(
        num_lengths: int = 20,
        num_seqs: int = 30,
        logspace=False,
-       lindbladian=False
+       lindbladian=False,
+       padding=""
        ):
     # print('Performing RB fit experiment.')
     gate = list(U_dict.keys())[0]
@@ -277,12 +279,12 @@ def RB(
                     ).astype(int)
     surv_prob = []
     for L in lengths:
-        seqs = single_length_RB(num_seqs, L)
+        seqs = single_length_RB(num_seqs, L, padding)
         Us = evaluate_sequences(U_dict, seqs)
         pop0s = []
         for U in Us:
             pops = populations(tf.matmul(U, psi_init), lindbladian)
-            pop0s.append(float(pops[0]))
+            pop0s.append(float(pops[0]+pops[1]))
         surv_prob.append(pop0s)
 
     def RB_fit(len, r, A, B):
@@ -322,12 +324,12 @@ def RB(
                             ).astype(int)
             max_length = max_length * 2
             for L in new_lengths:
-                seqs = single_length_RB(num_seqs, L)
+                seqs = single_length_RB(num_seqs, L, padding)
                 Us = evaluate_sequences(U_dict, seqs)
                 pop0s = []
                 for U in Us:
                     pops = populations(tf.matmul(U, psi_init), lindbladian)
-                    pop0s.append(float(pops[0]))
+                    pop0s.append(float(pops[0]+pops[1]))
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
@@ -346,7 +348,7 @@ def RB(
                 linestyle='None')
     plt.title('RB results')
     plt.ylabel('Population in 0')
-    plt.xlabel('# Cliffords')
+    plt.xlabel('\# Cliffords')
     plt.ylim(0, 1)
     plt.xlim(0, lengths[-1])
     fitted = RB_fit(lengths, r, A, B)

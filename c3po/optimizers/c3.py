@@ -3,6 +3,7 @@
 import os
 import json
 import pickle
+import itertools
 import numpy as np
 import tensorflow as tf
 from c3po.optimizers.optimizer import Optimizer
@@ -68,9 +69,10 @@ class C3(Optimizer):
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self):
+        num_data_sets = len(self.learn_data.keys())
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = np.floor(self.batch_size / len(self.learn_data.keys()))
+        batch_size = np.floor(self.batch_size / num_data_sets)
         total_size = len(learn_from)
         all = np.arange(total_size)
         if sampling == 'random':
@@ -165,6 +167,11 @@ class C3(Optimizer):
 
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
+                )
+                # We find the unique gates used in the sequence and compute
+                # only them.
+                self.exp.opt_gates = list(
+                    set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
                 sim_vals = self.exp.evaluate(

@@ -114,7 +114,6 @@ class Experiment:
             self.model.lindbladian
         )
         self.psi_init = psi_init
-
         populations_final = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
@@ -127,7 +126,6 @@ class Experiment:
                     pops,
                     self.model.lindbladian
                 )
-
             if labels is not None:
                 pops_select = 0
                 for l in labels:

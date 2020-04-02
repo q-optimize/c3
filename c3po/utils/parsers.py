@@ -63,6 +63,8 @@ def create_c1_opt(optimizer_config, lindblad):
         )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
+    def epc_RB(U_dict, index, dims):
+        return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad, padding="left")[0]
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
     def epc_ana(U_dict, index, dims):
@@ -81,12 +83,14 @@ def create_c1_opt(optimizer_config, lindblad):
         'lind_average_infid_CR': lind_avfid_CR,
         'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
+        'epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
     if lindblad:
         fid = 'lindbladian' + cfg['fid_func']
     else:
         fid = cfg['fid_func']
+
     cb_fids = cfg['callback_fids']
     try:
         fid_func = fids[fid]
