@@ -69,7 +69,7 @@ def unitary_infid(
 
 
 def unitary_infid_set(
-    U_dict: dict, index, dims, proj=True
+    U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
     for gate in U_dict.keys():
@@ -101,7 +101,7 @@ def lindbladian_unitary_infid(
 
 
 def lindbladian_unitary_infid_set(
-    U_dict: dict, index, dims, proj=True
+    U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
     for gate in U_dict.keys():
@@ -126,7 +126,7 @@ def average_infid(
     return infid
 
 def average_infid_set(
-    U_dict: dict, index, dims, proj=True
+    U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
     for gate in U_dict.keys():

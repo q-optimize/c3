@@ -215,15 +215,15 @@ class Model:
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
             )
+            # if self.dressed:
+            #     num_oper = tf.matmul(
+            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
+            #         self.transform
+            #     )
             FR = FR * tf.linalg.expm(
                 1.0j * num_oper * (freq * t_final + framechange)
             )
-        if self.dressed:
-            FR = tf.matmul(tf.matmul(
-                tf.linalg.adjoint(self.transform),
-                FR),
-                self.transform
-            )
+
         return FR
 
     def get_qubit_freqs(self):

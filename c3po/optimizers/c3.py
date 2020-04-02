@@ -78,7 +78,7 @@ class C3(Optimizer):
         if sampling == 'random':
             indeces = np.random.sample(all, batch_size)
         elif sampling == 'even':
-            n = int(total_size / batch_size)
+            n = int(np.ceil(total_size / batch_size))
             indeces = all[::n]
         elif sampling == 'from_start':
             indeces = all[:batch_size]
@@ -104,7 +104,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"Saving as:    {os.path.abspath(self.logdir + self.logname)}")
+        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -132,7 +132,7 @@ class C3(Optimizer):
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
-        print(f"Saving as:    {os.path.abspath(self.logdir + self.logname)}")
+        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
         try:

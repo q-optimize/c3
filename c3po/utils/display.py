@@ -273,8 +273,16 @@ def plot_C1(logfolder="", only_iterations=True):
         its = range(1, len(goal_function) + 1)
     subplots = {}
     if len(subplot_ids) > 0:
-        nrows = np.ceil(np.sqrt(len(subplot_ids)))
-        ncols = np.ceil((len(subplot_ids)) / nrows)
+
+        # Square layout
+        # nrows = np.ceil(np.sqrt(len(subplot_ids)))
+        # ncols = np.ceil((len(subplot_ids)) / nrows)
+
+        # One column layout
+        nrows = len(subplot_ids)
+        ncols = 1
+
+
         fig = plt.figure(figsize=(4 * ncols, 3 * nrows))
         for key in parameters.keys():
             p_type = key.split(" ")[-1]
