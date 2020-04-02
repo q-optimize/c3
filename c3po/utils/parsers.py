@@ -1,5 +1,6 @@
 import json
 import random
+import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
@@ -63,6 +64,12 @@ def create_c1_opt(optimizer_config, lindblad):
         )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
+    def epc_RB(U_dict, index, dims, eval):
+        epc, r, A, B, fig, ax = fidelities.RB(
+            U_dict, logspace=True, lindbladian=lindblad, padding="left"
+        )
+        plt.savefig(f"{cfg['dir_path']}recent/RB_{eval}.png", dpi=300)
+        return epc
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
     def epc_ana(U_dict, index, dims):
@@ -81,12 +88,14 @@ def create_c1_opt(optimizer_config, lindblad):
         'lind_average_infid_CR': lind_avfid_CR,
         'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
+        'epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
     if lindblad:
         fid = 'lindbladian' + cfg['fid_func']
     else:
         fid = cfg['fid_func']
+
     cb_fids = cfg['callback_fids']
     try:
         fid_func = fids[fid]
@@ -104,7 +113,21 @@ def create_c1_opt(optimizer_config, lindblad):
         print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
-        callback_fids.append(fids[cb_fid])
+        try:
+            cb_fid_func = fids[cb_fid]
+        except KeyError:
+            print(
+                "C3:STATUS:Goal function not found in user specification. "
+                "Trying libraries..."
+            )
+            try:
+                cb_fid_func = fidelities.__dict__[cb_fid]
+            except KeyError:
+                raise Exception(
+                    "C3:ERROR:Unkown goal function."
+                )
+            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+        callback_fids.append(cb_fid_func)
     opt_gates = cfg['opt_gates']
     gateset_opt_map = [
         [tuple(par) for par in set]

@@ -3,6 +3,7 @@
 import logging
 logging.getLogger('tensorflow').disabled = True
 
+import shutil
 import json
 import pickle
 import argparse
@@ -37,11 +38,18 @@ with tf.device('/CPU:0'):
     opt.set_exp(exp)
     dir = opt.logdir
 
+    shutil.copy2(master_config, dir)
+    shutil.copy2(exp_setup, dir)
+    shutil.copy2(opt_config, dir)
+    if optim_type == "C2":
+        shutil.copy2(eval_func, dir)
+
     if 'initial_point' in cfg:
         try:
             init_point = cfg['initial_point']
             opt.load_best(init_point)
             print(f"Loading initial point from : {init_point}")
+            shutil.copy(init_point, dir+"initial_point.log")
         except FileNotFoundError:
             print(
                 f"No initial point found at {init_point}. "

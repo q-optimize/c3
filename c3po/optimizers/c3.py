@@ -3,6 +3,7 @@
 import os
 import json
 import pickle
+import itertools
 import numpy as np
 import tensorflow as tf
 from c3po.optimizers.optimizer import Optimizer
@@ -68,15 +69,16 @@ class C3(Optimizer):
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self):
+        num_data_sets = len(self.learn_data.keys())
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = np.floor(self.batch_size / len(self.learn_data.keys()))
+        batch_size = np.floor(self.batch_size / num_data_sets)
         total_size = len(learn_from)
         all = np.arange(total_size)
         if sampling == 'random':
             indeces = np.random.sample(all, batch_size)
         elif sampling == 'even':
-            n = int(total_size / batch_size)
+            n = int(np.ceil(total_size / batch_size))
             indeces = all[::n]
         elif sampling == 'from_start':
             indeces = all[:batch_size]
@@ -102,7 +104,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"Saving as:    {os.path.abspath(self.logdir + self.logname)}")
+        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -130,7 +132,7 @@ class C3(Optimizer):
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
-        print(f"Saving as:    {os.path.abspath(self.logdir + self.logname)}")
+        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
         try:
@@ -165,6 +167,11 @@ class C3(Optimizer):
 
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
+                )
+                # We find the unique gates used in the sequence and compute
+                # only them.
+                self.exp.opt_gates = list(
+                    set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
                 sim_vals = self.exp.evaluate(
