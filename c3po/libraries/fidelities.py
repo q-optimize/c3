@@ -52,7 +52,7 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
 
 
 def unitary_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj: bool
 ):
     U = U_dict[gate]
     projection = 'fulluni'
@@ -111,7 +111,8 @@ def lindbladian_unitary_infid_set(
 
 
 def average_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool):
+    U_dict: dict, gate: str, index, dims, proj: bool
+):
     U = U_dict[gate]
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
