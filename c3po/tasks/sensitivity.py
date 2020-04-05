@@ -5,6 +5,7 @@ import json
 import pickle
 import time
 import numpy as np
+import adaptive
 import tensorflow as tf
 import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
@@ -105,12 +106,12 @@ class SET():
         else:
             return indeces
 
-    def goal_run(self, tup, val):
+    def goal_run(self, val):
         indeces = self.select_from_data()
         #self.exp.set_parameters(current_params, self.opt_map, scaled=False)
         # print("tup: " + str(tup))
         # print("val: " + str(val))
-        self.exp.set_parameters([val],[tup], scaled=False)
+        self.exp.set_parameters([val],[self.tup], scaled=False)
         print("params>>> ")
         params = self.exp.print_parameters(self.opt_map)
         print(params)
@@ -182,6 +183,8 @@ class SET():
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values = tf.concat(sim_values, axis=0)
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
+        print("EXP_VALUES:")
+        print(len(exp_values))
         print("self.fom ...")
         goal = self.fom(exp_values, sim_values, exp_stds)
         print("... done!")
@@ -239,41 +242,70 @@ class SET():
         ]
         self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
-        return goal
-
+        return goal_numpy
 
     def sensitivity_test(self):
+        self.evaluation = 0
         print(self.sweep_map)
-        for tmp in self.sweep_map:
-            print(tmp)
-            min = tmp[2][0]
-            max = tmp[2][1]
-            delta = tmp[2][2]
-            print(min)
-            print(max)
-            print(delta)
-            s = abs(max - min)
-            print(s)
-            n = int(s/delta)
-            print(n)
-            for i in range(n):
-                self.logname = 'confirm_' + str(i) + '.log'
-                self.dfname = "data.dat"
-                self.inverse = True
-                self.start_log()
-                print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        #for tmp in self.sweep_map:
+        tmp = self.sweep_map[0]
+        print(tmp)
+        min = tmp[2][0]
+        max = tmp[2][1]
+        delta = tmp[2][2]
+        print(min)
+        print(max)
+        print(delta)
+        s = abs(max - min)
+        print(s)
+        n = int(s/delta)
+        print(n)
 
-                tup = (tmp[0],tmp[1])
-                val = min + i * delta
-                print(tup)
-                print(val)
+        self.logname = 'confirm_runner' + '.log'
+        self.dfname = "data.dat"
+        self.inverse = True
+        self.start_log()
+        tup = (tmp[0],tmp[1])
+        self.tup = tup
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
 
-                # self.exp.set_parameters([val],[tup], scaled=False)
-                # x_best = self.exp.get_parameters(self.opt_map, scaled=False)
+        learner = adaptive.Learner1D(self.goal_run, bounds=(min,max))
 
-                self.evaluation = -1
-                try:
-                    #print("running ...")
-                    self.goal_run(tup, val)
-                except KeyboardInterrupt:
-                    pass
+        accuracy_goal = 0.1
+
+        runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < accuracy_goal)
+
+
+        #=== Get the resulting data ======================================
+
+        Xs=np.array(list(learner.data.keys()))
+        Ys=np.array(list(learner.data.values()))
+        Ks=np.argsort(Xs)
+        Xs=Xs[Ks]
+        Ys=Ys[Ks]
+
+
+            #runner.live_info()
+
+            # for i in range(n):
+            #     print(str(i) + "/" + str(n))
+            #     self.logname = 'confirm_' + str(i) + '.log'
+            #     self.dfname = "data.dat"
+            #     self.inverse = True
+            #     self.start_log()
+            #     print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+            #
+            #     tup = (tmp[0],tmp[1])
+            #     val = min + i * delta
+            #     print(tup)
+            #     print(val)
+            #
+            #     # self.exp.set_parameters([val],[tup], scaled=False)
+            #     # x_best = self.exp.get_parameters(self.opt_map, scaled=False)
+            #
+            #     self.evaluation = -1
+            #     try:
+            #         #print("running ...")
+            #         self.goal_run(tup, val)
+            #     except KeyboardInterrupt:
+            #         pass
