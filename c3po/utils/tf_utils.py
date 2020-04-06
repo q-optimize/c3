@@ -486,7 +486,7 @@ def super_to_choi(A):
 def tf_state_to_dm(psi_ket):
     psi_ket = tf.reshape(psi_ket, [psi_ket.shape[0], 1])
     psi_bra = tf.transpose(psi_ket)
-    return psi_ket * psi_bra
+    return tf.matmul(psi_ket, psi_bra)
 
 
 # TODO see which code to get dv is better (and kill the other)

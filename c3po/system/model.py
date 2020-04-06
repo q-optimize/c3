@@ -1,6 +1,5 @@
 """The model class, containing information on the system and its modelling."""
 
-import warnings
 import numpy as np
 import itertools
 import tensorflow as tf
