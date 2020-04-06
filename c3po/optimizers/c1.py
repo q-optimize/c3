@@ -67,7 +67,7 @@ class C1(Optimizer):
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_opt_gates(self.opt_gates)
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
             index.append(self.exp.model.names.index(name))
