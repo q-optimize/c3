@@ -4,6 +4,7 @@ import os
 import json
 import pickle
 import itertools
+import random
 import numpy as np
 import tensorflow as tf
 from c3po.optimizers.optimizer import Optimizer
@@ -72,11 +73,11 @@ class C3(Optimizer):
         num_data_sets = len(self.learn_data.keys())
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = np.floor(self.batch_size / num_data_sets)
+        batch_size = int(np.floor(self.batch_size / num_data_sets))
         total_size = len(learn_from)
-        all = np.arange(total_size)
+        all = list(range(total_size))
         if sampling == 'random':
-            indeces = np.random.sample(all, batch_size)
+            indeces = random.sample(all, batch_size)
         elif sampling == 'even':
             n = int(np.ceil(total_size / batch_size))
             indeces = all[::n]
@@ -104,7 +105,7 @@ class C3(Optimizer):
             os.makedirs(self.logdir + cb_fig.__name__)
         os.makedirs(self.logdir + 'dynamics_seq')
         os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
@@ -132,7 +133,7 @@ class C3(Optimizer):
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
-        print(f"Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x_best = self.exp.get_parameters(self.opt_map, scaled=True)
         self.evaluation = -1
         try:

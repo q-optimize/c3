@@ -39,10 +39,11 @@ class InitialiseGround(Task):
         )
         self.params['init_temp'] = init_temp
 
-    def initialise(self, drift_H, lindbladian):
-        init_temp = tf.cast(
-            self.params['init_temp'].get_value(), dtype=tf.complex128
-        )
+    def initialise(self, drift_H, lindbladian=False, init_temp=None):
+        if init_temp is None:
+            init_temp = tf.cast(
+                self.params['init_temp'].get_value(), dtype=tf.complex128
+            )
         diag = tf.linalg.diag_part(drift_H)
         dim = len(diag)
         if abs(init_temp) > np.finfo(float).eps:  # this checks that it's not zero

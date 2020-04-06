@@ -35,52 +35,62 @@ nice_parameter_name = {
     "meas_offset": "offset",
     "meas_scale": "scale",
     "Q1-Q2": "coupling",
-    "strength": "strength $g$"
+    "strength": "strength $g$",
+    "X90p:Id": "$X_{+\\frac{\\pi}{2}}\\otimes\\mathcal{I}$",
+    "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$"
 }
 
 
 def unit_conversion(desc, param):
     # TODO Get right units from the log
     use_prefix = True
-    if desc == "$\\delta\\omega_d$":
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == "$\\alpha_{xy}$":
-        p_val = param / np.pi
-        unit = '[$\\pi$]'
-        use_prefix = False
-    elif desc == 'freq':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'strength':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'anhar':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'delta':
-        p_val = param
-        unit = ''
-        use_prefix = False
-    elif desc == 't1' or desc == 't2star':
-        p_val = param
-        unit = 's'
-    elif desc == 'V_to_Hz':
-        p_val = param
-        unit = 'Hz/V'
-    elif desc == "Amplitude":
-        p_val = param
-        unit = 'V'
-    elif desc == 'rise_time':
-        p_val = param
-        unit = 's'
-    elif desc == 'init_temp':
-        p_val = param
-        unit = 'K'
-    else:
-        p_val = param
-        use_prefix = False
-        unit = ""
+    for key, item in nice_parameter_name.items():
+        # Yes, this is that stupid
+        if item==desc:
+            desc = key
+    for ii in range(2):
+        if desc == "freq_offset":
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == "xy_angle":
+            p_val = param / np.pi
+            unit = '[$\\pi$]'
+            use_prefix = False
+        elif desc == 'freq':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'strength':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'anhar':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'delta':
+            p_val = param
+            unit = ''
+            use_prefix = False
+        elif desc == 't1' or desc == 't2star':
+            p_val = param
+            unit = 's'
+        elif desc == 'V_to_Hz':
+            p_val = param
+            unit = 'Hz/V'
+        elif desc == "Amplitude":
+            p_val = param
+            unit = 'V'
+        elif desc == 'rise_time':
+            p_val = param
+            unit = 's'
+        elif desc == 'init_temp':
+            p_val = param
+            unit = 'K'
+        elif desc == "amp":
+            p_val = param
+            unit = 'V'
+        else:
+            p_val = param
+            use_prefix = False
+            unit = ""
     if use_prefix:
         value, prefix = eng_num(p_val)
         return value, " ["+prefix+unit+"]"
@@ -104,7 +114,7 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     fig = plt.figure()
     n_exps, _ = np.histogram(exps, bins=n_bins)
     H, xedges, yedges = np.histogram2d(exps, sims, bins=n_bins)
-    H = np.zeros_like(H) + (H.T / n_exps)
+    H = np.zeros([n_bins, n_bins]) + (H.T / n_exps)
     plt.imshow(
         H,
         origin='lower',
@@ -242,13 +252,13 @@ def plot_C1(logfolder="", only_iterations=True):
                                 nice_name = nice_parameter_name[desc]
                             except KeyError:
                                 nice_name = desc
-                            p_name += ' ' + nice_name
+                            p_name += '-' + nice_name
                         if not(p_name in parameters.keys()):
                             parameters[p_name] = []
                         parameters[p_name].append(param)
-                        p_name_splt = p_name.split(" ")
-                        p_type = p_name.split(" ")[-1]
-                        par_identifier = p_name.split(" ")[1]
+                        p_name_splt = p_name.split("-")
+                        p_type = p_name_splt[-1]
+                        par_identifier = p_name_splt[1]
                         if not p_type in subplot_ids.keys():
                             subplot_ids[p_type] = subplot_id
                             subplot_legends[p_type] = []
@@ -260,7 +270,7 @@ def plot_C1(logfolder="", only_iterations=True):
     units = {}
     for p_name, par in parameters.items():
         max_val = np.max(np.abs(par))
-        p_val, unit = unit_conversion(p_name.split(" ")[-1], max_val)
+        p_val, unit = unit_conversion(p_name.split("-")[-1], max_val)
         try:
             scaling[p_name] = np.array(p_val / max_val)
         except ZeroDivisionError:
@@ -277,27 +287,31 @@ def plot_C1(logfolder="", only_iterations=True):
         # Square layout
         # nrows = np.ceil(np.sqrt(len(subplot_ids)))
         # ncols = np.ceil((len(subplot_ids)) / nrows)
+        # fig = plt.figure(figsize=(4 * ncols, 3 * nrows))
 
         # One column layout
         nrows = len(subplot_ids)
         ncols = 1
-
-
-        fig = plt.figure(figsize=(4 * ncols, 3 * nrows))
+        fig, axs = plt.subplots(
+            figsize=(5, 2 * nrows), nrows=nrows, ncols=ncols, sharex=True
+        )
+        fig.subplots_adjust(hspace=0)
         for key in parameters.keys():
-            p_type = key.split(" ")[-1]
+            p_type = key.split("-")[-1]
             if not p_type in subplots.keys():
-                subplots[p_type] = plt.subplot(
-                    nrows, ncols, subplot_ids[key.split(" ")[-1]]
-                )
-            subplots[p_type].plot(its, scaling[key] * parameters[key])
-            subplots[p_type].grid()
-            plt.ylabel(" ".join(key.split(" ")[-2:]) + units[key])
-            plt.xlabel(xlabel)
+                subplots[p_type] = axs[subplot_ids[p_type]-1]
+            ax = subplots[p_type]
+            ax.plot(its, scaling[key] * parameters[key])
+            ax.tick_params(
+                direction="in", left=True, right=True, top=True, bottom=True
+            )
+            ax.set_ylabel(p_type + units[key])
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+            ax.grid(linestyle="--")
 
+        ax.set_xlabel(xlabel)
         for p_type, legend in subplot_legends.items():
             subplots[p_type].legend(legend)
-        plt.tight_layout()
         plt.savefig(logfolder + "open_loop.png")
         plt.figure()
         plt.title("Goal")
@@ -347,7 +361,7 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders=["./"], change_thresh=1e-3):
+def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
     """
     Generates model learning plots. Default options assume the function is
     called from inside a log folder. Otherwise a file location has to be given.
@@ -369,44 +383,59 @@ def plot_C3(logfolders=["./"], change_thresh=1e-3):
             real_parameters = {}
             synth_opt_map = json.loads(synth_model[0])
 
+        best_goal = 987654321
         goal_function = []
         parameters = {}
         scaling = {}
-        units = {}
         opt_map = json.loads(log[3])
+
+        subplot_ids = {}
+        subplot_legends = {}
+        subplot_id = 1
         for line in log[4:]:
             if line[0] == "{":
                 point = json.loads(line)
                 if 'goal' in point.keys():
-                    goal_function.append(point['goal'])
+                    if only_iterations and point['goal']<best_goal:
+                        best_goal = point['goal']
+                        goal_function.append(point['goal'])
 
-                    for iparam in range(len(point['params'])):
-                        param = point['params'][iparam]
-                        if type(param) is list:
-                            param=param[0]
-                        unit = ''
-                        p_name = ''
-                        for desc in opt_map[iparam]:
-                            try:
-                                nice_name = nice_parameter_name[desc]
-                            except KeyError:
-                                nice_name = desc
-                            p_name += ' ' + nice_name
-                        if not(p_name in parameters.keys()):
-                            parameters[p_name] = []
+                        for iparam in range(len(point['params'])):
+                            param = point['params'][iparam]
+                            if type(param) is list:
+                                param=param[0]
+                            unit = ''
+                            p_name = ''
+                            for desc in opt_map[iparam]:
+                                try:
+                                    nice_name = nice_parameter_name[desc]
+                                except KeyError:
+                                    nice_name = desc
+                                p_name += '-' + nice_name
+                            if not(p_name in parameters.keys()):
+                                parameters[p_name] = []
+                                if use_synthetic:
+                                    real_parameters[p_name] = []
+                            parameters[p_name].append(param)
                             if use_synthetic:
-                                real_parameters[p_name] = []
-                        parameters[p_name].append(param)
-                        if use_synthetic:
-                            real_value = real_params[
-                                    synth_opt_map.index(opt_map[iparam])
-                                ]
-                            if type(real_value) is list:
-                                real_value=real_value[0]
-                            real_parameters[p_name].append(real_value)
+                                real_value = real_params[
+                                        synth_opt_map.index(opt_map[iparam])
+                                    ]
+                                if type(real_value) is list:
+                                    real_value=real_value[0]
+                                real_parameters[p_name].append(real_value)
+                            p_name_splt = p_name.split("-")
+                            p_type = p_name_splt[-1]
+                            par_identifier = p_name_splt[1]
+                            if not p_type in subplot_ids.keys():
+                                subplot_ids[p_type] = subplot_id
+                                subplot_legends[p_type] = []
+                                subplot_id += 1
+                            if not par_identifier in subplot_legends[p_type]:
+                                subplot_legends[p_type].append(par_identifier)
+
         this_log = {
             "parameters": parameters,
-            "units": units,
             "goal_function": goal_function
         }
         if use_synthetic:
@@ -417,44 +446,61 @@ def plot_C3(logfolders=["./"], change_thresh=1e-3):
 
     for log in logs:
         parameters = log["parameters"]
-        units = log["units"]
         goal_function = log["goal_function"]
+        units = {}
         if use_synthetic:
             real_parameters = log["real_paramters"]
 
         pars_to_delete = []
-        for key, par in parameters.items():
-            max_val = np.max(np.abs(par))
-            rel_change = max_val / par[0]
+        for p_name, par in parameters.items():
+            rel_change = np.max(np.abs(np.diff(par))) / par[0]
             if rel_change < change_thresh:
-                pars_to_delete.append(key)
+                pars_to_delete.append(p_name)
 
-            p_val, unit = unit_conversion(key.split(" ")[-1], max_val)
-            scaling[key] = p_val / max_val
-            units[key] = unit
+            max_val = np.max(np.abs(par))
+            p_val, unit = unit_conversion(p_name.split(" ")[-1], max_val)
+            try:
+                scaling[p_name] = np.array(p_val / max_val)
+            except ZeroDivisionError:
+                scaling[p_name] = 1
+            units[p_name] = unit
+
 
         for key in pars_to_delete:
             parameters.pop(key)
 
         n_params = len(parameters.keys())
         its = range(1, len(goal_function) + 1)
-        if n_params > 0:
-            nrows = np.ceil(np.sqrt(n_params))
-            ncols = np.ceil((n_params) / nrows)
-            fig = plt.figure(figsize=(6 * ncols, 4 * nrows))
+        subplots = {}
+        if len(subplot_ids) > 0:
+            nrows = int(np.ceil(np.sqrt(len(subplot_ids))))
+            ncols = int(np.ceil((len(subplot_ids)) / nrows))
+            fig, axes = plt.subplots(
+                figsize=(6 * ncols, 4 * nrows), nrows=nrows, ncols=ncols,
+                sharex='col'
+            )
             ii = 1
             for key in parameters.keys():
-                plt.subplot(nrows, ncols, ii)
-                plt.plot(its, scaling[key] * parameters[key], color='tab:blue')
+                p_type = key.split("-")[-1]
+                if not p_type in subplots.keys():
+                    id = subplot_ids[p_type] - 1
+                    subplots[p_type] = axes[id // (nrows - 1)][id % (nrows - 1)]
+                ax = subplots[p_type]
+                ax.plot(its, scaling[key] * parameters[key], color='tab:blue')
+                ax.tick_params(
+                    direction="in", left=True, right=True, top=True, bottom=True
+                )
                 if use_synthetic:
-                    plt.plot(
+                    ax.plot(
                         its, scaling[key] *  real_parameters[key], "--",
                         color='tab:red'
                     )
-                plt.grid()
-                plt.xlabel('Evaluation')
+                ax.set_ylabel(p_type + units[key])
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+                ax.grid(linestyle="--")
                 plt.ylabel(key +units[key])
                 ii += 1
+    plt.xlabel('Evaluation')
 
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model.png")

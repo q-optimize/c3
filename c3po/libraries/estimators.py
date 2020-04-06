@@ -94,6 +94,25 @@ def neg_loglkh_gauss(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+def neg_loglkh_mean_gauss_new(exp_values, sim_values, exp_stds):
+    """
+    Likelihood of the experimental values.
+    The distribution is assumed to be binomial (approximated by a gaussian),
+    plus an extra fixed gaussian noise distribution (here set at 0.0125)
+    """
+    std_b = tf.sqrt(sim_values*(1-sim_values))
+    mean_b = sim_values
+    std_g = 0.
+    mean_g = 0.
+    mean = mean_b + mean_g
+    std = tf.sqrt(std_g**2 + std_b**2)
+    gauss = tfp.distributions.Normal(mean, std)
+    loglkhs = gauss.log_prob(exp_values)
+    loglkhs = loglkhs - gauss.log_prob(mean)
+    loglkh = tf.reduce_mean(loglkhs)
+    return -loglkh
+
+
 def neg_loglkh_binom_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values. CONVOLUTION NOT WORKING.

@@ -92,11 +92,15 @@ def create_c1_opt(optimizer_config, lindblad):
         'lind_epc_ana': lind_epc_ana
     }
     if lindblad:
-        fid = 'lindbladian' + cfg['fid_func']
+        fid = 'lindbladian_' + cfg['fid_func']
     else:
         fid = cfg['fid_func']
 
-    cb_fids = cfg['callback_fids']
+    if lindblad:
+        cb_fids = ['lindbladian_' + f for f in cfg['callback_fids']]
+    else:
+        cb_fids = cfg['callback_fids']
+
     try:
         fid_func = fids[fid]
     except KeyError:
@@ -108,7 +112,7 @@ def create_c1_opt(optimizer_config, lindblad):
             fid_func = fidelities.__dict__[fid]
         except KeyError:
             raise Exception(
-                "C3:ERROR:Unkown goal function."
+                f"C3:ERROR:Unkown goal function: {fid} "
             )
         print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
@@ -124,7 +128,7 @@ def create_c1_opt(optimizer_config, lindblad):
                 cb_fid_func = fidelities.__dict__[cb_fid]
             except KeyError:
                 raise Exception(
-                    "C3:ERROR:Unkown goal function."
+                    f"C3:ERROR:Unkown goal function: {cb_fid}"
                 )
             print(f"C3:STATUS:Found {cb_fid} in libraries.")
         callback_fids.append(cb_fid_func)
