@@ -276,12 +276,6 @@ def evaluate_sequences(
     U_dict: dict,
     sequences: list
 ):
-    """
-    Sequences are assumed to be given in the correct order (left to right).
-
-        e.g.
-        ['X90p','Y90p'] --> U = X90p x Y90p
-    """
     gates = U_dict
     # TODO deal with the case where you only evaluate one sequence
     U = []
