@@ -43,25 +43,47 @@ with tf.device('/CPU:0'):
         shutil.copy2(eval_func, dir)
 
     if 'initial_point' in cfg:
-        try:
-            init_point = cfg['initial_point']
-            opt.load_best(init_point)
-            print(
-                "C3:STATUS:Loading initial point from : "
-                f"{os.path.abspath(init_point)}"
-            )
-            shutil.copy(init_point, dir+"initial_point.log")
-        except FileNotFoundError:
-            print(
-                f"C3:STATUS:No initial point found at "
-                f"{os.path.abspath(init_point)}. "
-                "Continuing with default."
-            )
+        initial_points = cfg['initial_point']
+        if isinstance(initial_points, str):
+            initial_points = [initial_points]
+        elif isinstance(initial_points, list):
+            pass
+        else:
+            raise Warning('initial_point has to be a path or a list of paths.')
+        for init_point in initial_points:
+            try:
+                opt.load_best(init_point)
+                print(
+                    "C3:STATUS:Loading initial point from : "
+                    f"{os.path.abspath(init_point)}"
+                )
+                shutil.copy(init_point, dir+"initial_point.log")
+            except FileNotFoundError:
+                print(
+                    f"C3:STATUS:No initial point found at "
+                    f"{os.path.abspath(init_point)}. "
+                    "Continuing with default."
+                )
 
     if 'real_params' in cfg:
         real_params = cfg['real_params']
 
     if optim_type == "C1":
+        if 'adjust_exp' in cfg:
+            try:
+                adjust_exp = cfg['adjust_exp']
+                opt.adjust_exp(adjust_exp)
+                print(
+                    "C3:STATUS:Loading experimental values from : "
+                    f"{os.path.abspath(adjust_exp)}"
+                )
+                shutil.copy(adjust_exp, dir+"adjust_exp.log")
+            except FileNotFoundError:
+                print(
+                    f"C3:STATUS:No experimental values found at "
+                    f"{os.path.abspath(adjust_exp)}. "
+                    "Continuing with default."
+                )
         opt.optimize_controls()
 
     elif optim_type == "C2":

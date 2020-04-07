@@ -58,6 +58,13 @@ class C1(Optimizer):
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
+    def adjust_exp(self, adjust_exp):
+        with open(adjust_exp) as file:
+            best = file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            p = json.loads(best[1])['params']
+            self.exp.set_parameters(p, best_exp_opt_map)
+
     def optimize_controls(self):
         """
         Apply a search algorightm to your gateset given a fidelity function.
