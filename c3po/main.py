@@ -15,12 +15,11 @@ import tensorflow as tf
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 args = parser.parse_args()
-master_config = args.master_config
-with open(master_config, "r") as cfg_file:
+opt_config = args.master_config
+with open(opt_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
 optim_type = cfg['optim_type']
 exp_setup = cfg['exp_setup']
-opt_config = cfg['optimizer_config']
 
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
@@ -38,7 +37,6 @@ with tf.device('/CPU:0'):
     opt.set_exp(exp)
     dir = opt.logdir
 
-    shutil.copy2(master_config, dir)
     shutil.copy2(exp_setup, dir)
     shutil.copy2(opt_config, dir)
     if optim_type == "C2":
