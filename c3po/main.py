@@ -2,7 +2,8 @@
 """Base run for c3 code."""
 import logging
 logging.getLogger('tensorflow').disabled = True
-
+import os
+import shutil
 import json
 import pickle
 import argparse
@@ -26,25 +27,36 @@ with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
 
     if optim_type == "C1":
-        opt = parsers.create_c1_opt(opt_config)
+        opt = parsers.create_c1_opt(opt_config, exp.model.lindbladian)
     elif optim_type == "C2":
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
     elif optim_type == "C3":
         opt = parsers.create_c3_opt(opt_config)
     else:
-        raise Exception("Unknown optimization type specified.")
+        raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
     dir = opt.logdir
+
+    shutil.copy2(master_config, dir)
+    shutil.copy2(exp_setup, dir)
+    shutil.copy2(opt_config, dir)
+    if optim_type == "C2":
+        shutil.copy2(eval_func, dir)
 
     if 'initial_point' in cfg:
         try:
             init_point = cfg['initial_point']
             opt.load_best(init_point)
-            print(f"Loading initial point from : {init_point}")
+            print(
+                "C3:STATUS:Loading initial point from : "
+                f"{os.path.abspath(init_point)}"
+            )
+            shutil.copy(init_point, dir+"initial_point.log")
         except FileNotFoundError:
             print(
-                f"No initial point found at {init_point}. "
+                f"C3:STATUS:No initial point found at "
+                f"{os.path.abspath(init_point)}. "
                 "Continuing with default."
             )
 
@@ -71,4 +83,9 @@ with tf.device('/CPU:0'):
     elif optim_type == "C3":
         learn_from = []
         opt.read_data(cfg['datafile'])
+        shutil.copy2(
+            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            + "/real_model_params.log",
+            dir
+        )
         opt.learn_model()

@@ -35,7 +35,7 @@ def replace_symlink(path, alias):
 # NICE PRINTNG FUNCTIONS
 def eng_num(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
-    small_units = ['m', 'mu', 'n', 'p', 'f', 'a', 'z']
+    small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
     sign = 1
     if val == 0:
         return 0, ""

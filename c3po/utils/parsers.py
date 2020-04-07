@@ -1,5 +1,6 @@
 import json
 import random
+import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
@@ -20,7 +21,7 @@ def create_experiment(exp_setup, datafile=''):
     return exp
 
 
-def create_c1_opt(optimizer_config):
+def create_c1_opt(optimizer_config, lindblad):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -63,6 +64,12 @@ def create_c1_opt(optimizer_config):
         )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
+    def epc_RB(U_dict, index, dims, eval):
+        epc, r, A, B, fig, ax = fidelities.RB(
+            U_dict, logspace=True, lindbladian=lindblad, padding="left"
+        )
+        plt.savefig(f"{cfg['dir_path']}recent/RB_{eval}.png", dpi=300)
+        return epc
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
     def epc_ana(U_dict, index, dims):
@@ -81,10 +88,19 @@ def create_c1_opt(optimizer_config):
         'lind_average_infid_CR': lind_avfid_CR,
         'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
+        'epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
-    fid = cfg['fid_func']
-    cb_fids = cfg['callback_fids']
+    if lindblad:
+        fid = 'lindbladian_' + cfg['fid_func']
+    else:
+        fid = cfg['fid_func']
+
+    if lindblad:
+        cb_fids = ['lindbladian_' + f for f in cfg['callback_fids']]
+    else:
+        cb_fids = cfg['callback_fids']
+
     try:
         fid_func = fids[fid]
     except KeyError:
@@ -96,12 +112,26 @@ def create_c1_opt(optimizer_config):
             fid_func = fidelities.__dict__[fid]
         except KeyError:
             raise Exception(
-                "C3:ERROR:Unkown goal function."
+                f"C3:ERROR:Unkown goal function: {fid} "
             )
         print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
-        callback_fids.append(fids[cb_fid])
+        try:
+            cb_fid_func = fids[cb_fid]
+        except KeyError:
+            print(
+                "C3:STATUS:Goal function not found in user specification. "
+                "Trying libraries..."
+            )
+            try:
+                cb_fid_func = fidelities.__dict__[cb_fid]
+            except KeyError:
+                raise Exception(
+                    f"C3:ERROR:Unkown goal function: {cb_fid}"
+                )
+            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+        callback_fids.append(cb_fid_func)
     opt_gates = cfg['opt_gates']
     gateset_opt_map = [
         [tuple(par) for par in set]
@@ -164,7 +194,7 @@ def create_c1_opt_hk(
         try:
             cfg = json.loads(cfg_file.read())
         except json.decoder.JSONDecodeError:
-            raise Error(f"Config {optimizer_config} is invalid.")
+            raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
         def unit_X90p(U_dict):

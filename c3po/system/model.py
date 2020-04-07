@@ -1,6 +1,5 @@
 """The model class, containing information on the system and its modelling."""
 
-import warnings
 import numpy as np
 import itertools
 import tensorflow as tf
@@ -156,14 +155,10 @@ class Model:
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
+        reorder_matrix = tf.cast(tf.round(tf.math.abs(v)), tf.complex128)
         if ordered:
-            # FIXME Deal with the possibility of complex valued eigenvectors
-            warnings.warn(
-                "Deal with the possibility of complex valued eigenvectors"
-            )
-            reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
-            transform = tf.matmul(tf.linalg.adjoint(reorder_matrix), v)
+            transform = tf.matmul(v, tf.transpose(reorder_matrix))
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
@@ -219,15 +214,15 @@ class Model:
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
             )
+            # if self.dressed:
+            #     num_oper = tf.matmul(
+            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
+            #         self.transform
+            #     )
             FR = FR * tf.linalg.expm(
                 1.0j * num_oper * (freq * t_final + framechange)
             )
-        if self.dressed:
-            FR = tf.matmul(tf.matmul(
-                tf.linalg.adjoint(self.transform),
-                FR),
-                self.transform
-            )
+
         return FR
 
     def get_qubit_freqs(self):

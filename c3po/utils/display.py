@@ -15,59 +15,85 @@ rc('text', usetex=True)
 
 
 nice_parameter_name = {
-    "amp": "Area",
-    "freq": "$\\omega_q$",
-    "anhar": "$\\delta$",
+    "amp": "Amplitude",
+    "freq": "Frequency $\\omega_q$",
+    "anhar": "Anharmonicity $\\delta$",
     "v_to_hz": "$\\Phi$",
-    "V_to_Hz": "",
-    "freq_offset": "$\\delta\\omega_d$",
-    "delta": "$\\Delta$",
+    "V_to_Hz": "Line response",
+    "freq_offset": "Detuning $\\delta\\omega_d$",
+    "delta": "DRAG parameter $\\Delta$",
     "t_final": "$t_{final}$",
     "t1": "$T_{1}$",
-    "t1star": "$T_{2}^*$",
+    "t2star": "$T_{2}^*$",
     "xy_angle": "$\\alpha_{xy}$",
     "Q1": "Qubit 1",
-    "Q2": "Qubit 2"
+    "Q2": "Qubit 2",
+    "conf_matrix": "$M$",
+    "confusion_row_Q1": "Qubit 1",
+    "confusion_row_Q2": "Qubit 2",
+    "meas_rescale": "Readout",
+    "meas_offset": "offset",
+    "meas_scale": "scale",
+    "Q1-Q2": "coupling",
+    "strength": "strength $g$",
+    "X90p:Id": "$X_{+\\frac{\\pi}{2}}\\otimes\\mathcal{I}$",
+    "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$"
 }
 
 
 def unit_conversion(desc, param):
     # TODO Get right units from the log
     use_prefix = True
-    if desc == 'freq_offset':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'xy_angle' or desc == 'amp':
-        p_val = param / np.pi
-        unit = '$\\pi$'
-        use_prefix = False
-    elif desc == 'freq':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'anhar':
-        p_val = param / 2 / np.pi
-        unit = 'Hz'
-    elif desc == 'delta':
-        p_val = param
-        unit = 's'
-    elif desc == 't1' or desc == 't2star':
-        p_val = param
-        unit = 's'
-    elif desc == 'V_to_Hz':
-        p_val = param
-        unit = 'Hz/V'
-    elif desc == 'rise_time':
-        p_val = param
-        unit = 's'
-    elif desc == 'init_temp':
-        p_val = param
-        unit = 'K'
-    else:
-        p_val = param
-        unit = ""
+    for key, item in nice_parameter_name.items():
+        # Yes, this is that stupid
+        if item==desc:
+            desc = key
+    for ii in range(2):
+        if desc == "freq_offset":
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == "xy_angle":
+            p_val = param / np.pi
+            unit = '[$\\pi$]'
+            use_prefix = False
+        elif desc == 'freq':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'strength':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'anhar':
+            p_val = param / 2 / np.pi
+            unit = 'Hz'
+        elif desc == 'delta':
+            p_val = param
+            unit = ''
+            use_prefix = False
+        elif desc == 't1' or desc == 't2star':
+            p_val = param
+            unit = 's'
+        elif desc == 'V_to_Hz':
+            p_val = param
+            unit = 'Hz/V'
+        elif desc == "Amplitude":
+            p_val = param
+            unit = 'V'
+        elif desc == 'rise_time':
+            p_val = param
+            unit = 's'
+        elif desc == 'init_temp':
+            p_val = param
+            unit = 'K'
+        elif desc == "amp":
+            p_val = param
+            unit = 'V'
+        else:
+            p_val = param
+            use_prefix = False
+            unit = ""
     if use_prefix:
         value, prefix = eng_num(p_val)
-        return value, prefix+unit
+        return value, " ["+prefix+unit+"]"
     else:
         return p_val, unit
 
@@ -88,7 +114,7 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     fig = plt.figure()
     n_exps, _ = np.histogram(exps, bins=n_bins)
     H, xedges, yedges = np.histogram2d(exps, sims, bins=n_bins)
-    H = (H.T / n_exps)
+    H = np.zeros([n_bins, n_bins]) + (H.T / n_exps)
     plt.imshow(
         H,
         origin='lower',
@@ -192,61 +218,105 @@ def plot_distribution(logfilename=""):
     return diffs
 
 
-def plot_C1(logfolder=""):
+def plot_C1(logfolder="", only_iterations=True):
     logfilename = logfolder + "open_loop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
+
+    if only_iterations:
+        xlabel = "Iterations"
+    else:
+        xlabel = "Evaluations"
+
     goal_function = []
+    best_goal=987654321
     parameters = {}
-    scaling = {}
-    units = {}
     opt_map = json.loads(log[3])
+
+    subplot_ids = {}
+    subplot_legends = {}
+    subplot_id = 1
     for line in log[4:]:
         if line[0] == "{":
             point = json.loads(line)
             if 'goal' in point.keys():
-                goal_function.append(point['goal'])
-                for iparam in range(len(point['params'])):
-                    param = point['params'][iparam]
-                    unit = ''
-                    p_name = ''
-                    for desc in opt_map[iparam][0]:
-                        try:
-                            nice_name = nice_parameter_name[desc]
-                        except KeyError:
-                            nice_name = desc
-                        p_name += ' ' + nice_name
-                    if p_name not in scaling:
-                        p_val, unit = unit_conversion(desc, param)
-                        try:
-                            scaling[p_name] = p_val / param
-                        except ZeroDivisionError:
-                            scaling[p_name] = 1
-                        units[p_name] = unit
-                    if not(p_name in parameters.keys()):
-                        parameters[p_name] = []
-                    parameters[p_name].append(param * scaling[p_name])
-    n_params = len(parameters.keys())
-    its = range(1, len(goal_function) + 1)
-    if n_params > 0:
-        nrows = np.ceil(np.sqrt(n_params + 1))
-        ncols = np.ceil((n_params + 1) / nrows)
-        fig = plt.figure(figsize=(3 * ncols, 2 * nrows))
-        ii = 1
+                if only_iterations and point['goal']<best_goal:
+                    goal_function.append(point['goal'])
+                    best_goal = point['goal']
+                    for iparam in range(len(point['params'])):
+                        param = point['params'][iparam]
+                        unit = ''
+                        p_name = ''
+                        for desc in opt_map[iparam][0]:
+                            try:
+                                nice_name = nice_parameter_name[desc]
+                            except KeyError:
+                                nice_name = desc
+                            p_name += '-' + nice_name
+                        if not(p_name in parameters.keys()):
+                            parameters[p_name] = []
+                        parameters[p_name].append(param)
+                        p_name_splt = p_name.split("-")
+                        p_type = p_name_splt[-1]
+                        par_identifier = p_name_splt[1]
+                        if not p_type in subplot_ids.keys():
+                            subplot_ids[p_type] = subplot_id
+                            subplot_legends[p_type] = []
+                            subplot_id += 1
+                        if not par_identifier in subplot_legends[p_type]:
+                            subplot_legends[p_type].append(par_identifier)
+
+    scaling = {}
+    units = {}
+    for p_name, par in parameters.items():
+        max_val = np.max(np.abs(par))
+        p_val, unit = unit_conversion(p_name.split("-")[-1], max_val)
+        try:
+            scaling[p_name] = np.array(p_val / max_val)
+        except ZeroDivisionError:
+            scaling[p_name] = 1
+        units[p_name] = unit
+
+    if only_iterations:
+        its = range(len(goal_function))
+    else:
+        its = range(1, len(goal_function) + 1)
+    subplots = {}
+    if len(subplot_ids) > 0:
+
+        # Square layout
+        # nrows = np.ceil(np.sqrt(len(subplot_ids)))
+        # ncols = np.ceil((len(subplot_ids)) / nrows)
+        # fig = plt.figure(figsize=(4 * ncols, 3 * nrows))
+
+        # One column layout
+        nrows = len(subplot_ids)
+        ncols = 1
+        fig, axs = plt.subplots(
+            figsize=(5, 2 * nrows), nrows=nrows, ncols=ncols, sharex=True
+        )
+        fig.subplots_adjust(hspace=0)
         for key in parameters.keys():
-            plt.subplot(nrows, ncols, ii)
-            plt.plot(its, parameters[key])
-            plt.grid()
-            plt.title(key)
-            plt.ylabel(units[key])
-            plt.xlabel("Evaluation")
-            ii += 1
-        plt.tight_layout()
+            p_type = key.split("-")[-1]
+            if not p_type in subplots.keys():
+                subplots[p_type] = axs[subplot_ids[p_type]-1]
+            ax = subplots[p_type]
+            ax.plot(its, scaling[key] * parameters[key])
+            ax.tick_params(
+                direction="in", left=True, right=True, top=True, bottom=True
+            )
+            ax.set_ylabel(p_type + units[key])
+            ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+            ax.grid(linestyle="--")
+
+        ax.set_xlabel(xlabel)
+        for p_type, legend in subplot_legends.items():
+            subplots[p_type].legend(legend)
         plt.savefig(logfolder + "open_loop.png")
         plt.figure()
         plt.title("Goal")
         plt.grid()
-        plt.xlabel("Evaluations")
+        plt.xlabel(xlabel)
         plt.semilogy(its, goal_function)
         plt.savefig(logfolder + "goal.png")
 
@@ -291,7 +361,11 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders):
+def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
+    """
+    Generates model learning plots. Default options assume the function is
+    called from inside a log folder. Otherwise a file location has to be given.
+    """
     logs = []
     for logfolder in logfolders:
         logfilename = logfolder + 'model_learn.log'
@@ -309,46 +383,59 @@ def plot_C3(logfolders):
             real_parameters = {}
             synth_opt_map = json.loads(synth_model[0])
 
+        best_goal = 987654321
         goal_function = []
         parameters = {}
         scaling = {}
-        units = {}
         opt_map = json.loads(log[3])
+
+        subplot_ids = {}
+        subplot_legends = {}
+        subplot_id = 1
         for line in log[4:]:
             if line[0] == "{":
                 point = json.loads(line)
                 if 'goal' in point.keys():
-                    goal_function.append(point['goal'])
+                    if only_iterations and point['goal']<best_goal:
+                        best_goal = point['goal']
+                        goal_function.append(point['goal'])
 
-                    for iparam in range(len(point['params'])):
-                        param = point['params'][iparam]
-                        unit = ''
-                        p_name = ''
-                        for desc in opt_map[iparam]:
-                            try:
-                                nice_name = nice_parameter_name[desc]
-                            except KeyError:
-                                nice_name = desc
-                            p_name += ' ' + desc
-                        if p_name not in scaling:
-                            p_val, unit = unit_conversion(desc, param)
-                            scaling[p_name] = p_val / param
-                            units[p_name] = unit
-                        if not(p_name in parameters.keys()):
-                            parameters[p_name] = []
+                        for iparam in range(len(point['params'])):
+                            param = point['params'][iparam]
+                            if type(param) is list:
+                                param=param[0]
+                            unit = ''
+                            p_name = ''
+                            for desc in opt_map[iparam]:
+                                try:
+                                    nice_name = nice_parameter_name[desc]
+                                except KeyError:
+                                    nice_name = desc
+                                p_name += '-' + nice_name
+                            if not(p_name in parameters.keys()):
+                                parameters[p_name] = []
+                                if use_synthetic:
+                                    real_parameters[p_name] = []
+                            parameters[p_name].append(param)
                             if use_synthetic:
-                                real_parameters[p_name] = []
-                        parameters[p_name].append(param * scaling[p_name])
-                        if use_synthetic:
-                            real_value = real_params[
-                                    synth_opt_map.index(opt_map[iparam])
-                                ]
-                            real_parameters[p_name].append(
-                                real_value * scaling[p_name]
-                            )
+                                real_value = real_params[
+                                        synth_opt_map.index(opt_map[iparam])
+                                    ]
+                                if type(real_value) is list:
+                                    real_value=real_value[0]
+                                real_parameters[p_name].append(real_value)
+                            p_name_splt = p_name.split("-")
+                            p_type = p_name_splt[-1]
+                            par_identifier = p_name_splt[1]
+                            if not p_type in subplot_ids.keys():
+                                subplot_ids[p_type] = subplot_id
+                                subplot_legends[p_type] = []
+                                subplot_id += 1
+                            if not par_identifier in subplot_legends[p_type]:
+                                subplot_legends[p_type].append(par_identifier)
+
         this_log = {
             "parameters": parameters,
-            "units": units,
             "goal_function": goal_function
         }
         if use_synthetic:
@@ -356,33 +443,69 @@ def plot_C3(logfolders):
 
         logs.append(this_log)
 
+
     for log in logs:
         parameters = log["parameters"]
-        units = log["units"]
         goal_function = log["goal_function"]
+        units = {}
         if use_synthetic:
             real_parameters = log["real_paramters"]
+
+        pars_to_delete = []
+        for p_name, par in parameters.items():
+            rel_change = np.max(np.abs(np.diff(par))) / par[0]
+            if rel_change < change_thresh:
+                pars_to_delete.append(p_name)
+
+            max_val = np.max(np.abs(par))
+            p_val, unit = unit_conversion(p_name.split(" ")[-1], max_val)
+            try:
+                scaling[p_name] = np.array(p_val / max_val)
+            except ZeroDivisionError:
+                scaling[p_name] = 1
+            units[p_name] = unit
+
+
+        for key in pars_to_delete:
+            parameters.pop(key)
+
         n_params = len(parameters.keys())
         its = range(1, len(goal_function) + 1)
-        if n_params > 0:
-            nrows = np.ceil(np.sqrt(n_params))
-            ncols = np.ceil((n_params) / nrows)
-            fig = plt.figure(figsize=(6 * ncols, 4 * nrows))
+        subplots = {}
+        if len(subplot_ids) > 0:
+            nrows = int(np.ceil(np.sqrt(len(subplot_ids))))
+            ncols = int(np.ceil((len(subplot_ids)) / nrows))
+            fig, axes = plt.subplots(
+                figsize=(6 * ncols, 4 * nrows), nrows=nrows, ncols=ncols,
+                sharex='col'
+            )
             ii = 1
             for key in parameters.keys():
-                plt.subplot(nrows, ncols, ii)
-                plt.plot(its, parameters[key], color='tab:blue')
+                p_type = key.split("-")[-1]
+                if not p_type in subplots.keys():
+                    id = subplot_ids[p_type] - 1
+                    subplots[p_type] = axes[id // (nrows - 1)][id % (nrows - 1)]
+                ax = subplots[p_type]
+                ax.plot(its, scaling[key] * parameters[key], color='tab:blue')
+                ax.tick_params(
+                    direction="in", left=True, right=True, top=True, bottom=True
+                )
                 if use_synthetic:
-                    plt.plot(its, real_parameters[key], "--", color='tab:red')
-                plt.grid()
-                plt.title(key.replace('_', '\\_'))
-                plt.xlabel('Evaluation')
-                plt.ylabel(units[key])
+                    ax.plot(
+                        its, scaling[key] *  real_parameters[key], "--",
+                        color='tab:red'
+                    )
+                ax.set_ylabel(p_type + units[key])
+                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+                ax.grid(linestyle="--")
+                plt.ylabel(key +units[key])
                 ii += 1
-                plt.tight_layout()
-                plt.savefig(logfolder + "learn_model.png")
+    plt.xlabel('Evaluation')
 
-    fig = plt.figure()
+    plt.tight_layout()
+    plt.savefig(logfolder + "learn_model.png")
+
+    plt.figure()
     plt.title("Goal")
     plt.grid()
     colors = ["tab:blue", "tab:red", "tab:green"]
@@ -397,7 +520,7 @@ def plot_C3(logfolders):
         print(its)
         print(goal_function)
         c = colors.pop(0)
-        line =  plt.semilogx(
+        line = plt.semilogx(
             its, goal_function, marker=markers[idx], color=c,
             label=line_names[idx]
         )
@@ -405,15 +528,11 @@ def plot_C3(logfolders):
         idx += 1
         plt.semilogx(its[-1], goal_function[-1], "x", color=c)
     leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
-  #  for entry in leg:
-  #      leg_formatted.append(entry)
-  #      leg_formatted.append("converged")
-    plt.legend(leg_formatted)
+    plt.legend(leg)
     plt.xlabel('Evaluation')
     plt.ylabel('RMS model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
-
 
 
 def plot_envelope_history(logfilename):
