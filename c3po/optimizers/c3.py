@@ -191,25 +191,35 @@ class C3(Optimizer):
                     )
 
                 for iseq in range(num_seqs):
-                    m_val = m_vals[iseq]
-                    m_std = m_stds[iseq]
+                    m_val = np.array(m_vals[iseq])
+                    m_std = np.array(m_stds[iseq])
                     exp_values.append(m_val)
                     exp_stds.append(m_std)
-                    sim_val = float(sim_vals[iseq].numpy())
+                    sim_val = sim_vals[iseq].numpy()
+                    np.set_printoptions(formatter={'float': '{:8.5f}'.format})
                     with open(self.logdir + self.logname, 'a') as logfile:
                         # TODO: Fix sequence counting for multiple learn_from
                         # files
                         logfile.write(
                             f" Sequence {iseq + 1} of {num_seqs}:\n"
                         )
-                        logfile.write(f"  Simulation: {sim_val:8.5f}")
-                        logfile.write(f"  Experiment: {m_val:8.5f}")
-                        logfile.write(f"  Std: {m_std:8.5f}")
-                        logfile.write(f"  Diff: {m_val-sim_val:8.5f}\n")
+                        logfile.write(
+                            "  Simulation: " + np.array_str(sim_val.flatten())
+                        )
+                        logfile.write(
+                            "  Experiment: " + np.array_str(m_val.flatten())
+                        )
+                        logfile.write(
+                            "  Std: " +  np.array_str(m_val.flatten())
+                        )
+                        logfile.write(
+                            "  Diff: " +  np.array_str((m_val-sim_val).flatten())
+                        )
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=0)
+        sim_values = tf.concat(sim_values, axis=1)
+        print(sim_values.shape())
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())
