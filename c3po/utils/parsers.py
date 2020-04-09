@@ -137,7 +137,10 @@ def create_c1_opt(optimizer_config, lindblad):
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
-    grad_algs = {'lbfgs': algorithms.lbfgs}
+    grad_algs = {
+        'lbfgs': algorithms.lbfgs,
+        'lbfgs_hybrid': algorithms.cma_pre_lbfgs
+    }
     no_grad_algs = {'cmaes': algorithms.cmaes}
     if cfg['algorithm'] in grad_algs.keys():
         algorithm_with_grad = grad_algs[cfg['algorithm']]

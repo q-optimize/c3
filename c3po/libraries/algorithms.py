@@ -33,7 +33,7 @@ def cmaes(x0, goal_fun, options={}):
         samples = es.ask()
         if init_point and iter == 0:
             samples.insert(0,x0)
-            print('adding initial point to sample')
+            print('C3:STATUS:Adding initial point to CMA sample.')
         solutions = []
         for sample in samples:
             goal = goal_fun(sample)
@@ -43,7 +43,14 @@ def cmaes(x0, goal_fun, options={}):
         es.tell(samples, solutions)
         es.disp()
         iter += 1
+    return es
 
+
+def cma_pre_lbfgs(x0, goal_fun, grad_fun, options={}):
+    cma_opts = {'maxiter' : 5}
+    es = cmaes(x0, goal_fun, options=cma_opts)
+    x1 = es.result.xbest
+    lbfgs(x1, goal_fun, grad_fun, options=options)
 
 # def oneplusone(x0, goal_fun):
 #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
