@@ -215,10 +215,13 @@ class Model:
                 dtype=tf.complex128
             )
             # if self.dressed:
+            #     print('applying transform to FR')
             #     num_oper = tf.matmul(
             #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
             #         self.transform
             #     )
+            # else:
+            #     print('leaving FR as is')
             FR = FR * tf.linalg.expm(
                 1.0j * num_oper * (freq * t_final + framechange)
             )

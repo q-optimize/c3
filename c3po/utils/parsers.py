@@ -64,11 +64,11 @@ def create_c1_opt(optimizer_config, lindblad):
         )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
-    def epc_RB(U_dict, index, dims, eval):
+    def epc_RB(U_dict, index, dims, logdir, eval):
         epc, r, A, B, fig, ax = fidelities.RB(
             U_dict, logspace=True, lindbladian=lindblad, padding="left"
         )
-        plt.savefig(f"{cfg['dir_path']}recent/RB_{eval}.png", dpi=300)
+        plt.savefig(f"{logdir}RB_{eval}.png", dpi=300)
         return epc
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
@@ -89,6 +89,7 @@ def create_c1_opt(optimizer_config, lindblad):
         'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
         'epc_RB': epc_RB,
+        'lindbladian_epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
     if lindblad:

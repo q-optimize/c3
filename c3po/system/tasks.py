@@ -53,20 +53,25 @@ class InitialiseGround(Task):
             det_bal = tf.exp(-constants.hbar * freq_diff * beta)
             norm_bal = det_bal / tf.reduce_sum(det_bal)
             dm = tf.linalg.diag(norm_bal)
-        else:
-            dm =  tf_utils.tf_state_to_dm(
-                tf.constant(
-                    qt_utils.basis(dim, 0),
-                    shape=[dim, 1],
-                    dtype=tf.complex128
+            if lindbladian:
+                return tf_utils.tf_dm_to_vec(dm)
+            else:
+                raise Warning(
+                    "C3:WARNING: We still need to do Von Neumann right."
                 )
-            )
-        if lindbladian:
-            return tf_utils.tf_dm_to_vec(dm)
         else:
-            raise Warning(
-                "C3:WARNING: We still need to do Von Neumann right."
+            state = tf.constant(
+                qt_utils.basis(dim, 0),
+                shape=[dim, 1],
+                dtype=tf.complex128
             )
+            if lindbladian:
+                raise Warning(
+                    "C3:WARNING: We still need to do Von Neumann right."
+                )
+            else:
+                return state
+
 
 
 class ConfusionMatrix(Task):
