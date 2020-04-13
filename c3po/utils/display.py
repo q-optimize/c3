@@ -7,6 +7,7 @@ from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
 from c3po.utils.utils import eng_num
 import warnings
+import glob
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
@@ -329,9 +330,11 @@ def plot_C2(cfgfolder="", logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = 0
-    with open(cfgfolder+"c2.cfg", "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
-        batch_size = cfg['options']['popsize']
+    path = logfolder+"*.cfg"
+    for filename in glob.glob(path):
+        with open(filename, "r") as cfg_file:
+            cfg = json.loads(cfg_file.read())
+            batch_size = cfg['options']['popsize']
     eval = 0
     for line in log[5:]:
         if line[0] == "{":

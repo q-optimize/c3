@@ -66,9 +66,7 @@ class InitialiseGround(Task):
                 dtype=tf.complex128
             )
             if lindbladian:
-                raise Warning(
-                    "C3:WARNING: We still need to do Von Neumann right."
-                )
+                return tf_utils.tf_dm_to_vec(tf_utils.tf_state_to_dm(state))
             else:
                 return state
 
