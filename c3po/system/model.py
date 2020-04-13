@@ -155,7 +155,7 @@ class Model:
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
-        reorder_matrix = tf.cast(tf.round(tf.math.abs(v)), tf.complex128)
+        reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
             transform = tf.matmul(v, tf.transpose(reorder_matrix))
