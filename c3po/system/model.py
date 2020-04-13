@@ -200,8 +200,7 @@ class Model:
         framechanges: dict
     ):
         tot_dim = self.tot_dim
-        ones = tf.ones(tot_dim, dtype=tf.complex128)
-        FR = tf.linalg.diag(ones)
+        exponent = tf.constant(0., dtype = tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
@@ -222,10 +221,9 @@ class Model:
             #     )
             # else:
             #     print('leaving FR as is')
-            FR = FR * tf.linalg.expm(
+            exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
-            )
-
+        FR = tf.linalg.expm(exponent)
         return FR
 
     def get_qubit_freqs(self):
