@@ -1,4 +1,6 @@
+import os
 import json
+import time
 import random
 import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
@@ -308,11 +310,16 @@ def create_c2_opt(optimizer_config, eval_func_path):
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
+    logdir = cfg['dir_path'] + 'RB_c2_' + time.strftime(
+        "%Y_%m_%d_T_%H_%M_%S/", time.localtime()
+    )
+    if not os.path.isdir(logdir):
+        os.makedirs(logdir)
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
         def eval(p):
             return eval_func(
-                p, exp_right, gateset_opt_map, qubit_label, state_label
+                p, exp_right, gateset_opt_map, qubit_label, state_label, logdir
             )
     else:
         eval = eval_func
