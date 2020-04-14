@@ -21,6 +21,8 @@ def lbfgs(x0, goal_fun, grad_fun, options={}):
 
 
 def cmaes(x0, goal_fun, options={}):
+    custom_stop = False
+
     if 'noise' in options:
         noise = float(options.pop('noise'))
     else:
@@ -35,6 +37,13 @@ def cmaes(x0, goal_fun, options={}):
         spread = bool(options.pop('spread'))
     else:
         spread = 0.1
+
+    if 'stop_at_convergence' in options:
+        sigma_conv = options.pop('stop_at_convergence')
+        sigmas = []
+        custom_stop = True
+
+
     settings = options
 
     es = cma.CMAEvolutionStrategy(x0, spread, settings)
@@ -52,15 +61,24 @@ def cmaes(x0, goal_fun, options={}):
             solutions.append(goal)
         es.tell(samples, solutions)
         es.disp()
+
+        sigmas.append(es.sigma)
+        if custom_stop:
+            if iter > sigma_conv:
+                if(
+                    all(
+                        sigmas[-(i+1)]<sigmas[-(i+2)]
+                        for i in range(sigma_conv-1)
+                    )
+                ):
+                    break
         iter += 1
     return es
 
-
-def cma_pre_lbfgs(x0, goal_fun, grad_fun, options={}):
-    cma_opts = {'ftarget' : 1e-1}
-    es = cmaes(x0, goal_fun, options=cma_opts)
-    x1 = es.result.xbest
-    lbfgs(x1, goal_fun, grad_fun, options=options)
+def cma_pre_lbfgs(x0, goal_fun, grad_fun, options_BFGS={}, options_CMA={}):
+   es = cmaes(x0, goal_fun, options=options_CMA)
+   x1 = es.result.xbest
+   lbfgs(x1, goal_fun, grad_fun, options=options_BFGS)
 
 # def oneplusone(x0, goal_fun):
 #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
