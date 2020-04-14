@@ -11,7 +11,7 @@ def single_eval(x0, goal_fun, options={}):
 def lbfgs(x0, goal_fun, grad_fun, options={}):
     # TODO print from the log not from hear
     options.update({'disp': True})
-    minimize(
+    return minimize(
         goal_fun,
         x0,
         jac=grad_fun,
@@ -47,7 +47,7 @@ def cmaes(x0, goal_fun, options={}):
 
 
 def cma_pre_lbfgs(x0, goal_fun, grad_fun, options={}):
-    cma_opts = {'maxiter' : 5}
+    cma_opts = {'ftarget' : 1e-1}
     es = cmaes(x0, goal_fun, options=cma_opts)
     x1 = es.result.xbest
     lbfgs(x1, goal_fun, grad_fun, options=options)
