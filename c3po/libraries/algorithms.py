@@ -22,7 +22,6 @@ def lbfgs(x0, goal_fun, grad_fun, options={}):
 
 def cmaes(x0, goal_fun, options={}):
     custom_stop = False
-
     if 'noise' in options:
         noise = float(options.pop('noise'))
     else:
@@ -39,7 +38,7 @@ def cmaes(x0, goal_fun, options={}):
         spread = 0.1
 
     if 'stop_at_convergence' in options:
-        sigma_conv = options.pop('stop_at_convergence')
+        sigma_conv = int(options.pop('stop_at_convergence'))
         sigmas = []
         custom_stop = True
 
@@ -62,8 +61,8 @@ def cmaes(x0, goal_fun, options={}):
         es.tell(samples, solutions)
         es.disp()
 
-        sigmas.append(es.sigma)
         if custom_stop:
+            sigmas.append(es.sigma)
             if iter > sigma_conv:
                 if(
                     all(
@@ -71,6 +70,10 @@ def cmaes(x0, goal_fun, options={}):
                         for i in range(sigma_conv-1)
                     )
                 ):
+                    print(
+                        f'C3:STATUS:Shrinked cloud for {sigma_conv} steps. '
+                        'Switching to gradients.'
+                    )
                     break
         iter += 1
     return es
