@@ -313,8 +313,8 @@ def create_c2_opt(optimizer_config, eval_func_path):
     logdir = cfg['dir_path'] + 'RB_c2_' + time.strftime(
         "%Y_%m_%d_T_%H_%M_%S/", time.localtime()
     )
-    if not os.path.isdir(logdir):
-        os.makedirs(logdir)
+    # if not os.path.isdir(logdir):
+    #     os.makedirs(logdir)
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
         def eval(p):
