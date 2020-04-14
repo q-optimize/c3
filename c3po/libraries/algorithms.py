@@ -32,7 +32,7 @@ def cmaes(x0, goal_fun, options={}):
         init_point = False
 
     if 'spread' in options:
-        spread = bool(options.pop('spread'))
+        spread = float(options.pop('spread'))
     else:
         spread = 0.1
     settings = options
