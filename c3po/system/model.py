@@ -155,7 +155,7 @@ class Model:
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
-        reorder_matrix = tf.cast(tf.round(tf.math.abs(v)), tf.complex128)
+        reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
             transform = tf.matmul(v, tf.transpose(reorder_matrix))
@@ -200,8 +200,7 @@ class Model:
         framechanges: dict
     ):
         tot_dim = self.tot_dim
-        ones = tf.ones(tot_dim, dtype=tf.complex128)
-        FR = tf.linalg.diag(ones)
+        exponent = tf.constant(0., dtype = tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
@@ -215,14 +214,16 @@ class Model:
                 dtype=tf.complex128
             )
             # if self.dressed:
+            #     print('applying transform to FR')
             #     num_oper = tf.matmul(
             #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
             #         self.transform
             #     )
-            FR = FR * tf.linalg.expm(
+            # else:
+            #     print('leaving FR as is')
+            exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
-            )
-
+        FR = tf.linalg.expm(exponent)
         return FR
 
     def get_qubit_freqs(self):

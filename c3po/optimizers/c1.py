@@ -120,7 +120,9 @@ class C1(Optimizer):
                 "goal: {}: {}\n".format(self.fid_func.__name__, goal_numpy)
             )
             for cal in self.callback_fids:
-                val = cal(U_dict, self.index, dims, self.evaluation + 1)
+                val = cal(
+                    U_dict, self.index, dims, self.logdir, self.evaluation + 1
+                )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
                 logfile.write("{}: {}\n".format(cal.__name__, val))

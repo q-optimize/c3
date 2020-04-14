@@ -1,4 +1,6 @@
+import os
 import json
+import time
 import random
 import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
@@ -64,11 +66,11 @@ def create_c1_opt(optimizer_config, lindblad):
         )
     def avfid_X90p(U_dict, index, dims):
         return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
-    def epc_RB(U_dict, index, dims, eval):
+    def epc_RB(U_dict, index, dims, logdir, eval):
         epc, r, A, B, fig, ax = fidelities.RB(
             U_dict, logspace=True, lindbladian=lindblad, padding="left"
         )
-        plt.savefig(f"{cfg['dir_path']}recent/RB_{eval}.png", dpi=300)
+        plt.savefig(f"{logdir}RB_{eval}.png", dpi=300)
         return epc
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
@@ -89,6 +91,7 @@ def create_c1_opt(optimizer_config, lindblad):
         'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
         'epc_RB': epc_RB,
+        'lindbladian_epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
     if lindblad:
@@ -307,11 +310,16 @@ def create_c2_opt(optimizer_config, eval_func_path):
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
+    logdir = cfg['dir_path'] + 'RB_c2_' + time.strftime(
+        "%Y_%m_%d_T_%H_%M_%S/", time.localtime()
+    )
+    # if not os.path.isdir(logdir):
+    #     os.makedirs(logdir)
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
         def eval(p):
             return eval_func(
-                p, exp_right, gateset_opt_map, qubit_label, state_label
+                p, exp_right, gateset_opt_map, qubit_label, state_label, logdir
             )
     else:
         eval = eval_func
