@@ -23,11 +23,21 @@ def lbfgs(x0, goal_fun, grad_fun, options={}):
 def cmaes(x0, goal_fun, options={}):
     if 'noise' in options:
         noise = float(options.pop('noise'))
-    init_point = False
+    else:
+        noise = 0
+
     if 'init_point' in options:
         init_point = bool(options.pop('init_point'))
+    else:
+        init_point = False
+
+    if 'spread' in options:
+        spread = bool(options.pop('spread'))
+    else:
+        spread = 0.1
     settings = options
-    es = cma.CMAEvolutionStrategy(x0, 0.1, settings)
+
+    es = cma.CMAEvolutionStrategy(x0, spread, settings)
     iter = 0
     while not es.stop():
         samples = es.ask()
@@ -37,7 +47,7 @@ def cmaes(x0, goal_fun, options={}):
         solutions = []
         for sample in samples:
             goal = goal_fun(sample)
-            if 'noise' in options:
+            if noise:
                 goal = goal + (np.random.randn() * noise)
             solutions.append(goal)
         es.tell(samples, solutions)
