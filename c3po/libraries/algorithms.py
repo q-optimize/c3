@@ -4,23 +4,23 @@ import numpy as np
 # from nevergrad.optimization import registry as algo_registry
 
 
-def single_eval(x0, goal_fun, options={}):
+def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     goal_fun(x0)
 
 
-def lbfgs(x0, goal_fun, grad_fun, options={}):
+def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     # TODO print from the log not from hear
     options.update({'disp': True})
     return minimize(
-        goal_fun,
+        fun_grad,
         x0,
-        jac=grad_fun,
+        jac=grad_lookup,
         method='L-BFGS-B',
         options=options
     )
 
 
-def cmaes(x0, goal_fun, options={}):
+def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     custom_stop = False
     if 'noise' in options:
         noise = float(options.pop('noise'))
@@ -33,7 +33,7 @@ def cmaes(x0, goal_fun, options={}):
         init_point = False
 
     if 'spread' in options:
-        spread = bool(options.pop('spread'))
+        spread = float(options.pop('spread'))
     else:
         spread = 0.1
 
@@ -41,7 +41,6 @@ def cmaes(x0, goal_fun, options={}):
         sigma_conv = int(options.pop('stop_at_convergence'))
         sigmas = []
         custom_stop = True
-
 
     settings = options
 
@@ -54,7 +53,7 @@ def cmaes(x0, goal_fun, options={}):
             print('C3:STATUS:Adding initial point to CMA sample.')
         solutions = []
         for sample in samples:
-            goal = goal_fun(sample)
+            goal = fun(sample)
             if noise:
                 goal = goal + (np.random.randn() * noise)
             solutions.append(goal)
@@ -78,10 +77,12 @@ def cmaes(x0, goal_fun, options={}):
         iter += 1
     return es
 
-def cma_pre_lbfgs(x0, goal_fun, grad_fun, options_BFGS={}, options_CMA={}):
-   es = cmaes(x0, goal_fun, options=options_CMA)
-   x1 = es.result.xbest
-   lbfgs(x1, goal_fun, grad_fun, options=options_BFGS)
+def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    es = cmaes(x0, fun, options=options['cmaes'])
+    x1 = es.result.xbest
+    lbfgs(
+        x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
+    )
 
 # def oneplusone(x0, goal_fun):
 #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])

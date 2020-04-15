@@ -60,8 +60,10 @@ class C2(Optimizer):
         try:
             self.algorithm(
                 x0,
-                self.fct_to_min,
-                self.options
+                fun=self.fct_to_min,
+                fun_grad=self.fct_to_min_autograd,
+                grad_lookup=self.lookup_gradient,
+                options=self.options
             )
         except KeyboardInterrupt:
             pass
