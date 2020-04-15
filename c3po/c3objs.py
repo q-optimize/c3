@@ -69,13 +69,20 @@ class Quantity:
         min,
         max,
         symbol: str = '\\alpha',
-        unit: str = 'a.u.'
+        unit: str = 'I was too fucking lazy to put the right unit here.\
+            ¯\\_( ͡° ͜ʖ ͡°)_/¯'
     ):
         value = np.array(value)
         self.offset = np.array(min)
         self.scale = np.abs(np.array(max) - np.array(min))
         # TODO if setting is out of bounds this double breaks
-        self.set_value(value)
+        try:
+            self.set_value(value)
+        except ValueError:
+           raise ValueError(
+               f"Value has to be within {min:.3} .. {max:.3}"
+               f" but is {value:.3}."
+           )
         self.symbol = symbol
         self.unit = unit
         if hasattr(value, "shape"):
@@ -117,10 +124,14 @@ class Quantity:
 
     def __str__(self):
         val = self.numpy()
+        use_prefix = True
         if self.unit == "Hz 2pi":
             val = val / 2 / np.pi
+        elif self.unit == "pi":
+            val = val / np.pi
+            use_prefix = False
         ret = ""
-        for q in num3str(val):
+        for q in num3str(val, use_prefix):
             ret += q + self.unit + " "
         return ret
 
@@ -138,7 +149,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
-            raise ValueError()
+            raise ValueError
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)

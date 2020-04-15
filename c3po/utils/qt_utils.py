@@ -2,6 +2,7 @@
 
 import numpy as np
 from scipy.linalg import block_diag as scipy_block_diag
+from scipy.linalg import expm
 
 # Pauli matrices
 Id = np.array([[1, 0],
@@ -17,6 +18,13 @@ Z = np.array([[1, 0],
               [0, -1]],
              dtype=np.complex128)
 
+# TODO Combine the above Pauli definitions with this dict. Move to constants.
+PAULIS = {
+    "X": X,
+    "Y": Y,
+    "Z": Z,
+    "Id": Id
+}
 
 # MATH HELPERS
 def np_kron_n(mat_list):
@@ -44,6 +52,7 @@ def hilbert_space_kron(op, indx, dims):
         )
     return(np_kron_n(op_list))
 
+
 def hilbert_space_dekron(op, indx, dims):
     """
     Partial trace of an operator to return equivalent subspace operator.
@@ -51,7 +60,6 @@ def hilbert_space_dekron(op, indx, dims):
     """
     # TODO Partial trace, reducing operators and states to subspace.
     pass
-
 
 
 def rotation(phase, xyz):
@@ -99,14 +107,33 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
-def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
+def pad_matrix(matrix, dim, padding):
+    """
+    Fills matrix dimsions with zeros or identity.
+    """
+    if padding == 'compsub':
+        return matrix
+    elif padding == 'wzeros':
+        zeros = np.zeros([dim, dim])
+        matrix = scipy_block_diag(matrix, zeros)
+    elif padding == 'fulluni':
+        identity = np.eye(dim)
+        matrix = scipy_block_diag(matrix, identity)
+    return matrix
+
+
+def perfect_gate(
+    gates_str: str, index=[0, 1], dims=[2, 2], proj: str = 'wzeros'
+):
+    do_pad_gate = True
     # TODO index for now unused
     kron_list = []
     # for dim in dims:
     #     kron_list.append(np.eye(dim))
     kron_gate = 1
     gate_num = 0
-    # Note that the gates_str has to be explicit for all subspaces (and ordered)
+    # Note that the gates_str has to be explicit for all subspaces
+    # (and ordered)
     for gate_str in gates_str.split(":"):
         lvls = dims[gate_num]
         if gate_str == 'Id':
@@ -130,51 +157,88 @@ def perfect_gate(gates_str: str, index, dims, proj: str = 'wzeros'):
         elif gate_str == 'Zp':
             gate = Zp
         elif gate_str == 'CNOT':
-            # TODO: Fix the ideal CNOT construction.
-            NOT = 1j*perfect_gate('Xp', index, [lvls], proj)
-            C = perfect_gate('Id', index, [lvls], proj)
+            lvls2 = dims[gate_num + 1]
+            NOT = 1j*perfect_gate('Xp', index, [lvls2], proj)
+            C = perfect_gate('Id', index, [lvls2], proj)
             gate = scipy_block_diag(C, NOT)
-            gate_num += 1
             # We increase gate_num since CNOT is a two qubit gate
-            lvls2 = dims[gate_num]
-            for ii in range(2, lvls2):
-                if proj == 'compsub':
-                    pass
-                elif proj == 'wzeros':
-                    zeros = np.zeros([lvls, lvls])
-                    gate = scipy_block_diag(gate, zeros)
-                elif proj == 'fulluni':
-                    identity = np.eye(lvls)
-                    gate = scipy_block_diag(gate, identity)
+            for ii in range(2, lvls):
+                pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == 'CZ':
+            lvls2 = dims[gate_num + 1]
+            Z = 1j*perfect_gate('Zp', index, [lvls2], proj)
+            C = perfect_gate('Id', index, [lvls2], proj)
+            gate = scipy_block_diag(C, Z)
+            # We increase gate_num since CZ is a two qubit gate
+            for ii in range(2, lvls):
+                pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == 'CR':
+            # TODO: Fix the ideal CNOT construction.
+            lvls2 = dims[gate_num + 1]
+            Z = 1j*perfect_gate('Zp', index, [lvls], proj)
+            X = perfect_gate('Xp', index, [lvls2], proj)
+            gate = np.kron(Z, X)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == 'CR90':
+            # TODO: Fix the ideal CNOT construction.
+            lvls2 = dims[gate_num + 1]
+            Z = 1j*perfect_gate('Z90p', index, [lvls], proj)
+            X = perfect_gate('X90p', index, [lvls2], proj)
+            gate = np.kron(Z, X)
+            gate_num += 1
+            do_pad_gate = False
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print("\'Id\',\'X90p\',\'X90m\',\'Xp\',\'Y90p\',",
-                  "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\'")
+                  "\'Y90m\',\'Yp\',\'Z90p\',\'Z90m\',\'Zp\', \'CNOT\'")
             return None
-        if proj == 'compsub':
-            pass
-        elif proj == 'wzeros':
-            zeros = np.zeros([lvls - 2, lvls - 2])
-            gate = scipy_block_diag(gate, zeros)
-        elif proj == 'fulluni':
-            identity = np.eye(lvls - 2)
-            gate = scipy_block_diag(gate, identity)
+        if do_pad_gate:
+            if proj == 'compsub':
+                pass
+            elif proj == 'wzeros':
+                zeros = np.zeros([lvls - 2, lvls - 2])
+                gate = scipy_block_diag(gate, zeros)
+            elif proj == 'fulluni':
+                identity = np.eye(lvls - 2)
+                gate = scipy_block_diag(gate, identity)
         kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)
 
 
-def perfect_CZ(lvls: int, proj: str = 'wzeros'):
-    Id = perfect_gate(lvls, 'Id', proj=proj)
-    CZ = np.kron(Id,Id)
-    if proj == 'compsub':
-        CZ[3,3] = -1
-    elif proj == 'wzeros' or proj == 'fulluni':
-        CZ[lvls+1,lvls+1] = -1
-    return CZ
+def perfect_parametric_gate(paulis_str, ang, dims):
+    ps = []
+    p_list = paulis_str.split(":")
+    for idx in range(len(p_list)):
+        if p_list[idx] not in PAULIS:
+            raise KeyError(
+                f"Incorrect pauli matrix {p_list[idx]} in position {idx}.\
+                Select from {PAULIS.keys()}."
+            )
+        ps.append(
+                pad_matrix(PAULIS[p_list[idx]], dims[idx]-2, "wzeros")
+        )
+    gen = np_kron_n(ps)
+    return expm(-1.j/2 * ang * gen)
 
 
-def single_length_RB(RB_number, RB_length):
+def two_qubit_gate_tomography(gate):
+    """
+    Sequences to generate tomography for evaluating a two qubit gate.
+    """
+    # THE 4 GATES
+    base = ["Id", "X90p", "Y90p", "Xp"]
+    base2 = [x + ":" + y for x in base for y in base]
+    S = [[x, gate, y] for x in base2 for y in base2]
+    return S
+
+
+def single_length_RB(RB_number, RB_length, padding=""):
     """Given a length and number of repetitions it compiles RB sequences."""
     S = []
     for seq_idx in range(RB_number):
@@ -182,7 +246,14 @@ def single_length_RB(RB_number, RB_length):
         seq = np.append(seq, inverseC(seq))
         seq_gates = []
         for cliff_num in seq:
-            seq_gates.extend(cliffords_decomp[cliff_num-1])
+            # TODO: General padding for n qubits
+            if padding == "right":
+                g = ["Id:" + c for c in cliffords_decomp[cliff_num-1]]
+            elif padding == "left":
+                g = [c + ":Id" for c in cliffords_decomp[cliff_num-1]]
+            else:
+                g = cliffords_decomp[cliff_num-1]
+            seq_gates.extend(g)
         S.append(seq_gates)
     return S
 
@@ -302,7 +373,9 @@ cliffords_decomp = [
                     ['X90p', 'Y90p', 'X90m']
                     ]
 
-cliffords_decomp_xId = [[gate + ':Id' for gate in clif] for clif in cliffords_decomp]
+cliffords_decomp_xId = [
+    [gate + ':Id' for gate in clif] for clif in cliffords_decomp
+]
 
 sum = 0
 for cd in cliffords_decomp:

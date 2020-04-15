@@ -2,6 +2,7 @@ import time
 import os
 import numpy as np
 
+
 # SYSTEM AND SETUP
 def log_setup(data_path, run_name=None):
     # TODO make this plattform agnostic, i.e. work with Windows(tm)
@@ -34,7 +35,7 @@ def replace_symlink(path, alias):
 # NICE PRINTNG FUNCTIONS
 def eng_num(val):
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
-    small_units = ['m', 'mu', 'n', 'p', 'f', 'a', 'z']
+    small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
     sign = 1
     if val == 0:
         return 0, ""
@@ -51,14 +52,17 @@ def eng_num(val):
     return sign * (10 ** (tmp % 3)), prefix
 
 
-def num3str(val):
+def num3str(val, use_prefix=True):
     ret = []
     if not hasattr(val, "__iter__"):
         val = np.array([val])
     for idx in range(val.shape[0]):
         v = val[idx]
-        num, prefix = eng_num(v)
-        ret.append(f"{num:.3f}" + prefix)
+        if use_prefix:
+            num, prefix = eng_num(v)
+            ret.append(f"{num:.3f} " + prefix)
+        else:
+            ret.append(f"{v:.3f} ")
     return ret
 
 
@@ -81,5 +85,3 @@ def ask_yn():
             asking = False
             boolean = False
     return boolean
-
-

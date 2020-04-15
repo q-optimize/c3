@@ -51,6 +51,23 @@ def neg_loglkh_binom(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+def neg_loglkh_multinom(exp_values, sim_values, exp_stds):
+    """
+    Likelihood of the experimental values with multinomial distribution.
+
+    Return the likelihood of the experimental values given the simulated
+    values, and given a multinomial distribution function.
+    """
+    shots = tf.constant(500., dtype=tf.float64)
+    binom = tfp.distributions.Multinomial(total_count=shots, probs=sim_values)
+    loglkhs = binom.log_prob(exp_values*shots)
+    loglkh = tf.reduce_sum(loglkhs)
+    # print(sim_values)
+    # print(exp_values)
+    # print(loglkhs)
+    return -loglkh
+
+
 def neg_loglkh_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
@@ -106,7 +123,6 @@ def neg_loglkh_mean_gauss(exp_values, sim_values, exp_stds):
 def neg_loglkh_mean_gauss_new(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
-
     The distribution is assumed to be binomial (approximated by a gaussian),
     plus an extra fixed gaussian noise distribution (here set at 0.0125)
     """

@@ -49,13 +49,16 @@ class Model:
         dims = []
         names = []
         state_labels = []
+        comp_state_labels = []
         for subs in subsystems:
             dims.append(subs.hilbert_dim)
             names.append(subs.name)
             state_labels.append(list(range(subs.hilbert_dim)))
+            comp_state_labels.append([0, 1])
         self.tot_dim = np.prod(dims)
         self.names = names
         self.state_labels = list(itertools.product(*state_labels))
+        self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
         # Create anninhilation operators for physical comps
         ann_opers = []
@@ -152,11 +155,10 @@ class Model:
 
     def update_drift_eigen(self, ordered=True):
         e, v = tf.linalg.eigh(self.drift_H)
+        reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
-            reorder_matrix = tf.cast(tf.round(tf.abs(v)), tf.complex128)
-            e = tf.reshape(e, [e.shape[0], 1])
-            eigenframe = tf.matmul(reorder_matrix, e)
-            transform = tf.matmul(v, reorder_matrix)
+            eigenframe = tf.linalg.matvec(reorder_matrix, e)
+            transform = tf.matmul(v, tf.transpose(reorder_matrix))
         else:
             eigenframe = tf.linalg.diag(e)
             transform = v
@@ -198,8 +200,7 @@ class Model:
         framechanges: dict
     ):
         tot_dim = self.tot_dim
-        ones = tf.ones(tot_dim, dtype=tf.complex128)
-        FR = tf.linalg.diag(ones)
+        exponent = tf.constant(0., dtype = tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
@@ -212,15 +213,17 @@ class Model:
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
             )
-            FR = FR * tf.linalg.expm(
+            # if self.dressed:
+            #     print('applying transform to FR')
+            #     num_oper = tf.matmul(
+            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
+            #         self.transform
+            #     )
+            # else:
+            #     print('leaving FR as is')
+            exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
-            )
-        if self.dressed:
-            FR = tf.matmul(tf.matmul(
-                tf.linalg.adjoint(self.transform),
-                FR),
-                self.transform
-            )
+        FR = tf.linalg.expm(exponent)
         return FR
 
     def get_qubit_freqs(self):

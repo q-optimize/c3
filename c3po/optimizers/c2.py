@@ -47,15 +47,14 @@ class C2(Optimizer):
             ]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
-            print("\nLoading previous best point.")
 
     def optimize_controls(self):
         """
-        Apply a search algorightm to your gateset given a fidelity function.
+        Apply a search algorithm to your gateset given a fidelity function.
         """
         self.start_log()
         self.picklefilename = self.logdir + "learn_from.pickle"
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         self.nice_print = self.exp.gateset.print_parameters
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:

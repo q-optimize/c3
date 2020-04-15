@@ -52,7 +52,7 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
 
 
 def unitary_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj: bool
 ):
     U = U_dict[gate]
     projection = 'fulluni'
@@ -68,8 +68,20 @@ def unitary_infid(
     return infid
 
 
+def unitary_infid_set(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        np.set_printoptions(precision=2, linewidth=135)
+        infid = unitary_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+
 def lindbladian_unitary_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool):
+        U_dict: dict, gate: str, index, dims, proj: bool
+    ):
     # Here we deal with the projected case differently because it's not easy
     # to select the right section of the superoper
     U = U_dict[gate]
@@ -88,8 +100,19 @@ def lindbladian_unitary_infid(
     return infid
 
 
+def lindbladian_unitary_infid_set(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = lindbladian_unitary_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+
 def average_infid(
-        U_dict: dict, gate: str, index, dims, proj: bool):
+    U_dict: dict, gate: str, index, dims, proj: bool
+):
     U = U_dict[gate]
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
@@ -103,6 +126,15 @@ def average_infid(
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
+def average_infid_set(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = average_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
 
 def lindbladian_average_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
@@ -113,17 +145,27 @@ def lindbladian_average_infid(
     if proj:
         projection = 'wzeros'
         fid_lvls = 2 * len(index)
-    U_ideal = tf_super(
-        tf.constant(
-            perfect_gate(gate, index, dims, projection),
-            dtype=tf.complex128
-        )
+    ideal = tf.constant(
+        perfect_gate(gate, index, dims, projection),
+        dtype=tf.complex128
     )
+    U_ideal = tf_super(ideal)
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
 
-def epc_analytical(U_dict: dict, proj: bool):
+def lindbladian_average_infid_set(
+    U_dict: dict, index, dims, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = lindbladian_average_infid(U_dict, gate, index, dims, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+
+def epc_analytical(U_dict: dict, index, dims, proj: bool):
+    # TODO make this work with new index and dims
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     num_gates = len(gate.split(':'))
@@ -212,7 +254,8 @@ def RB(
        num_lengths: int = 20,
        num_seqs: int = 30,
        logspace=False,
-       lindbladian=False
+       lindbladian=False,
+       padding=""
        ):
     # print('Performing RB fit experiment.')
     gate = list(U_dict.keys())[0]
@@ -237,12 +280,12 @@ def RB(
                     ).astype(int)
     surv_prob = []
     for L in lengths:
-        seqs = single_length_RB(num_seqs, L)
+        seqs = single_length_RB(num_seqs, L, padding)
         Us = evaluate_sequences(U_dict, seqs)
         pop0s = []
         for U in Us:
             pops = populations(tf.matmul(U, psi_init), lindbladian)
-            pop0s.append(float(pops[0]))
+            pop0s.append(float(pops[0]+pops[1]))
         surv_prob.append(pop0s)
 
     def RB_fit(len, r, A, B):
@@ -282,12 +325,12 @@ def RB(
                             ).astype(int)
             max_length = max_length * 2
             for L in new_lengths:
-                seqs = single_length_RB(num_seqs, L)
+                seqs = single_length_RB(num_seqs, L, padding)
                 Us = evaluate_sequences(U_dict, seqs)
                 pop0s = []
                 for U in Us:
                     pops = populations(tf.matmul(U, psi_init), lindbladian)
-                    pop0s.append(float(pops[0]))
+                    pop0s.append(float(pops[0]+pops[1]))
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
@@ -306,7 +349,7 @@ def RB(
                 linestyle='None')
     plt.title('RB results')
     plt.ylabel('Population in 0')
-    plt.xlabel('# Cliffords')
+    plt.xlabel('\# Cliffords')
     plt.ylim(0, 1)
     plt.xlim(0, lengths[-1])
     fitted = RB_fit(lengths, r, A, B)

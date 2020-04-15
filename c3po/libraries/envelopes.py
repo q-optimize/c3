@@ -6,6 +6,7 @@ All functions assume the input of a time vector.
 
 import numpy as np
 import tensorflow as tf
+from c3po.c3objs import Quantity as Qty
 
 
 def no_drive(t, params):
@@ -76,7 +77,7 @@ def flattop(t, params):
 def gaussian_sigma(t, params):
     """Normalized gaussian."""
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
             * tf.math.erf(t_final / (np.sqrt(8) * sigma))
@@ -87,8 +88,13 @@ def gaussian_sigma(t, params):
 
 def gaussian(t, params):
     """Normalized gaussian with fixed time/sigma ratio."""
-    # TODO this might cause an error
-    params['sigma'] = params['t_final'].get_value()/6
+    DeprecationWarning("Using standard width. Better use gaussian_sigma.")
+    params['sigma'] = Qty(
+        value=params['t_final'].get_value()/4,
+        min=params['t_final'].get_value()/8,
+        max=params['t_final'].get_value()/2,
+        unit=params['t_final'].unit
+    )
     return gaussian_sigma(t, params)
 
 

@@ -17,6 +17,7 @@ class C1(Optimizer):
         fid_func,
         fid_subspace,
         gateset_opt_map,
+        opt_gates,
         callback_fids=[],
         algorithm_no_grad=None,
         algorithm_with_grad=None,
@@ -32,12 +33,12 @@ class C1(Optimizer):
             plot_pulses=plot_pulses
             )
         self.opt_map = gateset_opt_map
+        self.opt_gates = opt_gates
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
         self.callback_fids = callback_fids
         self.options = options
         self.log_setup(dir_path)
-
 
     def log_setup(self, dir_path):
         self.dir_path = dir_path
@@ -56,7 +57,13 @@ class C1(Optimizer):
             ]
             init_p = json.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
-            print("\nLoading previous best point.")
+
+    def adjust_exp(self, adjust_exp):
+        with open(adjust_exp) as file:
+            best = file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            p = json.loads(best[1])['params']
+            self.exp.set_parameters(p, best_exp_opt_map)
 
     def optimize_controls(self):
         """
@@ -65,8 +72,9 @@ class C1(Optimizer):
         self.start_log()
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
+        self.exp.set_opt_gates(self.opt_gates)
         self.nice_print = self.exp.gateset.print_parameters
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
             index.append(self.exp.model.names.index(name))
@@ -102,7 +110,7 @@ class C1(Optimizer):
         )
         dims = self.exp.model.dims
         U_dict = self.exp.get_gates()
-        goal = self.fid_func(U_dict, self.index, dims)
+        goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
         goal_numpy = float(goal.numpy())
         display.plot_C1(self.logdir)
 
@@ -112,7 +120,9 @@ class C1(Optimizer):
                 "goal: {}: {}\n".format(self.fid_func.__name__, goal_numpy)
             )
             for cal in self.callback_fids:
-                val = cal(U_dict)
+                val = cal(
+                    U_dict, self.index, dims, self.logdir, self.evaluation + 1
+                )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
                 logfile.write("{}: {}\n".format(cal.__name__, val))

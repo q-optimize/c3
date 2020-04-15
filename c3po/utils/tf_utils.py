@@ -94,10 +94,9 @@ def tf_limit_gpu_memory(memory_limit):
             print(e)
 
 
-@tf.function
+
 def tf_measure_operator(M, U):
     return tf.linalg.trace(tf.matmul(M, U))
-
 
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
@@ -130,7 +129,6 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     # dU = tf_expm(-1j * h * dt, terms)
     dU = tf.linalg.expm(-1j * h * dt)
     return dU
-
 
 @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
@@ -249,7 +247,7 @@ def tf_propagation(h0, hks, cflds, dt):
 #     return dUs
 #
 #
-# @tf.function
+#
 # def tf_propagation_batch(h0, hks, cflds, dt, left):
 #     """
 #     """
@@ -260,7 +258,6 @@ def tf_propagation(h0, hks, cflds, dt):
 #             cf_t.append(tf.cast(fields[ii], tf.complex128))
 #         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
 #     return dUs
-
 
 def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
     with tf.name_scope('Propagation'):
@@ -274,16 +271,11 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
 
 
 # MATRIX MULTIPLICATION FUCNTIONS
+
 def evaluate_sequences(
     U_dict: dict,
     sequences: list
 ):
-    """
-    Sequences are assumed to be given in the correct order (left to right).
-
-        e.g.
-        ['X90p','Y90p'] --> U = X90p x Y90p
-    """
     gates = U_dict
     # TODO deal with the case where you only evaluate one sequence
     U = []
@@ -364,10 +356,10 @@ def tf_log10(x):
 def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
     return tf.reshape(
-                tf.cast(
-                    tf.math.conj(x)*x,
-                    dtype=tf.float64),
-                shape=[1]
+        tf.cast(
+            tf.math.conj(x)*x,
+            dtype=tf.float64),
+        shape=[1]
     )
 
 
@@ -393,7 +385,7 @@ def tf_diff(l):
     return tf.linalg.matvec(proj, l)
 
 # MATRIX FUNCTIONS
-@tf.function
+
 def tf_expm(A, terms):
     """
     Matrix exponential by the series method.
@@ -434,41 +426,41 @@ def tf_kron(A, B):
     dims = tf.shape(A)*tf.shape(B)
     tensordot = tf.tensordot(A, B, axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                dims
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        dims
+    )
     return reshaped
 
 
 # SUPEROPER FUNCTIONS
 # TODO migrate all superoper functions to using tf_kron
-@tf.function
+
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
     Id = Id_like(A)
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(A, Id, axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                [dim**2, dim**2]
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        [dim**2, dim**2]
+    )
     return reshaped
 
 
-@tf.function
+
 def tf_spost(A):
     """Superoperator on the right of matrix A."""
     Id = Id_like(A)
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
     reshaped = tf.reshape(
-                tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-                [dim**2, dim**2]
-                )
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
+        [dim**2, dim**2]
+    )
     return reshaped
 
 
-@tf.function
+
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -478,15 +470,15 @@ def tf_super(A):
     return superA
 
 
-@tf.function
+
 def super_to_choi(A):
     sqrt_shape = int(np.sqrt(A.shape[0]))
     A_choi = tf.reshape(
-                tf.transpose(
-                    tf.reshape(A, [sqrt_shape] * 4),
-                    perm=[3, 1, 2, 0]
-                    ),
-                A.shape
+        tf.transpose(
+            tf.reshape(A, [sqrt_shape] * 4),
+            perm=[3, 1, 2, 0]
+            ),
+        A.shape
     )
     return A_choi
 
@@ -494,7 +486,7 @@ def super_to_choi(A):
 def tf_state_to_dm(psi_ket):
     psi_ket = tf.reshape(psi_ket, [psi_ket.shape[0], 1])
     psi_bra = tf.transpose(psi_ket)
-    return psi_ket * psi_bra
+    return tf.matmul(psi_ket, psi_bra)
 
 
 # TODO see which code to get dv is better (and kill the other)
@@ -511,16 +503,16 @@ def tf_dmdm_fid(rho, sigma):
     # TODO needs fixing
     rhosqrt = tf.linalg.sqrtm(rho)
     return tf.linalg.trace(
-                tf.linalg.sqrtm(
-                    tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
-                    )
-                )
+        tf.linalg.sqrtm(
+            tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
+        )
+    )
 
 
 def tf_dmket_fid(rho, psi):
     return tf.sqrt(
-            tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
-            )
+        tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
+    )
 
 
 def tf_ketket_fid(psi1, psi2):
@@ -544,10 +536,10 @@ def tf_unitary_overlap(A, B, lvls=None):
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
     overlap = tf_abs(
-                tf.linalg.trace(
-                    tf.matmul(A, tf.linalg.adjoint(B))
-                    ) / lvls
-                )**2
+        tf.linalg.trace(
+            tf.matmul(A, tf.linalg.adjoint(B))
+        ) / lvls
+    )**2
     return overlap
 
 
@@ -555,12 +547,12 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     overlap = tf_abs(
-                tf.sqrt(
-                    tf.linalg.trace(
-                        tf.matmul(A, tf.linalg.adjoint(B))
-                        )
-                    ) / lvls
-                )**2
+        tf.sqrt(
+            tf.linalg.trace(
+                tf.matmul(A, tf.linalg.adjoint(B))
+            )
+        ) / lvls
+    )**2
     return overlap
 
 

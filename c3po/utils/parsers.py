@@ -1,6 +1,8 @@
+import os
 import json
-import numpy as np
+import time
 import random
+import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
 import c3po.libraries.algorithms as algorithms
@@ -22,28 +24,55 @@ def create_experiment(exp_setup, datafile=''):
     return exp
 
 
-def create_c1_opt(optimizer_config):
+def create_c1_opt(optimizer_config, lindblad):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
+    # TODO merge this and the opt_gates to get rid of definitions
     def lind_unit_X90p(U_dict, index, dims):
         return fidelities.lindbladian_unitary_infid(
-            U_dict, 'X90p', index, dims,  proj=True
+            U_dict, 'CZ', index, dims,  proj=True
         )
     def unit_X90p(U_dict, index, dims):
-        return fidelities.unitary_infid(U_dict, 'X90p', index, dims,  proj=True)
+        return fidelities.unitary_infid(U_dict, 'CZ', index, dims,  proj=True)
     def lind_unit_Y90p(U_dict, index, dims):
         return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', index, dims,  proj=True)
+    def lind_unit_CR(U_dict, index, dims):
+        return fidelities.lindbladian_unitary_infid(
+            U_dict, 'CR', index, dims,  proj=True
+        )
     def unit_Y90p(U_dict, index, dims):
         return fidelities.unitary_infid(
             U_dict, 'Y90p', index, dims, proj=True
         )
     def lind_avfid_X90p(U_dict, index, dims):
         return fidelities.lindbladian_average_infid(
-            U_dict, 'X90p', index, dims, proj=True
+            U_dict, 'X90p:Id', index, dims, proj=True
+        )
+    def lind_avfid(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'X90p:Id', index, dims, proj=True
+        )
+    def lind_avfid_CR(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'CR', index, dims, proj=True
+        )
+    def lind_avfid_CR90(U_dict, index, dims):
+        return fidelities.lindbladian_average_infid(
+            U_dict, 'CR90', index, dims, proj=True
+        )
+    def avfid_CR90(U_dict, index, dims):
+        return fidelities.average_infid(
+            U_dict, 'CR90', index, dims, proj=True
         )
     def avfid_X90p(U_dict, index, dims):
-        return fidelities.average_infid(U_dict, 'X90p', index, dims,  proj=True)
+        return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
+    def epc_RB(U_dict, index, dims, logdir, eval):
+        epc, r, A, B, fig, ax = fidelities.RB(
+            U_dict, logspace=True, lindbladian=lindblad, padding="left"
+        )
+        plt.savefig(f"{logdir}RB_{eval}.png", dpi=300)
+        return epc
     def lind_epc_ana(U_dict, index, dims):
         return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
     def epc_ana(U_dict, index, dims):
@@ -55,22 +84,67 @@ def create_c1_opt(optimizer_config):
         'lind_unitary_infid': lind_unit_X90p,
         'unitary_infid_Y90p': unit_Y90p,
         'lind_unitary_infid_Y90p': lind_unit_Y90p,
+        'lind_unitary_infid_CR': lind_unit_CR,
         'average_infid': avfid_X90p,
+        'average_infid_CR90': avfid_CR90,
         'lind_average_infid': lind_avfid_X90p,
+        'lind_average_infid_CR': lind_avfid_CR,
+        'lind_average_infid_CR90': lind_avfid_CR90,
         'epc_ana': epc_ana,
+        'epc_RB': epc_RB,
+        'lindbladian_epc_RB': epc_RB,
         'lind_epc_ana': lind_epc_ana
     }
-    fid = cfg['fid_func']
-    cb_fids = cfg['callback_fids']
-    fid_func = fids[fid]
+    if lindblad:
+        fid = 'lindbladian_' + cfg['fid_func']
+    else:
+        fid = cfg['fid_func']
+
+    if lindblad:
+        cb_fids = ['lindbladian_' + f for f in cfg['callback_fids']]
+    else:
+        cb_fids = cfg['callback_fids']
+
+    try:
+        fid_func = fids[fid]
+    except KeyError:
+        print(
+            "C3:STATUS:Goal function not found in user specification. "
+            "Trying libraries..."
+        )
+        try:
+            fid_func = fidelities.__dict__[fid]
+        except KeyError:
+            raise Exception(
+                f"C3:ERROR:Unkown goal function: {fid} "
+            )
+        print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
-        callback_fids.append(fids[cb_fid])
+        try:
+            cb_fid_func = fids[cb_fid]
+        except KeyError:
+            print(
+                "C3:STATUS:Goal function not found in user specification. "
+                "Trying libraries..."
+            )
+            try:
+                cb_fid_func = fidelities.__dict__[cb_fid]
+            except KeyError:
+                raise Exception(
+                    f"C3:ERROR:Unkown goal function: {cb_fid}"
+                )
+            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+        callback_fids.append(cb_fid_func)
+    opt_gates = cfg['opt_gates']
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
-    grad_algs = {'lbfgs': algorithms.lbfgs}
+    grad_algs = {
+        'lbfgs': algorithms.lbfgs,
+        'lbfgs_hybrid': algorithms.cma_pre_lbfgs
+    }
     no_grad_algs = {'cmaes': algorithms.cmaes}
     if cfg['algorithm'] in grad_algs.keys():
         algorithm_with_grad = grad_algs[cfg['algorithm']]
@@ -104,6 +178,7 @@ def create_c1_opt(optimizer_config):
         fid_func=fid_func,
         fid_subspace=cfg['fid_subspace'],
         gateset_opt_map=gateset_opt_map,
+        opt_gates=opt_gates,
         callback_fids=callback_fids,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
@@ -123,7 +198,10 @@ def create_c1_opt_hk(
     noise
 ):
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        try:
+            cfg = json.loads(cfg_file.read())
+        except json.decoder.JSONDecodeError:
+            raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
         def unit_X90p(U_dict):
@@ -221,18 +299,35 @@ def create_c1_opt_hk(
 def create_c2_opt(optimizer_config, eval_func_path):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
+    qubit_label = None
+    state_label = None
+    if 'target' in cfg:
+        qubit_label = cfg["target"]
+        state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
+
     exp_eval_namespace = run_path(eval_func_path)
     eval_func = exp_eval_namespace['eval_func']
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
+    logdir = cfg['dir_path'] + 'RB_c2_' + time.strftime(
+        "%Y_%m_%d_T_%H_%M_%S/", time.localtime()
+    )
+    # if not os.path.isdir(logdir):
+    #     os.makedirs(logdir)
     if 'exp_right' in exp_eval_namespace:
         exp_right = exp_eval_namespace['exp_right']
-        eval = lambda p: eval_func(p, exp_right, gateset_opt_map)
+        def eval(p):
+            return eval_func(
+                p, exp_right, gateset_opt_map, qubit_label, state_label, logdir
+            )
     else:
         eval = eval_func
-    no_grad_algs = {'cmaes': algorithms.cmaes}
+    no_grad_algs = {
+        'cmaes': algorithms.cmaes,
+        'single_eval': algorithms.single_eval
+    }
     algorithm_no_grad = no_grad_algs[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
@@ -250,6 +345,12 @@ def create_c2_opt(optimizer_config, eval_func_path):
 def create_c3_opt(optimizer_config):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
+
+    state_labels={"all": None}
+    if "state_labels" in cfg:
+        for target, labels in cfg["state_labels"].items():
+            state_labels[target] = [tuple(l) for l in labels]
+
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']
     estims = {
@@ -302,12 +403,12 @@ def create_c3_opt(optimizer_config):
         sampling=cfg['sampling'],
         batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
+        state_labels=state_labels,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
         algorithm_no_grad=algorithm_no_grad,
         algorithm_with_grad=algorithm_with_grad,
-        plot_dynamics = plot_dynamics,
-        options=options
+        options=options,
     )
     return opt
 

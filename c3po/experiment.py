@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import c3po.utils.tf_utils as tf_utils
-import c3po.libraries.fidelities as fidelities
 
 
 # TODO add case where one only wants to pass a list of quantity objects?
@@ -101,11 +100,6 @@ class Experiment:
         return "".join(ret)
     # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
-    def get_Us(self, seqs):
-        U_dict = self.get_gates()
-        Us = tf_utils.evaluate_sequences(U_dict, seqs)
-        return Us
-
     # def evaluate(self, seqs):
     #     def unit_X90p(U_dict):
     #         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
@@ -113,33 +107,45 @@ class Experiment:
     #     results = [unit_X90p(U_dict)]
     #     return results
 
-    def evaluate(self, seqs):
-        Us = self.get_Us(seqs)
+    def evaluate(self, seqs, labels=None):
+        Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
         psi_init = self.model.tasks["init_ground"].initialise(
             self.model.drift_H,
             self.model.lindbladian
         )
         self.psi_init = psi_init
-        pop1s = []
+        populations_final = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
-            pops = self.populations(psi_final, self.model.lindbladian)
+            pops = self.populations(
+                psi_final, self.model.lindbladian
+            )
+            # TODO: Loop over all tasks in a general fashion
             if "conf_matrix" in self.model.tasks:
-                pop1 = self.model.tasks["conf_matrix"].pop1(
+                pops = self.model.tasks["conf_matrix"].confuse(
                     pops,
                     self.model.lindbladian
                 )
-            else:
-                pop1 = pops[1]
-            pop1 = self.model.tasks["meas_rescale"].rescale(pop1)
-            pop1s.append(pop1)
-        return pop1s
+            if labels is not None:
+                pops_select = 0
+                for l in labels:
+                    pops_select += pops[self.model.comp_state_labels.index(l)]
+                pops = pops_select
+
+            if "meas_rescale" in self.model.tasks:
+                pops = self.model.tasks["meas_rescale"].rescale(pops)
+            populations_final.append(pops)
+        return populations_final
 
     def get_gates(self):
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
-        for gate in self.gateset.instructions.keys():
+        if "opt_gates" in self.__dict__:
+            gate_keys = self.opt_gates
+        else:
+            gate_keys = self.gateset.instructions.keys()
+        for gate in gate_keys:
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
@@ -148,13 +154,12 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    if gate == "QId":
-                        offset = 0.0
-                    elif "freq_offset" in ctrls['gauss'].params:
-                        offset = ctrls['gauss'].params['freq_offset'].get_value()
-                    else:
-                        offset = 0.0
-
+                    # TODO calculate properly the average frequency that each qubit sees
+                    offset = 0.0
+                    if "gauss" in ctrls:
+                        if ctrls['gauss'].params["amp"] != 0.0:
+                            offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
                         + offset,
@@ -236,6 +241,9 @@ class Experiment:
         self.U = U
         return U
 
+    def set_opt_gates(self, opt_gates):
+        self.opt_gates = opt_gates
+
     def set_enable_dynamics_plots(self, flag, logdir):
         self.enable_dynamics_plots = flag
         self.logdir = logdir
@@ -250,7 +258,7 @@ class Experiment:
             os.mkdir(self.logdir + "pulses/")
             self.pulses_plot_counter = 0
 
-    def plot_dynamics(self, psi_init, seq):
+    def plot_dynamics(self, psi_init, seq, debug=False):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
@@ -267,12 +275,10 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    if gate == "QId":
-                        offset = 0.0
-                    elif "freq_offset" in ctrls['gauss'].params:
-                        offset = ctrls['gauss'].params['freq_offset'].get_value()
-                    else:
-                        offset = 0.0
+                    offset = 0.0
+                    if "gauss" in ctrls:
+                        if ctrls['gauss'].params["amp"] != 0.0:
+                            offset = ctrls['gauss'].params['freq_offset'].get_value()
 
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
@@ -304,9 +310,13 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        plt.savefig(
-            self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
-        )
+        plt.legend(self.model.state_labels)
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
+                )
 
     def plot_pulses(self, instr):
         # print(instr.name)
@@ -315,8 +325,6 @@ class Experiment:
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
-        inphase = awg.signal["inphase"]
-        quadrature = awg.signal["quadrature"]
 
         if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/"):
             os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/")
@@ -326,21 +334,17 @@ class Experiment:
         # ts = self.ts
         # dt = ts[1] - ts[0]
         # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(awg_ts / 1e-9, inphase/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
+        for channel in instr.comps:
+            inphase = awg.signal[channel]["inphase"]
+            quadrature = awg.signal[channel]["quadrature"]
+            axs.plot(awg_ts / 1e-9, inphase/1e-3, label="I "+ channel)
+            axs.plot(awg_ts / 1e-9, quadrature/1e-3, label="Q "+ channel)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.legend()
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_inphase_{list(instr.comps.keys())}.png", dpi=300
-        )
-
-        fig, axs = plt.subplots(1, 1)
-        axs.plot(awg_ts / 1e-9, quadrature/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_quadrature_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_{list(instr.comps.keys())}.png", dpi=300
         )
 
         dac = self.generator.devices["dac"]
@@ -396,8 +400,6 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
-
-
         fig, axs = plt.subplots(1, 1)
         # ts = self.ts
         # dt = ts[1] - ts[0]
@@ -406,7 +408,6 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('signal')
-        d1 = "d1"
         plt.savefig(
             self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
         )

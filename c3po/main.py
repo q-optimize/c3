@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """Base run for c3 code."""
-
-
+import logging
+logging.getLogger('tensorflow').disabled = True
+import os
+import shutil
 import json
 import pickle
 import argparse
@@ -28,20 +30,24 @@ tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 args = parser.parse_args()
-master_config = args.master_config
-with open(master_config, "r") as cfg_file:
+
+if 'optimizer_config' in cfg:
+    opt_config = cfg['optimizer_config']
+
+
+
+opt_config = args.master_config
+with open(opt_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
 optim_type = cfg['optim_type']
 exp_setup = cfg['exp_setup']
-if 'optimizer_config' in cfg:
-    opt_config = cfg['optimizer_config']
 
 tf_utils.tf_setup()
 with tf.device('/CPU:0'):
     exp = parsers.create_experiment(exp_setup)
 
     if optim_type == "C1":
-        opt = parsers.create_c1_opt(opt_config)
+        opt = parsers.create_c1_opt(opt_config, exp.model.lindbladian)
     elif optim_type == "C2":
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
@@ -53,19 +59,57 @@ with tf.device('/CPU:0'):
         print("creating set obj")
         opt = parsers.create_sensitivity_test(set_config)
     else:
-        raise Exception("Unknown optimization type specified.")
-
+        raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
     dir = opt.logdir
 
+    shutil.copy2(exp_setup, dir)
+    shutil.copy2(opt_config, dir)
+    if optim_type == "C2":
+        shutil.copy2(eval_func, dir)
+
     if 'initial_point' in cfg:
-        init_point = cfg['initial_point']
-        opt.load_best(init_point)
+        initial_points = cfg['initial_point']
+        if isinstance(initial_points, str):
+            initial_points = [initial_points]
+        elif isinstance(initial_points, list):
+            pass
+        else:
+            raise Warning('initial_point has to be a path or a list of paths.')
+        for init_point in initial_points:
+            try:
+                opt.load_best(init_point)
+                print(
+                    "C3:STATUS:Loading initial point from : "
+                    f"{os.path.abspath(init_point)}"
+                )
+                shutil.copy(init_point, dir+"initial_point.log")
+            except FileNotFoundError:
+                print(
+                    f"C3:STATUS:No initial point found at "
+                    f"{os.path.abspath(init_point)}. "
+                    "Continuing with default."
+                )
 
     if 'real_params' in cfg:
         real_params = cfg['real_params']
 
     if optim_type == "C1":
+        if 'adjust_exp' in cfg:
+            try:
+                adjust_exp = cfg['adjust_exp']
+                opt.adjust_exp(adjust_exp)
+                print(
+                    "C3:STATUS:Loading experimental values from : "
+                    f"{os.path.abspath(adjust_exp)}"
+                )
+                shutil.copy(adjust_exp, dir+"adjust_exp.log")
+            except FileNotFoundError:
+                print(
+                    f"C3:STATUS:No experimental values found at "
+                    f"{os.path.abspath(adjust_exp)}. "
+                    "Continuing with default."
+                )
         opt.optimize_controls()
 
     elif optim_type == "C2":
@@ -83,11 +127,13 @@ with tf.device('/CPU:0'):
         opt.optimize_controls()
 
     elif optim_type == "C3":
-        datafile = cfg['datafile']
-        with open(datafile, 'rb+') as file:
-            learn_from = pickle.load(file)
-        opt.read_data(datafile)
-        print("learning model ...")
+       learn_from = []
+        opt.read_data(cfg['datafile'])
+        shutil.copy2(
+            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            + "/real_model_params.log",
+            dir
+        )
         opt.learn_model()
 
     elif optim_type == "SET":
