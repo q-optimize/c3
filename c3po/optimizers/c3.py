@@ -110,18 +110,13 @@ class C3(Optimizer):
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         try:
             # TODO deal with kears learning differently
-            if self.grad:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min,
-                    self.lookup_gradient
-                )
-            else:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min,
-                    self.options
-                )
+            self.algorithm(
+                x0,
+                fun=self.fct_to_min,
+                fun_grad=self.fct_to_min_autograd,
+                grad_lookup=self.lookup_gradient,
+                options=self.options
+            )
         except KeyboardInterrupt:
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:

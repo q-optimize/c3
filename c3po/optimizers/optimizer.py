@@ -119,10 +119,17 @@ class Optimizer:
 
     def fct_to_min(self, x):
         current_params = tf.constant(x)
-        if self.grad:
-            goal = self.goal_run_with_grad(current_params)
-        else:
-            goal = self.goal_run(current_params)
+        goal = self.goal_run(current_params)
+        self.log_parameters()
+        if "U_dict" in self.exp.__dict__.keys():
+            self.log_best_unitary()
+        if isinstance(goal, tf.Tensor):
+            goal = float(goal.numpy())
+        return goal
+
+    def fct_to_min_autograd(self, x):
+        current_params = tf.constant(x)
+        goal = self.goal_run_with_grad(current_params)
         self.log_parameters()
         if "U_dict" in self.exp.__dict__.keys():
             self.log_best_unitary()
