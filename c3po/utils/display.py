@@ -519,9 +519,6 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
     for log in logs:
         goal_function = log["goal_function"]
         its = range(1, len(goal_function) + 1)
-        print('hey')
-        print(its)
-        print(goal_function)
         c = colors.pop(0)
         line = plt.semilogx(
             its, goal_function, marker=markers[idx], color=c,

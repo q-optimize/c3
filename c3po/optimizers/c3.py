@@ -10,6 +10,7 @@ import tensorflow as tf
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
+import c3po.utils.display as display
 
 
 class C3(Optimizer):
@@ -142,6 +143,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
+        display.plot_C3(self.logdir)
         exp_values = []
         exp_stds = []
         sim_values = []
