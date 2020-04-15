@@ -119,6 +119,7 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
+        display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
@@ -138,7 +139,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        display.plot_C3(self.logdir)
+        display.plot_C3([self.logdir])
         exp_values = []
         exp_stds = []
         sim_values = []
@@ -218,6 +219,7 @@ class C3(Optimizer):
                         logfile.write(
                             "  Diff: " +  np.array_str((m_val-sim_val).flatten())
                         )
+                        logfile.write("\n")
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)

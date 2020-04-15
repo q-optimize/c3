@@ -375,7 +375,10 @@ def create_c3_opt(optimizer_config):
         callback_figs.append(figs[key])
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
     grad_algs = {'lbfgs': algorithms.lbfgs}
-    no_grad_algs = {'cmaes': algorithms.cmaes}
+    no_grad_algs = {
+        'cmaes': algorithms.cmaes,
+        'single_eval': algorithms.single_eval
+    }
     if cfg['algorithm'] in grad_algs.keys():
         algorithm_with_grad = grad_algs[cfg['algorithm']]
         algorithm_no_grad = None
