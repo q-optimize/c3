@@ -176,7 +176,7 @@ class C3(Optimizer):
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
-                sim_values.extend(sim_vals)
+                sim_values.append(sim_vals)
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -219,8 +219,7 @@ class C3(Optimizer):
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=1)
-        print(sim_values.shape())
+        sim_values = tf.concat(sim_values, axis=0)
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())
@@ -234,7 +233,7 @@ class C3(Optimizer):
             logfile.flush()
 
         for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values, exp_stds)
+            fig = cb_fig(exp_values, sim_values.numpy().T[0], exp_stds)
             fig.savefig(
                 self.logdir
                 + cb_fig.__name__ + '/'
