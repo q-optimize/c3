@@ -357,7 +357,9 @@ def create_c3_opt(optimizer_config):
         'rms': estimators.rms_dist,
         'stds': estimators.exp_stds_dist,
         'gauss': estimators.neg_loglkh_gauss,
+        'gauss_new': estimators.neg_loglkh_mean_gauss_new,
         'binom': estimators.neg_loglkh_binom,
+        'binom_new': estimators.neg_loglkh_binom_new,
         'rms_stds': estimators.rms_exp_stds_dist,
         'std_diffs': estimators.std_of_diffs,
     }
