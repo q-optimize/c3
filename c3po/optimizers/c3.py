@@ -124,7 +124,7 @@ class C3(Optimizer):
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_log()
-        self.confirm()
+        #self.confirm()
 
     def confirm(self):
         self.logname = 'confirm.log'
