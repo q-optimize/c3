@@ -31,11 +31,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 args = parser.parse_args()
 
-if 'optimizer_config' in cfg:
-    opt_config = cfg['optimizer_config']
-
-
-
 opt_config = args.master_config
 with open(opt_config, "r") as cfg_file:
     cfg = json.loads(cfg_file.read())
@@ -55,9 +50,8 @@ with tf.device('/CPU:0'):
         print("creating c3 opt ...")
         opt = parsers.create_c3_opt(opt_config)
     elif optim_type == "SET":
-        set_config = cfg['set_config']
         print("creating set obj")
-        opt = parsers.create_sensitivity_test(set_config)
+        opt = parsers.create_sensitivity_test(opt_config)
     else:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
@@ -127,7 +121,7 @@ with tf.device('/CPU:0'):
         opt.optimize_controls()
 
     elif optim_type == "C3":
-       learn_from = []
+        learn_from = []
         opt.read_data(cfg['datafile'])
         shutil.copy2(
             "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
@@ -137,9 +131,15 @@ with tf.device('/CPU:0'):
         opt.learn_model()
 
     elif optim_type == "SET":
-        datafile = cfg['datafile']
-        with open(datafile, 'rb+') as file:
-            learn_from = pickle.load(file)
-        opt.read_data(datafile)
+        learn_from = []
+        opt.read_data(cfg['datafile'])
+        shutil.copy2(
+            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            + "/real_model_params.log",
+            dir
+        )
+
         print("sensitivity test ...")
         opt.sensitivity_test()
+
+

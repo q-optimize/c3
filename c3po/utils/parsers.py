@@ -2,6 +2,7 @@ import os
 import json
 import time
 import random
+import numpy as np
 import matplotlib.pyplot as plt
 import c3po.libraries.estimators as estimators
 import c3po.utils.display as display
@@ -415,6 +416,14 @@ def create_c3_opt(optimizer_config):
 def create_sensitivity_test(task_config):
     with open(task_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
+
+
+    state_labels={"all": None}
+    if "state_labels" in cfg:
+        for target, labels in cfg["state_labels"].items():
+            state_labels[target] = [tuple(l) for l in labels]
+
+
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']
     estims = {
@@ -468,6 +477,7 @@ def create_sensitivity_test(task_config):
         sampling=cfg['sampling'],
         batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
+        state_labels=state_labels,
         sweep_map=sweep_map,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
