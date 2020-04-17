@@ -456,9 +456,10 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
 
         pars_to_delete = []
         for p_name, par in parameters.items():
-            rel_change = np.max(np.abs(np.diff(par))) / par[0]
-            if rel_change < change_thresh:
-                pars_to_delete.append(p_name)
+            if change_thresh > 0 :
+                rel_change = np.max(np.abs(np.diff(par))) / par[0]
+                if rel_change < change_thresh:
+                    pars_to_delete.append(p_name)
 
             max_val = np.max(np.abs(par))
             p_val, unit = unit_conversion(p_name.split(" ")[-1], max_val)
@@ -467,8 +468,6 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
             except ZeroDivisionError:
                 scaling[p_name] = 1
             units[p_name] = unit
-
-
         for key in pars_to_delete:
             parameters.pop(key)
 
@@ -519,9 +518,6 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
     for log in logs:
         goal_function = log["goal_function"]
         its = range(1, len(goal_function) + 1)
-        print('hey')
-        print(its)
-        print(goal_function)
         c = colors.pop(0)
         line = plt.semilogx(
             its, goal_function, marker=markers[idx], color=c,
@@ -529,7 +525,8 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
         )
         leg_formatted.append(line)
         idx += 1
-        plt.semilogx(its[-1], goal_function[-1], "x", color=c)
+        if goal_function: #Do only if not empty
+            plt.semilogx(its[-1], goal_function[-1], "x", color=c)
     leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
     plt.legend(leg)
     plt.xlabel('Evaluation')

@@ -10,6 +10,7 @@ import tensorflow as tf
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
+import c3po.utils.display as display
 
 
 class C3(Optimizer):
@@ -114,11 +115,12 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
+        #display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_log()
-        self.confirm()
+        #self.confirm()
 
     def confirm(self):
         self.logname = 'confirm.log'
@@ -133,6 +135,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
+        #display.plot_C3([self.logdir])
         exp_values = []
         exp_stds = []
         sim_values = []
@@ -204,10 +207,11 @@ class C3(Optimizer):
                             f"{float(m_val):8.6f}    {float(m_std):8.6f}    "
                             f"{float(m_val-sim_val):8.6f}\n"
                         )
+                        logfile.write("\n")
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=0)
+        sim_values = tf.transpose(tf.concat(sim_values, axis=0))
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())
@@ -215,13 +219,15 @@ class C3(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
+            print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
+                print("{}: {}".format(cb_fom.__name__, val))
             logfile.flush()
 
         for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values.numpy().T[0], exp_stds)
+            fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
             fig.savefig(
                 self.logdir
                 + cb_fig.__name__ + '/'

@@ -11,7 +11,7 @@ def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     # TODO print from the log not from hear
     options.update({'disp': True})
-    return minimize(
+    minimize(
         fun_grad,
         x0,
         jac=grad_lookup,
@@ -75,7 +75,6 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
                     )
                     break
         iter += 1
-    return es
 
 def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     es = cmaes(x0, fun, options=options['cmaes'])
