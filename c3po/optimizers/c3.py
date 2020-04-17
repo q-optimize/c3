@@ -25,15 +25,11 @@ class C3(Optimizer):
         state_labels=None,
         callback_foms=[],
         callback_figs=[],
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm=None,
         options={}
     ):
         """Initiliase."""
-        super().__init__(
-            algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=algorithm_with_grad
-            )
+        super().__init__(algorithm=algorithm)
         self.fom = fom
         self.sampling = sampling
         self.batch_size = batch_size
@@ -190,6 +186,10 @@ class C3(Optimizer):
                             ),
                         )
                     )
+                    logfile.write(
+                        "Sequence    Simulation  Experiment  Std         "
+                        "Diff\n"
+                    )
 
                 for iseq in range(num_seqs):
                     m_val = np.array(m_vals[iseq])
@@ -197,24 +197,12 @@ class C3(Optimizer):
                     exp_values.append(m_val)
                     exp_stds.append(m_std)
                     sim_val = sim_vals[iseq].numpy()
-                    np.set_printoptions(formatter={'float': '{:8.5f}'.format})
+                    int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
-                        # TODO: Fix sequence counting for multiple learn_from
-                        # files
                         logfile.write(
-                            f" Sequence {iseq + 1} of {num_seqs}:\n"
-                        )
-                        logfile.write(
-                            "  Simulation: " + np.array_str(sim_val.flatten())
-                        )
-                        logfile.write(
-                            "  Experiment: " + np.array_str(m_val.flatten())
-                        )
-                        logfile.write(
-                            "  Std: " +  np.array_str(m_val.flatten())
-                        )
-                        logfile.write(
-                            "  Diff: " +  np.array_str((m_val-sim_val).flatten())
+                            f"{iseq + 1:8}    {float(sim_val):8.6f}    "
+                            f"{float(m_val):8.6f}    {float(m_std):8.6f}    "
+                            f"{float(m_val-sim_val):8.6f}\n"
                         )
                         logfile.flush()
 
@@ -225,7 +213,7 @@ class C3(Optimizer):
         goal_numpy = float(goal.numpy())
 
         with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write("Finished batch with\n")
+            logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())

@@ -19,16 +19,14 @@ class C1(Optimizer):
         gateset_opt_map,
         opt_gates,
         callback_fids=[],
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
         options={}
     ):
         """Initiliase."""
         super().__init__(
-            algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=algorithm_with_grad,
+            algorithm=algorithm,
             plot_dynamics=plot_dynamics,
             plot_pulses=plot_pulses
             )

@@ -5,7 +5,7 @@ import numpy as np
 
 
 def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
-    goal_fun(x0)
+    return fun(x0)
 
 
 def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):

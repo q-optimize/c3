@@ -13,8 +13,7 @@ class Optimizer:
 
     def __init__(
         self,
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm=None,
         plot_dynamics=False,
         plot_pulses=False
     ):
@@ -24,16 +23,11 @@ class Optimizer:
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
-        if algorithm_with_grad:
-            self.algorithm = algorithm_with_grad
-            self.grad = True
-        elif algorithm_no_grad:
-            self.algorithm = algorithm_no_grad
-            self.grad = False
+        if algorithm is not None:
+            self.algorithm = algorithm
         else:
             raise Exception("No algorithm passed. Using default LBFGS")
             self.algorithm = c3po.algorithms.lbfgs
-            self.grad = True
 
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir

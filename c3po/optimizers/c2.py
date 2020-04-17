@@ -16,13 +16,12 @@ class C2(Optimizer):
         dir_path,
         eval_func,
         gateset_opt_map,
-        algorithm_no_grad,
+        algorithm,
         options={}
     ):
         """Initiliase."""
         super().__init__(
-            algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=None
+            algorithm=algorithm
             )
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
