@@ -32,7 +32,7 @@ class C2(Optimizer):
         self.eval_func = eval_func
 
     def log_setup(self, dir_path):
-        self.dir_path = dir_path
+        self.dir_path = os.path.abspath(dir_path)
         self.string = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, self.string)
         self.logname = 'calibration.log'

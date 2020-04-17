@@ -366,6 +366,8 @@ def create_c3_opt(optimizer_config):
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
     if cfg['algorithm'] in algorithms.__dict__.keys():
         algorithm = algorithms.__dict__[cfg['algorithm']]
+    else:
+        raise KeyError("C3:ERROR:Unkown Algorithm.")
     options = {}
     if 'options' in cfg:
         options = cfg['options']

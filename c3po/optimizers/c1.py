@@ -39,7 +39,7 @@ class C1(Optimizer):
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        self.dir_path = dir_path
+        self.dir_path = os.path.abspath(dir_path)
         self.string = (
             'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
         )
