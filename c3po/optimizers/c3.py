@@ -82,6 +82,17 @@ class C3(Optimizer):
             indeces = all[:batch_size]
         elif sampling == 'from_end':
             indeces = all[-batch_size:]
+        elif sampling == 'high_std':
+            a_val = []
+            for sample in learn_from:
+                a_val.append(np.std(sample['results'])/np.mean(sample['results']))
+            indeces = np.argsort(np.array(a_val))[-batch_size:]
+        elif sampling == 'even_fid':
+            res = []
+            for sample in learn_from:
+                res.append(np.mean(sample['results']))
+            n = int(np.ceil(total_size / batch_size))
+            indeces = np.argsort(np.array(res))[::n]
         elif sampling == 'all':
             indeces = all
         else:

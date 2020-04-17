@@ -7,9 +7,10 @@ import numpy as np
 def log_setup(data_path, run_name=None):
     # TODO make this plattform agnostic, i.e. work with Windows(tm)
     # TODO Add the name to fhe folder
+    data_path = os.path.abspath(data_path)
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
-    pwd = data_path + time.strftime(
+    pwd = data_path + "/" +time.strftime(
         "%Y_%m_%d_T_%H_%M_%S", time.localtime()
     )
     try:
