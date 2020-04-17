@@ -13,8 +13,7 @@ class Optimizer:
 
     def __init__(
         self,
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm=None,
         plot_dynamics=False,
         plot_pulses=False
     ):
@@ -24,16 +23,11 @@ class Optimizer:
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
-        if algorithm_with_grad:
-            self.algorithm = algorithm_with_grad
-            self.grad = True
-        elif algorithm_no_grad:
-            self.algorithm = algorithm_no_grad
-            self.grad = False
+        if algorithm is not None:
+            self.algorithm = algorithm
         else:
             raise Exception("No algorithm passed. Using default LBFGS")
             self.algorithm = c3po.algorithms.lbfgs
-            self.grad = True
 
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
@@ -119,10 +113,17 @@ class Optimizer:
 
     def fct_to_min(self, x):
         current_params = tf.constant(x)
-        if self.grad:
-            goal = self.goal_run_with_grad(current_params)
-        else:
-            goal = self.goal_run(current_params)
+        goal = self.goal_run(current_params)
+        self.log_parameters()
+        if "U_dict" in self.exp.__dict__.keys():
+            self.log_best_unitary()
+        if isinstance(goal, tf.Tensor):
+            goal = float(goal.numpy())
+        return goal
+
+    def fct_to_min_autograd(self, x):
+        current_params = tf.constant(x)
+        goal = self.goal_run_with_grad(current_params)
         self.log_parameters()
         if "U_dict" in self.exp.__dict__.keys():
             self.log_best_unitary()

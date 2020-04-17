@@ -142,17 +142,7 @@ def create_c1_opt(optimizer_config, lindblad):
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
-    grad_algs = {
-        'lbfgs': algorithms.lbfgs,
-        'lbfgs_hybrid': algorithms.cma_pre_lbfgs
-    }
-    no_grad_algs = {'cmaes': algorithms.cmaes}
-    if cfg['algorithm'] in grad_algs.keys():
-        algorithm_with_grad = grad_algs[cfg['algorithm']]
-        algorithm_no_grad = None
-    elif cfg['algorithm'] in no_grad_algs.keys():
-        algorithm_no_grad = no_grad_algs[cfg['algorithm']]
-        algorithm_with_grad = None
+    algorithm = algorithms.__dict__[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -181,8 +171,7 @@ def create_c1_opt(optimizer_config, lindblad):
         gateset_opt_map=gateset_opt_map,
         opt_gates=opt_gates,
         callback_fids=callback_fids,
-        algorithm_no_grad=algorithm_no_grad,
-        algorithm_with_grad=algorithm_with_grad,
+        algorithm=algorithm,
         plot_dynamics=plot_dynamics,
         plot_pulses=plot_pulses,
         options=options
@@ -325,11 +314,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
             )
     else:
         eval = eval_func
-    no_grad_algs = {
-        'cmaes': algorithms.cmaes,
-        'single_eval': algorithms.single_eval
-    }
-    algorithm_no_grad = no_grad_algs[cfg['algorithm']]
+    algorithm = algorithms.__dict__[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -337,7 +322,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         dir_path=cfg['dir_path'],
         eval_func=eval,
         gateset_opt_map=gateset_opt_map,
-        algorithm_no_grad=algorithm_no_grad,
+        algorithm=algorithm,
         options=options
     )
     return opt, exp_right
@@ -359,12 +344,16 @@ def create_c3_opt(optimizer_config):
         'rms': estimators.rms_dist,
         'stds': estimators.exp_stds_dist,
         'gauss': estimators.neg_loglkh_gauss,
-        'mean_gauss' : estimators.neg_loglkh_mean_gauss,
+        'gauss_new': estimators.neg_loglkh_mean_gauss_new,
         'binom': estimators.neg_loglkh_binom,
+        'binom_new': estimators.neg_loglkh_binom_new,
         'rms_stds': estimators.rms_exp_stds_dist,
         'std_diffs': estimators.std_of_diffs,
     }
-    fom = estims[estimator]
+    try:
+        fom = estims[estimator]
+    except KeyError:
+        fom = estimators.__dict__[estimator]
     callback_foms = estims.values()
     callback_foms = []
     for cb_fom in cb_foms:
@@ -377,24 +366,8 @@ def create_c3_opt(optimizer_config):
     for key in cfg['callback_figs']:
         callback_figs.append(figs[key])
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
-    grad_algs = {'lbfgs': algorithms.lbfgs}
-    no_grad_algs = {'cmaes': algorithms.cmaes}
-    if cfg['algorithm'] in grad_algs.keys():
-        algorithm_with_grad = grad_algs[cfg['algorithm']]
-        algorithm_no_grad = None
-    elif cfg['algorithm'] in no_grad_algs.keys():
-        algorithm_no_grad = no_grad_algs[cfg['algorithm']]
-        algorithm_with_grad = None
-    if 'plot_dynamics' in cfg:
-        if cfg['plot_dynamics'] == "False":
-            plot_dynamics = False
-        elif cfg['plot_dynamics'] == "True":
-            plot_dynamics = True
-        else:
-            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
-    else:
-        plot_dynamics = False
-    print("plot_dynamics>>> " + str(plot_dynamics))
+    if cfg['algorithm'] in algorithms.__dict__.keys():
+        algorithm = algorithms.__dict__[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -407,8 +380,7 @@ def create_c3_opt(optimizer_config):
         state_labels=state_labels,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
-        algorithm_no_grad=algorithm_no_grad,
-        algorithm_with_grad=algorithm_with_grad,
+        algorithm=algorithm,
         options=options,
     )
     return opt

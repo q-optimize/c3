@@ -19,16 +19,14 @@ class C1(Optimizer):
         gateset_opt_map,
         opt_gates,
         callback_fids=[],
-        algorithm_no_grad=None,
-        algorithm_with_grad=None,
+        algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
         options={}
     ):
         """Initiliase."""
         super().__init__(
-            algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=algorithm_with_grad,
+            algorithm=algorithm,
             plot_dynamics=plot_dynamics,
             plot_pulses=plot_pulses
             )
@@ -81,20 +79,13 @@ class C1(Optimizer):
         self.index = index
         x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
         try:
-            # TODO deal with kears learning differently
-            if self.grad:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min,
-                    self.lookup_gradient,
-                    self.options
-                )
-            else:
-                self.algorithm(
-                    x0,
-                    self.fct_to_min,
-                    self.options
-                )
+            self.algorithm(
+                x0,
+                fun=self.fct_to_min,
+                fun_grad=self.fct_to_min_autograd,
+                grad_lookup=self.lookup_gradient,
+                options=self.options
+            )
         except KeyboardInterrupt:
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:

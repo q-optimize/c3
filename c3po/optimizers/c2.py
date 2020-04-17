@@ -16,13 +16,12 @@ class C2(Optimizer):
         dir_path,
         eval_func,
         gateset_opt_map,
-        algorithm_no_grad,
+        algorithm,
         options={}
     ):
         """Initiliase."""
         super().__init__(
-            algorithm_no_grad=algorithm_no_grad,
-            algorithm_with_grad=None
+            algorithm=algorithm
             )
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
@@ -60,8 +59,10 @@ class C2(Optimizer):
         try:
             self.algorithm(
                 x0,
-                self.fct_to_min,
-                self.options
+                fun=self.fct_to_min,
+                fun_grad=self.fct_to_min_autograd,
+                grad_lookup=self.lookup_gradient,
+                options=self.options
             )
         except KeyboardInterrupt:
             pass
