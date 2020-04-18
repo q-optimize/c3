@@ -45,7 +45,7 @@ class C3(Optimizer):
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        self.dir_path = dir_path
+        self.dir_path = os.path.abspath(dir_path)
         self.string = self.algorithm.__name__ + '-' \
             + self.sampling + '-' + str(self.batch_size) + '-' \
             + self.fom.__name__
@@ -68,6 +68,7 @@ class C3(Optimizer):
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self):
+        # TODO fix when batch size is 1 (atm it does all)
         num_data_sets = len(self.learn_data.keys())
         learn_from = self.learn_from
         sampling = self.sampling
@@ -83,6 +84,17 @@ class C3(Optimizer):
             indeces = all[:batch_size]
         elif sampling == 'from_end':
             indeces = all[-batch_size:]
+        elif sampling == 'high_std':
+            a_val = []
+            for sample in learn_from:
+                a_val.append(np.std(sample['results'])/np.mean(sample['results']))
+            indeces = np.argsort(np.array(a_val))[-batch_size:]
+        elif sampling == 'even_fid':
+            res = []
+            for sample in learn_from:
+                res.append(np.mean(sample['results']))
+            n = int(np.ceil(total_size / batch_size))
+            indeces = np.argsort(np.array(res))[::n]
         elif sampling == 'all':
             indeces = all
         else:
@@ -178,7 +190,7 @@ class C3(Optimizer):
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
-                sim_values.append(sim_vals)
+                sim_values.extend(sim_vals)
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -205,16 +217,21 @@ class C3(Optimizer):
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
-                        logfile.write(
-                            f"{iseq + 1:8}    {float(sim_val):8.6f}    "
-                            f"{float(m_val):8.6f}    {float(m_std):8.6f}    "
-                            f"{float(m_val-sim_val):8.6f}\n"
-                        )
-                        logfile.write("\n")
+                        for ii in range(len(sim_val)):
+                            logfile.write(
+                                f"{iseq + 1:8}    {float(sim_val[ii]):8.6f}    "
+                                f"{float(m_val[ii]):8.6f}    {float(m_std[ii]):8.6f}  "
+                                f"  {float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                            )
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.transpose(tf.concat(sim_values, axis=0))
+        sim_values =  tf.stack(sim_values)
+        if exp_values.shape != sim_values.shape:
+            raise Warning(
+                "Data format of experiment and simulation figures of"
+                " merit does not match."
+            )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())

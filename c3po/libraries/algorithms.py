@@ -75,6 +75,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
                     )
                     break
         iter += 1
+    return es
 
 def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     es = cmaes(x0, fun, options=options['cmaes'])
