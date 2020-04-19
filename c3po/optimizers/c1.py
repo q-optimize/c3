@@ -43,7 +43,7 @@ class C1(Optimizer):
         self.string = (
             'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
         )
-        self.logdir = log_setup(dir_path, self.string)
+        self.logdir = log_setup(self.dir_path, self.string)
         self.logname = 'open_loop.log'
 
     def load_best(self, init_point):

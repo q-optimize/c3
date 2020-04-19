@@ -334,7 +334,13 @@ def plot_C2(cfgfolder="", logfolder=""):
     for filename in glob.glob(path):
         with open(filename, "r") as cfg_file:
             cfg = json.loads(cfg_file.read())
-            batch_size = cfg['options']['popsize']
+            try:
+                batch_size = cfg['options']['popsize']
+            except KeyError:
+                print(
+                    "Couldn't find ORBIT config file. No plot for you."
+                )
+                break
     eval = 0
     for line in log[5:]:
         if line[0] == "{":
