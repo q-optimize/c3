@@ -244,7 +244,7 @@ class C3(Optimizer):
             logfile.flush()
 
         for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
+            fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
             fig.savefig(
                 self.logdir
                 + cb_fig.__name__ + '/'

@@ -113,6 +113,8 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html
     n_bins = 40
     fig = plt.figure()
+    exps = np.reshape(exps, exps.shape[0])
+    sims = np.reshape(sims, sims.shape[0])
     n_exps, _ = np.histogram(exps, bins=n_bins)
     H, xedges, yedges = np.histogram2d(exps, sims, bins=n_bins)
     H = np.zeros([n_bins, n_bins]) + (H.T / n_exps)
