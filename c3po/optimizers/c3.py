@@ -215,7 +215,12 @@ class C3(Optimizer):
                     int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
                         if len(m_val)>1:
-                            logfile.write("Obscure fucking numpy error won't tell what's wrong here. So no printing.")
+                            for ii in range(len(sim_val)):
+                                logfile.write(
+                                    f"{iseq + 1:8}    {float(sim_val[ii]):8.6f}    "
+                                    f"{float(m_val[ii]):8.6f}    {float(m_std[ii]):8.6f}  "
+                                    f"  {float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                                )
                         else:
                             logfile.write(
                                 f"{iseq + 1:8}    {float(sim_val):8.6f}    "
@@ -227,7 +232,8 @@ class C3(Optimizer):
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
         if exp_values.shape != sim_values.shape:
-            raise Warning(
+            print(
+                "C3:WARNING:"
                 "Data format of experiment and simulation figures of"
                 " merit does not match."
             )

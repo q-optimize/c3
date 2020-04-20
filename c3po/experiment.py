@@ -130,7 +130,7 @@ class Experiment:
                 pops_select = 0
                 for l in labels:
                     pops_select += pops[self.model.comp_state_labels.index(l)]
-                pops = pops_select
+                pops = [pops_select]
 
             if "meas_rescale" in self.model.tasks:
                 pops = self.model.tasks["meas_rescale"].rescale(pops)
