@@ -12,6 +12,8 @@ import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
+from c3po.libraries.estimators import REGISTRY_OF_ESTIMATORS
+
 
 
 class SET():
@@ -20,6 +22,7 @@ class SET():
     def __init__(
         self,
         dir_path,
+        estimators,
         fom,
         sampling,
         batch_size,
@@ -36,6 +39,7 @@ class SET():
         # not really needed? it's not an optimization
         self.optim_status = {}
 
+        self.estimators = estimators
         self.fom = fom
         self.sampling = sampling
         self.batch_size = batch_size
@@ -50,7 +54,7 @@ class SET():
         self.log_setup(dir_path)
 
     def log_setup(self, dir_path):
-        self.dir_path = dir_path
+        self.dir_path = os.path.abspath(dir_path)
         self.string = "set_test"
         # self.string = self.algorithm.__name__ + '-' \
         #          + self.sampling + '-' \
@@ -83,10 +87,13 @@ class SET():
 
 
     def select_from_data(self):
+        # TODO fix when batch size is 1 (atm it does all)
         num_data_sets = len(self.learn_data.keys())
+#        print("select_from_data: num_data_sets: " + str(num_data_sets))
         learn_from = self.learn_from
         sampling = self.sampling
         batch_size = int(np.floor(self.batch_size / num_data_sets))
+#        print("select_from_data: batch_size: " + str(batch_size))
         total_size = len(learn_from)
         all = list(range(total_size))
         if sampling == 'random':
@@ -98,6 +105,17 @@ class SET():
             indeces = all[:batch_size]
         elif sampling == 'from_end':
             indeces = all[-batch_size:]
+        elif sampling == 'high_std':
+            a_val = []
+            for sample in learn_from:
+                a_val.append(np.std(sample['results'])/np.mean(sample['results']))
+            indeces = np.argsort(np.array(a_val))[-batch_size:]
+        elif sampling == 'even_fid':
+            res = []
+            for sample in learn_from:
+                res.append(np.mean(sample['results']))
+            n = int(np.ceil(total_size / batch_size))
+            indeces = np.argsort(np.array(res))[::n]
         elif sampling == 'all':
             indeces = all
         else:
@@ -106,119 +124,14 @@ class SET():
                 Select from 'from_end'  'even', 'random' , 'from_start', 'all'.
                 Thank you."""
             )
+
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
             return indeces
 
 
-        
     def goal_run(self, val):
-        #self.exp.set_parameters(current_params, self.opt_map, scaled=False)
-        # print("tup: " + str(tup))
-        # print("val: " + str(val))
-        self.exp.set_parameters([val],[self.tup], scaled=False)
-        print("params>>> ")
-        params = self.exp.print_parameters(self.opt_map)
-        print(params)
-        print(len(params))
-
-
-        exp_values = []
-        exp_stds = []
-        sim_values = []
-
-        count = 0
-        print("indices: " + str(len(indeces)))
-        for ipar in indeces:
-            if count % 100 == 0:
-                print("count: " + str(count))
-            count += 1
-            m = self.learn_from[ipar]
-            gateset_params = m['params']
-            gateset_opt_map = self.gateset_opt_map
-            m_vals = m['results']
-            m_stds = m['results_std']
-            sequences = m['seqs']
-            num_seqs = len(sequences)
-
-            # if count == 1:
-            #     print("gateset_opt_map:")
-            #     print(gateset_opt_map)
-            #     print(len(gateset_opt_map))
-            #print("gateset_params:")
-            #print(gateset_params)
-
-            self.exp.gateset.set_parameters(
-                gateset_params, gateset_opt_map, scaled=False
-            )
-
-            sim_vals = self.exp.evaluate(sequences)
-
-            # exp_values.extend(m_vals)
-            # exp_stds.extend(m_stds)
-            sim_values.extend(sim_vals)
-
-            with open(self.logdir + self.logname, 'a') as logfile:
-                logfile.write(
-                    "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
-                        ipar + 1,
-                        count,
-                        len(indeces),
-                        json.dumps(self.gateset_opt_map),
-                        self.exp.gateset.get_parameters(
-                            self.gateset_opt_map, to_str=True
-                        ),
-                    )
-                )
-            for iseq in range(num_seqs):
-                m_val = m_vals[iseq]
-                m_std = m_stds[iseq]
-                exp_values.append(m_val)
-                exp_stds.append(m_std)
-                sim_val = float(sim_vals[iseq].numpy())
-                with open(self.logdir + self.logname, 'a') as logfile:
-                    logfile.write(
-                        " Sequence {} of {}:\n".format(iseq + 1, num_seqs)
-                    )
-                    logfile.write(f"  Simulation: {sim_val:8.5f}")
-                    logfile.write(f"  Experiment: {m_val:8.5f}")
-                    logfile.write(f"  Std: {m_std:8.5f}")
-                    logfile.write(f"  Diff: {m_val-sim_val:8.5f}\n")
-                    logfile.flush()
-
-
-        exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=0)
-        exp_stds = tf.constant(exp_stds, dtype=tf.float64)
-        print("EXP_VALUES:")
-        print(len(exp_values))
-        print("self.fom ...")
-        goal = self.fom(exp_values, sim_values, exp_stds)
-        print("... done!")
-        goal_numpy = float(goal.numpy())
-
-        with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write("Finished batch with\n")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            for cb_fom in self.callback_foms:
-                val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
-                logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-            logfile.flush()
-
-        with open(self.logdir + self.dfname, 'a') as datafile:
-            datafile.write(f"{val}\t{goal_numpy}\n")
-
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
-        ]
-        self.optim_status['goal'] = goal_numpy
-        self.evaluation += 1
-        return goal_numpy
-
-
-    def goal_run_new(self, val):
         exp_values = []
         exp_stds = []
         sim_values = []
@@ -230,9 +143,8 @@ class SET():
         print("params>>> ")
         params = self.exp.print_parameters(self.opt_map)
         print(params)
-        print(len(params))
 
-
+        print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         count = 0
         for target, data in self.learn_data.items():
 
@@ -240,10 +152,12 @@ class SET():
             self.gateset_opt_map = data['opt_map']
             indeces = self.select_from_data()
 
+            print("indeces: " + str(len(indeces)))
+
             for ipar in indeces:
                 if count % 100 == 0:
                         print("count: " + str(count))
-         
+
                 count += 1
                 m = self.learn_from[ipar]
                 gateset_params = m['params']
@@ -269,7 +183,8 @@ class SET():
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
-                sim_values.append(sim_vals)
+                sim_values.extend(sim_vals)
+
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -283,6 +198,10 @@ class SET():
                             ),
                         )
                     )
+                    logfile.write(
+                        "Sequence    Simulation  Experiment  Std         "
+                        "Diff\n"
+                    )
 
                 for iseq in range(num_seqs):
                     m_val = np.array(m_vals[iseq])
@@ -290,43 +209,50 @@ class SET():
                     exp_values.append(m_val)
                     exp_stds.append(m_std)
                     sim_val = sim_vals[iseq].numpy()
-                    np.set_printoptions(formatter={'float': '{:8.5f}'.format})
-                    with open(self.logdir + self.logname, 'a') as logfile:
-                        # TODO: Fix sequence counting for multiple learn_from
-                        # files
-                        logfile.write(
-                            f" Sequence {iseq + 1} of {num_seqs}:\n"
-                        )
-                        logfile.write(
-                            "  Simulation: " + np.array_str(sim_val.flatten())
-                        )
-                        logfile.write(
-                            "  Experiment: " + np.array_str(m_val.flatten())
-                        )
-                        logfile.write(
-                            "  Std: " +  np.array_str(m_val.flatten())
-                        )
-                        logfile.write(
-                            "  Diff: " +  np.array_str((m_val-sim_val).flatten())
-                        )
-                        logfile.flush()
+                    int_len = len(str(num_seqs))
+#                     with open(self.logdir + self.logname, 'a') as logfile:
+                        # for ii in range(len(sim_val)):
+                            # logfile.write(
+                                # f"{iseq + 1:8}    {float(sim_val[ii]):8.6f}    "
+                                # f"{float(m_val[ii]):8.6f}    {float(m_std[ii]):8.6f}  "
+                                # f"  {float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                            # )
+                        # logfile.flush()
+
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values = tf.concat(sim_values, axis=0)
+        sim_values =  tf.stack(sim_values)
+        if exp_values.shape != sim_values.shape:
+            raise Warning(
+                "Data format of experiment and simulation figures of"
+                " merit does not match."
+            )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds)
         goal_numpy = float(goal.numpy())
 
+        with open(self.logdir + self.dfname, 'a') as datafile:
+            datafile.write(f"{val}\t{goal_numpy}\n")
+
+        for estimator in self.estimators:
+            fom = REGISTRY_OF_ESTIMATORS[estimator]
+            tmp = fom(exp_values, sim_values, exp_stds)
+            fname = estimator + '.dat'
+            with open(self.logdir + fname, 'a') as datafile:
+                datafile.write(f"{val}\t{tmp}\n")
+
         with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write("Finished batch with\n")
+            logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
+            print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
+                print("{}: {}".format(cb_fom.__name__, val))
             logfile.flush()
 
 #         for cb_fig in self.callback_figs:
-            # fig = cb_fig(exp_values, sim_values.numpy().T[0], exp_stds)
+            # fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
             # fig.savefig(
                 # self.logdir
                 # + cb_fig.__name__ + '/'
@@ -335,11 +261,6 @@ class SET():
                 # + '.png'
             # )
             # plt.close(fig)
-
-
-        with open(self.logdir + self.dfname, 'a') as datafile:
-            datafile.write(f"{val}\t{goal_numpy}\n")
-
 
         self.optim_status['params'] = [
             par.numpy().tolist()
@@ -370,15 +291,16 @@ class SET():
         n = int(s/delta)
         print(n)
 
+        print("batch_size: " + str(self.batch_size))
+
         self.logname = 'confirm_runner' + '.log'
         self.dfname = "data.dat"
-        self.inverse = True
         self.start_log()
         tup = (tmp[0],tmp[1])
         self.tup = tup
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
 
-        learner = adaptive.Learner1D(self.goal_run_new, bounds=(min,max))
+        learner = adaptive.Learner1D(self.goal_run, bounds=(min,max))
 
         accuracy_goal = 0.1
 

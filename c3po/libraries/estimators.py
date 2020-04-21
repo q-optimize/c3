@@ -3,37 +3,51 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
 
+REGISTRY_OF_ESTIMATORS = dict()
+def func_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    REGISTRY_OF_ESTIMATORS[str(func.__name__)] = func
+    return func
 
+
+@func_reg_deco
 def median_dist(exp_values, sim_values, exp_stds):
     """Return the median of the differences."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tfp.stats.percentile(diffs, 50.0, interpolation='midpoint')
 
 
+@func_reg_deco
 def rms_dist(exp_values, sim_values, exp_stds):
     """Return the root mean squared of the differences."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.sqrt(tf.reduce_mean(diffs ** 2))
 
 
+@func_reg_deco
 def exp_stds_dist(exp_values, sim_values, exp_stds):
     """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.reduce_mean(diffs / exp_stds)
 
 
+@func_reg_deco
 def rms_exp_stds_dist(exp_values, sim_values, exp_stds):
     """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.sqrt(tf.reduce_mean((diffs / exp_stds)**2))
 
 
+@func_reg_deco
 def std_of_diffs(exp_values, sim_values, exp_stds):
     """Return the mean distance in exp_stds."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
     return tf.math.reduce_std(diffs)
 
 
+@func_reg_deco
 def neg_loglkh_binom(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values with binomial distribution.
@@ -51,6 +65,7 @@ def neg_loglkh_binom(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+@func_reg_deco
 def neg_loglkh_binom_new(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values with binomial distribution.
@@ -69,6 +84,7 @@ def neg_loglkh_binom_new(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+@func_reg_deco
 def neg_loglkh_multinom(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values with multinomial distribution.
@@ -86,6 +102,7 @@ def neg_loglkh_multinom(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+@func_reg_deco
 def neg_loglkh_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
@@ -112,6 +129,7 @@ def neg_loglkh_gauss(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+@func_reg_deco
 def neg_loglkh_mean_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
@@ -119,9 +137,10 @@ def neg_loglkh_mean_gauss(exp_values, sim_values, exp_stds):
     The distribution is assumed to be binomial (approximated by a gaussian),
     plus an extra fixed gaussian noise distribution (here set at 0.0125)
     """
-    std_b = tf.sqrt(sim_values*(1-sim_values))
+    K = len(exp_values)
+    std_b = tf.sqrt(sim_values * (1 - sim_values) / K)
     mean_b = sim_values
-    std_g = 0.0125
+    std_g = 0.
     mean_g = 0.
     mean = mean_b + mean_g
     std = tf.sqrt(std_g**2 + std_b**2)
@@ -138,13 +157,15 @@ def neg_loglkh_mean_gauss(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
+@func_reg_deco
 def neg_loglkh_mean_gauss_new(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values.
     The distribution is assumed to be binomial (approximated by a gaussian),
     plus an extra fixed gaussian noise distribution (here set at 0.)
     """
-    std_b = tf.sqrt(sim_values*(1-sim_values))
+    K = len(exp_values)
+    std_b = tf.sqrt(sim_values * (1 - sim_values) / K)
     mean_b = sim_values
     std_g = 0.
     mean_g = 0.
@@ -157,7 +178,8 @@ def neg_loglkh_mean_gauss_new(exp_values, sim_values, exp_stds):
     return -loglkh
 
 
-def g_shai(exp_values, sim_values, exp_stds):
+@func_reg_deco
+def g_RMS(exp_values, sim_values, exp_stds):
     K = len(exp_values)
     #sigma_k = exp_stds
     sigma_k = tf.sqrt(sim_values * (1 - sim_values) / K)
@@ -168,6 +190,22 @@ def g_shai(exp_values, sim_values, exp_stds):
     return tf.sqrt(tmp)
 
 
+@func_reg_deco
+def g_LL(exp_values, sim_values, exp_stds):
+    K = len(exp_values)
+    std_b = tf.sqrt(sim_values * (1 - sim_values) / K)
+    mean_b = sim_values
+    std_g = 0.
+    mean_g = 0.
+    mean = mean_b + mean_g
+    std = tf.sqrt(std_g**2 + std_b**2)
+    gauss = tfp.distributions.Normal(mean, std)
+    loglkhs = gauss.log_prob(exp_values)
+    loglkh = tf.reduce_sum(loglkhs)
+    return -loglkh
+
+
+@func_reg_deco
 def neg_loglkh_binom_gauss(exp_values, sim_values, exp_stds):
     """
     Likelihood of the experimental values. CONVOLUTION NOT WORKING.

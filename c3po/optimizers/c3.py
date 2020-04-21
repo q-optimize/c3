@@ -39,7 +39,6 @@ class C3(Optimizer):
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
-        self.plot_dynamics = plot_dynamics
         self.options = options
         self.learn_data = {}
         self.log_setup(dir_path)
@@ -110,8 +109,6 @@ class C3(Optimizer):
 
     def learn_model(self):
         self.start_log()
-        print("self.plot_dynamics: (learn_model)" + str(self.plot_dynamics))
-        self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
@@ -256,6 +253,7 @@ class C3(Optimizer):
                 + '.png'
             )
             plt.close(fig)
+
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.get_parameters(self.opt_map)

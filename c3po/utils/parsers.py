@@ -14,7 +14,7 @@ from c3po.optimizers.c1 import C1
 from c3po.optimizers.c2 import C2
 from c3po.optimizers.c3 import C3
 from c3po.tasks.sensitivity import SET
-
+from c3po.libraries.estimators import REGISTRY_OF_ESTIMATORS
 
 def create_experiment(exp_setup, datafile=''):
     exp_namespace = run_path(exp_setup)
@@ -400,19 +400,21 @@ def create_sensitivity_test(task_config):
 
     estimator = cfg['estimator']
     cb_foms = cfg['callback_est']
-    estims = {
-        'median': estimators.median_dist,
-        'rms': estimators.rms_dist,
-        'stds': estimators.exp_stds_dist,
-        'gauss': estimators.neg_loglkh_gauss,
-        'mean_gauss' : estimators.neg_loglkh_mean_gauss,
-        'mean_gauss_new' : estimators.neg_loglkh_mean_gauss_new,
-        'g_shai' : estimators.g_shai,
-        'binom': estimators.neg_loglkh_binom,
-        'rms_stds': estimators.rms_exp_stds_dist,
-        'std_diffs': estimators.std_of_diffs,
-    }
-    fom = estims[estimator]
+    # estims = {
+    #     'median': estimators.median_dist,
+    #     'rms': estimators.rms_dist,
+    #     'stds': estimators.exp_stds_dist,
+    #     'gauss': estimators.neg_loglkh_gauss,
+    #     'mean_gauss' : estimators.neg_loglkh_mean_gauss,
+    #     'mean_gauss_new' : estimators.neg_loglkh_mean_gauss_new,
+    #     'g_shai' : estimators.g_shai,
+    #     'g_LL' : estimators.g_LL,
+    #     'binom': estimators.neg_loglkh_binom,
+    #     'rms_stds': estimators.rms_exp_stds_dist,
+    #     'std_diffs': estimators.std_of_diffs,
+    # }
+    # fom = estims[estimator]
+    fom = REGISTRY_OF_ESTIMATORS[estimator[0]]
     # callback_foms = estims.values()
     callback_foms = []
     # for cb_fom in cb_foms:
@@ -447,6 +449,7 @@ def create_sensitivity_test(task_config):
         options = cfg['options']
     set = SET(
         dir_path=cfg['dir_path'],
+        estimators = cfg['estimator'],
         fom=fom,
         sampling=cfg['sampling'],
         batch_size=int(cfg['batch_size']),
