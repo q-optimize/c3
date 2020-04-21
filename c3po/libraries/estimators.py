@@ -12,6 +12,12 @@ def estimator_reg_deco(func):
     REGISTRY_OF_ESTIMATORS[str(func.__name__)] = func
     return func
 
+@estimator_reg_deco
+def mean_dist(exp_values, sim_values, exp_stds, shots):
+    """Return the root mean squared of the differences."""
+    diffs = tf.abs(tf.subtract(exp_values, sim_values))
+    return tf.reduce_mean(diffs)
+
 
 @estimator_reg_deco
 def median_dist(exp_values, sim_values, exp_stds, shots):
@@ -32,7 +38,7 @@ def mean_sim_stds_dist(exp_values, sim_values, exp_stds, shots):
     """Return the mean of the distance in number of exp_stds away."""
     sim_std = tf.sqrt(sim_values*(1-sim_values)/shots)
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.reduce_mean(diffs / exp_stds)
+    return tf.reduce_mean(diffs / sim_std)
 
 
 @estimator_reg_deco
@@ -40,7 +46,7 @@ def rms_sim_stds_dist(exp_values, sim_values, exp_stds, shots):
     """Return the root mean squared of the differences measured in exp_stds."""
     sim_std = tf.sqrt(sim_values*(1-sim_values)/shots)
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.sqrt(tf.reduce_mean((diffs / exp_stds)**2))
+    return tf.sqrt(tf.reduce_mean((diffs / sim_std)**2))
 
 
 @estimator_reg_deco
@@ -87,6 +93,7 @@ def neg_loglkh_binom_norm(exp_values, sim_values, exp_stds, shots):
     values, and given a binomial distribution function that is normalised to
     give probability 1 at the top of the distribution.
     """
+
     binom = tfp.distributions.Binomial(total_count=shots, probs=sim_values)
     loglkhs = binom.log_prob(exp_values*shots) - \
         binom.log_prob(sim_values*shots)
