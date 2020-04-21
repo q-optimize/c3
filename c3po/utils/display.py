@@ -372,7 +372,7 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
+def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_plots=False):
     """
     Generates model learning plots. Default options assume the function is
     called from inside a log folder. Otherwise a file location has to be given.
@@ -470,7 +470,7 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
                     pars_to_delete.append(p_name)
 
             max_val = np.max(np.abs(par))
-            p_val, unit = unit_conversion(p_name.split(" ")[-1], max_val)
+            p_val, unit = unit_conversion(p_name.split("-")[-1], max_val)
             try:
                 scaling[p_name] = np.array(p_val / max_val)
             except ZeroDivisionError:
@@ -494,7 +494,10 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
                 p_type = key.split("-")[-1]
                 if not p_type in subplots.keys():
                     id = subplot_ids[p_type] - 1
-                    subplots[p_type] = axes[id // (nrows - 1)][id % (nrows - 1)]
+                    if ncols>1:
+                        subplots[p_type] = axes[id // (nrows - 1)][id % (nrows - 1)]
+                    else:
+                        subplots[p_type] = axes[id // (nrows - 1)]
                 ax = subplots[p_type]
                 ax.plot(its, scaling[key] * parameters[key], color='tab:blue')
                 ax.tick_params(
@@ -538,7 +541,7 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True):
     leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
     plt.legend(leg)
     plt.xlabel('Evaluation')
-    plt.ylabel('RMS model match')
+    plt.ylabel('model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
 
