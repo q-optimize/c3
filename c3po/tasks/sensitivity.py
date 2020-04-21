@@ -29,6 +29,7 @@ class SET():
         opt_map,
         state_labels=None,
         sweep_map=None,
+        accuracy_goal = 0.5,
         callback_foms=[],
         callback_figs=[],
         # algorithm_no_grad=None,
@@ -36,6 +37,9 @@ class SET():
         options={}
     ):
         """Initiliase."""
+        # not really needed? it's not an optimization
+        self.optim_status = {}
+
         self.estimators = estimators
         self.fom = fom
         self.sampling = sampling
@@ -43,6 +47,7 @@ class SET():
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.sweep_map = sweep_map
+        self.accuracy_goal = accuracy_goal
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
@@ -307,9 +312,9 @@ class SET():
 
         learner = adaptive.Learner1D(self.goal_run, bounds=(min,max))
 
-        accuracy_goal = 0.1
+        print("accuracy_goal: " + str(self.accuracy_goal))
 
-        runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < accuracy_goal)
+        runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < self.accuracy_goal)
 
 
         #=== Get the resulting data ======================================

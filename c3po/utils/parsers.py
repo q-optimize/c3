@@ -472,6 +472,9 @@ def create_sensitivity_test(task_config):
         tmp.append(eval(a[2][2]))
         sweep_map.append((a[0],a[1],tuple(tmp)))
 
+    if 'accuracy_goal' in cfg:
+        accuracy_goal = cfg['accuracy_goal']
+
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -484,6 +487,7 @@ def create_sensitivity_test(task_config):
         opt_map=exp_opt_map,
         state_labels=state_labels,
         sweep_map=sweep_map,
+        accuracy_goal=accuracy_goal,
         callback_foms=callback_foms,
         callback_figs=callback_figs,
         options=options
