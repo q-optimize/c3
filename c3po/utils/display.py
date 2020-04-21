@@ -101,6 +101,8 @@ def unit_conversion(desc, param):
 
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
+    exps = np.reshape(exps, exps.shape[0])
+    sims = np.reshape(sims, sims.shape[0])
     plt.scatter(exps, sims)
     plt.title('Infidelity correlation')
     plt.xlabel('Experiment')

@@ -127,7 +127,7 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        #display.plot_C3([self.logdir])
+        # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
@@ -147,10 +147,11 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        #display.plot_C3([self.logdir])
+        # display.plot_C3([self.logdir])
         exp_values = []
         exp_stds = []
         sim_values = []
+        exp_shots = []
 
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         count = 0
@@ -169,6 +170,7 @@ class C3(Optimizer):
                 gateset_opt_map = self.gateset_opt_map
                 m_vals = m['results']
                 m_stds = m['results_std']
+                m_shots = m['shots']
                 sequences = m['seqs']
                 num_seqs = len(sequences)
 
@@ -202,30 +204,28 @@ class C3(Optimizer):
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         "
-                        "Diff\n"
+                        "Sequence    Simulation  Experiment  Std         Shots"
+                        "       Diff\n"
                     )
 
                 for iseq in range(num_seqs):
                     m_val = np.array(m_vals[iseq])
                     m_std = np.array(m_stds[iseq])
+                    shots = np.array(m_shots[iseq])
                     exp_values.append(m_val)
                     exp_stds.append(m_std)
+                    exp_shots.append(shots)
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
-                        if len(m_val)>1:
-                            for ii in range(len(sim_val)):
-                                logfile.write(
-                                    f"{iseq + 1:8}    {float(sim_val[ii]):8.6f}    "
-                                    f"{float(m_val[ii]):8.6f}    {float(m_std[ii]):8.6f}  "
-                                    f"  {float(m_val[ii]-sim_val[ii]):8.6f}\n"
-                                )
-                        else:
+                        for ii in range(len(sim_val)):
                             logfile.write(
-                                f"{iseq + 1:8}    {float(sim_val):8.6f}    "
-                                f"{float(m_val):8.6f}    {float(m_std):8.6f}  "
-                                f"  {float(m_val-sim_val):8.6f}\n"
+                                f"{iseq + 1:8}    "
+                                f"{float(sim_val[ii]):8.6f}    "
+                                f"{float(m_val[ii]):8.6f}    "
+                                f"{float(m_std[ii]):8.6f}    "
+                                f"{float(shots[0]):8}    "
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
 
@@ -238,14 +238,17 @@ class C3(Optimizer):
                 " merit does not match."
             )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
-        goal = self.fom(exp_values, sim_values, exp_stds)
+        exp_shots = tf.constant(exp_shots, dtype=tf.float64)
+        goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
         goal_numpy = float(goal.numpy())
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
-                val = float(cb_fom(exp_values, sim_values, exp_stds).numpy())
+                val = float(
+                    cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
+                )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
             logfile.flush()
 
