@@ -34,7 +34,7 @@ class C2(Optimizer):
     def log_setup(self, dir_path):
         self.dir_path = os.path.abspath(dir_path)
         self.string = self.eval_func.__name__ + self.algorithm.__name__
-        self.logdir = log_setup(dir_path, self.string)
+        self.logdir = log_setup(self.dir_path, self.string)
         self.logname = 'calibration.log'
 
     def load_best(self, init_point):

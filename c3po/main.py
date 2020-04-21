@@ -33,7 +33,10 @@ args = parser.parse_args()
 
 opt_config = args.master_config
 with open(opt_config, "r") as cfg_file:
-    cfg = json.loads(cfg_file.read())
+    try:
+        cfg = json.loads(cfg_file.read())
+    except json.decoder.JSONDecodeError:
+        raise Exception(f"Config {opt_config} is invalid.")
 optim_type = cfg['optim_type']
 exp_setup = cfg['exp_setup']
 
@@ -101,7 +104,7 @@ with tf.device('/CPU:0'):
             except FileNotFoundError:
                 print(
                     f"C3:STATUS:No experimental values found at "
-                    f"{os.path.abspath(adjust_exp)}. "
+                    f"{os.path.abspath(adjust_exp)} "
                     "Continuing with default."
                 )
         opt.optimize_controls()
@@ -123,8 +126,9 @@ with tf.device('/CPU:0'):
     elif optim_type == "C3":
         learn_from = []
         opt.read_data(cfg['datafile'])
+        key = list(cfg['datafile'].keys())[0]
         shutil.copy2(
-            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            "/".join(cfg['datafile'][key].split("/")[0:-1]) \
             + "/real_model_params.log",
             dir
         )

@@ -232,9 +232,50 @@ def two_qubit_gate_tomography(gate):
     Sequences to generate tomography for evaluating a two qubit gate.
     """
     # THE 4 GATES
-    base = ["Id", "X90p", "Y90p", "Xp"]
-    base2 = [x + ":" + y for x in base for y in base]
-    S = [[x, gate, y] for x in base2 for y in base2]
+    base = [["Id", "Id"], ["X90p", "Id"], ["Y90p", "Id"], ["X90p", "X90p"]]
+    base2 = []
+    for x in base:
+        for y in base:
+            g = []
+            for indx in range(2):
+                g.append(x[indx] + ":" + y[indx])
+            base2.append(g)
+
+    S = []
+    for x in base2:
+        for y in base2:
+            g = []
+            for g1 in x:
+                g.append(g1)
+            g.append(gate)
+            for g2 in y:
+                g.append(g2)
+            S.append(g)
+    return S
+
+
+def T1_sequence(length, target):
+    wait = ["Id:Id"]
+    if target == "left":
+        prepare_1 = ["X90p:Id", "X90p:Id"]
+    elif target == "right":
+        prepare_1 = ["Id:X90p", "Id:X90p"]
+    S = []
+    S.extend(prepare_1)
+    S.extend(wait * length)
+    return S
+
+
+def ramsay_sequence(length, target):
+    wait = ["Id:Id"]
+    if target == "left":
+        rotate_90 = ["X90p:Id"]
+    elif target == "right":
+        rotate_90 = ["Id:X90p"]
+    S = []
+    S.extend(rotate_90)
+    S.extend(wait * length)
+    S.extend(rotate_90)
     return S
 
 

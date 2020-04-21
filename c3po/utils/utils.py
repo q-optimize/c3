@@ -16,10 +16,10 @@ def log_setup(data_path, run_name=None):
         os.makedirs(pwd)
     except FileExistsError:
         pass
-    recent = data_path + 'recent'
+    recent = data_path + '/recent'
     replace_symlink(pwd, recent)
     if run_name is not None:
-        name = data_path + run_name
+        name = data_path + '/' + run_name
         replace_symlink(pwd, name)
     return pwd + '/'
 
