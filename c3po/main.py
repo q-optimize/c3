@@ -17,7 +17,10 @@ parser.add_argument("master_config")
 args = parser.parse_args()
 opt_config = args.master_config
 with open(opt_config, "r") as cfg_file:
-    cfg = json.loads(cfg_file.read())
+    try:
+        cfg = json.loads(cfg_file.read())
+    except json.decoder.JSONDecodeError:
+        raise Exception(f"Config {opt_config} is invalid.")
 optim_type = cfg['optim_type']
 exp_setup = cfg['exp_setup']
 
