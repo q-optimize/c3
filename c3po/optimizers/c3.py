@@ -51,7 +51,7 @@ class C3(Optimizer):
         # datafile = os.path.basename(self.datafile)
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
-        self.logdir = log_setup(dir_path, self.string)
+        self.logdir = log_setup(self.dir_path, self.string)
         self.logname = 'model_learn.log'
 
     def read_data(self, datafiles):
@@ -204,8 +204,8 @@ class C3(Optimizer):
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std    Shots"
-                        "         Diff\n"
+                        "Sequence    Simulation  Experiment  Std         Shots"
+                        "       Diff\n"
                     )
 
                 for iseq in range(num_seqs):
@@ -220,17 +220,20 @@ class C3(Optimizer):
                     with open(self.logdir + self.logname, 'a') as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
-                                f"{iseq + 1:8}    {float(sim_val[ii]):8.6f}    "
-                                f"{float(m_val[ii]):8.6f}    {float(m_std[ii]):8.6f}"
-                                f"    {float(shots):8}"
-                                f"    {float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                                f"{iseq + 1:8}    "
+                                f"{float(sim_val[ii]):8.6f}    "
+                                f"{float(m_val[ii]):8.6f}    "
+                                f"{float(m_std[ii]):8.6f}    "
+                                f"{float(shots[0]):8}    "
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
         if exp_values.shape != sim_values.shape:
-            raise Warning(
+            print(
+                "C3:WARNING:"
                 "Data format of experiment and simulation figures of"
                 " merit does not match."
             )
@@ -242,13 +245,11 @@ class C3(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                print("{}: {}".format(cb_fom.__name__, val))
             logfile.flush()
 
         for cb_fig in self.callback_figs:
