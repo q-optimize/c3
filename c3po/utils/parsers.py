@@ -286,15 +286,31 @@ def create_c1_opt_hk(
 
 def create_c2_opt(optimizer_config, eval_func_path):
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
-    qubit_label = None
-    state_label = None
-    if 'target' in cfg:
-        qubit_label = cfg["target"]
-        state_label = [tuple(l) for l in cfg["state_labels"][qubit_label]]
+        try:
+            cfg = json.loads(cfg_file.read())
+        except json.decoder.JSONDecodeError:
+            raise Exception(f"Config {optimizer_config} is invalid.")
+
+    state_labels = None
+    if 'state_labels' in cfg:
+        state_labels = cfg["state_labels"]
 
     exp_eval_namespace = run_path(eval_func_path)
-    eval_func = exp_eval_namespace['eval_func']
+
+    try:
+        exp_type = cfg['exp_type']
+    except KeyError:
+        raise Exception(
+            "C3:ERROR:No experiment type found in "
+            f"{optimizer_config}"
+        )
+    try:
+        eval_func = exp_eval_namespace[exp_type]
+    except KeyError:
+        raise Exception(
+            f"C3:ERROR:Unkown experiment type: {cfg['exp_type']}"
+        )
+
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
@@ -308,7 +324,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         exp_right = exp_eval_namespace['exp_right']
         def eval(p):
             return eval_func(
-                p, exp_right, gateset_opt_map, qubit_label, state_label, logdir
+                p, exp_right, gateset_opt_map, state_labels, logdir
             )
     else:
         eval = eval_func

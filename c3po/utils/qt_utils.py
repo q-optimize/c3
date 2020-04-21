@@ -254,6 +254,31 @@ def two_qubit_gate_tomography(gate):
     return S
 
 
+def T1_sequence(length, target):
+    wait = ["Id:Id"]
+    if target == "left":
+        prepare_1 = ["X90p:Id", "X90p:Id"]
+    elif target == "right":
+        prepare_1 = ["Id:X90p", "Id:X90p"]
+    S = []
+    S.extend(prepare_1)
+    S.extend(wait * length)
+    return S
+
+
+def ramsay_sequence(length, target):
+    wait = ["Id:Id"]
+    if target == "left":
+        rotate_90 = ["X90p:Id"]
+    elif target == "right":
+        rotate_90 = ["Id:X90p"]
+    S = []
+    S.extend(rotate_90)
+    S.extend(wait * length)
+    S.extend(rotate_90)
+    return S
+
+
 def single_length_RB(RB_number, RB_length, padding=""):
     """Given a length and number of repetitions it compiles RB sequences."""
     S = []
