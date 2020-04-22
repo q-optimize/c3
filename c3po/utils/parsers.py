@@ -291,10 +291,6 @@ def create_c2_opt(optimizer_config, eval_func_path):
         except json.decoder.JSONDecodeError:
             raise Exception(f"Config {optimizer_config} is invalid.")
 
-    state_labels = None
-    if 'state_labels' in cfg:
-        state_labels = cfg["state_labels"]
-
     exp_eval_namespace = run_path(eval_func_path)
 
     try:
@@ -315,6 +311,9 @@ def create_c2_opt(optimizer_config, eval_func_path):
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
+    state_labels = None
+    if 'state_labels' in cfg:
+        state_labels = cfg["state_labels"]
     logdir = cfg['dir_path'] + 'RB_c2_' + time.strftime(
         "%Y_%m_%d_T_%H_%M_%S/", time.localtime()
     )

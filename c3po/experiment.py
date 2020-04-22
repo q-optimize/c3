@@ -132,7 +132,7 @@ class Experiment:
                     pops_select += pops[self.model.comp_state_labels.index(l)]
                 pops = pops_select
             else:
-                pops = tf.reshape(pops, pops.shape[0])
+                pops = tf.reshape(pops, [pops.shape[0]])
 
             if "meas_rescale" in self.model.tasks:
                 pops = self.model.tasks["meas_rescale"].rescale(pops)
