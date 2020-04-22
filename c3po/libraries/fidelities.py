@@ -12,7 +12,15 @@ from c3po.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
 from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
 
+fidelities = dict()
+def fid_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    fidelities[str(func.__name__)] = func
+    return func
 
+@fid_reg_deco
 def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
     U = U_dict[gate]
     if proj:
@@ -50,7 +58,7 @@ def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
 #     overlap = tf_dmket_fid(dv_actual, psi_f)
 #     return overlap
 
-
+@fid_reg_deco
 def unitary_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
 ):
@@ -67,7 +75,7 @@ def unitary_infid(
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
 
-
+@fid_reg_deco
 def unitary_infid_set(
     U_dict: dict, index, dims, eval, proj=True
 ):
@@ -78,7 +86,7 @@ def unitary_infid_set(
         infids.append(infid)
     return tf.reduce_mean(infids)
 
-
+@fid_reg_deco
 def lindbladian_unitary_infid(
         U_dict: dict, gate: str, index, dims, proj: bool
     ):
@@ -99,7 +107,7 @@ def lindbladian_unitary_infid(
     infid = 1 - tf_superoper_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
 
-
+@fid_reg_deco
 def lindbladian_unitary_infid_set(
     U_dict: dict, index, dims, eval, proj=True
 ):
@@ -109,7 +117,7 @@ def lindbladian_unitary_infid_set(
         infids.append(infid)
     return tf.reduce_mean(infids)
 
-
+@fid_reg_deco
 def average_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
 ):
@@ -126,6 +134,7 @@ def average_infid(
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
+@fid_reg_deco
 def average_infid_set(
     U_dict: dict, index, dims, eval, proj=True
 ):
@@ -135,7 +144,7 @@ def average_infid_set(
         infids.append(infid)
     return tf.reduce_mean(infids)
 
-
+@fid_reg_deco
 def lindbladian_average_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
 ):
@@ -153,7 +162,7 @@ def lindbladian_average_infid(
     infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
     return infid
 
-
+@fid_reg_deco
 def lindbladian_average_infid_set(
     U_dict: dict, index, dims, proj=True
 ):
@@ -163,7 +172,7 @@ def lindbladian_average_infid_set(
         infids.append(infid)
     return tf.reduce_mean(infids)
 
-
+@fid_reg_deco
 def epc_analytical(U_dict: dict, index, dims, proj: bool):
     # TODO make this work with new index and dims
     gate = list(U_dict.keys())[0]
@@ -193,7 +202,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool):
     infid = 1 - tf_ave(fids)
     return infid
 
-
+@fid_reg_deco
 def lindbladian_epc_analytical(U_dict: dict, proj: bool):
     real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     lvls = int(np.sqrt(real_cliffords[0].shape[0]))
@@ -217,7 +226,7 @@ def lindbladian_epc_analytical(U_dict: dict, proj: bool):
     infid = 1 - tf_ave(fids)
     return infid
 
-
+@fid_reg_deco
 def populations(state, lindbladian):
     if lindbladian:
         diag = []
@@ -229,7 +238,7 @@ def populations(state, lindbladian):
     else:
         return np.abs(state)**2
 
-
+@fid_reg_deco
 def population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
     lvls = U.shape[0]
@@ -246,7 +255,7 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
     dv_actual = tf.matmul(U, dv_0)
     return populations(dv_actual, lindbladian=True)[lvl]
 
-
+@fid_reg_deco
 def RB(
        U_dict,
        min_length: int = 5,
@@ -360,7 +369,7 @@ def RB(
              transform=ax.transAxes)
     return epc, r, A, B, fig, ax
 
-
+@fid_reg_deco
 def leakage_RB(
    U_dict,
    min_length: int = 5,
@@ -510,7 +519,7 @@ def leakage_RB(
     epc = 1 - fid
     return epc, leakage, seepage, r_leak, A_leak, B_leak, r, A, C
 
-
+@fid_reg_deco
 def orbit_infid(
     U_dict,
     RB_number: int = 30,

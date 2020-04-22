@@ -3,10 +3,11 @@ import json
 import time
 import random
 import matplotlib.pyplot as plt
-from c3po.libraries.estimators import REGISTRY_OF_ESTIMATORS
-import c3po.utils.display as display
-import c3po.libraries.algorithms as algorithms
-import c3po.libraries.fidelities as fidelities
+from c3po.libraries.algorithms import algorithms
+from c3po.libraries.estimators import estimators
+from c3po.libraries.fidelities import fidelities
+from c3po.libraries.sampling import sampling
+from c3po.utils.display import plots
 import c3po.utils.qt_utils as qt_utils
 from runpy import run_path
 from c3po.optimizers.c1 import C1
@@ -27,73 +28,6 @@ def create_c1_opt(optimizer_config, lindblad):
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
-    # TODO merge this and the opt_gates to get rid of definitions
-    def lind_unit_X90p(U_dict, index, dims):
-        return fidelities.lindbladian_unitary_infid(
-            U_dict, 'CZ', index, dims,  proj=True
-        )
-    def unit_X90p(U_dict, index, dims):
-        return fidelities.unitary_infid(U_dict, 'CZ', index, dims,  proj=True)
-    def lind_unit_Y90p(U_dict, index, dims):
-        return fidelities.lindbladian_unitary_infid(U_dict, 'Y90p', index, dims,  proj=True)
-    def lind_unit_CR(U_dict, index, dims):
-        return fidelities.lindbladian_unitary_infid(
-            U_dict, 'CR', index, dims,  proj=True
-        )
-    def unit_Y90p(U_dict, index, dims):
-        return fidelities.unitary_infid(
-            U_dict, 'Y90p', index, dims, proj=True
-        )
-    def lind_avfid_X90p(U_dict, index, dims):
-        return fidelities.lindbladian_average_infid(
-            U_dict, 'X90p:Id', index, dims, proj=True
-        )
-    def lind_avfid(U_dict, index, dims):
-        return fidelities.lindbladian_average_infid(
-            U_dict, 'X90p:Id', index, dims, proj=True
-        )
-    def lind_avfid_CR(U_dict, index, dims):
-        return fidelities.lindbladian_average_infid(
-            U_dict, 'CR', index, dims, proj=True
-        )
-    def lind_avfid_CR90(U_dict, index, dims):
-        return fidelities.lindbladian_average_infid(
-            U_dict, 'CR90', index, dims, proj=True
-        )
-    def avfid_CR90(U_dict, index, dims):
-        return fidelities.average_infid(
-            U_dict, 'CR90', index, dims, proj=True
-        )
-    def avfid_X90p(U_dict, index, dims):
-        return fidelities.average_infid(U_dict, 'CZ', index, dims,  proj=True)
-    def epc_RB(U_dict, index, dims, logdir, eval):
-        epc, r, A, B, fig, ax = fidelities.RB(
-            U_dict, logspace=True, lindbladian=lindblad, padding="left"
-        )
-        plt.savefig(f"{logdir}RB_{eval}.png", dpi=300)
-        return epc
-    def lind_epc_ana(U_dict, index, dims):
-        return fidelities.lindbladian_epc_analytical(U_dict, index, dims,  proj=True)
-    def epc_ana(U_dict, index, dims):
-        return fidelities.epc_analytical(U_dict, index, dims,  proj=True)
-    # TODO fix epc
-
-    fids = {
-        'unitary_infid': unit_X90p,
-        'lind_unitary_infid': lind_unit_X90p,
-        'unitary_infid_Y90p': unit_Y90p,
-        'lind_unitary_infid_Y90p': lind_unit_Y90p,
-        'lind_unitary_infid_CR': lind_unit_CR,
-        'average_infid': avfid_X90p,
-        'average_infid_CR90': avfid_CR90,
-        'lind_average_infid': lind_avfid_X90p,
-        'lind_average_infid_CR': lind_avfid_CR,
-        'lind_average_infid_CR90': lind_avfid_CR90,
-        'epc_ana': epc_ana,
-        'epc_RB': epc_RB,
-        'lindbladian_epc_RB': epc_RB,
-        'lind_epc_ana': lind_epc_ana
-    }
     if lindblad:
         fid = 'lindbladian_' + cfg['fid_func']
     else:
@@ -105,42 +39,28 @@ def create_c1_opt(optimizer_config, lindblad):
         cb_fids = cfg['callback_fids']
 
     try:
-        fid_func = fids[fid]
+        fid_func = fidelities[fid]
     except KeyError:
-        print(
-            "C3:STATUS:Goal function not found in user specification. "
-            "Trying libraries..."
+        raise Exception(
+            f"C3:ERROR:Unkown goal function: {fid} "
         )
-        try:
-            fid_func = fidelities.__dict__[fid]
-        except KeyError:
-            raise Exception(
-                f"C3:ERROR:Unkown goal function: {fid} "
-            )
-        print(f"C3:STATUS:Found {fid} in libraries.")
+    print(f"C3:STATUS:Found {fid} in libraries.")
     callback_fids = []
     for cb_fid in cb_fids:
         try:
-            cb_fid_func = fids[cb_fid]
+            cb_fid_func = fidelities[cb_fid]
         except KeyError:
-            print(
-                "C3:STATUS:Goal function not found in user specification. "
-                "Trying libraries..."
+            raise Exception(
+                f"C3:ERROR:Unkown goal function: {cb_fid}"
             )
-            try:
-                cb_fid_func = fidelities.__dict__[cb_fid]
-            except KeyError:
-                raise Exception(
-                    f"C3:ERROR:Unkown goal function: {cb_fid}"
-                )
-            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+        print(f"C3:STATUS:Found {cb_fid} in libraries.")
         callback_fids.append(cb_fid_func)
     opt_gates = cfg['opt_gates']
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
-    algorithm = algorithms.__dict__[cfg['algorithm']]
+    algorithm = algorithms[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -261,14 +181,7 @@ def create_c1_opt_hk(
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
     ]
-    grad_algs = {'lbfgs': algorithms.lbfgs}
-    no_grad_algs = {'cmaes': algorithms.cmaes}
-    if cfg['algorithm'] in grad_algs.keys():
-        algorithm_with_grad = grad_algs[cfg['algorithm']]
-        algorithm_no_grad = None
-    elif cfg['algorithm'] in no_grad_algs.keys():
-        algorithm_no_grad = no_grad_algs[cfg['algorithm']]
-        algorithm_with_grad = None
+    algorithm = algorithms[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -277,8 +190,7 @@ def create_c1_opt_hk(
         fid_func=fid_func,
         gateset_opt_map=gateset_opt_map,
         callback_fids=callback_fids,
-        algorithm_no_grad=algorithm_no_grad,
-        algorithm_with_grad=algorithm_with_grad,
+        algorithm=algorithm,
         options=options
     )
     return opt
@@ -327,7 +239,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
             )
     else:
         eval = eval_func
-    algorithm = algorithms.__dict__[cfg['algorithm']]
+    algorithm = algorithms[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
         options = cfg['options']
@@ -360,13 +272,13 @@ def create_c3_opt(optimizer_config):
         )
         estimator = 'rms_dist'
     try:
-        fom = REGISTRY_OF_ESTIMATORS[estimator]
+        fom = estimators[estimator]
     except KeyError:
         print(
             f"C3:WARNING: No estimator named \'{estimator}\' found."
             " Using default estimator RMS distance."
         )
-        fom = REGISTRY_OF_ESTIMATORS['rms_dist']
+        fom = estimators['rms_dist']
 
     try:
         cb_foms = cfg['callback_est']
@@ -377,32 +289,34 @@ def create_c3_opt(optimizer_config):
     callback_foms = []
     for cb_fom in cb_foms:
         try:
-            callback_foms.append(REGISTRY_OF_ESTIMATORS[cb_fom])
+            callback_foms.append(estimators[cb_fom])
         except KeyError:
             print(
                 f"C3:WARNING: No estimator named \'{estimator}\' found."
                 " Skipping this callback estimator."
             )
 
-    figs = {
-        'exp_vs_sim': display.exp_vs_sim,
-        'exp_vs_sim_2d_hist': display.exp_vs_sim_2d_hist
-    }
     callback_figs = []
     for key in cfg['callback_figs']:
-        callback_figs.append(figs[key])
+        callback_figs.append(plots[key])
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
-    if cfg['algorithm'] in algorithms.__dict__.keys():
-        algorithm = algorithms.__dict__[cfg['algorithm']]
-    else:
+    try:
+        algorithm = algorithms[cfg['algorithm']]
+    except KeyError:
         raise KeyError("C3:ERROR:Unkown Algorithm.")
+
+    try:
+        sampling_func = sampling[cfg['sampling']]
+    except KeyError:
+        raise KeyError("C3:ERROR:Unkown sampling method.")
+
     options = {}
     if 'options' in cfg:
         options = cfg['options']
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
-        sampling=cfg['sampling'],
+        sampling=sampling_func,
         batch_size=int(cfg['batch_size']),
         opt_map=exp_opt_map,
         state_labels=state_labels,

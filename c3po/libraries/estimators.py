@@ -4,12 +4,12 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 
-REGISTRY_OF_ESTIMATORS = dict()
+estimators = dict()
 def estimator_reg_deco(func):
     """
     Decorator for making registry of functions
     """
-    REGISTRY_OF_ESTIMATORS[str(func.__name__)] = func
+    estimators[str(func.__name__)] = func
     return func
 
 @estimator_reg_deco

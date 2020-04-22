@@ -3,11 +3,21 @@ import cma.evolution_strategy as cma
 import numpy as np
 # from nevergrad.optimization import registry as algo_registry
 
+algorithms = dict()
+def algo_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    algorithms[str(func.__name__)] = func
+    return func
 
+
+@algo_reg_deco
 def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return fun(x0)
 
 
+@algo_reg_deco
 def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     # TODO print from the log not from hear
     options.update({'disp': True})
@@ -20,6 +30,7 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     )
 
 
+@algo_reg_deco
 def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     custom_stop = False
     if 'noise' in options:
@@ -77,6 +88,8 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         iter += 1
     return es
 
+
+@algo_reg_deco
 def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     es = cmaes(x0, fun, options=options['cmaes'])
     x1 = es.result.xbest
