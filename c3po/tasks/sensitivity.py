@@ -29,6 +29,7 @@ class SET():
         opt_map,
         state_labels=None,
         sweep_map=None,
+        probe_list=[],
         accuracy_goal = 0.5,
         callback_foms=[],
         callback_figs=[],
@@ -47,6 +48,7 @@ class SET():
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.sweep_map = sweep_map
+        self.probe_list = probe_list
         self.accuracy_goal = accuracy_goal
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
@@ -286,67 +288,46 @@ class SET():
 
     def sensitivity_test(self):
         self.evaluation = 0
-        print(self.sweep_map)
-        #for tmp in self.sweep_map:
-        tmp = self.sweep_map[0]
-        print(tmp)
-        min = tmp[2][0]
-        max = tmp[2][1]
-        delta = tmp[2][2]
-        print(min)
-        print(max)
-        print(delta)
-        s = abs(max - min)
-        print(s)
-        n = int(s/delta)
-        print(n)
+
 
         print("batch_size: " + str(self.batch_size))
 
         self.logname = 'confirm_runner' + '.log'
         self.dfname = "data.dat"
         self.start_log()
-        tup = (tmp[0],tmp[1])
-        self.tup = tup
+
+        #for tmp in self.sweep_map:
+        tmp = self.sweep_map[0]
+
+
+        print(tmp)
+
+        min = tmp[2][0]
+        max = tmp[2][1]
+        self.tup = (tmp[0],tmp[1])
+
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
 
         learner = adaptive.Learner1D(self.goal_run, bounds=(min,max))
+
+        if self.probe_list:
+            for x in self.probe_list:
+                print("from probe_list: " + str(x))
+                tmp = learner.function(x)
+                print("done\n")
+                learner.tell(x, tmp)
 
         print("accuracy_goal: " + str(self.accuracy_goal))
 
         runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < self.accuracy_goal)
 
 
-        #=== Get the resulting data ======================================
+        # #=== Get the resulting data ======================================
 
-        Xs=np.array(list(learner.data.keys()))
-        Ys=np.array(list(learner.data.values()))
-        Ks=np.argsort(Xs)
-        Xs=Xs[Ks]
-        Ys=Ys[Ks]
+        # Xs=np.array(list(learner.data.keys()))
+        # Ys=np.array(list(learner.data.values()))
+        # Ks=np.argsort(Xs)
+        # Xs=Xs[Ks]
+        # Ys=Ys[Ks]
 
 
-            #runner.live_info()
-
-            # for i in range(n):
-            #     print(str(i) + "/" + str(n))
-            #     self.logname = 'confirm_' + str(i) + '.log'
-            #     self.dfname = "data.dat"
-            #     self.inverse = True
-            #     self.start_log()
-            #     print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
-            #
-            #     tup = (tmp[0],tmp[1])
-            #     val = min + i * delta
-            #     print(tup)
-            #     print(val)
-            #
-            #     # self.exp.set_parameters([val],[tup], scaled=False)
-            #     # x_best = self.exp.get_parameters(self.opt_map, scaled=False)
-            #
-            #     self.evaluation = -1
-            #     try:
-            #         #print("running ...")
-            #         self.goal_run(tup, val)
-            #     except KeyboardInterrupt:
-            #         pass
