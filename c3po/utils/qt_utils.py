@@ -266,7 +266,7 @@ def T1_sequence(length, target):
     return S
 
 
-def ramsay_sequence(length, target):
+def ramsey_sequence(length, target):
     wait = ["Id:Id"]
     if target == "left":
         rotate_90 = ["X90p:Id"]

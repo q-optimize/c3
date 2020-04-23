@@ -83,8 +83,7 @@ class Experiment:
                     par.set_value(values[val_indx])
                     val_indx += 1
                 except ValueError:
-                    print("Value out of bounds")
-                    print(f"Trying to set {id} to value {values[val_indx]}")
+                    raise ValueError(f"Trying to set {id} to value {values[val_indx]}")
         self.model.update_model()
 
     def print_parameters(self, opt_map=None):
