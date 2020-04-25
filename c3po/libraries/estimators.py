@@ -133,6 +133,22 @@ def neg_loglkh_gauss_norm(exp_values, sim_values, exp_stds, shots):
 
 
 @estimator_reg_deco
+def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
+    """
+    Likelihood of the experimental values.
+
+    The distribution is assumed to be binomial (approximated by a gaussian)
+    that is normalised to give probability 1 at the top of the distribution.
+    """
+    std = tf.sqrt(sim_values*(1-sim_values)/shots)
+    mean = sim_values
+    gauss = tfp.distributions.Normal(mean, std)
+    loglkhs = gauss.log_prob(exp_values) - gauss.log_prob(mean)
+    loglkh = tf.reduce_sum(loglkhs)
+    return -loglkh
+
+
+@estimator_reg_deco
 def neg_loglkh_multinom(exp_values, sim_values, exp_stds, shots):
     """
     Average likelihood of the experimental values with multinomial distribution.

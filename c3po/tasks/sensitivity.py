@@ -239,6 +239,7 @@ class SET():
                 " merit does not match."
             )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
+#        print("exp_shots: " + str(exp_shots))
         exp_shots = tf.constant(exp_shots, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
         goal_numpy = float(goal.numpy())
@@ -298,17 +299,31 @@ class SET():
 
         #for tmp in self.sweep_map:
         tmp = self.sweep_map[0]
-
-
         print(tmp)
 
-        min = tmp[2][0]
-        max = tmp[2][1]
+        bound_min = tmp[2][0]
+        bound_max = tmp[2][1]
         self.tup = (tmp[0],tmp[1])
 
         print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
 
-        learner = adaptive.Learner1D(self.goal_run, bounds=(min,max))
+#         tmp = min(self.probe_list)
+        # for i in range(30):
+                # tmp = 0.9 * tmp
+                # self.probe_list.append(tmp)
+
+        probe_list_min = min(self.probe_list)
+        probe_list_max = max(self.probe_list)
+
+        bound_min = min(bound_min, probe_list_min)
+        bound_max = max(bound_max, probe_list_max)
+
+        print(" ")
+        print("bound_min: " + str((bound_min)/(2e9 * np.pi)))
+        print("bound_max: " + str((bound_max)/(2e9 * np.pi)))
+        print(" ")
+
+        learner = adaptive.Learner1D(self.goal_run, bounds=(bound_min, bound_max))
 
         if self.probe_list:
             for x in self.probe_list:
