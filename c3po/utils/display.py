@@ -14,6 +14,14 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # rc('font',**{'family':'serif','serif':['Palatino']})
 rc('text', usetex=True)
 
+plots = dict()
+def plots_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    plots[str(func.__name__)] = func
+    return func
+
 
 nice_parameter_name = {
     "amp": "Amplitude",
@@ -98,7 +106,7 @@ def unit_conversion(desc, param):
     else:
         return p_val, unit
 
-
+@plots_reg_deco
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
     exps = np.reshape(exps, exps.shape[0])
@@ -109,7 +117,7 @@ def exp_vs_sim(exps, sims, stds):
     plt.ylabel('Simulation')
     return fig
 
-
+@plots_reg_deco
 def exp_vs_sim_2d_hist(exps, sims, stds):
     # example in
     # docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html

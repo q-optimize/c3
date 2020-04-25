@@ -80,7 +80,8 @@ with tf.device('/CPU:0'):
                     "C3:STATUS:Loading initial point from : "
                     f"{os.path.abspath(init_point)}"
                 )
-                shutil.copy(init_point, dir+"initial_point.log")
+                init_dir = os.path.basename(os.path.normpath(init_point))
+                shutil.copy(init_point, dir + init_dir + "initial_point.log")
             except FileNotFoundError:
                 print(
                     f"C3:STATUS:No initial point found at "

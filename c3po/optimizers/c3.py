@@ -21,7 +21,7 @@ class C3(Optimizer):
         dir_path,
         fom,
         sampling,
-        batch_size,
+        batch_sizes,
         opt_map,
         state_labels=None,
         callback_foms=[],
@@ -33,7 +33,7 @@ class C3(Optimizer):
         super().__init__(algorithm=algorithm)
         self.fom = fom
         self.sampling = sampling
-        self.batch_size = batch_size
+        self.batch_sizes = batch_sizes
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.callback_foms = callback_foms
@@ -46,7 +46,7 @@ class C3(Optimizer):
     def log_setup(self, dir_path):
         self.dir_path = os.path.abspath(dir_path)
         self.string = self.algorithm.__name__ + '-' \
-            + self.sampling + '-' + str(self.batch_size) + '-' \
+            + self.sampling.__name__ + '-' +  '-' \
             + self.fom.__name__
         # datafile = os.path.basename(self.datafile)
         # datafile = datafile.split('.')[0]
@@ -66,42 +66,11 @@ class C3(Optimizer):
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
-    def select_from_data(self):
+    def select_from_data(self, batch_size):
         # TODO fix when batch size is 1 (atm it does all)
-        num_data_sets = len(self.learn_data.keys())
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = int(np.floor(self.batch_size / num_data_sets))
-        total_size = len(learn_from)
-        all = list(range(total_size))
-        if sampling == 'random':
-            indeces = random.sample(all, batch_size)
-        elif sampling == 'even':
-            n = int(np.ceil(total_size / batch_size))
-            indeces = all[::n]
-        elif sampling == 'from_start':
-            indeces = all[:batch_size]
-        elif sampling == 'from_end':
-            indeces = all[-batch_size:]
-        elif sampling == 'high_std':
-            a_val = []
-            for sample in learn_from:
-                a_val.append(np.std(sample['results'])/np.mean(sample['results']))
-            indeces = np.argsort(np.array(a_val))[-batch_size:]
-        elif sampling == 'even_fid':
-            res = []
-            for sample in learn_from:
-                res.append(np.mean(sample['results']))
-            n = int(np.ceil(total_size / batch_size))
-            indeces = np.argsort(np.array(res))[::n]
-        elif sampling == 'all':
-            indeces = all
-        else:
-            raise(
-                """Unspecified sampling method.\n
-                Select from 'from_end'  'even', 'random' , 'from_start', 'all'.
-                Thank you."""
-            )
+        indeces =  sampling(learn_from, batch_size)
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
@@ -160,7 +129,7 @@ class C3(Optimizer):
 
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
-            indeces = self.select_from_data()
+            indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
 

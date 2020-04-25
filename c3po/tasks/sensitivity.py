@@ -12,8 +12,7 @@ import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
-from c3po.libraries.estimators import REGISTRY_OF_ESTIMATORS
-
+from c3po.libraries.estimators import estimators
 
 
 class SET():
@@ -22,10 +21,10 @@ class SET():
     def __init__(
         self,
         dir_path,
-        estimators,
+        estimator_list,
         fom,
         sampling,
-        batch_size,
+        batch_sizes,
         opt_map,
         state_labels=None,
         sweep_map=None,
@@ -41,10 +40,10 @@ class SET():
         # not really needed? it's not an optimization
         self.optim_status = {}
 
-        self.estimators = estimators
+        self.estimator_list = estimator_list
         self.fom = fom
         self.sampling = sampling
-        self.batch_size = batch_size
+        self.batch_sizes = batch_sizes
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.sweep_map = sweep_map
@@ -90,45 +89,11 @@ class SET():
                         self.learn_data[target] = pickle.load(file)
 
 
-    def select_from_data(self):
+    def select_from_data(self, batch_size):
         # TODO fix when batch size is 1 (atm it does all)
-        num_data_sets = len(self.learn_data.keys())
-#        print("select_from_data: num_data_sets: " + str(num_data_sets))
         learn_from = self.learn_from
         sampling = self.sampling
-        batch_size = int(np.floor(self.batch_size / num_data_sets))
-#        print("select_from_data: batch_size: " + str(batch_size))
-        total_size = len(learn_from)
-        all = list(range(total_size))
-        if sampling == 'random':
-            indeces = random.sample(all, batch_size)
-        elif sampling == 'even':
-            n = int(np.ceil(total_size / batch_size))
-            indeces = all[::n]
-        elif sampling == 'from_start':
-            indeces = all[:batch_size]
-        elif sampling == 'from_end':
-            indeces = all[-batch_size:]
-        elif sampling == 'high_std':
-            a_val = []
-            for sample in learn_from:
-                a_val.append(np.std(sample['results'])/np.mean(sample['results']))
-            indeces = np.argsort(np.array(a_val))[-batch_size:]
-        elif sampling == 'even_fid':
-            res = []
-            for sample in learn_from:
-                res.append(np.mean(sample['results']))
-            n = int(np.ceil(total_size / batch_size))
-            indeces = np.argsort(np.array(res))[::n]
-        elif sampling == 'all':
-            indeces = all
-        else:
-            raise(
-                """Unspecified sampling method.\n
-                Select from 'from_end'  'even', 'random' , 'from_start', 'all'.
-                Thank you."""
-            )
-
+        indeces =  sampling(learn_from, batch_size)
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
@@ -155,7 +120,7 @@ class SET():
 
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
-            indeces = self.select_from_data()
+            indeces = self.select_from_data(self.batch_sizes[target])
 
             print("indeces: " + str(len(indeces)))
 
@@ -247,22 +212,27 @@ class SET():
         with open(self.logdir + self.dfname, 'a') as datafile:
             datafile.write(f"{val}\t{goal_numpy}\n")
 
-        for estimator in self.estimators:
-            fom = REGISTRY_OF_ESTIMATORS[estimator]
+        for estimator in self.estimator_list:
+            fom = estimators[estimator]
             tmp = fom(exp_values, sim_values, exp_stds, exp_shots)
             fname = estimator + '.dat'
             with open(self.logdir + fname, 'a') as datafile:
                 datafile.write(f"{val}\t{tmp}\n")
 
+
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
+            print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
+                print("{}: {}".format(cb_fom.__name__, val))
+            print("")
             logfile.flush()
+
 
 #         for cb_fig in self.callback_figs:
             # fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
@@ -289,9 +259,6 @@ class SET():
 
     def sensitivity_test(self):
         self.evaluation = 0
-
-
-        print("batch_size: " + str(self.batch_size))
 
         self.logname = 'confirm_runner' + '.log'
         self.dfname = "data.dat"
