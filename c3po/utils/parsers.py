@@ -320,7 +320,7 @@ def create_c3_opt(optimizer_config):
         dir_path=cfg['dir_path'],
         fom=fom,
         sampling=sampling_func,
-        batch_sizes=,
+        batch_sizes=batch_sizes,
         opt_map=exp_opt_map,
         state_labels=state_labels,
         callback_foms=callback_foms,

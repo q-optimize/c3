@@ -93,22 +93,23 @@ class C2(Optimizer):
         # generate signals for an experiment and send those to eval_func.
         params = self.exp.gateset.get_parameters(self.opt_map, scaled=False)
 
-        goal, results, results_std, seqs = self.eval_func(params)
+        goal, results, results_std, seqs, shots = self.eval_func(params)
         self.optim_status['params'] = [
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal)
         self.evaluation += 1
-        self.log_pickle(params, seqs, results, results_std)
+        self.log_pickle(params, seqs, results, results_std, shots)
         display.plot_C2(self.dir_path, self.logdir)
         return goal
 
-    def log_pickle(self, params, seqs, results, results_std):
+    def log_pickle(self, params, seqs, results, results_std, shots):
         m = {}
         m['params'] = params
         m['seqs'] = seqs
         m['results'] = results
         m['results_std'] = results_std
+        m['shots'] = shots
         with open(self.picklefilename, "ab") as file:
             pickle.dump(m, file)

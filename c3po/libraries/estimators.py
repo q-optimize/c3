@@ -141,7 +141,7 @@ def neg_loglkh_multinom(exp_values, sim_values, exp_stds, shots):
     values, and given a multinomial distribution function.
     """
     multi = tfp.distributions.Multinomial(
-        total_count=tf.reshape(shots, shots.shape[0]),
+        total_count=tf.reshape(shots, [shots.shape[0]]),
         probs=sim_values)
     loglkhs = multi.log_prob(exp_values*shots)
     loglkh = tf.reduce_mean(loglkhs)
@@ -158,7 +158,7 @@ def neg_loglkh_multinom_norm(exp_values, sim_values, exp_stds, shots):
     give probability 1 at the top of the distribution.
     """
     multi = tfp.distributions.Multinomial(
-        total_count=tf.reshape(shots, shots.shape[0]),
+        total_count=tf.reshape(shots, [shots.shape[0]]),
         probs=sim_values)
     loglkhs = multi.log_prob(exp_values*shots) - \
         multi.log_prob(sim_values*shots)

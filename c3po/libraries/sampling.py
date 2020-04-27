@@ -12,16 +12,19 @@ def sampling_reg_deco(func):
 
 @sampling_reg_deco
 def all(learn_from,  batch_size):
+    total_size = len(learn_from)
     all = list(range(total_size))
     return all
 
 @sampling_reg_deco
 def from_start(learn_from,  batch_size):
+    total_size = len(learn_from)
     all = list(range(total_size))
     return all[:batch_size]
 
 @sampling_reg_deco
 def from_end(learn_from,  batch_size):
+    total_size = len(learn_from)
     all = list(range(total_size))
     return all[-batch_size:]
 
@@ -33,6 +36,7 @@ def even(learn_from,  batch_size):
 
 @sampling_reg_deco
 def even(learn_from,  batch_size):
+    total_size = len(learn_from)
     all = list(range(total_size))
     return random.sample(all, batch_size)
 
@@ -45,6 +49,7 @@ def high_std(learn_from,  batch_size):
 
 @sampling_reg_deco
 def even_fid(learn_from,  batch_size):
+    total_size = len(learn_from)
     res = []
     for sample in learn_from:
         res.append(np.mean(sample['results']))
