@@ -126,8 +126,7 @@ class GateSet:
                             val = fct(val)
                         par.set_value(val)
                     except ValueError:
-                        print("Value out of bounds")
-                        print(f"Trying to set {id} to value {val}")
+                        raise ValueError(f"Trying to set {id} to value {val}")
             if scaled:
                 val_indx += par_len
             else:
