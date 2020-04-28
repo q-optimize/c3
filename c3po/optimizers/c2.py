@@ -17,7 +17,8 @@ class C2(Optimizer):
         eval_func,
         gateset_opt_map,
         algorithm,
-        options={}
+        options={},
+        run_name=None,
     ):
         """Initiliase."""
         super().__init__(
@@ -26,15 +27,16 @@ class C2(Optimizer):
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
         self.options = options
-        self.log_setup(dir_path)
+        self.log_setup(dir_path, run_name)
 
     def set_eval_func(self, eval_func):
         self.eval_func = eval_func
 
-    def log_setup(self, dir_path):
+    def log_setup(self, dir_path, run_name):
         self.dir_path = os.path.abspath(dir_path)
-        self.string = self.eval_func.__name__ + self.algorithm.__name__
-        self.logdir = log_setup(self.dir_path, self.string)
+        if run_name is None:
+            run_name = self.eval_func.__name__ + self.algorithm.__name__
+        self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'calibration.log'
 
     def load_best(self, init_point):

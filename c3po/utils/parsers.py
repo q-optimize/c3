@@ -245,6 +245,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         options = cfg['options']
     opt = C2(
         dir_path=cfg['dir_path'],
+        run_name=cfg['run_name'],
         eval_func=eval,
         gateset_opt_map=gateset_opt_map,
         algorithm=algorithm,

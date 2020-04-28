@@ -27,6 +27,7 @@ class C3(Optimizer):
         callback_foms=[],
         callback_figs=[],
         algorithm=None,
+        run_name=None,
         options={}
     ):
         """Initiliase."""
@@ -41,17 +42,18 @@ class C3(Optimizer):
         self.inverse = False
         self.options = options
         self.learn_data = {}
-        self.log_setup(dir_path)
+        self.log_setup(dir_path, run_name)
 
-    def log_setup(self, dir_path):
+    def log_setup(self, dir_path, run_name):
         self.dir_path = os.path.abspath(dir_path)
-        self.string = self.algorithm.__name__ + '-' \
-            + self.sampling.__name__ + '-' +  '-' \
-            + self.fom.__name__
+        if run_name is None:
+            run_name = self.algorithm.__name__ + '-' \
+                + self.sampling.__name__ + '-' \
+                + self.fom.__name__
         # datafile = os.path.basename(self.datafile)
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
-        self.logdir = log_setup(self.dir_path, self.string)
+        self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'model_learn.log'
 
     def read_data(self, datafiles):
@@ -194,7 +196,7 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
                                 f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                                f"{float(m_val[ii]-sim_val[ii]):-8.6f}\n"
                             )
                         logfile.flush()
 
