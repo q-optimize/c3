@@ -382,7 +382,10 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_plots=False):
+def plot_C3(
+    logfolders=["./"], change_thresh=0, only_iterations=True,
+    combine_plots=False, interactive=False
+):
     """
     Generates model learning plots. Default options assume the function is
     called from inside a log folder. Otherwise a file location has to be given.
@@ -527,6 +530,8 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
 
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model.png")
+    if interactive:
+        plt.show()
 
     plt.figure()
     plt.title("Goal")
@@ -554,6 +559,8 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
     plt.ylabel('model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
+    if interactive:
+        plt.show()
 
 
 def plot_envelope_history(logfilename):
