@@ -450,10 +450,8 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
                             par_identifier = p_name_splt[1]
                             if not p_type in subplot_ids.keys():
                                 subplot_ids[p_type] = subplot_id
-                                subplot_legends[p_type] = []
                                 subplot_id += 1
-                            if not par_identifier in subplot_legends[p_type]:
-                                subplot_legends[p_type].append(par_identifier)
+
 
         this_log = {
             "parameters": parameters,
@@ -500,31 +498,34 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
                 sharex='col'
             )
             ii = 1
-            for key in parameters.keys():
-                p_type = key.split("-")[-1]
+            for p_name in parameters.keys():
+                p_type = p_name.split("-")[-1]
+                par_identifier = p_name.split("-")[1]
                 if not p_type in subplots.keys():
                     id = subplot_ids[p_type] - 1
                     if ncols>1:
-                        subplots[p_type] = axes[id // (nrows - 1)][id % (nrows - 1)]
+                        subplots[p_type] = axes[id // nrows][id % nrows]
                     else:
-                        subplots[p_type] = axes[id // (nrows - 1)]
+                        subplots[p_type] = axes[id % nrows]
                 ax = subplots[p_type]
-                ax.plot(its, scaling[key] * parameters[key], color='tab:blue')
+                ax.plot(its, scaling[p_name] * parameters[p_name],
+                    label = par_identifier)
                 ax.tick_params(
                     direction="in", left=True, right=True, top=True, bottom=True
                 )
                 if use_synthetic:
                     ax.plot(
-                        its, scaling[key] *  real_parameters[key], "--",
-                        color='tab:red'
+                        its, scaling[p_name] *  real_parameters[p_name], "--",
+                        color='tab:red', label = par_identifier + " real"
                     )
-                ax.set_ylabel(p_type + units[key])
+                ax.set_ylabel(p_type + units[p_name])
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
                 ax.grid(linestyle="--")
-                plt.ylabel(key +units[key])
                 ii += 1
+                ax.legend()
     plt.xlabel('Evaluation')
-
+    for p_type, legend in subplot_legends.items():
+        subplots[p_type].legend(legend)
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model.png")
 
