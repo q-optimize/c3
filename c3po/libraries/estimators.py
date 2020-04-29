@@ -172,7 +172,7 @@ def g_LL_prime(exp_values, sim_values, exp_stds, shots):
     K = len(sim_values)
     print("K: " + str(K))
     loglkh = - (1 / K) * loglkh
-    return loglkh
+    return tf.sqrt(loglkh)
 
 
 @estimator_reg_deco
