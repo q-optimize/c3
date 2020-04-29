@@ -30,12 +30,13 @@ def from_end(learn_from,  batch_size):
 
 @sampling_reg_deco
 def even(learn_from,  batch_size):
+    total_size = len(learn_from)
     all = list(range(total_size))
     n = int(np.ceil(total_size / batch_size))
     return all[::n]
 
 @sampling_reg_deco
-def even(learn_from,  batch_size):
+def random_sample(learn_from,  batch_size):
     total_size = len(learn_from)
     all = list(range(total_size))
     return random.sample(all, batch_size)

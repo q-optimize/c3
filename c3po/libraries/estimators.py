@@ -1,5 +1,6 @@
 """Collection of estimator functions."""
 
+import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -145,7 +146,33 @@ def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
     gauss = tfp.distributions.Normal(mean, std)
     loglkhs = gauss.log_prob(exp_values) - gauss.log_prob(mean)
     loglkh = tf.reduce_sum(loglkhs)
+
     return -loglkh
+
+
+@estimator_reg_deco
+def g_LL_prime(exp_values, sim_values, exp_stds, shots):
+    """
+    Likelihood of the experimental values.
+
+    The distribution is assumed to be binomial (approximated by a gaussian)
+    that is normalised to give probability 1 at the top of the distribution.
+    """
+    std = tf.sqrt(sim_values*(1-sim_values)/shots)
+    mean = sim_values
+    gauss = tfp.distributions.Normal(mean, std)
+
+    prefac = tf.math.sqrt(2 * tf.constant(np.pi) * tf.constant(np.e))
+    rescale = tf.math.multiply(tf.cast(prefac, dtype=tf.float64), std)
+    #print(rescale)
+
+    loglkhs = tf.math.add(gauss.log_prob(exp_values), tf.math.log(rescale))
+    loglkh = tf.reduce_sum(loglkhs)
+
+    K = len(sim_values)
+    print("K: " + str(K))
+    loglkh = - (1 / K) * loglkh
+    return loglkh
 
 
 @estimator_reg_deco

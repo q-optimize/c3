@@ -89,6 +89,14 @@ class SET():
                         self.learn_data[target] = pickle.load(file)
 
 
+    def load_best(self, init_point):
+        with open(init_point) as init_file:
+            best = init_file.readlines()
+            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
+            init_p = json.loads(best[1])['params']
+            self.exp.set_parameters(init_p, best_exp_opt_map)
+
+
     def select_from_data(self, batch_size):
         # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
@@ -215,6 +223,7 @@ class SET():
         for estimator in self.estimator_list:
             fom = estimators[estimator]
             tmp = fom(exp_values, sim_values, exp_stds, exp_shots)
+            tmp = float(tmp.numpy())
             fname = estimator + '.dat'
             with open(self.logdir + fname, 'a') as datafile:
                 datafile.write(f"{val}\t{tmp}\n")
@@ -311,5 +320,3 @@ class SET():
         # Ks=np.argsort(Xs)
         # Xs=Xs[Ks]
         # Ys=Ys[Ks]
-
-
