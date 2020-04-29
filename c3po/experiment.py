@@ -160,6 +160,8 @@ class Experiment:
                     if "gauss" in ctrls:
                         if ctrls['gauss'].params["amp"] != 0.0:
                             offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    if "nodrive_env" in ctrls:
+                        offset = ctrls['nodrive_env'].params['freq_offset'].get_value()
                     # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
@@ -308,7 +310,10 @@ class Experiment:
         dt = ts[1] - ts[0]
         ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
         axs.plot(ts / 1e-9, pop_t.T)
-        axs.grid()
+        axs.grid(linestyle="--")
+        axs.tick_params(
+            direction="in", left=True, right=True, top=True, bottom=True
+        )
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         plt.legend(self.model.state_labels)
