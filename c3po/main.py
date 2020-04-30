@@ -12,9 +12,25 @@ import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
 
+#import os
+#import tensorflow as tf
+
+#os.environ['AUTOGRAPH_VERBOSITY'] = 5
+# Verbosity is now 5
+
+#import os
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+#print(os.environ['TF_CPP_MIN_LOG_LEVEL'])
+#import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+#tf.get_logger().setLevel('ERROR')
+# Verbosity is now 0
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("master_config")
 args = parser.parse_args()
+
 opt_config = args.master_config
 with open(opt_config, "r") as cfg_file:
     try:
@@ -34,7 +50,11 @@ with tf.device('/CPU:0'):
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
     elif optim_type == "C3":
+        print("creating c3 opt ...")
         opt = parsers.create_c3_opt(opt_config)
+    elif optim_type == "SET":
+        print("creating set obj")
+        opt = parsers.create_sensitivity_test(opt_config)
     else:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
@@ -114,3 +134,17 @@ with tf.device('/CPU:0'):
             dir
         )
         opt.learn_model()
+
+    elif optim_type == "SET":
+        learn_from = []
+        opt.read_data(cfg['datafile'])
+        shutil.copy2(
+            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            + "/real_model_params.log",
+            dir
+        )
+
+        print("sensitivity test ...")
+        opt.sensitivity_test()
+
+
