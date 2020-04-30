@@ -160,8 +160,6 @@ class Experiment:
                     if "gauss" in ctrls:
                         if ctrls['gauss'].params["amp"] != 0.0:
                             offset = ctrls['gauss'].params['freq_offset'].get_value()
-                    if "nodrive_env" in ctrls:
-                        offset = ctrls['nodrive_env'].params['freq_offset'].get_value()
                     # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()

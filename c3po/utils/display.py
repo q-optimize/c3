@@ -465,7 +465,7 @@ def plot_C3(
 
         logs.append(this_log)
 
-
+    colors = ["tab:blue", "tab:red", "tab:green"]
     for log in logs:
         parameters = log["parameters"]
         goal_function = log["goal_function"]
@@ -511,15 +511,17 @@ def plot_C3(
                     else:
                         subplots[p_type] = axes[id % nrows]
                 ax = subplots[p_type]
-                ax.plot(its, scaling[p_name] * parameters[p_name],
-                    label = par_identifier)
+                l = ax.plot(
+                    its, scaling[p_name] * parameters[p_name], ".-",
+                    markersize=12, linewidth=0.5, label=par_identifier
+                )
                 ax.tick_params(
                     direction="in", left=True, right=True, top=True, bottom=True
                 )
                 if use_synthetic:
                     ax.plot(
                         its, scaling[p_name] *  real_parameters[p_name], "--",
-                        color='tab:red', label = par_identifier + " real"
+                        color=l[-1].get_color(), label = par_identifier + " real"
                     )
                 ax.set_ylabel(p_type + units[p_name])
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
@@ -537,7 +539,6 @@ def plot_C3(
     plt.figure()
     plt.title("Goal")
     plt.grid()
-    colors = ["tab:blue", "tab:red", "tab:green"]
     markers = ["x", "+", "."]
     line_names = ["simple", "intermediate", "full"]
     idx = 0
