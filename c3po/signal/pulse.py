@@ -1,4 +1,5 @@
 from c3po.c3objs import C3obj
+from c3po.c3objs import Quantity as Qty
 import tensorflow as tf
 import types
 
@@ -59,12 +60,41 @@ class Envelope(InstructionComponent):
             params=params,
             )
         self.shape = shape
-        # if 'amp' not in params:
-        #     params['amp'] = 1.0
-        # if 'freq_offset' not in params:
-        #     params['freq_offset'] = 0.0
-        # if 'xy_angle' not in params:
-        #     params['xy_angle'] = 0.0
+        if 'amp' not in params:
+            params['amp'] = Qty(
+                value=0.0,
+                min=-1.0,
+                max=+1.0,
+                unit="V"
+            )
+        if 'delta' not in params:
+            params['delta'] = Qty(
+                value=0.0,
+                min=-1.0,
+                max=+1.0,
+                unit="V"
+            )
+        if 'freq_offset' not in params:
+            params['freq_offset'] = Qty(
+                value=0.0,
+                min=-1.0,
+                max=+1.0,
+                unit='Hz 2pi'
+            )
+        if 'xy_angle' not in params:
+            params['xy_angle'] = Qty(
+                value=0.0,
+                min=-1.0,
+                max=+1.0,
+                unit='rad'
+            )
+        if 't_final' not in params:
+            params['t_final'] = Qty(
+                value=0.0,
+                min=-1.0,
+                max=+1.0,
+                unit="s"
+            )
 
     def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times."""
