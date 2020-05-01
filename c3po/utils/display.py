@@ -3,6 +3,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib import colors as clrs
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
 from c3po.utils.utils import eng_num
@@ -382,7 +383,10 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.savefig(logfolder + "closed_loop.png")
 
 
-def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_plots=False):
+def plot_C3(
+    logfolders=["./"], change_thresh=0, only_iterations=True,
+    combine_plots=False, interactive=False
+):
     """
     Generates model learning plots. Default options assume the function is
     called from inside a log folder. Otherwise a file location has to be given.
@@ -462,7 +466,7 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
 
         logs.append(this_log)
 
-
+    colors = ["tab:blue", "tab:red", "tab:green"]
     for log in logs:
         parameters = log["parameters"]
         goal_function = log["goal_function"]
@@ -494,7 +498,7 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
             nrows = int(np.ceil(np.sqrt(len(subplot_ids))))
             ncols = int(np.ceil((len(subplot_ids)) / nrows))
             fig, axes = plt.subplots(
-                figsize=(6 * ncols, 4 * nrows), nrows=nrows, ncols=ncols,
+                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols,
                 sharex='col'
             )
             ii = 1
@@ -508,19 +512,27 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
                     else:
                         subplots[p_type] = axes[id % nrows]
                 ax = subplots[p_type]
-                ax.plot(its, scaling[p_name] * parameters[p_name],
-                    label = par_identifier)
+                l = ax.plot(
+                    its, scaling[p_name] * parameters[p_name], ".-",
+                    markersize=12, linewidth=0.5, label=par_identifier
+                )
                 ax.tick_params(
                     direction="in", left=True, right=True, top=True, bottom=True
                 )
                 if use_synthetic:
+                    sim_color = l[-1].get_color()
+                    real_color = clrs.hsv_to_rgb(
+                        clrs.rgb_to_hsv(clrs.to_rgb(sim_color))
+                        - [0, 0, 0.25]
+                    )
                     ax.plot(
                         its, scaling[p_name] *  real_parameters[p_name], "--",
-                        color='tab:red', label = par_identifier + " real"
+                        color=real_color, label = par_identifier + " real",
+                        linewidth=2
                     )
                 ax.set_ylabel(p_type + units[p_name])
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-                ax.grid(linestyle="--")
+                ax.grid(linestyle="--", linewidth=0.5)
                 ii += 1
                 ax.legend()
     plt.xlabel('Evaluation')
@@ -528,11 +540,12 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
         subplots[p_type].legend(legend)
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model.png")
+    if interactive:
+        plt.show()
 
     plt.figure()
     plt.title("Goal")
     plt.grid()
-    colors = ["tab:blue", "tab:red", "tab:green"]
     markers = ["x", "+", "."]
     line_names = ["simple", "intermediate", "full"]
     idx = 0
@@ -555,6 +568,8 @@ def plot_C3(logfolders=["./"], change_thresh=0, only_iterations=True, combine_pl
     plt.ylabel('model match')
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
+    if interactive:
+        plt.show()
 
 
 def plot_envelope_history(logfilename):

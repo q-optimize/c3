@@ -2,6 +2,7 @@ import os
 import json
 import time
 import random
+import numpy as np
 import matplotlib.pyplot as plt
 from c3po.libraries.algorithms import algorithms
 from c3po.libraries.estimators import estimators
@@ -13,6 +14,7 @@ from runpy import run_path
 from c3po.optimizers.c1 import C1
 from c3po.optimizers.c2 import C2
 from c3po.optimizers.c3 import C3
+from c3po.tasks.sensitivity import SET
 
 
 def create_experiment(exp_setup, datafile=''):
@@ -245,6 +247,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         options = cfg['options']
     opt = C2(
         dir_path=cfg['dir_path'],
+        run_name=cfg['run_name'],
         eval_func=eval,
         gateset_opt_map=gateset_opt_map,
         algorithm=algorithm,
@@ -329,3 +332,105 @@ def create_c3_opt(optimizer_config):
         options=options,
     )
     return opt
+
+def create_sensitivity_test(task_config):
+    with open(task_config, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+
+
+    state_labels = {"all": None}
+    if "state_labels" in cfg:
+        for target, labels in cfg["state_labels"].items():
+            state_labels[target] = [tuple(l) for l in labels]
+
+
+    try:
+        estimator = cfg['estimator']
+    except KeyError:
+        print(
+            "C3:WARNING: Non estimator given."
+            " Using default estimator RMS distance."
+        )
+        estimator = 'rms_dist'
+    try:
+        fom = estimators[estimator[0]]
+    except KeyError:
+        print(
+            f"C3:WARNING: No estimator named \'{estimator}\' found."
+            " Using default estimator RMS distance."
+        )
+        fom = estimators['neg_loglkh_gauss_norm']
+
+    try:
+        cb_foms = cfg['callback_est']
+    except KeyError:
+        print("C3:WARNING: Non callback estimators given.")
+        cb_foms = []
+
+    callback_foms = []
+    for cb_fom in cb_foms:
+        try:
+            callback_foms.append(estimators[cb_fom])
+        except KeyError:
+            print(
+                f"C3:WARNING: No estimator named \'{estimator}\' found."
+                " Skipping this callback estimator."
+            )
+
+    callback_figs = []
+    for key in cfg['callback_figs']:
+        callback_figs.append(plots[key])
+    exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
+    try:
+        algorithm = algorithms[cfg['algorithm']]
+    except KeyError:
+        raise KeyError("C3:ERROR:Unkown Algorithm.")
+
+    try:
+        sampling_func = sampling[cfg['sampling']]
+    except KeyError:
+        raise KeyError("C3:ERROR:Unkown sampling method.")
+
+
+
+
+    sweep_map = []
+    for a in cfg['sweep_map']:
+        tmp = []
+        tmp.append(eval(a[2][0]))
+        tmp.append(eval(a[2][1]))
+        sweep_map.append((a[0],a[1],tuple(tmp)))
+
+    if 'accuracy_goal' in cfg:
+        accuracy_goal = cfg['accuracy_goal']
+
+    if 'probe_list' in cfg:
+        probe_list = []
+        for x in cfg['probe_list']:
+            probe_list.append(eval(x))
+
+
+
+    options = {}
+
+
+    batch_sizes = cfg['batch_size']
+
+    if 'options' in cfg:
+        options = cfg['options']
+    set = SET(
+        dir_path=cfg['dir_path'],
+        estimator_list = cfg['estimator'],
+        fom=fom,
+        sampling=sampling_func,
+        batch_sizes=batch_sizes,
+        opt_map=exp_opt_map,
+        state_labels=state_labels,
+        sweep_map=sweep_map,
+        probe_list=probe_list,
+        accuracy_goal=accuracy_goal,
+        callback_foms=callback_foms,
+        callback_figs=callback_figs,
+        options=options
+    )
+    return set

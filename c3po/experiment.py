@@ -308,7 +308,10 @@ class Experiment:
         dt = ts[1] - ts[0]
         ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
         axs.plot(ts / 1e-9, pop_t.T)
-        axs.grid()
+        axs.grid(linestyle="--")
+        axs.tick_params(
+            direction="in", left=True, right=True, top=True, bottom=True
+        )
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         plt.legend(self.model.state_labels)

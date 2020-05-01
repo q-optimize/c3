@@ -1,65 +1,93 @@
-"""Object that deals with the model learning."""
+"""Object that deals with the sensitivity test."""
 
 import os
 import json
 import pickle
 import itertools
-import random
+import time
 import numpy as np
+import adaptive
 import tensorflow as tf
+import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
-import c3po.utils.display as display
+from c3po.libraries.estimators import estimators
 
 
-class C3(Optimizer):
-    """Object that deals with the model learning."""
+class SET():
+    """Object that deals with the sensitivity test."""
 
     def __init__(
         self,
         dir_path,
+        estimator_list,
         fom,
         sampling,
         batch_sizes,
         opt_map,
         state_labels=None,
+        sweep_map=None,
+        probe_list=[],
+        accuracy_goal = 0.5,
         callback_foms=[],
         callback_figs=[],
-        algorithm=None,
-        run_name=None,
+        # algorithm_no_grad=None,
+        # algorithm_with_grad=None,
         options={}
     ):
         """Initiliase."""
-        super().__init__(algorithm=algorithm)
+        # not really needed? it's not an optimization
+        self.optim_status = {}
+
+        self.estimator_list = estimator_list
         self.fom = fom
         self.sampling = sampling
         self.batch_sizes = batch_sizes
         self.opt_map = opt_map
         self.state_labels = state_labels
+        self.sweep_map = sweep_map
+        self.probe_list = probe_list
+        self.accuracy_goal = accuracy_goal
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
         self.options = options
         self.learn_data = {}
-        self.log_setup(dir_path, run_name)
+        self.log_setup(dir_path)
 
-    def log_setup(self, dir_path, run_name):
+    def log_setup(self, dir_path):
         self.dir_path = os.path.abspath(dir_path)
-        if run_name is None:
-            run_name = self.algorithm.__name__ + '-' \
-                + self.sampling.__name__ + '-' \
-                + self.fom.__name__
+        self.string = "set_test"
+        # self.string = self.algorithm.__name__ + '-' \
+        #          + self.sampling + '-' \
+        #          + str(self.batch_size) + '-' \
+        #          + self.fom.__name__
         # datafile = os.path.basename(self.datafile)
         # datafile = datafile.split('.')[0]
         # string = string + '----[' + datafile + ']'
-        self.logdir = log_setup(self.dir_path, run_name)
+        self.logdir = log_setup(dir_path, self.string)
         self.logname = 'model_learn.log'
+
+    def start_log(self):
+        self.start_time = time.time()
+        start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
+        with open(self.logdir + self.logname, 'a') as logfile:
+            logfile.write("Starting optimization at ")
+            logfile.write(start_time_str)
+            logfile.write("Optimization parameters:\n")
+            logfile.write(json.dumps(self.opt_map))
+            logfile.write("\n")
+            logfile.flush()
+
+    def set_exp(self, exp):
+        self.exp = exp
 
     def read_data(self, datafiles):
         for target, datafile in datafiles.items():
-            with open(datafile, 'rb+') as file:
-                self.learn_data[target] = pickle.load(file)
+                    with open(datafile, 'rb+') as file:
+                        self.learn_data[target] = pickle.load(file)
+
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -67,6 +95,7 @@ class C3(Optimizer):
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
+
 
     def select_from_data(self, batch_size):
         # TODO fix when batch size is 1 (atm it does all)
@@ -78,62 +107,34 @@ class C3(Optimizer):
         else:
             return indeces
 
-    def learn_model(self):
-        self.start_log()
-        self.nice_print = self.exp.print_parameters
-        for cb_fig in self.callback_figs:
-            os.makedirs(self.logdir + cb_fig.__name__)
-        os.makedirs(self.logdir + 'dynamics_seq')
-        os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
-        try:
-            # TODO deal with kears learning differently
-            self.algorithm(
-                x0,
-                fun=self.fct_to_min,
-                fun_grad=self.fct_to_min_autograd,
-                grad_lookup=self.lookup_gradient,
-                options=self.options
-            )
-        except KeyboardInterrupt:
-            pass
-        display.plot_C3([self.logdir])
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
-        self.exp.set_parameters(best_params, self.opt_map)
-        self.end_log()
-        #self.confirm()
 
-    def confirm(self):
-        self.logname = 'confirm.log'
-        self.inverse = True
-        self.start_log()
-        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x_best = self.exp.get_parameters(self.opt_map, scaled=True)
-        self.evaluation = -1
-        try:
-            self.goal_run(x_best)
-        except KeyboardInterrupt:
-            pass
-
-    def goal_run(self, current_params):
-        display.plot_C3([self.logdir])
+    def goal_run(self, val):
         exp_values = []
         exp_stds = []
         sim_values = []
         exp_shots = []
 
-        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-        count = 0
+        #self.exp.set_parameters(current_params, self.opt_map, scaled=False)
+        # print("tup: " + str(tup))
+        # print("val: " + str(val))
+        self.exp.set_parameters([val],[self.tup], scaled=False)
+        print("params>>> ")
+        params = self.exp.print_parameters(self.opt_map)
+        print(params)
 
+        print("self.learn_data.items(): " + str(len(self.learn_data.items())))
+        count = 0
         for target, data in self.learn_data.items():
 
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
             indeces = self.select_from_data(self.batch_sizes[target])
 
+            print("indeces: " + str(len(indeces)))
+
             for ipar in indeces:
+                if count % 100 == 0:
+                        print("count: " + str(count))
 
                 count += 1
                 m = self.learn_from[ipar]
@@ -148,6 +149,7 @@ class C3(Optimizer):
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
+
                 # We find the unique gates used in the sequence and compute
                 # only them.
                 self.exp.opt_gates = list(
@@ -162,6 +164,7 @@ class C3(Optimizer):
                 # exp_stds.extend(m_stds)
                 sim_values.extend(sim_vals)
 
+
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
                         "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
@@ -175,8 +178,8 @@ class C3(Optimizer):
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         Shots"
-                        "       Diff\n"
+                        "Sequence    Simulation  Experiment  Std         "
+                        "Diff\n"
                     )
 
                 for iseq in range(num_seqs):
@@ -196,7 +199,7 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
                                 f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):-8.6f}\n"
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
 
@@ -209,9 +212,22 @@ class C3(Optimizer):
                 " merit does not match."
             )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
+#        print("exp_shots: " + str(exp_shots))
         exp_shots = tf.constant(exp_shots, dtype=tf.float64)
         goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
         goal_numpy = float(goal.numpy())
+
+        with open(self.logdir + self.dfname, 'a') as datafile:
+            datafile.write(f"{val}\t{goal_numpy}\n")
+
+        for estimator in self.estimator_list:
+            fom = estimators[estimator]
+            tmp = fom(exp_values, sim_values, exp_stds, exp_shots)
+            tmp = float(tmp.numpy())
+            fname = estimator + '.dat'
+            with open(self.logdir + fname, 'a') as datafile:
+                datafile.write(f"{val}\t{tmp}\n")
+
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
@@ -226,16 +242,17 @@ class C3(Optimizer):
             print("")
             logfile.flush()
 
-        for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
-            fig.savefig(
-                self.logdir
-                + cb_fig.__name__ + '/'
-                + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal_numpy, 3))
-                + '.png'
-            )
-            plt.close(fig)
+
+#         for cb_fig in self.callback_figs:
+            # fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
+            # fig.savefig(
+                # self.logdir
+                # + cb_fig.__name__ + '/'
+                # + 'eval:' + str(self.evaluation) + "__"
+                # + self.fom.__name__ + str(round(goal_numpy, 3))
+                # + '.png'
+            # )
+            # plt.close(fig)
 
         self.optim_status['params'] = [
             par.numpy().tolist()
@@ -243,4 +260,63 @@ class C3(Optimizer):
         ]
         self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
-        return goal
+        return goal_numpy
+
+
+
+
+
+    def sensitivity_test(self):
+        self.evaluation = 0
+
+        self.logname = 'confirm_runner' + '.log'
+        self.dfname = "data.dat"
+        self.start_log()
+
+        #for tmp in self.sweep_map:
+        tmp = self.sweep_map[0]
+        print(tmp)
+
+        bound_min = tmp[2][0]
+        bound_max = tmp[2][1]
+        self.tup = (tmp[0],tmp[1])
+
+        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
+
+#         tmp = min(self.probe_list)
+        # for i in range(30):
+                # tmp = 0.9 * tmp
+                # self.probe_list.append(tmp)
+
+        probe_list_min = min(self.probe_list)
+        probe_list_max = max(self.probe_list)
+
+        bound_min = min(bound_min, probe_list_min)
+        bound_max = max(bound_max, probe_list_max)
+
+        print(" ")
+        print("bound_min: " + str((bound_min)/(2e9 * np.pi)))
+        print("bound_max: " + str((bound_max)/(2e9 * np.pi)))
+        print(" ")
+
+        learner = adaptive.Learner1D(self.goal_run, bounds=(bound_min, bound_max))
+
+        if self.probe_list:
+            for x in self.probe_list:
+                print("from probe_list: " + str(x))
+                tmp = learner.function(x)
+                print("done\n")
+                learner.tell(x, tmp)
+
+        print("accuracy_goal: " + str(self.accuracy_goal))
+
+        runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < self.accuracy_goal)
+
+
+        # #=== Get the resulting data ======================================
+
+        # Xs=np.array(list(learner.data.keys()))
+        # Ys=np.array(list(learner.data.values()))
+        # Ks=np.argsort(Xs)
+        # Xs=Xs[Ks]
+        # Ys=Ys[Ks]

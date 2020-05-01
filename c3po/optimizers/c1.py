@@ -22,7 +22,8 @@ class C1(Optimizer):
         algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
-        options={}
+        options={},
+        run_name=None
     ):
         """Initiliase."""
         super().__init__(
@@ -36,14 +37,15 @@ class C1(Optimizer):
         self.fid_subspace = fid_subspace
         self.callback_fids = callback_fids
         self.options = options
-        self.log_setup(dir_path)
+        self.log_setup(dir_path, run_name)
 
-    def log_setup(self, dir_path):
+    def log_setup(self, dir_path, run_name):
         self.dir_path = os.path.abspath(dir_path)
-        self.string = (
-            'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
-        )
-        self.logdir = log_setup(self.dir_path, self.string)
+        if run_name is None:
+            run_name = (
+                'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
+            )
+        self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'open_loop.log'
 
     def load_best(self, init_point):
