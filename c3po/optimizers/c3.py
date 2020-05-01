@@ -87,6 +87,8 @@ class C3(Optimizer):
         os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
+        self.init_gateset_params = self.exp.gateset.get_parameters()
+        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
         try:
             # TODO deal with kears learning differently
             self.algorithm(
@@ -145,6 +147,11 @@ class C3(Optimizer):
                 sequences = m['seqs']
                 num_seqs = len(sequences)
 
+                self.exp.gateset.set_parameters(
+                    self.init_gateset_params,
+                    self.init_gateset_opt_map,
+                    scaled=False
+                )
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
@@ -210,6 +217,7 @@ class C3(Optimizer):
             )
         exp_stds = tf.constant(exp_stds, dtype=tf.float64)
         exp_shots = tf.constant(exp_shots, dtype=tf.float64)
+
         goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
         goal_numpy = float(goal.numpy())
 

@@ -50,10 +50,10 @@ with tf.device('/CPU:0'):
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
     elif optim_type == "C3":
-        print("creating c3 opt ...")
+        print("C3:STATUS: creating c3 opt ...")
         opt = parsers.create_c3_opt(opt_config)
     elif optim_type == "SET":
-        print("creating set obj")
+        print("C3:STATUS: creating set obj")
         opt = parsers.create_sensitivity_test(opt_config)
     else:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
@@ -81,7 +81,7 @@ with tf.device('/CPU:0'):
                     f"{os.path.abspath(init_point)}"
                 )
                 init_dir = os.path.basename(os.path.normpath(os.path.dirname(init_point)))
-                shutil.copy(init_point, dir + init_dir + "initial_point.log")
+                shutil.copy(init_point, dir + init_dir + "_initial_point.log")
             except FileNotFoundError:
                 print(
                     f"C3:STATUS:No initial point found at "
@@ -146,5 +146,3 @@ with tf.device('/CPU:0'):
 
         print("sensitivity test ...")
         opt.sensitivity_test()
-
-
