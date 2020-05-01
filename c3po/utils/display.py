@@ -3,6 +3,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from matplotlib import colors as clrs
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
 from c3po.utils.utils import eng_num
@@ -497,7 +498,7 @@ def plot_C3(
             nrows = int(np.ceil(np.sqrt(len(subplot_ids))))
             ncols = int(np.ceil((len(subplot_ids)) / nrows))
             fig, axes = plt.subplots(
-                figsize=(6 * ncols, 4 * nrows), nrows=nrows, ncols=ncols,
+                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols,
                 sharex='col'
             )
             ii = 1
@@ -519,13 +520,19 @@ def plot_C3(
                     direction="in", left=True, right=True, top=True, bottom=True
                 )
                 if use_synthetic:
+                    sim_color = l[-1].get_color()
+                    real_color = clrs.hsv_to_rgb(
+                        clrs.rgb_to_hsv(clrs.to_rgb(sim_color))
+                        - [0, 0, 0.25]
+                    )
                     ax.plot(
                         its, scaling[p_name] *  real_parameters[p_name], "--",
-                        color=l[-1].get_color(), label = par_identifier + " real"
+                        color=real_color, label = par_identifier + " real",
+                        linewidth=2
                     )
                 ax.set_ylabel(p_type + units[p_name])
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-                ax.grid(linestyle="--")
+                ax.grid(linestyle="--", linewidth=0.5)
                 ii += 1
                 ax.legend()
     plt.xlabel('Evaluation')
