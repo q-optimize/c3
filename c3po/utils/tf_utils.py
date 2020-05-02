@@ -150,10 +150,10 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    # terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
-    # TODO test eyeballing of the number of terms in the taylor expansion
-    # dU = tf_expm(lind_op * dt, terms)
-    dU = tf.linalg.expm(lind_op * dt)
+    terms = int(1e12 * dt)  # Eyeball number of terms in expm
+    dU = tf_expm(lind_op * dt, terms)
+    # Built-in tensorflow exponential below
+    # dU = tf.linalg.expm(lind_op * dt)
     return dU
 
 
