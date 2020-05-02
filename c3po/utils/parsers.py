@@ -319,11 +319,17 @@ def create_c3_opt(optimizer_config):
 
     batch_sizes = cfg['batch_size']
 
+    if 'seqs_per_point' in cfg:
+        seqs_per_point = cfg['seqs_per_point']
+    else:
+        seqs_per_point = None
+
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
+        seqs_per_point=seqs_per_point,
         opt_map=exp_opt_map,
         state_labels=state_labels,
         callback_foms=callback_foms,

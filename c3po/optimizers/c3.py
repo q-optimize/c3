@@ -22,6 +22,7 @@ class C3(Optimizer):
         fom,
         sampling,
         batch_sizes,
+        seqs_per_point,
         opt_map,
         state_labels=None,
         callback_foms=[],
@@ -35,6 +36,7 @@ class C3(Optimizer):
         self.fom = fom
         self.sampling = sampling
         self.batch_sizes = batch_sizes
+        self.seqs_per_point = seqs_per_point
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.callback_foms = callback_foms
@@ -128,6 +130,7 @@ class C3(Optimizer):
 
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         count = 0
+        seqs_pp = self.seqs_per_point
 
         for target, data in self.learn_data.items():
 
@@ -141,10 +144,10 @@ class C3(Optimizer):
                 m = self.learn_from[ipar]
                 gateset_params = m['params']
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results']
-                m_stds = m['results_std']
-                m_shots = m['shots']
-                sequences = m['seqs']
+                m_vals = m['results'][:seqs_pp]
+                m_stds = m['results_std'][:seqs_pp]
+                m_shots = m['shots'][:seqs_pp]
+                sequences = m['seqs'][:seqs_pp]
                 num_seqs = len(sequences)
 
                 self.exp.gateset.set_parameters(
