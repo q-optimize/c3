@@ -125,9 +125,9 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
         ii += 1
-    # terms = max(24, int(2e12 * dt))  # Eyeball number of terms in expm
-    # dU = tf_expm(-1j * h * dt, terms)
-    dU = tf.linalg.expm(-1j * h * dt)
+    terms = int(1e12 * dt)
+    dU = tf_expm(-1j * h * dt, terms)
+    # dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
 @tf.function
@@ -408,8 +408,37 @@ def tf_expm(A, terms):
     r += A
 
     for ii in range(2, terms):
-        A_powers = tf.matmul(A_powers, A)
-        r += A_powers / np.math.factorial(ii)
+        A_powers = tf.matmul(A_powers, A) / ii
+        ii += 1
+        r += A_powers
+    return r
+
+def tf_expm_dynamic(A, acc=1e-4):
+    """
+    Matrix exponential by the series method.
+
+    Parameters
+    ----------
+    A : tf.tensor
+        Matrix to be exponentiated.
+    terms : int
+        Number of terms in the series.
+
+    Returns
+    -------
+    tf.tensor
+        expm(A)
+
+    """
+    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
+    A_powers = A
+    r += A
+
+    ii = tf.constant(2, dtype=tf.complex128)
+    while tf.reduce_max(tf.abs(A_powers))>acc:
+        A_powers = tf.matmul(A_powers, A) / ii
+        ii += 1
+        r += A_powers
     return r
 
 
