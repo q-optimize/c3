@@ -23,6 +23,13 @@ def plots_reg_deco(func):
     plots[str(func.__name__)] = func
     return func
 
+def layout(n):
+    if not (n%2):
+        return n//2, 2
+    elif n==9:
+        return 3, 3
+    else:
+        return n, 1
 
 nice_parameter_name = {
     "amp": "Amplitude",
@@ -39,13 +46,13 @@ nice_parameter_name = {
     "Q1": "Qubit 1",
     "Q2": "Qubit 2",
     "conf_matrix": "$M$",
-    "confusion_row_Q1": "Qubit 1",
-    "confusion_row_Q2": "Qubit 2",
+    "confusion_row_Q1": "Confusion",
+    "confusion_row_Q2": "Confusion",
     "meas_rescale": "Readout",
     "meas_offset": "offset",
     "meas_scale": "scale",
     "Q1-Q2": "coupling",
-    "strength": "strength $g$",
+    "strength": "coupling $g$",
     "X90p:Id": "$X_{+\\frac{\\pi}{2}}\\otimes\\mathcal{I}$",
     "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$"
 }
@@ -414,9 +421,8 @@ def plot_C3(
         scaling = {}
         opt_map = json.loads(log[3])
 
-        subplot_ids = {}
+        subplot_names = []
         subplot_legends = {}
-        subplot_id = 1
         for line in log[4:]:
             if line[0] == "{":
                 point = json.loads(line)
@@ -451,10 +457,16 @@ def plot_C3(
                                 real_parameters[p_name].append(real_value)
                             p_name_splt = p_name.split("-")
                             p_type = p_name_splt[-1]
-                            par_identifier = p_name_splt[1]
-                            if not p_type in subplot_ids.keys():
-                                subplot_ids[p_type] = subplot_id
-                                subplot_id += 1
+                            if (
+                                p_type == nice_parameter_name["freq"] or
+                                p_type == nice_parameter_name["anhar"]
+                            ):
+                                if not p_name in subplot_names:
+                                    subplot_names.append(p_name)
+                            else:
+                                par_identifier = p_name_splt[1]
+                                if not p_type in subplot_names:
+                                    subplot_names.append(p_type)
 
 
         this_log = {
@@ -493,43 +505,65 @@ def plot_C3(
 
         n_params = len(parameters.keys())
         its = range(1, len(goal_function) + 1)
+
+        subplot_ids = {}
+        ii = 1
+        for key in sorted(subplot_names, key=lambda key: key.split("-")[-1]):
+            subplot_ids[key] = ii
+            ii += 1
+
         subplots = {}
         if len(subplot_ids) > 0:
-            nrows = int(np.ceil(np.sqrt(len(subplot_ids))))
-            ncols = int(np.ceil((len(subplot_ids)) / nrows))
+            nrows, ncols = layout(len(subplot_ids))
             fig, axes = plt.subplots(
                 figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols,
                 sharex='col'
             )
             ii = 1
+            print(subplot_ids)
             for p_name in parameters.keys():
                 p_type = p_name.split("-")[-1]
-                par_identifier = p_name.split("-")[1]
-                if not p_type in subplots.keys():
-                    id = subplot_ids[p_type] - 1
-                    if ncols>1:
-                        subplots[p_type] = axes[id // nrows][id % nrows]
-                    else:
-                        subplots[p_type] = axes[id % nrows]
-                ax = subplots[p_type]
-                l = ax.plot(
-                    its, scaling[p_name] * parameters[p_name], ".-",
-                    markersize=12, linewidth=0.5, label=par_identifier
-                )
+                if (
+                    p_type == nice_parameter_name["freq"] or
+                    p_type == nice_parameter_name["anhar"]
+                ):
+                    if not p_name in subplots.keys():
+                        id = subplot_ids[p_name] - 1
+                        if ncols>1:
+                            subplots[p_name] = axes[id // ncols][id % ncols]
+                        else:
+                            subplots[p_name] = axes[id % nrows]
+                    ax = subplots[p_name]
+                else:
+                    par_identifier = p_name.split("-")[1]
+                    if not p_type in subplots.keys():
+                        id = subplot_ids[p_type] - 1
+                        if ncols>1:
+                            subplots[p_type] = axes[id // ncols][id % ncols]
+                        else:
+                            subplots[p_type] = axes[id % nrows]
+                    ax = subplots[p_type]
+                try:
+                    l = ax.plot(
+                        its, scaling[p_name] * parameters[p_name], ".-",
+                        markersize=12, linewidth=0.5, label=par_identifier
+                    )
+                    if use_synthetic:
+                        sim_color = l[-1].get_color()
+                        real_color = clrs.hsv_to_rgb(
+                            clrs.rgb_to_hsv(clrs.to_rgb(sim_color))
+                            - [0, 0, 0.25]
+                        )
+                        ax.plot(
+                            its, scaling[p_name] *  real_parameters[p_name], "--",
+                            color=real_color, label = par_identifier + " real",
+                            linewidth=2
+                        )
+                except:
+                    print(f"Error plotting {p_name}")
                 ax.tick_params(
                     direction="in", left=True, right=True, top=True, bottom=True
                 )
-                if use_synthetic:
-                    sim_color = l[-1].get_color()
-                    real_color = clrs.hsv_to_rgb(
-                        clrs.rgb_to_hsv(clrs.to_rgb(sim_color))
-                        - [0, 0, 0.25]
-                    )
-                    ax.plot(
-                        its, scaling[p_name] *  real_parameters[p_name], "--",
-                        color=real_color, label = par_identifier + " real",
-                        linewidth=2
-                    )
                 ax.set_ylabel(p_type + units[p_name])
                 ax.xaxis.set_major_locator(MaxNLocator(integer=True))
                 ax.grid(linestyle="--", linewidth=0.5)
