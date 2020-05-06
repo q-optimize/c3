@@ -50,9 +50,6 @@ class C3(Optimizer):
             run_name = self.algorithm.__name__ + '-' \
                 + self.sampling.__name__ + '-' \
                 + self.fom.__name__
-        # datafile = os.path.basename(self.datafile)
-        # datafile = datafile.split('.')[0]
-        # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'model_learn.log'
 
@@ -83,8 +80,8 @@ class C3(Optimizer):
         self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
-        os.makedirs(self.logdir + 'dynamics_seq')
-        os.makedirs(self.logdir + 'dynamics_xyxy')
+        # os.makedirs(self.logdir + 'dynamics_seq')
+        # os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         self.init_gateset_params = self.exp.gateset.get_parameters()
@@ -203,7 +200,7 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
                                 f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):-8.6f}\n"
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
 
