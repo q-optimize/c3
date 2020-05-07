@@ -58,8 +58,8 @@ class SET(Optimizer):
 
     def read_data(self, datafiles):
         for target, datafile in datafiles.items():
-                    with open(datafile, 'rb+') as file:
-                        self.learn_data[target] = pickle.load(file)
+            with open(datafile, 'rb+') as file:
+                self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -90,8 +90,6 @@ class SET(Optimizer):
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         self.init_gateset_params = self.exp.gateset.get_parameters()
         self.init_gateset_opt_map = self.exp.gateset.list_parameters()
-        if self.same_dyn:
-            self.exp.get_gates()
         try:
             self.algorithm(
                 x0,
@@ -119,10 +117,10 @@ class SET(Optimizer):
 
         # print("tup: " + str(tup))
         # print("val: " + str(val))
-        print(self.opt_map)
+        # print(self.opt_map)
         self.exp.set_parameters(val, self.opt_map, scaled=False)
-        print("params>>> ")
-        print(self.exp.print_parameters(self.opt_map))
+        # print("params>>> ")
+        # print(self.exp.print_parameters(self.opt_map))
 
         # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         count = 0
@@ -131,8 +129,6 @@ class SET(Optimizer):
             self.learn_from = data['seqs_grouped_by_param_set']
             self.gateset_opt_map = data['opt_map']
             indeces = self.select_from_data(self.batch_sizes[target])
-
-            # print("indeces: " + str(len(indeces)))
 
             for ipar in indeces:
                 # if count % 100 == 0:
@@ -161,11 +157,12 @@ class SET(Optimizer):
                 self.exp.opt_gates = list(
                     set(itertools.chain.from_iterable(sequences))
                 )
-                if not self.same_dyn:
+                if self.same_dyn and self.evaluation != 0:
+                    pass
+                else:
                     self.exp.get_gates()
-                sim_vals = self.exp.evaluate(
-                    sequences, labels=self.state_labels[target]
-                )
+                    self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target])
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
@@ -242,7 +239,7 @@ class SET(Optimizer):
                     est(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(est.__name__, val))
-                print("{}: {}".format(est.__name__, val))
+                #print("{}: {}".format(est.__name__, val))
             print("")
             logfile.flush()
 
