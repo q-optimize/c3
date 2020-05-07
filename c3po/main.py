@@ -11,7 +11,6 @@ import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
-
 #import os
 #import tensorflow as tf
 
