@@ -520,7 +520,6 @@ def plot_C3(
                 sharex='col'
             )
             ii = 1
-            print(subplot_ids)
             for p_name in parameters.keys():
                 p_type = p_name.split("-")[-1]
                 if (
