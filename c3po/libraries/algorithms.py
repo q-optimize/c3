@@ -3,6 +3,7 @@ import cma.evolution_strategy as cma
 import numpy as np
 # from nevergrad.optimization import registry as algo_registry
 import adaptive
+import copy
 
 algorithms = dict()
 def algo_reg_deco(func):
@@ -60,7 +61,13 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     for x in xs:
         for y in ys:
-            fun([x, y])
+            if 'wrapper' in options:
+                val = copy.deepcopy(options['wrapper'])
+                val[val.index('x')] = x
+                val[val.index('y')] = y
+                fun([val])
+            else:
+                fun([x, y])
 
 
 @algo_reg_deco
