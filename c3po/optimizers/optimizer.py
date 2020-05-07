@@ -5,7 +5,7 @@ import time
 import json
 import tensorflow as tf
 import numpy as np
-import c3po.libraries.algorithms
+import c3po.libraries.algorithms as algorithms
 
 
 class Optimizer:
@@ -26,8 +26,8 @@ class Optimizer:
         if algorithm is not None:
             self.algorithm = algorithm
         else:
-            raise Exception("No algorithm passed. Using default LBFGS")
-            self.algorithm = c3po.algorithms.lbfgs
+            print("C3:WARNING:No algorithm passed. Using default LBFGS")
+            self.algorithm = algorithms.lbfgs
 
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir

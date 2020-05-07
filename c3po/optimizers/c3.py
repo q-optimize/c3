@@ -52,9 +52,6 @@ class C3(Optimizer):
             run_name = self.algorithm.__name__ + '-' \
                 + self.sampling.__name__ + '-' \
                 + self.fom.__name__
-        # datafile = os.path.basename(self.datafile)
-        # datafile = datafile.split('.')[0]
-        # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'model_learn.log'
 
@@ -85,8 +82,8 @@ class C3(Optimizer):
         self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
-        os.makedirs(self.logdir + 'dynamics_seq')
-        os.makedirs(self.logdir + 'dynamics_xyxy')
+        # os.makedirs(self.logdir + 'dynamics_seq')
+        # os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         self.init_gateset_params = self.exp.gateset.get_parameters()
@@ -164,9 +161,8 @@ class C3(Optimizer):
                     set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
-                sim_vals = self.exp.evaluate(
-                    sequences, labels=self.state_labels[target]
-                )
+                self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target])
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
@@ -206,9 +202,18 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
                                 f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):-8.6f}\n"
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
+                #     with open(self.logdir + target + '_exp_pops.log', 'a+') as logfile:
+                #         logfile.write(json.dumps(m_val.tolist()))
+                #         logfile.write("\n")
+                #
+                # with open(self.logdir + target + '_sim_pops.log', 'a+') as logfile:
+                #     for pop in self.exp.pops:
+                #         logfile.write(json.dumps(pop.numpy().tolist()))
+                #         logfile.write("\n")
+
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)

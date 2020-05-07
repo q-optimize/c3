@@ -90,7 +90,7 @@ class ConfusionMatrix(Task):
         for qubit, conf_row in confusion_rows.items():
             self.params['confusion_row_'+qubit] = conf_row
 
-    def confuse(self, pops, lindbladian):
+    def confuse(self, pops):
         # if 'confusion_row' in self.params:
         conf_matrix = tf.constant([[1]], dtype=tf.float64)
         for conf_row in self.params.values():

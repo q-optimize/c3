@@ -99,32 +99,28 @@ class Experiment:
         return "".join(ret)
     # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
-    # def evaluate(self, seqs):
-    #     def unit_X90p(U_dict):
-    #         return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
-    #     U_dict = self.get_gates()
-    #     results = [unit_X90p(U_dict)]
-    #     return results
-
-    def evaluate(self, seqs, labels=None):
+    def evaluate(self, seqs):
         Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
         psi_init = self.model.tasks["init_ground"].initialise(
             self.model.drift_H,
             self.model.lindbladian
         )
         self.psi_init = psi_init
-        populations_final = []
+        populations = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
             pops = self.populations(
                 psi_final, self.model.lindbladian
             )
+            populations.append(pops)
+        self.pops = populations
+
+    def process(self, labels=None):
+        populations_final = []
+        for pops in self.pops:
             # TODO: Loop over all tasks in a general fashion
             if "conf_matrix" in self.model.tasks:
-                pops = self.model.tasks["conf_matrix"].confuse(
-                    pops,
-                    self.model.lindbladian
-                )
+                pops = self.model.tasks["conf_matrix"].confuse(pops)
             if labels is not None:
                 pops_select = 0
                 for l in labels:
