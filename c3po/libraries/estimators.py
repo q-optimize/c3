@@ -170,8 +170,9 @@ def g_LL_prime(exp_values, sim_values, exp_stds, shots):
     loglkh = tf.reduce_sum(loglkhs)
 
     K = len(sim_values)
-    print("K: " + str(K))
+    # print("K: " + str(K))
     loglkh = - (1 / K) * loglkh
+    loglkh = tf.math.maximum(loglkh, 0)
     return tf.sqrt(loglkh)
 
 
