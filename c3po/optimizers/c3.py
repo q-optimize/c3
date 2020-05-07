@@ -158,9 +158,8 @@ class C3(Optimizer):
                     set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
-                sim_vals = self.exp.evaluate(
-                    sequences, labels=self.state_labels[target]
-                )
+                self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target])
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
@@ -203,6 +202,15 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
+                #     with open(self.logdir + target + '_exp_pops.log', 'a+') as logfile:
+                #         logfile.write(json.dumps(m_val.tolist()))
+                #         logfile.write("\n")
+                #
+                # with open(self.logdir + target + '_sim_pops.log', 'a+') as logfile:
+                #     for pop in self.exp.pops:
+                #         logfile.write(json.dumps(pop.numpy().tolist()))
+                #         logfile.write("\n")
+
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
