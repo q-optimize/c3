@@ -152,27 +152,15 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if 'stop_at_convergence' in options:
         sigma_conv = int(options.pop('stop_at_convergence'))
         sigmas = []
-        custom_stop = True
+        shrinked_stop = True
 
     settings = options
 
     es = cma.CMAEvolutionStrategy(x0, spread, settings)
     iter = 0
     while not es.stop():
-        samples = es.ask()
-        if init_point and iter == 0:
-            samples.insert(0,x0)
-            print('C3:STATUS:Adding initial point to CMA sample.')
-        solutions = []
-        for sample in samples:
-            goal = fun(sample)
-            if noise:
-                goal = goal + (np.random.randn() * noise)
-            solutions.append(goal)
-        es.tell(samples, solutions)
-        es.disp()
 
-        if custom_stop:
+        if shrinked_stop:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
                 if(
@@ -186,13 +174,27 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
                         'Switching to gradients.'
                     )
                     break
+
+        samples = es.ask()
+        if init_point and iter == 0:
+            samples.insert(0,x0)
+            print('C3:STATUS:Adding initial point to CMA sample.')
+        solutions = []
+        for sample in samples:
+            goal = fun(sample)
+            if noise:
+                goal = goal + (np.random.randn() * noise)
+            solutions.append(goal)
+        es.tell(samples, solutions)
+        es.disp()
+
         iter += 1
+    return es.result.xbest
 
 
 @algo_reg_deco
 def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
-    es = cmaes(x0, fun, options=options['cmaes'])
-    x1 = es.result.xbest
+    x1 = cmaes(x0, fun, options=options['cmaes'])
     lbfgs(
         x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
     )
