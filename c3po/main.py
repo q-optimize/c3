@@ -11,10 +11,6 @@ import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
-
-import sys
-sys.stdout = open('output.log', 'a', 1)
-
 #import os
 #import tensorflow as tf
 
@@ -62,9 +58,6 @@ with tf.device('/CPU:0'):
         raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
     dir = opt.logdir
-
-    shutil.move('output.log', dir + 'output.log')
-    sys.stdout =  open(dir + 'output.log', 'a', 1)
 
     shutil.copy2(exp_setup, dir)
     shutil.copy2(opt_config, dir)
