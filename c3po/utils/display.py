@@ -45,6 +45,8 @@ nice_parameter_name = {
     "xy_angle": "$\\alpha_{xy}$",
     "Q1": "Qubit 1",
     "Q2": "Qubit 2",
+    "init_ground" : "",
+    "init_temp": "temperature $T$",
     "conf_matrix": "$M$",
     "confusion_row_Q1": "Confusion",
     "confusion_row_Q2": "Confusion",
@@ -427,7 +429,9 @@ def plot_C3(
             if line[0] == "{":
                 point = json.loads(line)
                 if 'goal' in point.keys():
-                    if only_iterations and point['goal']<best_goal:
+                    if only_iterations and point['goal']>best_goal:
+                        pass
+                    else:
                         best_goal = point['goal']
                         goal_function.append(point['goal'])
 
