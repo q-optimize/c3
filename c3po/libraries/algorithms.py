@@ -149,10 +149,16 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         spread = 0.1
 
+    shrinked_check = False
     if 'stop_at_convergence' in options:
         sigma_conv = int(options.pop('stop_at_convergence'))
         sigmas = []
-        shrinked_stop = True
+        shrinked_check = True
+
+    sigma_check = False
+    if 'stop_at_sigma' in options:
+        stop_sigma = int(options.pop('stop_at_sigma'))
+        sigma_check = True
 
     settings = options
 
@@ -160,7 +166,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     iter = 0
     while not es.stop():
 
-        if shrinked_stop:
+        if shrinked_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
                 if(
@@ -174,6 +180,13 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
                         'Switching to gradients.'
                     )
                     break
+
+        if sigma_check:
+            if es.sigma < stop_sigma:
+                print(
+                    f'C3:STATUS:Goal sigma reached. Stopping CMA.'
+                )
+                break
 
         samples = es.ask()
         if init_point and iter == 0:
