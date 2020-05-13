@@ -232,14 +232,14 @@ class C3(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            print("{}: {}".format(self.fom.__name__, goal_numpy))
+            # print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                print("{}: {}".format(cb_fom.__name__, val))
-            print("")
+                # print("{}: {}".format(cb_fom.__name__, val))
+            # print("")
             logfile.flush()
 
         for cb_fig in self.callback_figs:
