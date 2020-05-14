@@ -49,7 +49,7 @@ with tf.device('/CPU:0'):
     elif optim_type == "C2":
         eval_func = cfg['eval_func']
         opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
-    elif optim_type == "C3":
+    elif optim_type == "C3" or optim_type == "C3_confirm":
         print("C3:STATUS: creating c3 opt ...")
         opt = parsers.create_c3_opt(opt_config)
     elif optim_type == "SET":
@@ -134,6 +134,17 @@ with tf.device('/CPU:0'):
             dir
         )
         opt.learn_model()
+
+    elif optim_type == "C3_confirm":
+        learn_from = []
+        opt.read_data(cfg['datafile'])
+        key = list(cfg['datafile'].keys())[0]
+        shutil.copy2(
+            "/".join(cfg['datafile'][key].split("/")[0:-1]) \
+            + "/real_model_params.log",
+            dir
+        )
+        opt.confirm()
 
     elif optim_type == "SET":
         learn_from = []
