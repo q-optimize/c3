@@ -125,7 +125,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
         ii += 1
-    terms = int(1e12 * dt)
+    terms = int(1e12 * dt) + 1
     dU = tf_expm(-1j * h * dt, terms)
     # dU = tf.linalg.expm(-1j * h * dt)
     return dU
@@ -150,7 +150,7 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    terms = int(1e12 * dt)  # Eyeball number of terms in expm
+    terms = int(1e12 * dt) + 1 # Eyeball number of terms in expm
     dU = tf_expm(lind_op * dt, terms)
     # Built-in tensorflow exponential below
     # dU = tf.linalg.expm(lind_op * dt)

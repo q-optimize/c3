@@ -22,6 +22,7 @@ class C3(Optimizer):
         fom,
         sampling,
         batch_sizes,
+        seqs_per_point,
         opt_map,
         state_labels=None,
         callback_foms=[],
@@ -35,6 +36,7 @@ class C3(Optimizer):
         self.fom = fom
         self.sampling = sampling
         self.batch_sizes = batch_sizes
+        self.seqs_per_point = seqs_per_point
         self.opt_map = opt_map
         self.state_labels = state_labels
         self.callback_foms = callback_foms
@@ -50,9 +52,6 @@ class C3(Optimizer):
             run_name = self.algorithm.__name__ + '-' \
                 + self.sampling.__name__ + '-' \
                 + self.fom.__name__
-        # datafile = os.path.basename(self.datafile)
-        # datafile = datafile.split('.')[0]
-        # string = string + '----[' + datafile + ']'
         self.logdir = log_setup(self.dir_path, run_name)
         self.logname = 'model_learn.log'
 
@@ -83,8 +82,8 @@ class C3(Optimizer):
         self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
-        os.makedirs(self.logdir + 'dynamics_seq')
-        os.makedirs(self.logdir + 'dynamics_xyxy')
+        # os.makedirs(self.logdir + 'dynamics_seq')
+        # os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.exp.get_parameters(self.opt_map, scaled=True)
         self.init_gateset_params = self.exp.gateset.get_parameters()
@@ -128,6 +127,7 @@ class C3(Optimizer):
 
         self.exp.set_parameters(current_params, self.opt_map, scaled=True)
         count = 0
+        seqs_pp = self.seqs_per_point
 
         for target, data in self.learn_data.items():
 
@@ -141,10 +141,10 @@ class C3(Optimizer):
                 m = self.learn_from[ipar]
                 gateset_params = m['params']
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results']
-                m_stds = m['results_std']
-                m_shots = m['shots']
-                sequences = m['seqs']
+                m_vals = m['results'][:seqs_pp]
+                m_stds = m['results_std'][:seqs_pp]
+                m_shots = m['shots'][:seqs_pp]
+                sequences = m['seqs'][:seqs_pp]
                 num_seqs = len(sequences)
 
                 self.exp.gateset.set_parameters(
@@ -161,9 +161,8 @@ class C3(Optimizer):
                     set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
-                sim_vals = self.exp.evaluate(
-                    sequences, labels=self.state_labels[target]
-                )
+                self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target])
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
@@ -203,9 +202,18 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
                                 f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):-8.6f}\n"
+                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
+                #     with open(self.logdir + target + '_exp_pops.log', 'a+') as logfile:
+                #         logfile.write(json.dumps(m_val.tolist()))
+                #         logfile.write("\n")
+                #
+                # with open(self.logdir + target + '_sim_pops.log', 'a+') as logfile:
+                #     for pop in self.exp.pops:
+                #         logfile.write(json.dumps(pop.numpy().tolist()))
+                #         logfile.write("\n")
+
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
@@ -224,14 +232,14 @@ class C3(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            print("{}: {}".format(self.fom.__name__, goal_numpy))
+            # print("{}: {}".format(self.fom.__name__, goal_numpy))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                print("{}: {}".format(cb_fom.__name__, val))
-            print("")
+                # print("{}: {}".format(cb_fom.__name__, val))
+            # print("")
             logfile.flush()
 
         for cb_fig in self.callback_figs:

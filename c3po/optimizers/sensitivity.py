@@ -6,88 +6,60 @@ import pickle
 import itertools
 import time
 import numpy as np
-import adaptive
 import tensorflow as tf
 import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
-from c3po.libraries.estimators import estimators
 
 
-class SET():
+class SET(Optimizer):
     """Object that deals with the sensitivity test."""
 
     def __init__(
         self,
         dir_path,
-        estimator_list,
         fom,
+        estimator_list,
         sampling,
         batch_sizes,
-        opt_map,
         state_labels=None,
         sweep_map=None,
-        probe_list=[],
-        accuracy_goal = 0.5,
-        callback_foms=[],
-        callback_figs=[],
-        # algorithm_no_grad=None,
-        # algorithm_with_grad=None,
+        sweep_bounds=None,
+        algorithm=None,
+        run_name=None,
+        same_dyn=False,
         options={}
     ):
         """Initiliase."""
-        # not really needed? it's not an optimization
-        self.optim_status = {}
-
-        self.estimator_list = estimator_list
+        super().__init__(algorithm=algorithm)
         self.fom = fom
+        self.estimator_list = estimator_list
         self.sampling = sampling
         self.batch_sizes = batch_sizes
-        self.opt_map = opt_map
         self.state_labels = state_labels
-        self.sweep_map = sweep_map
-        self.probe_list = probe_list
-        self.accuracy_goal = accuracy_goal
-        self.callback_foms = callback_foms
-        self.callback_figs = callback_figs
-        self.inverse = False
+        self.opt_map = sweep_map
+        self.sweep_bounds = sweep_bounds
         self.options = options
+        self.inverse = False
         self.learn_data = {}
-        self.log_setup(dir_path)
+        self.same_dyn = same_dyn
+        self.log_setup(dir_path, run_name)
 
-    def log_setup(self, dir_path):
+    def log_setup(self, dir_path, run_name):
         self.dir_path = os.path.abspath(dir_path)
-        self.string = "set_test"
-        # self.string = self.algorithm.__name__ + '-' \
-        #          + self.sampling + '-' \
-        #          + str(self.batch_size) + '-' \
-        #          + self.fom.__name__
-        # datafile = os.path.basename(self.datafile)
-        # datafile = datafile.split('.')[0]
-        # string = string + '----[' + datafile + ']'
-        self.logdir = log_setup(dir_path, self.string)
-        self.logname = 'model_learn.log'
-
-    def start_log(self):
-        self.start_time = time.time()
-        start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-        with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write("Starting optimization at ")
-            logfile.write(start_time_str)
-            logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.opt_map))
-            logfile.write("\n")
-            logfile.flush()
-
-    def set_exp(self, exp):
-        self.exp = exp
+        if run_name is None:
+            run_name = "sensitivity" \
+                + self.algorithm.__name__ + '-' \
+                + self.sampling.__name__ + '-' \
+                + self.fom.__name__
+        self.logdir = log_setup(self.dir_path, run_name)
+        self.logname = "sensitivity.log"
 
     def read_data(self, datafiles):
         for target, datafile in datafiles.items():
-                    with open(datafile, 'rb+') as file:
-                        self.learn_data[target] = pickle.load(file)
-
+            with open(datafile, 'rb+') as file:
+                self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
         with open(init_point) as init_file:
@@ -96,9 +68,7 @@ class SET():
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
-
     def select_from_data(self, batch_size):
-        # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
         sampling = self.sampling
         indeces =  sampling(learn_from, batch_size)
@@ -107,6 +77,37 @@ class SET():
         else:
             return indeces
 
+    def sensitivity_test(self):
+        self.start_log()
+        self.nice_print = self.exp.print_parameters
+
+        print("Initial parameters:")
+        print(self.exp.print_parameters())
+        self.dfname = "data.dat"
+        self.options['bounds'] = self.sweep_bounds
+
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
+        self.init_gateset_params = self.exp.gateset.get_parameters()
+        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
+        try:
+            self.algorithm(
+                x0,
+                fun=self.fct_to_min,
+                fun_grad=self.fct_to_min_autograd,
+                grad_lookup=self.lookup_gradient,
+                options=self.options
+            )
+        except KeyboardInterrupt:
+            pass
+
+        # #=== Get the resulting data ======================================
+
+        # Xs=np.array(list(learner.data.keys()))
+        # Ys=np.array(list(learner.data.values()))
+        # Ks=np.argsort(Xs)
+        # Xs=Xs[Ks]
+        # Ys=Ys[Ks]
 
     def goal_run(self, val):
         exp_values = []
@@ -114,15 +115,14 @@ class SET():
         sim_values = []
         exp_shots = []
 
-        #self.exp.set_parameters(current_params, self.opt_map, scaled=False)
         # print("tup: " + str(tup))
         # print("val: " + str(val))
-        self.exp.set_parameters([val],[self.tup], scaled=False)
-        print("params>>> ")
-        params = self.exp.print_parameters(self.opt_map)
-        print(params)
+        # print(self.opt_map)
+        self.exp.set_parameters(val, self.opt_map, scaled=False)
+        # print("params>>> ")
+        # print(self.exp.print_parameters(self.opt_map))
 
-        print("self.learn_data.items(): " + str(len(self.learn_data.items())))
+        # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         count = 0
         for target, data in self.learn_data.items():
 
@@ -130,11 +130,9 @@ class SET():
             self.gateset_opt_map = data['opt_map']
             indeces = self.select_from_data(self.batch_sizes[target])
 
-            print("indeces: " + str(len(indeces)))
-
             for ipar in indeces:
-                if count % 100 == 0:
-                        print("count: " + str(count))
+                # if count % 100 == 0:
+                #     print("count: " + str(count))
 
                 count += 1
                 m = self.learn_from[ipar]
@@ -147,23 +145,28 @@ class SET():
                 num_seqs = len(sequences)
 
                 self.exp.gateset.set_parameters(
+                    self.init_gateset_params,
+                    self.init_gateset_opt_map,
+                    scaled=False
+                )
+                self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
-
                 # We find the unique gates used in the sequence and compute
                 # only them.
                 self.exp.opt_gates = list(
                     set(itertools.chain.from_iterable(sequences))
                 )
-                self.exp.get_gates()
-                sim_vals = self.exp.evaluate(
-                    sequences, labels=self.state_labels[target]
-                )
+                if self.same_dyn and self.evaluation != 0:
+                    pass
+                else:
+                    self.exp.get_gates()
+                    self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target])
 
                 # exp_values.extend(m_vals)
                 # exp_stds.extend(m_stds)
                 sim_values.extend(sim_vals)
-
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -178,8 +181,8 @@ class SET():
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         "
-                        "Diff\n"
+                        "Sequence    Simulation  Experiment  Std         Shots"
+                        "       Diff\n"
                     )
 
                 for iseq in range(num_seqs):
@@ -220,39 +223,25 @@ class SET():
         with open(self.logdir + self.dfname, 'a') as datafile:
             datafile.write(f"{val}\t{goal_numpy}\n")
 
-        for estimator in self.estimator_list:
-            fom = estimators[estimator]
-            tmp = fom(exp_values, sim_values, exp_stds, exp_shots)
+        for est in self.estimator_list:
+            tmp = est(exp_values, sim_values, exp_stds, exp_shots)
             tmp = float(tmp.numpy())
-            fname = estimator + '.dat'
+            fname = est.__name__ + '.dat'
             with open(self.logdir + fname, 'a') as datafile:
                 datafile.write(f"{val}\t{tmp}\n")
-
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
             print("{}: {}".format(self.fom.__name__, goal_numpy))
-            for cb_fom in self.callback_foms:
+            for est in self.estimator_list:
                 val = float(
-                    cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
+                    est(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
-                logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                print("{}: {}".format(cb_fom.__name__, val))
+                logfile.write("{}: {}\n".format(est.__name__, val))
+                #print("{}: {}".format(est.__name__, val))
             print("")
             logfile.flush()
-
-
-#         for cb_fig in self.callback_figs:
-            # fig = cb_fig(exp_values, sim_values.numpy()[0], exp_stds)
-            # fig.savefig(
-                # self.logdir
-                # + cb_fig.__name__ + '/'
-                # + 'eval:' + str(self.evaluation) + "__"
-                # + self.fom.__name__ + str(round(goal_numpy, 3))
-                # + '.png'
-            # )
-            # plt.close(fig)
 
         self.optim_status['params'] = [
             par.numpy().tolist()
@@ -260,63 +249,4 @@ class SET():
         ]
         self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
-        return goal_numpy
-
-
-
-
-
-    def sensitivity_test(self):
-        self.evaluation = 0
-
-        self.logname = 'confirm_runner' + '.log'
-        self.dfname = "data.dat"
-        self.start_log()
-
-        #for tmp in self.sweep_map:
-        tmp = self.sweep_map[0]
-        print(tmp)
-
-        bound_min = tmp[2][0]
-        bound_max = tmp[2][1]
-        self.tup = (tmp[0],tmp[1])
-
-        print(f"\nSaving as:\n{os.path.abspath(self.logdir + self.logname)}")
-
-#         tmp = min(self.probe_list)
-        # for i in range(30):
-                # tmp = 0.9 * tmp
-                # self.probe_list.append(tmp)
-
-        probe_list_min = min(self.probe_list)
-        probe_list_max = max(self.probe_list)
-
-        bound_min = min(bound_min, probe_list_min)
-        bound_max = max(bound_max, probe_list_max)
-
-        print(" ")
-        print("bound_min: " + str((bound_min)/(2e9 * np.pi)))
-        print("bound_max: " + str((bound_max)/(2e9 * np.pi)))
-        print(" ")
-
-        learner = adaptive.Learner1D(self.goal_run, bounds=(bound_min, bound_max))
-
-        if self.probe_list:
-            for x in self.probe_list:
-                print("from probe_list: " + str(x))
-                tmp = learner.function(x)
-                print("done\n")
-                learner.tell(x, tmp)
-
-        print("accuracy_goal: " + str(self.accuracy_goal))
-
-        runner = adaptive.runner.simple(learner, goal=lambda learner_: learner_.loss() < self.accuracy_goal)
-
-
-        # #=== Get the resulting data ======================================
-
-        # Xs=np.array(list(learner.data.keys()))
-        # Ys=np.array(list(learner.data.values()))
-        # Ks=np.argsort(Xs)
-        # Xs=Xs[Ks]
-        # Ys=Ys[Ks]
+        return goal

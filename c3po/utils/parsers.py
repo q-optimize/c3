@@ -14,7 +14,7 @@ from runpy import run_path
 from c3po.optimizers.c1 import C1
 from c3po.optimizers.c2 import C2
 from c3po.optimizers.c3 import C3
-from c3po.tasks.sensitivity import SET
+from c3po.optimizers.sensitivity import SET
 
 
 def create_experiment(exp_setup, datafile=''):
@@ -295,14 +295,16 @@ def create_c3_opt(optimizer_config):
             callback_foms.append(estimators[cb_fom])
         except KeyError:
             print(
-                f"C3:WARNING: No estimator named \'{estimator}\' found."
+                f"C3:WARNING: No estimator named \'{cb_fom}\' found."
                 " Skipping this callback estimator."
             )
 
     callback_figs = []
     for key in cfg['callback_figs']:
         callback_figs.append(plots[key])
+
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
+
     try:
         algorithm = algorithms[cfg['algorithm']]
     except KeyError:
@@ -319,11 +321,17 @@ def create_c3_opt(optimizer_config):
 
     batch_sizes = cfg['batch_size']
 
+    if 'seqs_per_point' in cfg:
+        seqs_per_point = cfg['seqs_per_point']
+    else:
+        seqs_per_point = None
+
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
+        seqs_per_point=seqs_per_point,
         opt_map=exp_opt_map,
         state_labels=state_labels,
         callback_foms=callback_foms,
@@ -337,50 +345,30 @@ def create_sensitivity_test(task_config):
     with open(task_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
+    sweep_map = [tuple(a) for a in cfg['sweep_map']]
 
     state_labels = {"all": None}
     if "state_labels" in cfg:
         for target, labels in cfg["state_labels"].items():
             state_labels[target] = [tuple(l) for l in labels]
 
-
     try:
         estimator = cfg['estimator']
     except KeyError:
         print(
-            "C3:WARNING: Non estimator given."
+            "C3:WARNING: No estimator given."
             " Using default estimator RMS distance."
         )
         estimator = 'rms_dist'
     try:
-        fom = estimators[estimator[0]]
+        fom = estimators[estimator]
     except KeyError:
         print(
             f"C3:WARNING: No estimator named \'{estimator}\' found."
             " Using default estimator RMS distance."
         )
-        fom = estimators['neg_loglkh_gauss_norm']
+        fom = estimators['rms_dist']
 
-    try:
-        cb_foms = cfg['callback_est']
-    except KeyError:
-        print("C3:WARNING: Non callback estimators given.")
-        cb_foms = []
-
-    callback_foms = []
-    for cb_fom in cb_foms:
-        try:
-            callback_foms.append(estimators[cb_fom])
-        except KeyError:
-            print(
-                f"C3:WARNING: No estimator named \'{estimator}\' found."
-                " Skipping this callback estimator."
-            )
-
-    callback_figs = []
-    for key in cfg['callback_figs']:
-        callback_figs.append(plots[key])
-    exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
     try:
         algorithm = algorithms[cfg['algorithm']]
     except KeyError:
@@ -391,46 +379,48 @@ def create_sensitivity_test(task_config):
     except KeyError:
         raise KeyError("C3:ERROR:Unkown sampling method.")
 
+    try:
+        est_list = cfg['estimator_list']
+    except KeyError:
+        print("C3:WARNING: No estimators given. Using RMS")
+        est_list = ['rms_dist']
 
-
-
-    sweep_map = []
-    for a in cfg['sweep_map']:
-        tmp = []
-        tmp.append(eval(a[2][0]))
-        tmp.append(eval(a[2][1]))
-        sweep_map.append((a[0],a[1],tuple(tmp)))
-
-    if 'accuracy_goal' in cfg:
-        accuracy_goal = cfg['accuracy_goal']
-
-    if 'probe_list' in cfg:
-        probe_list = []
-        for x in cfg['probe_list']:
-            probe_list.append(eval(x))
-
-
-
-    options = {}
-
+    estimator_list = []
+    for est in est_list:
+        try:
+            estimator_list.append(estimators[est])
+        except KeyError:
+            print(
+                f"C3:WARNING: No estimator named \'{est}\' found."
+                " Skipping this estimator."
+            )
 
     batch_sizes = cfg['batch_size']
 
+    options = {}
     if 'options' in cfg:
         options = cfg['options']
+
+    sweep_bounds = []
+    for a in cfg['sweep_bounds']:
+        sweep_bounds.append([eval(a[0]),eval(a[1])])
+
+    if 'same_dyn' in cfg:
+        same_dyn = bool(cfg['same_dyn'])
+    else:
+        same_dyn = False
+
     set = SET(
         dir_path=cfg['dir_path'],
-        estimator_list = cfg['estimator'],
         fom=fom,
+        estimator_list = estimator_list,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
-        opt_map=exp_opt_map,
         state_labels=state_labels,
         sweep_map=sweep_map,
-        probe_list=probe_list,
-        accuracy_goal=accuracy_goal,
-        callback_foms=callback_foms,
-        callback_figs=callback_figs,
+        sweep_bounds=sweep_bounds,
+        algorithm=algorithm,
+        same_dyn=same_dyn,
         options=options
     )
     return set
