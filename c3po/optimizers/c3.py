@@ -121,11 +121,11 @@ class C3(Optimizer):
     def goal_run(self, current_params):
         display.plot_C3([self.logdir])
         exp_values = []
-        exp_stds = []
         sim_values = []
+        exp_stds = []
         exp_shots = []
-
-        self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+        goals = []
+        grads = []
         count = 0
         seqs_pp = self.seqs_per_point
 
@@ -147,26 +147,41 @@ class C3(Optimizer):
                 sequences = m['seqs'][:seqs_pp]
                 num_seqs = len(sequences)
 
-                self.exp.gateset.set_parameters(
-                    self.init_gateset_params,
-                    self.init_gateset_opt_map,
-                    scaled=False
-                )
-                self.exp.gateset.set_parameters(
-                    gateset_params, gateset_opt_map, scaled=False
-                )
-                # We find the unique gates used in the sequence and compute
-                # only them.
-                self.exp.opt_gates = list(
-                    set(itertools.chain.from_iterable(sequences))
-                )
-                self.exp.get_gates()
-                self.exp.evaluate(sequences)
-                sim_vals = self.exp.process(labels=self.state_labels[target])
+                with tf.GradientTape() as t:
+                    t.watch(current_params)
+                    self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+                    self.exp.gateset.set_parameters(
+                        self.init_gateset_params,
+                        self.init_gateset_opt_map,
+                        scaled=False
+                    )
+                    self.exp.gateset.set_parameters(
+                        gateset_params, gateset_opt_map, scaled=False
+                    )
+                    # We find the unique gates used in the sequence and compute
+                    # only them.
+                    self.exp.opt_gates = list(
+                        set(itertools.chain.from_iterable(sequences))
+                    )
+                    self.exp.get_gates()
+                    self.exp.evaluate(sequences)
+                    sim_vals = self.exp.process(labels=self.state_labels[target])
 
-                # exp_values.extend(m_vals)
-                # exp_stds.extend(m_stds)
+                    exp_stds.extend(m_stds)
+                    exp_shots.extend(m_shots)
+
+                    goal = self.fom(
+                        m_vals,
+                        tf.stack(sim_vals),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64)
+                    )
+
+                goals.append(goal.numpy())
+                grads.append(t.gradient(goal, current_params).numpy())
+
                 sim_values.extend(sim_vals)
+                exp_values.extend(m_vals)
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -189,9 +204,6 @@ class C3(Optimizer):
                     m_val = np.array(m_vals[iseq])
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
-                    exp_values.append(m_val)
-                    exp_stds.append(m_std)
-                    exp_shots.append(shots)
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
@@ -205,34 +217,18 @@ class C3(Optimizer):
                                 f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
                             )
                         logfile.flush()
-                #     with open(self.logdir + target + '_exp_pops.log', 'a+') as logfile:
-                #         logfile.write(json.dumps(m_val.tolist()))
-                #         logfile.write("\n")
-                #
-                # with open(self.logdir + target + '_sim_pops.log', 'a+') as logfile:
-                #     for pop in self.exp.pops:
-                #         logfile.write(json.dumps(pop.numpy().tolist()))
-                #         logfile.write("\n")
 
 
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
-        if exp_values.shape != sim_values.shape:
-            print(
-                "C3:WARNING:"
-                "Data format of experiment and simulation figures of"
-                " merit does not match."
-            )
-        exp_stds = tf.constant(exp_stds, dtype=tf.float64)
-        exp_shots = tf.constant(exp_shots, dtype=tf.float64)
 
-        goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
-        goal_numpy = float(goal.numpy())
+        goal = np.mean(goals)
+        grad = np.mean(grads, axis=0)
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            # print("{}: {}".format(self.fom.__name__, goal_numpy))
+            logfile.write("{}: {}\n".format(self.fom.__name__, goal))
+            # print("{}: {}".format(self.fom.__name__, goal))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
@@ -248,7 +244,7 @@ class C3(Optimizer):
                 self.logdir
                 + cb_fig.__name__ + '/'
                 + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal_numpy, 3))
+                + self.fom.__name__ + str(round(goal, 3))
                 + '.png'
             )
             plt.close(fig)
@@ -257,6 +253,7 @@ class C3(Optimizer):
             par.numpy().tolist()
             for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal_numpy
+        self.optim_status['goal'] = goal
+        self.optim_status['gradient'] = list(grad.flatten())
         self.evaluation += 1
-        return goal
+        return goal, grad

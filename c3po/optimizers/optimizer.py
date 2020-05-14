@@ -132,13 +132,8 @@ class Optimizer:
         return goal
 
     def goal_run_with_grad(self, current_params):
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            goal = self.goal_run(current_params)
-        grad = t.gradient(goal, current_params)
-        gradients = grad.numpy().flatten()
+        goal, gradients = self.goal_run(current_params)
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['gradient'] = gradients.tolist()
         return goal
 
     def lookup_gradient(self, x):
