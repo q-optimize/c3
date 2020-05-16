@@ -232,10 +232,10 @@ class Experiment:
             dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
-        self.dUs[gate] = dUs
-        self.ts = ts
+        #self.dUs[gate] = dUs
+        #self.ts = ts
         U = tf_utils.tf_matmul_left(dUs)
-        self.U = U
+        #self.U = U
         return U
 
     def set_opt_gates(self, opt_gates):
