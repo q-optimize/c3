@@ -221,6 +221,10 @@ def create_c2_opt(optimizer_config, eval_func_path):
             f"C3:ERROR:Unkown experiment type: {cfg['exp_type']}"
         )
 
+    run_name = None
+    if "run_name" in cfg:
+        run_name = cfg['run_name']
+
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
@@ -247,7 +251,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         options = cfg['options']
     opt = C2(
         dir_path=cfg['dir_path'],
-        run_name=cfg['run_name'],
+        run_name=run_name,
         eval_func=eval,
         gateset_opt_map=gateset_opt_map,
         algorithm=algorithm,
