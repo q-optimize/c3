@@ -69,6 +69,38 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
             else:
                 fun([x, y])
 
+@algo_reg_deco
+def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+
+    if 'points' in options:
+        points = options['points']
+    else:
+        points = 100
+
+    probe_list = []
+    if 'probe_list' in options:
+        for x in options['probe_list']:
+            probe_list.append(eval(x))
+
+    if 'init_point' in options:
+        init_point = bool(options.pop('init_point'))
+        if init_point:
+            probe_list.append(x0[0].numpy())
+
+    for p in probe_list:
+        fun([p])
+
+    bounds = options['bounds'][0]
+    bound_min = bounds[0]
+    bound_max = bounds[1]
+    probe_list_min = min(probe_list)
+    probe_list_max = max(probe_list)
+    bound_min = min(bound_min, probe_list_min)
+    bound_max = max(bound_max, probe_list_max)
+    xs = np.linspace(bound_min, bound_max, points)
+    for x in xs:
+        fun([x])
+
 
 @algo_reg_deco
 def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):

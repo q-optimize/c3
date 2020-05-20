@@ -87,7 +87,7 @@ class SET(Optimizer):
         self.options['bounds'] = self.sweep_bounds
 
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
+        x0 = self.exp.get_parameters(self.opt_map, scaled=False)
         self.init_gateset_params = self.exp.gateset.get_parameters()
         self.init_gateset_opt_map = self.exp.gateset.list_parameters()
         try:
