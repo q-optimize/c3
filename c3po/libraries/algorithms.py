@@ -85,10 +85,15 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if 'init_point' in options:
         init_point = bool(options.pop('init_point'))
         if init_point:
-            probe_list.append(x0[0].numpy())
+            fun([x0[0].numpy()])
 
     for p in probe_list:
-        fun([p])
+        if 'wrapper' in options:
+            val = copy.deepcopy(options['wrapper'])
+            val[val.index('x')] = p
+            fun([val])
+        else:
+            fun([p])
 
     bounds = options['bounds'][0]
     bound_min = bounds[0]
@@ -99,7 +104,12 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     bound_max = max(bound_max, probe_list_max)
     xs = np.linspace(bound_min, bound_max, points)
     for x in xs:
-        fun([x])
+        if 'wrapper' in options:
+            val = copy.deepcopy(options['wrapper'])
+            val[val.index('x')] = x
+            fun([val])
+        else:
+            fun([x])
 
 
 @algo_reg_deco
