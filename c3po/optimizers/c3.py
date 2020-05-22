@@ -72,6 +72,8 @@ class C3(Optimizer):
         learn_from = self.learn_from
         sampling = self.sampling
         indeces =  sampling(learn_from, batch_size)
+        total_size = len(learn_from)
+        all = list(range(total_size))
         if self.inverse:
             return list(set(all) - set(indeces))
         else:

@@ -54,6 +54,10 @@ with tf.device('/CPU:0'):
     elif optim_type == "SET":
         print("C3:STATUS: creating set obj")
         opt = parsers.create_sensitivity_test(opt_config)
+    elif optim_type == "confirm":
+        print("C3:STATUS: creating c3 opt ...")
+        opt = parsers.create_c3_opt(opt_config)
+        opt.inverse = True
     else:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
     opt.set_exp(exp)
@@ -123,7 +127,7 @@ with tf.device('/CPU:0'):
 
         opt.optimize_controls()
 
-    elif optim_type == "C3":
+    elif optim_type == "C3" or optim_type == "confirm":
         learn_from = []
         opt.read_data(cfg['datafile'])
         key = list(cfg['datafile'].keys())[0]
