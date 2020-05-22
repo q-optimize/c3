@@ -82,11 +82,6 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         for x in options['probe_list']:
             probe_list.append(eval(x))
 
-    if 'init_point' in options:
-        init_point = bool(options.pop('init_point'))
-        if init_point:
-            fun([x0[0].numpy()])
-
     for p in probe_list:
         if 'wrapper' in options:
             val = copy.deepcopy(options['wrapper'])
@@ -94,6 +89,11 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
             fun([val])
         else:
             fun([p])
+
+    if 'init_point' in options:
+        init_point = bool(options.pop('init_point'))
+        if init_point:
+            fun([x0[0].numpy()])
 
     bounds = options['bounds'][0]
     bound_min = bounds[0]
