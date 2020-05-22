@@ -119,7 +119,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        display.plot_C3([self.logdir])
+        display.plot_C3([self.logdir], only_iterations=False)
         exp_values = []
         exp_stds = []
         sim_values = []

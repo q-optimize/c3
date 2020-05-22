@@ -562,16 +562,17 @@ def plot_C3(
                             color=real_color, label = par_identifier + " real",
                             linewidth=2
                         )
+                        ax.tick_params(
+                            direction="in", left=True, right=True, top=True, bottom=True
+                        )
+                        ax.set_ylabel(p_type + units[p_name])
+                        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+                        ax.grid(linestyle="--", linewidth=0.5)
+                        ii += 1
+                        ax.legend()
                 except:
-                    print(f"Error plotting {p_name}")
-                ax.tick_params(
-                    direction="in", left=True, right=True, top=True, bottom=True
-                )
-                ax.set_ylabel(p_type + units[p_name])
-                ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-                ax.grid(linestyle="--", linewidth=0.5)
-                ii += 1
-                ax.legend()
+                    pass
+                    #print(f"Error plotting {p_name}")
     plt.xlabel('Evaluation')
     for p_type, legend in subplot_legends.items():
         subplots[p_type].legend(legend)

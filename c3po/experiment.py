@@ -218,7 +218,6 @@ class Experiment:
         ts,
         gate
     ):
-
         h0, hctrls = self.model.get_Hamiltonians()
         signals = []
         hks = []
