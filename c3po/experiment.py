@@ -254,7 +254,7 @@ class Experiment:
             os.mkdir(self.logdir + "pulses/")
             self.pulses_plot_counter = 0
 
-    def plot_dynamics(self, psi_init, seq, debug=False):
+    def plot_dynamics(self, psi_init, seq, goal, debug=False):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
@@ -314,10 +314,12 @@ class Experiment:
             plt.show()
         else:
             plt.savefig(
-                self.logdir+f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}.png", dpi=300
-                )
+                self.logdir +
+                f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}_{goal}.png",
+                dpi=300
+            )
 
-    def plot_pulses(self, instr):
+    def plot_pulses(self, instr, goal):
         # print(instr.name)
         # print(instr.comps)
         # print(self.generator.devices)
@@ -325,9 +327,9 @@ class Experiment:
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
 
-        if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/"):
-            os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/")
-        os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "/" + str(instr.name) + "/")
+        if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"):
+            os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/")
+        os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/" + str(instr.name) + "/")
 
         fig, axs = plt.subplots(1, 1)
         # ts = self.ts
@@ -343,7 +345,8 @@ class Experiment:
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.legend()
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/awg_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg_{list(instr.comps.keys())}.png",
+            dpi=300
         )
 
         dac = self.generator.devices["dac"]
@@ -360,7 +363,7 @@ class Experiment:
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/dac_inphase_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_inphase_{list(instr.comps.keys())}.png", dpi=300
         )
 
         fig, axs = plt.subplots(1, 1)
@@ -369,7 +372,7 @@ class Experiment:
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
         )
 
         if "resp" in self.generator.devices:
@@ -387,7 +390,7 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_inphase_{list(instr.comps.keys())}.png", dpi=300
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_inphase_{list(instr.comps.keys())}.png", dpi=300
             )
 
             fig, axs = plt.subplots(1, 1)
@@ -396,7 +399,7 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
         fig, axs = plt.subplots(1, 1)
@@ -408,7 +411,7 @@ class Experiment:
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('signal')
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
         )
 
 

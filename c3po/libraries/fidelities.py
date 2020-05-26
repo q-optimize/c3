@@ -343,6 +343,9 @@ def RB(
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
+    print("epc:", epc)
+    epg = 1 - ((1-epc)**(1/2.25))
+    print("epg:", epg)
 
     fig, ax = plt.subplots()
     ax.plot(lengths,
@@ -367,7 +370,27 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-    return epc, r, A, B, fig, ax
+    plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
+    # return epc, r, A, B, fig, ax
+    return epg
+
+@fid_reg_deco
+def lindbladian_RB_left(
+    U_dict: dict, gate: str, index, dims, proj: bool
+):
+    return RB(
+       U_dict,
+       padding="left"
+       )
+
+@fid_reg_deco
+def lindbladian_RB_right(
+    U_dict: dict, gate: str, index, dims, proj: bool
+):
+    return RB(
+       U_dict,
+       padding="right"
+       )
 
 @fid_reg_deco
 def leakage_RB(
