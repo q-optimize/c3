@@ -151,30 +151,57 @@ def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
 
 
 @estimator_reg_deco
-def g_LL_prime(exp_values, sim_values, exp_stds, shots):
+def g_LL_prime_squared(exp_values, sim_values, exp_stds, shots):
     """
     Likelihood of the experimental values.
 
     The distribution is assumed to be binomial (approximated by a gaussian)
     that is normalised to give probability 1 at the top of the distribution.
     """
+
+    # number of gaussians (i.e. of values m_i to match)
+    K = len(sim_values)
+
+    # Comments relate to model_fit_v2.pdf
+    # std -> sigma
     std = tf.sqrt(sim_values*(1-sim_values)/shots)
     mean = sim_values
     gauss = tfp.distributions.Normal(mean, std)
 
+    # See eq. (11)
     prefac = tf.math.sqrt(2 * tf.constant(np.pi) * tf.constant(np.e))
     rescale = tf.math.multiply(tf.cast(prefac, dtype=tf.float64), std)
     #print(rescale)
 
-    loglkhs = tf.math.add(gauss.log_prob(exp_values), tf.math.log(rescale))
-    loglkh = tf.reduce_sum(loglkhs)
+    # log of eq. 3
+    p = tf.reduce_sum(gauss.log_prob(exp_values)) * 1/K
 
-    K = len(sim_values)
+    # log of the rescaling part of eq 11
+    r = tf.reduce_sum(tf.math.log(rescale)) * 1/K
+
+    # add the log of the two parts of eq 11
+    loglkh = tf.math.add(p, r)
+
     # print("K: " + str(K))
-    loglkh = - (1 / K) * loglkh
+    loglkh = - loglkh
     loglkh = tf.math.maximum(loglkh, 0)
-    return tf.sqrt(loglkh)
+    return loglkh
 
+@estimator_reg_deco
+def dv_g_LL_prime(gs, dv_gs):
+    Ks = []
+    for g in gs:
+        Ks.append(g.shape[0])
+    K = tf.reduce_sum(Ks)
+    return tf.reduce_sum(Ks * dv_gs) / K
+
+@estimator_reg_deco
+def g_LL_prime(gs):
+    Ks = []
+    for g in gs:
+        Ks.append(g.shape[0])
+    K = tf.reduce_sum(Ks)
+    return tf.reduce_sum(Ks*gs) / K
 
 @estimator_reg_deco
 def neg_loglkh_multinom(exp_values, sim_values, exp_stds, shots):
