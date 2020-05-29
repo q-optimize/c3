@@ -72,6 +72,8 @@ class C3(Optimizer):
         learn_from = self.learn_from
         sampling = self.sampling
         indeces =  sampling(learn_from, batch_size)
+        total_size = len(learn_from)
+        all = list(range(total_size))
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
@@ -119,7 +121,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        display.plot_C3([self.logdir])
+        display.plot_C3([self.logdir], only_iterations=False)
         exp_values = []
         sim_values = []
         exp_stds = []
