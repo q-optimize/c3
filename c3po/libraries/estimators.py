@@ -188,20 +188,17 @@ def g_LL_prime_squared(exp_values, sim_values, exp_stds, shots):
     return loglkh
 
 @estimator_reg_deco
-def dv_g_LL_prime(gs, dv_gs):
-    Ks = []
-    for g in gs:
-        Ks.append(g.shape[0])
-    K = tf.reduce_sum(Ks)
-    return tf.reduce_sum(Ks * dv_gs) / K
+def dv_g_LL_prime(gs, dv_gs, weights):
+    K = np.sum(weights)
+    g = 0
+    for ii in range(len(weights)):
+        g += weights[ii] * dv_gs[ii]
+    return g / K
 
 @estimator_reg_deco
-def g_LL_prime(gs):
-    Ks = []
-    for g in gs:
-        Ks.append(g.shape[0])
-    K = tf.reduce_sum(Ks)
-    return tf.reduce_sum(Ks*gs) / K
+def g_LL_prime(gs, weights):
+    K = np.sum(weights)
+    return np.sum(np.array(weights) * gs) / K
 
 @estimator_reg_deco
 def neg_loglkh_multinom(exp_values, sim_values, exp_stds, shots):

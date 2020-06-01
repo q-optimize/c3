@@ -11,6 +11,7 @@ from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
 import c3po.utils.display as display
+from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime
 
 
 class C3(Optimizer):
@@ -128,8 +129,10 @@ class C3(Optimizer):
         exp_shots = []
         goals = []
         grads = []
+        seq_weigths = []
         count = 0
         seqs_pp = self.seqs_per_point
+        #TODO: seq per point is not constant. Remove.
 
         for target, data in self.learn_data.items():
 
@@ -176,9 +179,8 @@ class C3(Optimizer):
                     tf.constant(m_stds, dtype=tf.float64),
                     tf.constant(m_shots, dtype=tf.float64)
                 )
-
                 goals.append(goal.numpy())
-
+                seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
 
@@ -221,7 +223,7 @@ class C3(Optimizer):
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
 
-        goal = np.mean(goals)
+        goal = g_LL_prime(goals, seq_weigths)
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
@@ -263,6 +265,7 @@ class C3(Optimizer):
         exp_shots = []
         goals = []
         grads = []
+        seq_weigths = []
         count = 0
         seqs_pp = self.seqs_per_point
 
@@ -314,6 +317,7 @@ class C3(Optimizer):
                         tf.constant(m_shots, dtype=tf.float64)
                     )
 
+                seq_weigths.append(num_seqs)
                 goals.append(goal.numpy())
                 grads.append(t.gradient(goal, current_params).numpy())
 
@@ -359,8 +363,8 @@ class C3(Optimizer):
         exp_values = tf.constant(exp_values, dtype=tf.float64)
         sim_values =  tf.stack(sim_values)
 
-        goal = np.mean(goals)
-        grad = np.mean(grads, axis=0)
+        goal = g_LL_prime(goals, seq_weigths)
+        grad = dv_g_LL_prime(goals, grads, seq_weigths)
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
