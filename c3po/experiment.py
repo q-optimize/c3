@@ -1,6 +1,7 @@
 """Experiment class that models the whole experiment."""
 
 import os
+import json
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -335,6 +336,7 @@ class Experiment:
         # ts = self.ts
         # dt = ts[1] - ts[0]
         # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+
         for channel in instr.comps:
             inphase = awg.signal[channel]["inphase"]
             quadrature = awg.signal[channel]["quadrature"]
@@ -344,6 +346,16 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.legend()
+            with open(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
+                'a+'
+            ) as logfile:
+                logfile.write(f"{channel}, inphase :\n")
+                logfile.write(json.dumps(inphase.numpy().tolist()))
+                logfile.write("\n")
+                logfile.write(f"{channel}, quadrature :\n")
+                logfile.write(json.dumps(quadrature.numpy().tolist()))
+                logfile.write("\n")
         plt.savefig(
             self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg_{list(instr.comps.keys())}.png",
             dpi=300
