@@ -123,8 +123,10 @@ class Optimizer:
 
     def fct_to_min_autograd(self, x):
         current_params = tf.constant(x)
-        goal, gradients = self.goal_run_with_grad(current_params)
-        self.gradients[str(x)] = gradients
+        goal, grad = self.goal_run_with_grad(current_params)
+        gradients = grad.numpy().flatten()
+        self.gradients[str(current_params.numpy())] = gradients
+        self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
         if "U_dict" in self.exp.__dict__.keys():
             self.log_best_unitary()
@@ -133,9 +135,11 @@ class Optimizer:
         return goal
 
     def goal_run_with_grad(self, current_params):
-        goal, gradients = self.goal_run(current_params)
-        self.gradients[str(current_params.numpy())] = gradients
-        return goal
+        with tf.GradientTape() as t:
+            t.watch(current_params)
+            goal = self.goal_run(current_params)
+        grad = t.gradient(goal, current_params)
+        return goal, grad
 
     def lookup_gradient(self, x):
         key = str(x)

@@ -11,7 +11,7 @@ from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
 import c3po.utils.display as display
-from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime
+from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
 
 
 class C3(Optimizer):
@@ -151,6 +151,8 @@ class C3(Optimizer):
                 m_shots = m['shots'][:seqs_pp]
                 sequences = m['seqs'][:seqs_pp]
                 num_seqs = len(sequences)
+                if target == 'all':
+                    num_seqs = len(sequences) * 3
 
                 self.exp.set_parameters(current_params, self.opt_map, scaled=True)
                 self.exp.gateset.set_parameters(
@@ -173,12 +175,20 @@ class C3(Optimizer):
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
 
-                goal = self.fom(
-                    m_vals,
-                    tf.stack(sim_vals),
-                    tf.constant(m_stds, dtype=tf.float64),
-                    tf.constant(m_shots, dtype=tf.float64)
-                )
+                if target == 'all':
+                    goal = neg_loglkh_multinom_norm(
+                        m_vals,
+                        tf.stack(sim_vals),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64)
+                    )
+                else:
+                    goal = g_LL_prime(
+                        m_vals,
+                        tf.stack(sim_vals),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64)
+                    )
                 goals.append(goal.numpy())
                 seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
@@ -201,7 +211,7 @@ class C3(Optimizer):
                         "       Diff\n"
                     )
 
-                for iseq in range(num_seqs):
+                for iseq in range(len(sequences)):
                     m_val = np.array(m_vals[iseq])
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
@@ -219,11 +229,8 @@ class C3(Optimizer):
                             )
                         logfile.flush()
 
-
-        exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values =  tf.stack(sim_values)
-
-        goal = g_LL_prime(goals, seq_weigths)
+        goal = g_LL_prime_combined(goals, seq_weigths)
+        # TODO make gradient free function use any fom
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
@@ -282,10 +289,12 @@ class C3(Optimizer):
                 gateset_params = m['params']
                 gateset_opt_map = self.gateset_opt_map
                 m_vals = m['results'][:seqs_pp]
-                m_stds = m['results_std'][:seqs_pp]
+                m_stds = np.array(m['results_std'][:seqs_pp])
                 m_shots = m['shots'][:seqs_pp]
                 sequences = m['seqs'][:seqs_pp]
                 num_seqs = len(sequences)
+                if target == 'all':
+                    num_seqs = len(sequences) * 3
 
                 with tf.GradientTape() as t:
                     t.watch(current_params)
@@ -310,16 +319,24 @@ class C3(Optimizer):
                     exp_stds.extend(m_stds)
                     exp_shots.extend(m_shots)
 
-                    goal = self.fom(
-                        m_vals,
-                        tf.stack(sim_vals),
-                        tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
-                    )
+                    if target == 'all':
+                        g = neg_loglkh_multinom_norm(
+                            m_vals,
+                            tf.stack(sim_vals),
+                            tf.constant(m_stds, dtype=tf.float64),
+                            tf.constant(m_shots, dtype=tf.float64)
+                        )
+                    else:
+                        g = g_LL_prime(
+                            m_vals,
+                            tf.stack(sim_vals),
+                            tf.constant(m_stds, dtype=tf.float64),
+                            tf.constant(m_shots, dtype=tf.float64)
+                        )
 
                 seq_weigths.append(num_seqs)
-                goals.append(goal.numpy())
-                grads.append(t.gradient(goal, current_params).numpy())
+                goals.append(g.numpy())
+                grads.append(t.gradient(g, current_params).numpy())
 
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
@@ -341,7 +358,7 @@ class C3(Optimizer):
                         "       Diff\n"
                     )
 
-                for iseq in range(num_seqs):
+                for iseq in range(len(sequences)):
                     m_val = np.array(m_vals[iseq])
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
@@ -360,10 +377,12 @@ class C3(Optimizer):
                         logfile.flush()
 
 
-        exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values =  tf.stack(sim_values)
+        # exp_values = tf.constant(exp_values, dtype=tf.float64)
+        # sim_values =  tf.stack(sim_values)
+        # exp_stds = tf.constant(exp_stds, dtype=tf.float64)
+        # exp_shots = tf.constant(exp_shots, dtype=tf.float64)
 
-        goal = g_LL_prime(goals, seq_weigths)
+        goal = g_LL_prime_combined(goals, seq_weigths)
         grad = dv_g_LL_prime(goals, grads, seq_weigths)
 
         with open(self.logdir + self.logname, 'a') as logfile:
