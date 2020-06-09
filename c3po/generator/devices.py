@@ -235,6 +235,36 @@ class Transfer(Device):
         return self.signal
 
 
+class FluxTuning(Device):
+    """Get frequency response as a function of flux"""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            phi_0: np.float = 0.0,
+            omega_0: np.float = 0.0
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.params['phi_0'] = phi_0
+        self.params['omega_0'] = omega_0
+        self.frequency = None
+
+    def frequency(self, signal):
+        """Apply a transfer function to the signal."""
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        self.frequency = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * signal / phi_0)))
+        return self.frequency
+
+
+
 # TODO real AWG has 16bits plus noise
 class Response(Device):
     """Make the AWG signal physical by including rise time."""

@@ -179,6 +179,53 @@ class Resonator(PhysicalComponent):
         return freq * self.Hs['freq']
 
 
+class TC(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as tunanble coupler.
+
+    Parameters
+    ----------
+    freq: np.float64
+        base frequency of the TC
+    phi_0: np.float64
+        half period of the phase dependant function
+    phi: np.fl
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 2,
+            freq: np.float64 = 0.0,
+            phi: np.float64 = 0.0,
+            phi_0: np.float64 = 0.0
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+            )
+        self.params['freq'] = freq
+        self.parama['phi'] = phi
+        self.parama['phi_0'] = phi_0
+
+    def init_Hs(self, ann_oper):
+        self.Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+
+    def get_Hamiltonian(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
+        return freq * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))) * self.Hs['freq']
+
+
 class LineComponent(C3obj):
     """
     Represents the components connecting chip elements and drives.
