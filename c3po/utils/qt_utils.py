@@ -17,6 +17,11 @@ Y = np.array([[0, -1j],
 Z = np.array([[1, 0],
               [0, -1]],
              dtype=np.complex128)
+iswap = np.array([[1, 0, 0, 0],
+                  [0, 0, 1j, 0],
+                  [0, 1j, 0, 0],
+                  [0, 0, 0, 1]],
+                 dtype=np.complex128)
 
 # TODO Combine the above Pauli definitions with this dict. Move to constants.
 PAULIS = {
@@ -190,6 +195,11 @@ def perfect_gate(
             Z = 1j*perfect_gate('Z90p', index, [lvls], proj)
             X = perfect_gate('X90p', index, [lvls2], proj)
             gate = np.kron(Z, X)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == "iSWAP":
+            # TODO make construction of iSWAP work with superoperator too
+            gate = iswap
             gate_num += 1
             do_pad_gate = False
         else:
