@@ -245,6 +245,7 @@ class FluxTuning(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             phi_0: np.float = 0.0,
+            Phi: np.float = 0.0,
             omega_0: np.float = 0.0
     ):
         super().__init__(
@@ -254,14 +255,17 @@ class FluxTuning(Device):
             resolution=resolution
         )
         self.params['phi_0'] = phi_0
+        self.params['Phi'] = Phi
         self.params['omega_0'] = omega_0
-        self.frequency = None
+        self.freq = None
 
     def frequency(self, signal):
         """Apply a transfer function to the signal."""
         pi = tf.constant(np.pi, dtype=tf.float64)
-        self.frequency = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * signal / phi_0)))
-        return self.frequency
+        self.freq = self.params['omega_0'].get_value() * tf.sqrt(tf.abs(tf.cos(
+            pi * (self.params['Phi'].get_value() + signal) / self.params['phi_0'].get_value()
+        )))
+        return self.freq
 
 
 
