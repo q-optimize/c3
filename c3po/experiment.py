@@ -414,17 +414,19 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
-        fig, axs = plt.subplots(1, 1)
-        # ts = self.ts
-        # dt = ts[1] - ts[0]
-        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(ts / 1e-9, signal["d1"]["values"])
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('signal')
+
+        for channel in instr.comps:
+            fig, axs = plt.subplots(1, 1)
+            axs.plot(ts / 1e-9, signal[channel]["values"], label = channel)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('signal')
+            plt.legend()
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
+            dpi=300
         )
+
 
 
     def populations(self, state, lindbladian):
