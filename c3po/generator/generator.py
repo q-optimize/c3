@@ -47,7 +47,7 @@ class Generator:
             dig_to_an = self.devices["dac"]
             if "resp" in self.devices:
                 resp = self.devices["resp"]
-            if "fluxbias" in self.device:
+            if "fluxbias" in self.devices:
                 fluxbias = self.devices["fluxbias"]
             t_start = instr.t_start
             t_end = instr.t_end
@@ -63,7 +63,7 @@ class Generator:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
                 signal = v_to_hz.transform(signal, omega_lo)
-                if "fluxbias" in self.devices:
+                if "fluxbias" in self.devices and chan == "TC":
                     signal = fluxbias.frequency(signal)
 
                 gen_signal[chan]["values"] = signal
