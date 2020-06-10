@@ -61,11 +61,11 @@ def rect(t, params):
 
 def flattop_risefall(t, params):
     """Flattop gaussian with width of length risefall."""
-    t_up = tf.cast(params['t_up'], dtype=tf.float64)
-    t_down = tf.cast(params['t_down'], dtype=tf.float64)
-    risefall = tf.cast(params['risefall'], dtype=tf.float64)
-    return (1 + tf.math.erf((t - t_down) / risefall)) / 2 * \
-           (1 + tf.math.erf((-t + t_up) / risefall)) / 2
+    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
+           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
 
 
 def flattop(t, params):
@@ -105,6 +105,15 @@ def gaussian_nonorm(t, params):
     sigma = params['sigma'].get_value()
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     return gauss
+
+
+def gaussian_der_nonorm(t, params):
+    """Derivative of the normalized gaussian (ifself not normalized)."""
+    t_final = tf.cast(params['t_final'], dtype=tf.float64)
+    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
+        (t - t_final / 2) / sigma ** 2
+    return gauss_der
 
 
 def gaussian_der(t, params):
