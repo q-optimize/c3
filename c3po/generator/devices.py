@@ -268,6 +268,44 @@ class FluxTuning(Device):
         return self.freq
 
 
+class FluxTuning_AT(Device):
+    """Get frequency response as a function of flux"""
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            omega_0: np.float = 0.0,
+            Phi: np.float64 = 0.0,
+            phi_0: np.float64 = 0.0,
+            gamma: np.float64 = 0.0
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.params['phi_0'] = phi_0
+        self.params['Phi'] = Phi
+        self.params['omega_0'] = omega_0
+        self.params['gamma'] = gamma
+        self.freq = None
+
+    def frequency(self, signal):
+        """Apply a transfer function to the signal."""
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        omega_0 = tf.cast(self.params['omega_0'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params['Phi'].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
+        gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+        self.freq = gamma * tf.sqrt(tf.sqrt(
+            tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
+        ))
+        return self.freq
 
 # TODO real AWG has 16bits plus noise
 class Response(Device):
