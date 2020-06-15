@@ -100,7 +100,7 @@ class Optimizer:
                 self.exp.model.drift_H,
                 self.exp.model.lindbladian
             )
-            for gate in self.exp.gateset.instructions.keys():
+            for gate in self.opt_gates:
                 instr = self.exp.gateset.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
             self.exp.pulses_plot_counter += 1
