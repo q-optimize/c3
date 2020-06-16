@@ -67,12 +67,13 @@ def unitary_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
     )
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
+    # print(gate, '  :  ', infid)
     return infid
 
 @fid_reg_deco
@@ -81,7 +82,6 @@ def unitary_infid_set(
 ):
     infids = []
     for gate in U_dict.keys():
-        np.set_printoptions(precision=2, linewidth=135)
         infid = unitary_infid(U_dict, gate, index, dims, proj)
         infids.append(infid)
     return tf.reduce_mean(infids)
@@ -97,7 +97,7 @@ def lindbladian_unitary_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf_super(
         tf.constant(
             perfect_gate(gate, index, dims,  projection),
@@ -126,7 +126,7 @@ def average_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
@@ -153,7 +153,7 @@ def lindbladian_average_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
@@ -187,7 +187,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool):
     projection = 'fulluni'
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * num_gates
+        fid_lvls = 2 ** num_gates
     ideal_cliffords = perfect_cliffords(
         lvls,
         proj=projection,
