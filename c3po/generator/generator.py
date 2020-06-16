@@ -62,10 +62,10 @@ class Generator:
                 else:
                     conv_signal = flat_signal
                 signal = mixer.combine(lo_signal, conv_signal)
-                signal = v_to_hz.transform(signal, omega_lo)
                 if "fluxbias" in self.devices and chan == "TC":
                     signal = fluxbias.frequency(signal)
-
+                else:
+                    signal = v_to_hz.transform(signal, omega_lo)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
                 # plt.figure()
