@@ -84,6 +84,15 @@ def create_c1_opt(optimizer_config, lindblad):
             raise(Exception("Couldn't resolve setting of 'plot_pulses'"))
     else:
         plot_pulses = False
+    if 'store_unitaries' in cfg:
+        if cfg['store_unitaries'] == "False":
+            store_unitaries = False
+        elif cfg['store_unitaries'] == "True":
+            store_unitaries = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+    else:
+        store_unitaries = False
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
@@ -94,6 +103,7 @@ def create_c1_opt(optimizer_config, lindblad):
         algorithm=algorithm,
         plot_dynamics=plot_dynamics,
         plot_pulses=plot_pulses,
+        store_unitaries=store_unitaries,
         options=options
     )
     return opt

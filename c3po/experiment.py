@@ -2,6 +2,7 @@
 
 import os
 import json
+import pickle
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -255,6 +256,13 @@ class Experiment:
             os.mkdir(self.logdir + "pulses/")
             self.pulses_plot_counter = 0
 
+    def set_enable_store_unitaries(self, flag, logdir):
+        self.enable_store_unitaries = flag
+        self.logdir = logdir
+        if self.enable_store_unitaries:
+            os.mkdir(self.logdir + "unitaries/")
+            self.store_unitaries_counter = 0
+
     def plot_dynamics(self, psi_init, seq, goal, debug=False):
         # TODO double check if it works well
         dUs = self.dUs
@@ -427,6 +435,15 @@ class Experiment:
             dpi=300
         )
 
+
+    def store_Udict(self, goal):
+        folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        with open(folder + 'Us.pickle', 'wb+') as file:
+            pickle.dump(self.unitaries, file)
+        for key, value in self.unitaries.items():
+            np.savetxt(folder + key + ".txt", value)
 
 
     def populations(self, state, lindbladian):

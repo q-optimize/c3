@@ -15,7 +15,8 @@ class Optimizer:
         self,
         algorithm=None,
         plot_dynamics=False,
-        plot_pulses=False
+        plot_pulses=False,
+        store_unitaries=False
     ):
         self.optim_status = {}
         self.gradients = {}
@@ -23,6 +24,7 @@ class Optimizer:
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
+        self.store_unitaries = store_unitaries
         if algorithm is not None:
             self.algorithm = algorithm
         else:
@@ -104,6 +106,9 @@ class Optimizer:
                 instr = self.exp.gateset.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
             self.exp.pulses_plot_counter += 1
+        if self.store_unitaries:
+            self.exp.store_Udict(self.optim_status['goal'])
+            self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             # logfile.write(json.dumps(self.optim_status, indent=2))
@@ -138,6 +143,7 @@ class Optimizer:
         grad = t.gradient(goal, current_params)
         gradients = grad.numpy().flatten()
         self.gradients[str(current_params.numpy())] = gradients
+        print(gradients)
         self.optim_status['gradient'] = gradients.tolist()
         return goal
 
