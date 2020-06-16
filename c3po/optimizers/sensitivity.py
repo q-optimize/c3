@@ -11,6 +11,7 @@ import c3po.utils.display as display
 from c3po.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3po.utils.utils import log_setup
+from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
 
 
 class SET(Optimizer):
@@ -114,6 +115,10 @@ class SET(Optimizer):
         exp_stds = []
         sim_values = []
         exp_shots = []
+        goals = []
+        seq_weigths = []
+        count = 0
+        #TODO: seq per point is not constant. Remove.
 
         # print("tup: " + str(tup))
         # print("val: " + str(val))
@@ -123,7 +128,6 @@ class SET(Optimizer):
         # print(self.exp.print_parameters(self.opt_map))
 
         # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
-        count = 0
         for target, data in self.learn_data.items():
 
             self.learn_from = data['seqs_grouped_by_param_set']
@@ -139,10 +143,12 @@ class SET(Optimizer):
                 gateset_params = m['params']
                 gateset_opt_map = self.gateset_opt_map
                 m_vals = m['results']
-                m_stds = m['results_std']
+                m_stds = np.array(m['results_std'])
                 m_shots = m['shots']
                 sequences = m['seqs']
                 num_seqs = len(sequences)
+                if target == 'all':
+                    num_seqs = len(sequences) * 3
 
                 self.exp.gateset.set_parameters(
                     self.init_gateset_params,
@@ -157,16 +163,31 @@ class SET(Optimizer):
                 self.exp.opt_gates = list(
                     set(itertools.chain.from_iterable(sequences))
                 )
-                if self.same_dyn and self.evaluation != 0:
-                    pass
-                else:
-                    self.exp.get_gates()
-                    self.exp.evaluate(sequences)
+                self.exp.get_gates()
+                self.exp.evaluate(sequences)
                 sim_vals = self.exp.process(labels=self.state_labels[target])
 
-                # exp_values.extend(m_vals)
-                # exp_stds.extend(m_stds)
+                exp_stds.extend(m_stds)
+                exp_shots.extend(m_shots)
+
+                if target == 'all':
+                    goal = neg_loglkh_multinom_norm(
+                        m_vals,
+                        tf.stack(sim_vals),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64)
+                    )
+                else:
+                    goal = g_LL_prime(
+                        m_vals,
+                        tf.stack(sim_vals),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64)
+                    )
+                goals.append(goal.numpy())
+                seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
+                exp_values.extend(m_vals)
 
                 with open(self.logdir + self.logname, 'a') as logfile:
                     logfile.write(
@@ -185,13 +206,10 @@ class SET(Optimizer):
                         "       Diff\n"
                     )
 
-                for iseq in range(num_seqs):
+                for iseq in range(len(sequences)):
                     m_val = np.array(m_vals[iseq])
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
-                    exp_values.append(m_val)
-                    exp_stds.append(m_std)
-                    exp_shots.append(shots)
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, 'a') as logfile:
@@ -206,34 +224,13 @@ class SET(Optimizer):
                             )
                         logfile.flush()
 
-        exp_values = tf.constant(exp_values, dtype=tf.float64)
-        sim_values =  tf.stack(sim_values)
-        if exp_values.shape != sim_values.shape:
-            print(
-                "C3:WARNING:"
-                "Data format of experiment and simulation figures of"
-                " merit does not match."
-            )
-        exp_stds = tf.constant(exp_stds, dtype=tf.float64)
-#        print("exp_shots: " + str(exp_shots))
-        exp_shots = tf.constant(exp_shots, dtype=tf.float64)
-        goal = self.fom(exp_values, sim_values, exp_stds, exp_shots)
-        goal_numpy = float(goal.numpy())
-
-        with open(self.logdir + self.dfname, 'a') as datafile:
-            datafile.write(f"{val}\t{goal_numpy}\n")
-
-        for est in self.estimator_list:
-            tmp = est(exp_values, sim_values, exp_stds, exp_shots)
-            tmp = float(tmp.numpy())
-            fname = est.__name__ + '.dat'
-            with open(self.logdir + fname, 'a') as datafile:
-                datafile.write(f"{val}\t{tmp}\n")
+        goal = g_LL_prime_combined(goals, seq_weigths)
+        # TODO make gradient free function use any fom
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal_numpy))
-            print("{}: {}".format(self.fom.__name__, goal_numpy))
+            logfile.write("{}: {}\n".format(self.fom.__name__, goal))
+            print("{}: {}".format(self.fom.__name__, goal))
             for est in self.estimator_list:
                 val = float(
                     est(exp_values, sim_values, exp_stds, exp_shots).numpy()
@@ -247,6 +244,6 @@ class SET(Optimizer):
             par.numpy().tolist()
             for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal_numpy
+        self.optim_status['goal'] = goal
         self.evaluation += 1
         return goal
