@@ -56,7 +56,9 @@ nice_parameter_name = {
     "Q1-Q2": "coupling",
     "strength": "coupling $g$",
     "X90p:Id": "$X_{+\\frac{\\pi}{2}}\\otimes\\mathcal{I}$",
-    "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$"
+    "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$",
+    "t_up": "$T_{up}$",
+    "t_down": "$T_{down}$"
 }
 
 
