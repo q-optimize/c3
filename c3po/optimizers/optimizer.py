@@ -130,7 +130,7 @@ class Optimizer:
         current_params = tf.constant(x)
         goal, grad = self.goal_run_with_grad(current_params)
         if isinstance(grad, tf.Tensor):
-            grad = float(grad.numpy())
+            grad = grad.numpy()
         gradients = grad.flatten()
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status['gradient'] = gradients.tolist()
