@@ -23,11 +23,11 @@ def pwc(t, params):
 def fourier_sin(t, params):
     """Fourier basis of the pulse constant pulse (sin)."""
     amps = tf.reshape(
-                tf.cast(params['amps'], dtype=tf.float64),
+                tf.cast(params['amps'].get_value(), dtype=tf.float64),
                 [params['amps'].shape[0], 1]
            )
     freqs = tf.reshape(
-                tf.cast(params['freqs'], dtype=tf.float64),
+                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
                 [params['freqs'].shape[0], 1]
            )
     t = tf.reshape(
@@ -40,11 +40,11 @@ def fourier_sin(t, params):
 def fourier_cos(t, params):
     """Fourier basis of the pulse constant pulse (cos)."""
     amps = tf.reshape(
-                tf.cast(params['amps'], dtype=tf.float64),
+                tf.cast(params['amps'].get_value(), dtype=tf.float64),
                 [params['amps'].shape[0], 1]
            )
     freqs = tf.reshape(
-                tf.cast(params['freqs'], dtype=tf.float64),
+                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
                 [params['freqs'].shape[0], 1]
            )
     t = tf.reshape(
@@ -109,8 +109,8 @@ def gaussian_nonorm(t, params):
 
 def gaussian_der_nonorm(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
         (t - t_final / 2) / sigma ** 2
     return gauss_der
@@ -118,8 +118,8 @@ def gaussian_der_nonorm(t, params):
 
 def gaussian_der(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
         (t - t_final / 2) / sigma ** 2
     norm = tf.sqrt(2 * np.pi * sigma ** 2) \
@@ -130,8 +130,8 @@ def gaussian_der(t, params):
 
 def drag_sigma(t, params):
     """Second order gaussian."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     drag = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
             * tf.math.erf(t_final / (np.sqrt(8) * sigma))
@@ -148,8 +148,8 @@ def drag(t, params):
 
 def drag_der(t, params):
     """Derivative of second order gaussian."""
-    t_final = tf.cast(params['t_final'], dtype=tf.float64)
-    sigma = tf.cast(params['sigma'], dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     norm = (tf.sqrt(2 * np.pi * sigma ** 2)
             * tf.math.erf(t_final / (np.sqrt(8) * sigma))
             - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
