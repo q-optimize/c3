@@ -174,9 +174,15 @@ class Resonator(PhysicalComponent):
             resonator(ann_oper), dtype=tf.complex128
         )
 
+    def init_Ls(self, ann_oper):
+        pass
+
     def get_Hamiltonian(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         return freq * self.Hs['freq']
+
+    def get_Lindbladian(self, dims):
+        pass
 
 
 class SymmetricTransmon(PhysicalComponent):
@@ -210,20 +216,25 @@ class SymmetricTransmon(PhysicalComponent):
             hilbert_dim=hilbert_dim
             )
         self.params['freq'] = freq
-        self.parama['phi'] = phi
-        self.parama['phi_0'] = phi_0
+        self.params['phi'] = phi
+        self.params['phi_0'] = phi_0
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
 
+    def init_Ls(self, ann_oper):
+        pass
+
     def get_Hamiltonian(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         pi = tf.constant(np.pi, dtype=tf.complex128)
         phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        return freq * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))) * self.Hs['freq']
+        return freq * tf.cast(tf.sqrt(tf.abs(tf.cos(
+            pi * phi / phi_0
+        ))), tf.complex128) * self.Hs['freq']
 
 
 

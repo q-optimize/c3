@@ -21,16 +21,31 @@ def fid_reg_deco(func):
     return func
 
 @fid_reg_deco
-def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
-    U = U_dict[gate]
-    if proj:
-        U = U[0:2, 0:2]
-    lvls = U.shape[0]
-    U_ideal = tf.constant(
-                perfect_gate(lvls, gate, proj),
-                dtype=tf.complex128
-                )
+def iswap_transfer(
+    U_dict: dict, index, dims, eval, proj=True
+):
     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+
+
+@fid_reg_deco
+def state_transfer_infid_set(
+    U_dict: dict, index, dims, psi_0, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = state_transfer_infid(U_dict, gate, index, dims, psi_0, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool):
+    U = U_dict[gate]
+    projection = 'fulluni'
+    if proj:
+        projection = 'wzeros'
+    U_ideal = tf.constant(
+        perfect_gate(gate, index, dims, projection),
+        dtype=tf.complex128
+    )
     psi_ideal = tf.matmul(U_ideal, psi_0)
     psi_actual = tf.matmul(U, psi_0)
     overlap = tf_ketket_fid(psi_ideal, psi_actual)

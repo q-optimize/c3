@@ -545,7 +545,7 @@ def tf_dmket_fid(rho, psi):
 
 
 def tf_ketket_fid(psi1, psi2):
-    return tf_abs(tf.matmul(psi1, psi2))
+    return tf_abs(tf.matmul(tf.linalg.adjoint(psi1), psi2))
 
 
 def tf_unitary_overlap(A, B, lvls=None):

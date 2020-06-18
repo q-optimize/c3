@@ -262,9 +262,22 @@ class FluxTuning(Device):
     def frequency(self, signal):
         """Apply a transfer function to the signal."""
         pi = tf.constant(np.pi, dtype=tf.float64)
-        self.freq = self.params['omega_0'].get_value() * tf.sqrt(tf.abs(tf.cos(
-            pi * (self.params['Phi'].get_value() + signal) / self.params['phi_0'].get_value()
-        )))
+        Phi = self.params['Phi'].get_value()
+        omega_0 = self.params['omega_0'].get_value()
+        phi_0 = self.params['phi_0'].get_value()
+
+        base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * Phi / phi_0)))
+        self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(
+            pi * (Phi + signal) / phi_0
+        ))) - base_freq
+        # print(self.params['Phi'])
+        # print(self.params['phi_0'])
+        # plt.figure()
+        # plt.plot(signal[1000:4000])
+        # plt.savefig("signal")
+        # plt.figure()
+        # plt.plot(self.freq[1000:4000])
+        # plt.savefig("freqs")
         return self.freq
 
 
