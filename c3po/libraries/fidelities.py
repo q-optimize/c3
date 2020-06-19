@@ -24,8 +24,14 @@ def fid_reg_deco(func):
 def iswap_transfer(
     U_dict: dict, index, dims, eval, proj=True
 ):
-    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
-
+    infids = []
+    for indx in [0,2,4,6]:
+        psi_init = [0] * 8
+        psi_init[indx] = 1
+        psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+        infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
 
 @fid_reg_deco
 def state_transfer_infid_set(
