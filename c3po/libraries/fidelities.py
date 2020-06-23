@@ -25,13 +25,48 @@ def iswap_transfer(
     U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
-    for indx in [0,2,4,6]:
+    for indx in [0,1,2,3]:
         psi_init = [0] * 8
         psi_init[indx] = 1
         psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
-        infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
+        infid = state_transfer_infid(U_dict, "Id:iSWAP", index, dims, psi_0, proj)
         infids.append(infid)
+    # for indx in [0,2,4,6]:
+    #     psi_init = [0] * 8
+    #     psi_init[indx] = 1
+    #     psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+    #     infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
+    #     infids.append(infid)
     return tf.reduce_mean(infids)
+
+@fid_reg_deco
+def iswap_comp_sub(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    U_ideal = tf.constant(
+        perfect_gate("iSWAP", [0,1], [2,2]),
+        dtype=tf.complex128
+    )
+    U = U_dict["Id:iSWAP"][:4,:4]
+    # U = U_dict["Id:iSWAP"][4:,4:]
+    infid = 1 - tf_unitary_overlap(U, U_ideal)
+    return infid
+
+@fid_reg_deco
+def iswap_leakage(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    infids = []
+    psi_init = [0] * 8
+    psi_init[0] = 1
+    psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+    psi_actual = tf.matmul(U_dict["Id:iSWAP"], psi_0)
+    leakage = 0
+    for indx in [0,1,2,3]:  # fix indeces
+        psi = [0] * 8
+        psi[indx] = 1
+        leakage = leakage + tf_ketket_fid(psi, psi_actual)
+    return leakage
 
 @fid_reg_deco
 def state_transfer_infid_set(
