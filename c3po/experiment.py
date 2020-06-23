@@ -1,6 +1,8 @@
 """Experiment class that models the whole experiment."""
 
 import os
+import json
+import pickle
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -156,6 +158,11 @@ class Experiment:
                     if "gauss" in ctrls:
                         if ctrls['gauss'].params["amp"] != 0.0:
                             offset = ctrls['gauss'].params['freq_offset'].get_value()
+                    if "flux" in ctrls:
+                        if ctrls['flux'].params["amp"] != 0.0:
+                            offset = ctrls['flux'].params['freq_offset'].get_value()
+                    if "pwc" in ctrls:
+                        offset = ctrls['pwc'].params['freq_offset'].get_value()
                     # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
@@ -254,6 +261,13 @@ class Experiment:
             os.mkdir(self.logdir + "pulses/")
             self.pulses_plot_counter = 0
 
+    def set_enable_store_unitaries(self, flag, logdir):
+        self.enable_store_unitaries = flag
+        self.logdir = logdir
+        if self.enable_store_unitaries:
+            os.mkdir(self.logdir + "unitaries/")
+            self.store_unitaries_counter = 0
+
     def plot_dynamics(self, psi_init, seq, goal, debug=False):
         # TODO double check if it works well
         dUs = self.dUs
@@ -335,6 +349,7 @@ class Experiment:
         # ts = self.ts
         # dt = ts[1] - ts[0]
         # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
+
         for channel in instr.comps:
             inphase = awg.signal[channel]["inphase"]
             quadrature = awg.signal[channel]["quadrature"]
@@ -344,6 +359,16 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.legend()
+            with open(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
+                'a+'
+            ) as logfile:
+                logfile.write(f"{channel}, inphase :\n")
+                logfile.write(json.dumps(inphase.numpy().tolist()))
+                logfile.write("\n")
+                logfile.write(f"{channel}, quadrature :\n")
+                logfile.write(json.dumps(quadrature.numpy().tolist()))
+                logfile.write("\n")
         plt.savefig(
             self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg_{list(instr.comps.keys())}.png",
             dpi=300
@@ -402,17 +427,28 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
-        fig, axs = plt.subplots(1, 1)
-        # ts = self.ts
-        # dt = ts[1] - ts[0]
-        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(ts / 1e-9, signal["d1"]["values"])
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('signal')
+
+        for channel in instr.comps:
+            fig, axs = plt.subplots(1, 1)
+            axs.plot(ts / 1e-9, signal[channel]["values"], label = channel)
+            axs.grid()
+            axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('signal')
+            plt.legend()
         plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/final_{list(instr.comps.keys())}.png", dpi=300
+            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
+            dpi=300
         )
+
+
+    def store_Udict(self, goal):
+        folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        with open(folder + 'Us.pickle', 'wb+') as file:
+            pickle.dump(self.unitaries, file)
+        for key, value in self.unitaries.items():
+            np.savetxt(folder + key + ".txt", value)
 
 
     def populations(self, state, lindbladian):
