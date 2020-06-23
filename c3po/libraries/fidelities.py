@@ -25,10 +25,11 @@ def iswap_transfer(
     U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
-    for indx in [0,1,2,3]:
-        psi_init = [0] * 8
+    indeces = [0,1,dims[2],dims[2]+1]
+    for indx in indeces:
+        psi_init = [0] * np.prod(dims)
         psi_init[indx] = 1
-        psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+        psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[np.prod(dims),1])
         infid = state_transfer_infid(U_dict, "Id:iSWAP", index, dims, psi_0, proj)
         infids.append(infid)
     # for indx in [0,2,4,6]:
@@ -43,13 +44,27 @@ def iswap_transfer(
 def iswap_comp_sub(
     U_dict: dict, index, dims, eval, proj=True
 ):
-    U_ideal = tf.constant(
-        perfect_gate("iSWAP", [0,1], [2,2]),
-        dtype=tf.complex128
-    )
-    U = U_dict["Id:iSWAP"][:4,:4]
-    # U = U_dict["Id:iSWAP"][4:,4:]
-    infid = 1 - tf_unitary_overlap(U, U_ideal)
+    dim = dims[1]
+    # U_ideal = tf.constant(
+    #     perfect_gate("iSWAP", [0,1], [dim,dim]),
+    #     dtype=tf.complex128, projection =
+    # )
+
+    # proj = [[1,0],
+    #         [0,1]]
+    # lvls = 2
+    # while dim > lvls:
+    #     proj = proj.append([0,0])
+    #     lvls = lvls + 1
+    # p = np.kron(proj, proj)
+    # print(p)
+    # p = tf.constant(p, dtype=tf.complex128)
+    # U_comp = p.T@U@p
+    # print(U)
+    # print(U_comp)
+    U = {}
+    U["iSWAP"] = U_dict["Id:iSWAP"][:dim**2,:dim**2]
+    infid = unitary_infid(U, "iSWAP", [0,1], [dim, dim], proj=proj)
     return infid
 
 @fid_reg_deco
@@ -119,6 +134,7 @@ def unitary_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
 ):
     U = U_dict[gate]
+    # print(U)
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
@@ -128,6 +144,7 @@ def unitary_infid(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
     )
+    # print(U_ideal)
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     # print(gate, '  :  ', infid)
     return infid
