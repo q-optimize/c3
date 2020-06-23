@@ -161,6 +161,8 @@ class Experiment:
                     if "flux" in ctrls:
                         if ctrls['flux'].params["amp"] != 0.0:
                             offset = ctrls['flux'].params['freq_offset'].get_value()
+                    if "pwc" in ctrls:
+                        offset = ctrls['pwc'].params['freq_offset'].get_value()
                     # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
