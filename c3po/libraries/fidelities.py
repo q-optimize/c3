@@ -71,15 +71,20 @@ def iswap_comp_sub(
 def iswap_leakage(
     U_dict: dict, index, dims, eval, proj=True
 ):
-    infids = []
-    psi_init = [0] * 8
-    psi_init[0] = 1
-    psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+    indeces = np.append(np.append(
+        np.arange(2,dims[1]),
+        np.arange(2,dims[1]) + dims[2]),
+        np.arange(dims[1]*dims[2],np.prod(dims))
+    )
+    psi_init = [0] * np.prod(dims)
+    psi_init[1] = 1
+    psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[np.prod(dims),1])
     psi_actual = tf.matmul(U_dict["Id:iSWAP"], psi_0)
     leakage = 0
-    for indx in [0,1,2,3]:  # fix indeces
-        psi = [0] * 8
+    for indx in indeces:  # fix indeces
+        psi = [0] * np.prod(dims)
         psi[indx] = 1
+        psi = tf.constant(psi, dtype=tf.complex128, shape=[np.prod(dims),1])
         leakage = leakage + tf_ketket_fid(psi, psi_actual)
     return leakage
 
