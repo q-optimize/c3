@@ -34,8 +34,8 @@ class Optimizer:
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
         self.logdir = new_logdir
-        os.remove(self.dir_path + 'recent')
-        os.remove(self.dir_path + self.string)
+        os.remove(self.dir_path + '/recent')
+        #os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
     def set_exp(self, exp):
