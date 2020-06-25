@@ -344,8 +344,9 @@ def RB(
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
     print("epc:", epc)
-    epg = 1 - ((1-epc)**(1/2.25))
+    epg = 1 - ((1-epc)**(1/4))
     print("epg:", epg)
+    # print('example seq: ', seqs[0])
 
     fig, ax = plt.subplots()
     ax.plot(lengths,
