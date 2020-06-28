@@ -164,7 +164,7 @@ def lindbladian_average_infid(
 
 @fid_reg_deco
 def lindbladian_average_infid_set(
-    U_dict: dict, index, dims, proj=True
+    U_dict: dict, index, dims, eval, proj=True
 ):
     infids = []
     for gate in U_dict.keys():

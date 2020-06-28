@@ -185,11 +185,12 @@ def perfect_gate(
             gate_num += 1
             do_pad_gate = False
         elif gate_str == 'CR90':
-            # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
-            Z = 1j*perfect_gate('Z90p', index, [lvls], proj)
-            X = perfect_gate('X90p', index, [lvls2], proj)
-            gate = np.kron(Z, X)
+            RXp = perfect_gate('X90p', index, [lvls2], proj)
+            RXm = perfect_gate('X90m', index, [lvls2], proj)
+            gate = scipy_block_diag(RXp, RXm)
+            for ii in range(2, lvls):
+                gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
             do_pad_gate = False
         else:

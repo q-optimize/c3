@@ -96,10 +96,6 @@ class Optimizer:
                 self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
             self.exp.dynamics_plot_counter += 1
         if self.plot_pulses:
-            psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
-            )
             for gate in self.opt_gates:
                 instr = self.exp.gateset.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
