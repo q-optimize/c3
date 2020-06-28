@@ -333,7 +333,7 @@ class Experiment:
                 dpi=300
             )
 
-    def plot_pulses(self, instr, goal):
+    def plot_pulses(self, instr, goal, debug=False):
         # print(instr.name)
         # print(instr.comps)
         # print(self.generator.devices)
@@ -341,9 +341,12 @@ class Experiment:
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
 
-        if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"):
-            os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/")
-        os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/" + str(instr.name) + "/")
+        if debug:
+            pass
+        else:
+            if not os.path.exists(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"):
+                os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/")
+            os.mkdir(self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/" + str(instr.name) + "/")
 
         fig, axs = plt.subplots(1, 1)
         # ts = self.ts
@@ -359,20 +362,26 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.legend()
-            with open(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
-                'a+'
-            ) as logfile:
-                logfile.write(f"{channel}, inphase :\n")
-                logfile.write(json.dumps(inphase.numpy().tolist()))
-                logfile.write("\n")
-                logfile.write(f"{channel}, quadrature :\n")
-                logfile.write(json.dumps(quadrature.numpy().tolist()))
-                logfile.write("\n")
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg_{list(instr.comps.keys())}.png",
-            dpi=300
-        )
+            if debug:
+                pass
+            else:
+                with open(
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
+                    'a+'
+                ) as logfile:
+                    logfile.write(f"{channel}, inphase :\n")
+                    logfile.write(json.dumps(inphase.numpy().tolist()))
+                    logfile.write("\n")
+                    logfile.write(f"{channel}, quadrature :\n")
+                    logfile.write(json.dumps(quadrature.numpy().tolist()))
+                    logfile.write("\n")
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg_{list(instr.comps.keys())}.png",
+                dpi=300
+            )
 
         dac = self.generator.devices["dac"]
         dac_ts = dac.ts
@@ -387,18 +396,24 @@ class Experiment:
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_inphase_{list(instr.comps.keys())}.png", dpi=300
-        )
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_inphase_{list(instr.comps.keys())}.png", dpi=300
+            )
 
         fig, axs = plt.subplots(1, 1)
         axs.plot(dac_ts / 1e-9, quadrature/1e-3)
         axs.grid()
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
-        )
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
+            )
 
         if "resp" in self.generator.devices:
             resp = self.generator.devices["resp"]
@@ -414,18 +429,24 @@ class Experiment:
             axs.grid()
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_inphase_{list(instr.comps.keys())}.png", dpi=300
-            )
+            if debug:
+                plt.show()
+            else:
+                plt.savefig(
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_inphase_{list(instr.comps.keys())}.png", dpi=300
+                )
 
             fig, axs = plt.subplots(1, 1)
             axs.plot(resp_ts / 1e-9, quadrature/1e-3)
             axs.grid()
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
-            )
+            if debug:
+                plt.show()
+            else:
+                plt.savefig(
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
+                )
 
 
         for channel in instr.comps:
@@ -435,10 +456,13 @@ class Experiment:
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('signal')
             plt.legend()
-        plt.savefig(
-            self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
-            dpi=300
-        )
+        if debug:
+            plt.show()
+        else:
+            plt.savefig(
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
+                dpi=300
+            )
 
 
     def store_Udict(self, goal):
