@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
+import c3po.utils.qt_utils as qt_utils
 
 
 def tf_setup():
@@ -499,6 +500,12 @@ def tf_super(A):
     return superA
 
 
+def tf_choi_to_chi(U, dims=None):
+    if dims is None:
+        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
+    B = tf.constant(qt_utils.pauli_basis(dims), dtype=tf.complex128)
+    return (tf.linalg.adjoint(B) @ U @ B)
+
 
 def super_to_choi(A):
     sqrt_shape = int(np.sqrt(A.shape[0]))
@@ -591,9 +598,9 @@ def tf_average_fidelity(A, B, lvls=None):
     Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     # get to choi decomposition
     lambda_super = tf_super(Lambda)
-    lambda_choi = super_to_choi(lambda_super)
+    lambda_chi = tf_choi_to_chi(super_to_choi(lambda_super), dims=[int(lvls.numpy())])
     # get only 00 element and measure fidelity
-    ave_fid = tf_abs((lambda_choi[0, 0] * lvls + 1) / (lvls + 1))
+    ave_fid = tf_abs((lambda_chi[0, 0] / lvls + 1) / (lvls + 1))
     return ave_fid
 
 

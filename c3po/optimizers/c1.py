@@ -105,7 +105,10 @@ class C1(Optimizer):
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
         goal_numpy = float(goal.numpy())
-        display.plot_C1(self.logdir)
+        try:
+            display.plot_C1(self.logdir)
+        except TypeError:
+            pass
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")

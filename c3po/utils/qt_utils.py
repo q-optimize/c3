@@ -3,6 +3,7 @@
 import numpy as np
 from scipy.linalg import block_diag as scipy_block_diag
 from scipy.linalg import expm
+from itertools import starmap, product
 
 # Pauli matrices
 Id = np.array([[1, 0],
@@ -25,6 +26,34 @@ PAULIS = {
     "Z": Z,
     "Id": Id
 }
+
+def pauli_basis(dims=[2]):
+    nq = len(dims)
+    _SINGLE_QUBIT_PAULI_BASIS = (Id, X, Y, Z)
+    paulis = []
+    for dim in dims:
+        paulis.append([pad_matrix(P, dim-2, 'wzeros') for P in _SINGLE_QUBIT_PAULI_BASIS])
+    result = [[]]
+    res_tuple = []
+    # TAKEN FROM ITERTOOLS
+    for pauli_set in paulis:
+        result = [x+[y] for x in result for y in pauli_set]
+    for prod in result:
+        res_tuple.append(tuple(prod))
+    
+    # TAKEN FROM QUTIP
+    size = np.prod(np.array(dims)**2)
+    B = np.zeros((size, size), dtype=complex)
+    for idx, op_tuple in enumerate(res_tuple):
+        if nq == 1:
+            op = op_tuple[0]
+        if nq == 2:
+            op = np.kron(op_tuple[0],op_tuple[1])
+        if nq == 3:  
+            op = np.kron(np.kron(op_tuple[0],op_tuple[1]),op_tuple[2])
+        vec = np.reshape(np.transpose(op), [-1, 1])
+        B[:, idx] = vec.T.conj()
+    return B
 
 # MATH HELPERS
 def np_kron_n(mat_list):
