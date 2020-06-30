@@ -153,7 +153,7 @@ with tf.device('/CPU:0'):
         learn_from = []
         opt.read_data(cfg['datafile'])
         shutil.copy2(
-            "/".join(cfg['datafile']['left'].split("/")[0:-1]) \
+            "/".join(list(cfg['datafile'].values())[0].split("/")[0:-1]) \
             + "/real_model_params.log",
             dir
         )

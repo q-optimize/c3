@@ -18,6 +18,22 @@ Y = np.array([[0, -1j],
 Z = np.array([[1, 0],
               [0, -1]],
              dtype=np.complex128)
+iswap = np.array([[1, 0, 0, 0],
+                  [0, 0, 1j, 0],
+                  [0, 1j, 0, 0],
+                  [0, 0, 0, 1]],
+                 dtype=np.complex128)
+iswap3 = np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 1j, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 1j, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 1, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                  [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                  ],
+                 dtype=np.complex128)
 
 # TODO Combine the above Pauli definitions with this dict. Move to constants.
 PAULIS = {
@@ -220,6 +236,15 @@ def perfect_gate(
             gate = scipy_block_diag(RXp, RXm)
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == "iSWAP":
+            # TODO make construction of iSWAP work with superoperator too
+            lvls2 = dims[gate_num + 1]
+            if lvls == 2 and lvls2 == 2:
+                gate = iswap
+            elif lvls == 3 and lvls2 == 3:
+                gate = iswap3
             gate_num += 1
             do_pad_gate = False
         else:

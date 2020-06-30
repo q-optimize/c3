@@ -9,19 +9,20 @@ def log_setup(data_path, run_name=None):
     # TODO Add the name to fhe folder
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
-    pwd = data_path + "/" +time.strftime(
-        "%Y_%m_%d_T_%H_%M_%S", time.localtime()
+    pwd = os.path.join(
+        data_path,
+        time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
     )
     try:
         os.makedirs(pwd)
     except FileExistsError:
         pass
-    recent = data_path + '/recent'
+    recent = os.path.join(data_path, 'recent')
     replace_symlink(pwd, recent)
     if run_name is not None:
-        name = data_path + '/' + run_name
+        name = os.path.join(data_path, run_name)
         replace_symlink(pwd, name)
-    return pwd + '/'
+    return os.path.join(pwd,'')
 
 
 def replace_symlink(path, alias):

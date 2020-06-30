@@ -22,6 +22,7 @@ class C1(Optimizer):
         algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
+        store_unitaries=False,
         options={},
         run_name=None
     ):
@@ -29,7 +30,8 @@ class C1(Optimizer):
         super().__init__(
             algorithm=algorithm,
             plot_dynamics=plot_dynamics,
-            plot_pulses=plot_pulses
+            plot_pulses=plot_pulses,
+            store_unitaries=store_unitaries
             )
         self.opt_map = gateset_opt_map
         self.opt_gates = opt_gates
@@ -72,6 +74,7 @@ class C1(Optimizer):
         self.start_log()
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
+        self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
         self.exp.set_opt_gates(self.opt_gates)
         self.nice_print = self.exp.gateset.print_parameters
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")

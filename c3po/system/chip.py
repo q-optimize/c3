@@ -174,10 +174,122 @@ class Resonator(PhysicalComponent):
             resonator(ann_oper), dtype=tf.complex128
         )
 
+    def init_Ls(self, ann_oper):
+        pass
+
     def get_Hamiltonian(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         return freq * self.Hs['freq']
 
+    def get_Lindbladian(self, dims):
+        pass
+
+
+class SymmetricTransmon(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as tunanble coupler.
+
+    Parameters
+    ----------
+    freq: np.float64
+        base frequency of the TC
+    phi_0: np.float64
+        half period of the phase dependant function
+    phi: np.fl
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 2,
+            freq: np.float64 = 0.0,
+            phi: np.float64 = 0.0,
+            phi_0: np.float64 = 0.0
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+            )
+        self.params['freq'] = freq
+        self.params['phi'] = phi
+        self.params['phi_0'] = phi_0
+
+    def init_Hs(self, ann_oper):
+        self.Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+
+    def init_Ls(self, ann_oper):
+        pass
+
+    def get_Hamiltonian(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
+        return freq * tf.cast(tf.sqrt(tf.abs(tf.cos(
+            pi * phi / phi_0
+        ))), tf.complex128) * self.Hs['freq']
+
+
+
+class AsymmetricTransmon(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as tunanble coupler.
+
+    Parameters
+    ----------
+    freq: np.float64
+        base frequency of the TC
+    phi_0: np.float64
+        half period of the phase dependant function
+    phi: np.fl
+
+    """
+
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            hilbert_dim: int = 2,
+            freq: np.float64 = 0.0,
+            phi: np.float64 = 0.0,
+            phi_0: np.float64 = 0.0,
+            gamma: np.float64 = 0.0
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+            )
+        self.params['freq'] = freq
+        self.parama['phi'] = phi
+        self.parama['phi_0'] = phi_0
+        self.parama['gamma'] = gamma
+
+    def init_Hs(self, ann_oper):
+        self.Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+
+    def get_Hamiltonian(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
+        gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+        d = (gamma - 1) / (gamma + 1)
+        factor = tf.sqrt(tf.sqrt(
+            tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
+        ))
+        return freq * factor * self.Hs['freq']
 
 class LineComponent(C3obj):
     """

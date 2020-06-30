@@ -21,5 +21,6 @@ setup(
         'matplotlib',
         'numpy',
         'scipy',
+        'adaptive'
     ]
 )

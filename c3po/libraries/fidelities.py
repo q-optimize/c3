@@ -21,16 +21,92 @@ def fid_reg_deco(func):
     return func
 
 @fid_reg_deco
-def state_transfer_infid(U_dict: dict, gate: str, proj: bool):
+def iswap_transfer(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    infids = []
+    indeces = [0,1,dims[2],dims[2]+1]
+    for indx in indeces:
+        psi_init = [0] * np.prod(dims)
+        psi_init[indx] = 1
+        psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[np.prod(dims),1])
+        infid = state_transfer_infid(U_dict, "Id:iSWAP", index, dims, psi_0, proj)
+        infids.append(infid)
+    # for indx in [0,2,4,6]:
+    #     psi_init = [0] * 8
+    #     psi_init[indx] = 1
+    #     psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
+    #     infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
+    #     infids.append(infid)
+    return tf.reduce_mean(infids)
+
+@fid_reg_deco
+def iswap_comp_sub(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    dim = dims[1]
+    # U_ideal = tf.constant(
+    #     perfect_gate("iSWAP", [0,1], [dim,dim]),
+    #     dtype=tf.complex128, projection =
+    # )
+
+    # proj = [[1,0],
+    #         [0,1]]
+    # lvls = 2
+    # while dim > lvls:
+    #     proj = proj.append([0,0])
+    #     lvls = lvls + 1
+    # p = np.kron(proj, proj)
+    # print(p)
+    # p = tf.constant(p, dtype=tf.complex128)
+    # U_comp = p.T@U@p
+    # print(U)
+    # print(U_comp)
+    U = {}
+    U["iSWAP"] = U_dict["Id:iSWAP"][:dim**2,:dim**2]
+    infid = unitary_infid(U, "iSWAP", [0,1], [dim, dim], proj=proj)
+    return infid
+
+@fid_reg_deco
+def iswap_leakage(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    indeces = np.append(np.append(
+        np.arange(2,dims[1]),
+        np.arange(2,dims[1]) + dims[2]),
+        np.arange(dims[1]*dims[2],np.prod(dims))
+    )
+    psi_init = [0] * np.prod(dims)
+    psi_init[1] = 1
+    psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[np.prod(dims),1])
+    psi_actual = tf.matmul(U_dict["Id:iSWAP"], psi_0)
+    leakage = 0
+    for indx in indeces:  # fix indeces
+        psi = [0] * np.prod(dims)
+        psi[indx] = 1
+        psi = tf.constant(psi, dtype=tf.complex128, shape=[np.prod(dims),1])
+        leakage = leakage + tf_ketket_fid(psi, psi_actual)
+    return leakage
+
+@fid_reg_deco
+def state_transfer_infid_set(
+    U_dict: dict, index, dims, psi_0, proj=True
+):
+    infids = []
+    for gate in U_dict.keys():
+        infid = state_transfer_infid(U_dict, gate, index, dims, psi_0, proj)
+        infids.append(infid)
+    return tf.reduce_mean(infids)
+
+def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool):
     U = U_dict[gate]
+    projection = 'fulluni'
     if proj:
-        U = U[0:2, 0:2]
-    lvls = U.shape[0]
+        projection = 'wzeros'
     U_ideal = tf.constant(
-                perfect_gate(lvls, gate, proj),
-                dtype=tf.complex128
-                )
-    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
+        perfect_gate(gate, index, dims, projection),
+        dtype=tf.complex128
+    )
     psi_ideal = tf.matmul(U_ideal, psi_0)
     psi_actual = tf.matmul(U, psi_0)
     overlap = tf_ketket_fid(psi_ideal, psi_actual)
@@ -63,16 +139,19 @@ def unitary_infid(
     U_dict: dict, gate: str, index, dims, proj: bool
 ):
     U = U_dict[gate]
+    # print(U)
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
     )
+    # print(U_ideal)
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
+    # print(gate, '  :  ', infid)
     return infid
 
 @fid_reg_deco
@@ -81,7 +160,6 @@ def unitary_infid_set(
 ):
     infids = []
     for gate in U_dict.keys():
-        np.set_printoptions(precision=2, linewidth=135)
         infid = unitary_infid(U_dict, gate, index, dims, proj)
         infids.append(infid)
     return tf.reduce_mean(infids)
@@ -97,7 +175,7 @@ def lindbladian_unitary_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf_super(
         tf.constant(
             perfect_gate(gate, index, dims,  projection),
@@ -126,7 +204,7 @@ def average_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
@@ -153,7 +231,7 @@ def lindbladian_average_infid(
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * len(index)
+        fid_lvls = 2 ** len(index)
     ideal = tf.constant(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
@@ -187,7 +265,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool):
     projection = 'fulluni'
     if proj:
         projection = 'wzeros'
-        fid_lvls = 2 * num_gates
+        fid_lvls = 2 ** num_gates
     ideal_cliffords = perfect_cliffords(
         lvls,
         proj=projection,

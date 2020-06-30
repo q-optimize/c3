@@ -15,7 +15,8 @@ class Optimizer:
         self,
         algorithm=None,
         plot_dynamics=False,
-        plot_pulses=False
+        plot_pulses=False,
+        store_unitaries=False
     ):
         self.optim_status = {}
         self.gradients = {}
@@ -23,6 +24,7 @@ class Optimizer:
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
+        self.store_unitaries = store_unitaries
         if algorithm is not None:
             self.algorithm = algorithm
         else:
@@ -32,8 +34,8 @@ class Optimizer:
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
         self.logdir = new_logdir
-        os.remove(self.dir_path + 'recent')
-        os.remove(self.dir_path + self.string)
+        os.remove(self.dir_path + '/recent')
+        #os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
     def set_exp(self, exp):
@@ -88,10 +90,14 @@ class Optimizer:
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
         if self.plot_dynamics:
-            psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
-            )
+            # psi_init = self.exp.model.tasks["init_ground"].initialise(
+            #     self.exp.model.drift_H,
+            #     self.exp.model.lindbladian
+            # )
+            dim = np.prod(self.exp.model.dims)
+            psi_init = [0] * dim
+            psi_init[1] = 1
+            psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
             for gate in self.exp.dUs.keys():
                 self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
             self.exp.dynamics_plot_counter += 1
@@ -100,6 +106,9 @@ class Optimizer:
                 instr = self.exp.gateset.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
             self.exp.pulses_plot_counter += 1
+        if self.store_unitaries:
+            self.exp.store_Udict(self.optim_status['goal'])
+            self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation}\n")
             # logfile.write(json.dumps(self.optim_status, indent=2))
