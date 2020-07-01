@@ -181,6 +181,7 @@ def tf_propagation(h0, hks, cflds, dt):
 
     """
     dUs = []
+
     for ii in range(cflds[0].shape[0]):
         cf_t = []
         for fields in cflds:
@@ -503,7 +504,7 @@ def tf_super(A):
 def tf_choi_to_chi(U, dims=None):
     if dims is None:
         dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.constant(qt_utils.pauli_basis(dims), dtype=tf.complex128)
+    B = tf.constant(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
     return (tf.linalg.adjoint(B) @ U @ B)
 
 
@@ -589,27 +590,42 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
             )
         ) / lvls
     )**2
+
     return overlap
 
 
 def tf_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(tf.linalg.adjoint(A), B)
-    # get to choi decomposition
-    lambda_super = tf_super(Lambda)
-    lambda_chi = tf_choi_to_chi(super_to_choi(lambda_super), dims=[int(lvls.numpy())])
-    # get only 00 element and measure fidelity
-    ave_fid = tf_abs((lambda_chi[0, 0] / lvls + 1) / (lvls + 1))
-    return ave_fid
+    Lambda = tf.matmul(
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls)), B
+    )
+    return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
 def tf_superoper_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
     lambda_super = tf.matmul(tf.linalg.adjoint(A), B)
-    # get to choi decomposition
-    lambda_choi = super_to_choi(lambda_super)
+    return tf_super_to_fid(lambda_super, lvls)
+
+
+def tf_super_to_fid(err, lvls):
+    lambda_chi = tf_choi_to_chi(super_to_choi(err), dims=lvls)
+    d = 2 ** len(lvls)
     # get only 00 element and measure fidelity
-    ave_fid = tf_abs((lambda_choi[0, 0] * lvls + 1) / (lvls + 1))
-    return ave_fid
+    return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
+
+
+def tf_project_to_comp(A, dims):
+    proj_list = []
+    for dim in dims:
+        p = np.zeros([dim, 2])
+        p[0, 0] = 1
+        p[1 ,1] = 1
+        proj_list.append(p)
+    proj = proj_list.pop()
+    while not proj_list==[]:
+        proj = np.kron(proj_list.pop(), proj)
+    P = tf.constant(proj, dtype=A.dtype)
+    return tf.matmul(tf.matmul(P,A,transpose_a=True), P)

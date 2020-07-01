@@ -86,10 +86,9 @@ with tf.device('/CPU:0'):
                 init_dir = os.path.basename(os.path.normpath(os.path.dirname(init_point)))
                 shutil.copy(init_point, dir + init_dir + "_initial_point.log")
             except FileNotFoundError:
-                print(
-                    f"C3:STATUS:No initial point found at "
+                raise Exception(
+                    f"C3:ERROR:No initial point found at "
                     f"{os.path.abspath(init_point)}. "
-                    "Continuing with default."
                 )
 
     if 'real_params' in cfg:
@@ -106,8 +105,8 @@ with tf.device('/CPU:0'):
                 )
                 shutil.copy(adjust_exp, dir+"adjust_exp.log")
             except FileNotFoundError:
-                print(
-                    f"C3:STATUS:No experimental values found at "
+                raise Error(
+                    f"C3:ERROR:No experimental values found at "
                     f"{os.path.abspath(adjust_exp)} "
                     "Continuing with default."
                 )
