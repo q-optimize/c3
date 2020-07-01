@@ -32,39 +32,15 @@ def iswap_transfer(
         psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[np.prod(dims),1])
         infid = state_transfer_infid(U_dict, "Id:iSWAP", index, dims, psi_0, proj)
         infids.append(infid)
-    # for indx in [0,2,4,6]:
-    #     psi_init = [0] * 8
-    #     psi_init[indx] = 1
-    #     psi_0 = tf.constant(psi_init, dtype=tf.complex128, shape=[8,1])
-    #     infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
-    #     infids.append(infid)
     return tf.reduce_mean(infids)
 
 @fid_reg_deco
 def iswap_comp_sub(
     U_dict: dict, index, dims, eval, proj=True
 ):
-    dim = dims[1]
-    # U_ideal = tf.constant(
-    #     perfect_gate("iSWAP", [0,1], [dim,dim]),
-    #     dtype=tf.complex128, projection =
-    # )
-
-    # proj = [[1,0],
-    #         [0,1]]
-    # lvls = 2
-    # while dim > lvls:
-    #     proj = proj.append([0,0])
-    #     lvls = lvls + 1
-    # p = np.kron(proj, proj)
-    # print(p)
-    # p = tf.constant(p, dtype=tf.complex128)
-    # U_comp = p.T@U@p
-    # print(U)
-    # print(U_comp)
     U = {}
-    U["iSWAP"] = U_dict["Id:iSWAP"][:dim**2,:dim**2]
-    infid = unitary_infid(U, "iSWAP", [0,1], [dim, dim], proj=proj)
+    U["iSWAP"] = U_dict["Id:iSWAP"][:dims[1]*dims[2],:dims[1]*dims[2]]
+    infid = unitary_infid(U, "iSWAP", [0,1], [dims[1], dims[2]], proj=proj)
     return infid
 
 @fid_reg_deco
