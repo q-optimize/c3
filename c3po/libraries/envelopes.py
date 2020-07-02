@@ -61,17 +61,21 @@ def rect(t, params):
 
 def flattop_risefall(t, params):
     """Flattop gaussian with width of length risefall."""
-    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
-    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    t_up = risefall
+    t_down = t_final - risefall
     return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
            (1 + tf.math.erf((-t + t_down) / risefall)) / 2
 
 
 def flattop(t, params):
-    """Flattop gaussian with fixed width of 1ns."""
-    params['risefall'] = 1e-9
-    return flattop_risefall(t, params)
+    """Flattop gaussian with width of length risefall."""
+    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
+           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
 
 
 def gaussian_sigma(t, params):
