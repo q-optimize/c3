@@ -167,7 +167,6 @@ def create_c1_opt_hk(
         sampled_seqs = random.sample(seqs100, k=RB_number)
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
             seqs=sampled_seqs, shots=shots, noise=noise)
-
     fids = {
         'unitary_infid': unit_X90p,
         # 'unitary_infid_Y90p': unit_Y90p,
@@ -197,12 +196,45 @@ def create_c1_opt_hk(
     options = {}
     if 'options' in cfg:
         options = cfg['options']
+    if 'plot_dynamics' in cfg:
+        if cfg['plot_dynamics'] == "False":
+            plot_dynamics = False
+        elif cfg['plot_dynamics'] == "True":
+            plot_dynamics = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+    else:
+        plot_dynamics = False
+    if 'plot_pulses' in cfg:
+        if cfg['plot_pulses'] == "False":
+            plot_pulses = False
+        elif cfg['plot_pulses'] == "True":
+            plot_pulses = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_pulses'"))
+    else:
+        plot_pulses = False
+    if 'store_unitaries' in cfg:
+        if cfg['store_unitaries'] == "False":
+            store_unitaries = False
+        elif cfg['store_unitaries'] == "True":
+            store_unitaries = True
+        else:
+            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+    else:
+        store_unitaries = False
+    opt_gates = cfg['opt_gates']
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
+        fid_subspace=cfg['fid_subspace'],
         gateset_opt_map=gateset_opt_map,
+        opt_gates=opt_gates,
         callback_fids=callback_fids,
         algorithm=algorithm,
+        plot_dynamics=plot_dynamics,
+        plot_pulses=plot_pulses,
+        store_unitaries=store_unitaries,
         options=options
     )
     return opt
