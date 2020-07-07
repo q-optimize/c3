@@ -197,7 +197,7 @@ class Experiment:
                 else:
                     amps = {}
                     for line, ctrls in instr.comps.items():
-                        amp, sum = self.generator.devices['awg'].get_average_amp()
+                        amp, sum = self.generator.devices['awg'].get_average_amp(line)
                         # amp = ctrls['gauss'].params['amp'].get_value()
                         # amp = tf.constant(1.0)
                         amps[line] = tf.cast(amp, tf.complex128)

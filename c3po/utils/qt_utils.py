@@ -394,19 +394,19 @@ C23 = Y90p @ Y90p @ X90m
 C24 = X90m @ Y90p @ X90p
 
 
-def perfect_cliffords(lvls: int, proj: str = 'fulluni', num_gates: int = 1):
+def perfect_cliffords(lvls, proj: str = 'fulluni', num_gates: int = 1):
     # TODO make perfect clifford more general by making it take a decomposition
 
     if num_gates == 1:
-        x90p = perfect_gate(lvls, 'X90p', proj)
-        y90p = perfect_gate(lvls, 'Y90p', proj)
-        x90m = perfect_gate(lvls, 'X90m', proj)
-        y90m = perfect_gate(lvls, 'Y90m', proj)
+        x90p = perfect_gate('X90p', index=[0], dims=lvls, proj=proj)
+        y90p = perfect_gate('Y90p', index=[0], dims=lvls, proj=proj)
+        x90m = perfect_gate('X90m', index=[0], dims=lvls, proj=proj)
+        y90m = perfect_gate('Y90m', index=[0], dims=lvls, proj=proj)
     elif num_gates == 2:
-        x90p = perfect_gate(lvls, 'X90p:Id', proj)
-        y90p = perfect_gate(lvls, 'Y90p:Id', proj)
-        x90m = perfect_gate(lvls, 'X90m:Id', proj)
-        y90m = perfect_gate(lvls, 'Y90m:Id', proj)
+        x90p = perfect_gate('X90p', index=[0,1], dims=lvls, proj=proj)
+        y90p = perfect_gate('Y90p', index=[0,1], dims=lvls, proj=proj)
+        x90m = perfect_gate('X90m', index=[0,1], dims=lvls, proj=proj)
+        y90m = perfect_gate('Y90m', index=[0,1], dims=lvls, proj=proj)
 
     C1 = x90m @ x90p
     C2 = x90p @ y90p
@@ -442,59 +442,59 @@ cliffords_string = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9',
                     'C10', 'C11', 'C12', 'C13', 'C14', 'C15', 'C16', 'C17',
                     'C18', 'C19', 'C20', 'C21', 'C22', 'C23', 'C24']
 
-# cliffords_decomp = [
-#                     ['X90p', 'X90m'],
-#                     ['Y90p', 'X90p'],
-#                     ['X90m', 'Y90m'],
-#                     ['Y90p', 'X90p', 'X90p'],
-#                     ['X90m'],
-#                     ['X90p', 'Y90m', 'X90m'],
-#                     ['X90p', 'X90p'],
-#                     ['Y90m', 'X90m'],
-#                     ['X90p', 'Y90m'],
-#                     ['Y90m'],
-#                     ['X90p'],
-#                     ['X90p', 'Y90p', 'X90p'],
-#                     ['Y90p', 'Y90p'],
-#                     ['Y90m', 'X90p'],
-#                     ['X90p', 'Y90p'],
-#                     ['Y90m', 'X90p', 'X90p'],
-#                     ['X90p', 'Y90p', 'Y90p'],
-#                     ['X90p', 'Y90m', 'X90p'],
-#                     ['X90p', 'X90p', 'Y90p', 'Y90p'],
-#                     ['Y90p', 'X90m'],
-#                     ['X90m', 'Y90p'],
-#                     ['Y90p'],
-#                     ['X90m', 'Y90p', 'Y90p'],
-#                     ['X90p', 'Y90p', 'X90m']
-#                     ]
-
 cliffords_decomp = [
-                    ['Id', 'Id', 'Id', 'Id'],
-                    ['Y90p', 'X90p', 'Id', 'Id'],
-                    ['X90m', 'Y90m', 'Id', 'Id'],
-                    ['Y90p', 'X90p', 'X90p', 'Id'],
-                    ['X90m', 'Id', 'Id', 'Id'],
-                    ['X90p', 'Y90m', 'X90m', 'Id'],
-                    ['X90p', 'X90p', 'Id', 'Id'],
-                    ['Y90m', 'X90m', 'Id', 'Id'],
-                    ['X90p', 'Y90m', 'Id', 'Id'],
-                    ['Y90m', 'Id', 'Id', 'Id'],
-                    ['X90p', 'Id', 'Id', 'Id'],
-                    ['X90p', 'Y90p', 'X90p', 'Id'],
-                    ['Y90p', 'Y90p', 'Id', 'Id'],
-                    ['Y90m', 'X90p', 'Id', 'Id'],
-                    ['X90p', 'Y90p', 'Id', 'Id'],
-                    ['Y90m', 'X90p', 'X90p', 'Id'],
-                    ['X90p', 'Y90p', 'Y90p', 'Id'],
-                    ['X90p', 'Y90m', 'X90p', 'Id'],
+                    ['X90p', 'X90m'],
+                    ['Y90p', 'X90p'],
+                    ['X90m', 'Y90m'],
+                    ['Y90p', 'X90p', 'X90p'],
+                    ['X90m'],
+                    ['X90p', 'Y90m', 'X90m'],
+                    ['X90p', 'X90p'],
+                    ['Y90m', 'X90m'],
+                    ['X90p', 'Y90m'],
+                    ['Y90m'],
+                    ['X90p'],
+                    ['X90p', 'Y90p', 'X90p'],
+                    ['Y90p', 'Y90p'],
+                    ['Y90m', 'X90p'],
+                    ['X90p', 'Y90p'],
+                    ['Y90m', 'X90p', 'X90p'],
+                    ['X90p', 'Y90p', 'Y90p'],
+                    ['X90p', 'Y90m', 'X90p'],
                     ['X90p', 'X90p', 'Y90p', 'Y90p'],
-                    ['Y90p', 'X90m', 'Id', 'Id'],
-                    ['X90m', 'Y90p', 'Id', 'Id'],
-                    ['Y90p', 'Id', 'Id', 'Id'],
-                    ['X90m', 'Y90p', 'Y90p', 'Id'],
-                    ['X90p', 'Y90p', 'X90m', 'Id']
+                    ['Y90p', 'X90m'],
+                    ['X90m', 'Y90p'],
+                    ['Y90p'],
+                    ['X90m', 'Y90p', 'Y90p'],
+                    ['X90p', 'Y90p', 'X90m']
                     ]
+
+# cliffords_decomp = [
+#                     ['Id', 'Id', 'Id', 'Id'],
+#                     ['Y90p', 'X90p', 'Id', 'Id'],
+#                     ['X90m', 'Y90m', 'Id', 'Id'],
+#                     ['Y90p', 'X90p', 'X90p', 'Id'],
+#                     ['X90m', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Y90m', 'X90m', 'Id'],
+#                     ['X90p', 'X90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90m', 'Id', 'Id'],
+#                     ['X90p', 'Y90m', 'Id', 'Id'],
+#                     ['Y90m', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Y90p', 'X90p', 'Id'],
+#                     ['Y90p', 'Y90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90p', 'Id', 'Id'],
+#                     ['X90p', 'Y90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90p', 'X90p', 'Id'],
+#                     ['X90p', 'Y90p', 'Y90p', 'Id'],
+#                     ['X90p', 'Y90m', 'X90p', 'Id'],
+#                     ['X90p', 'X90p', 'Y90p', 'Y90p'],
+#                     ['Y90p', 'X90m', 'Id', 'Id'],
+#                     ['X90m', 'Y90p', 'Id', 'Id'],
+#                     ['Y90p', 'Id', 'Id', 'Id'],
+#                     ['X90m', 'Y90p', 'Y90p', 'Id'],
+#                     ['X90p', 'Y90p', 'X90m', 'Id']
+#                     ]
 
 cliffords_decomp_xId = [
     [gate + ':Id' for gate in clif] for clif in cliffords_decomp

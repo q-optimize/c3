@@ -207,7 +207,7 @@ def lindbladian_average_infid(
         dtype=tf.complex128
     )
     U_ideal = tf_super(ideal)
-    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
+    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=dims)
     return infid
 
 @fid_reg_deco
@@ -222,44 +222,39 @@ def lindbladian_average_infid_set(
 
 @fid_reg_deco
 def epc_analytical(U_dict: dict, index, dims, proj: bool):
-    # TODO make this work with new index and dims
-    gate = list(U_dict.keys())[0]
-    U = U_dict[gate]
-    num_gates = len(gate.split(':'))
-    lvls = int(U.shape[0] ** (1/num_gates))
-    fid_lvls = lvls
+    # TODO make this work with new index and dims (double-check)
+    num_gates = len(dims)
     if num_gates == 1:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
-    projection = 'fulluni'
-    if proj:
-        projection = 'wzeros'
-        fid_lvls = 2 ** num_gates
     ideal_cliffords = perfect_cliffords(
-        lvls,
-        proj=projection,
+        lvls=[2]*num_gates,
         num_gates=num_gates
     )
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
-        C_ideal = ideal_cliffords[C_indx]
-        ave_fid = tf_average_fidelity(C_real, C_ideal, fid_lvls)
+        C_ideal = tf.constant(
+                    ideal_cliffords[C_indx],
+                    dtype=tf.complex128
+                  )
+        ave_fid = tf_average_fidelity(C_real, C_ideal, lvls=dims)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
 
 @fid_reg_deco
-def lindbladian_epc_analytical(U_dict: dict, proj: bool):
-    real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
-    lvls = int(np.sqrt(real_cliffords[0].shape[0]))
-    projection = 'fulluni'
-    fid_lvls = lvls
-    if proj:
-        projection = 'wzeros'
-        fid_lvls = 2
-    ideal_cliffords = perfect_cliffords(lvls, projection)
+def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool):
+    num_gates = len(dims)
+    if num_gates == 1:
+        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+    elif num_gates == 2:
+        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
+    ideal_cliffords = perfect_cliffords(
+        lvls=[2]*num_gates,
+        num_gates=num_gates
+    )
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
@@ -269,7 +264,7 @@ def lindbladian_epc_analytical(U_dict: dict, proj: bool):
                         dtype=tf.complex128
                         )
                    )
-        ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=fid_lvls)
+        ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=dims)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
@@ -391,9 +386,9 @@ def RB(
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
-    print("epc:", epc)
+    # print("epc:", epc)
     epg = 1 - ((1-epc)**(1/4))
-    print("epg:", epg)
+    # print("epg:", epg)
     # print('example seq: ', seqs[0])
 
     fig, ax = plt.subplots()
@@ -420,8 +415,8 @@ def RB(
              size=16,
              transform=ax.transAxes)
     plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
-    # return epc, r, A, B, fig, ax
-    return epg
+    return epc, r, A, B, fig, ax
+    # return epg
 
 @fid_reg_deco
 def lindbladian_RB_left(

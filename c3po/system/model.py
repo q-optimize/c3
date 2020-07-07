@@ -239,7 +239,7 @@ class Model:
             amp = amps[line]
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
-            ann_oper = self.ann_opers[qubit]
+            ann_oper = self.ann_opers[self.names.index(qubit)]
             num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper),
                 dtype=tf.complex128
@@ -254,27 +254,6 @@ class Model:
             if p.numpy() > 1 or p.numpy() < 0:
                 raise ValueError('strengh of dephasing channels outside [0,1]')
                 print('dephasing stength: ', p)
+            # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1-p) * Id + p * Z)
         return deph_ch
-
-    # def simple_dephasing_channel(self, t_final, amps):
-    #     amp = amps['d1']
-    #     diag = tf.constant([1, 1, 0, 0], dtype=tf.complex128)
-    #     Id = tf.linalg.diag(diag)
-    #     Id = tf_utils.tf_super(Id)
-    #     deph_ch = Id
-    #     Z = tf.constant(
-    #         np.array(
-    #             [[1, 0, 0, 0],
-    #              [0, -1, 0, 0],
-    #              [0, 0, 0, 0],
-    #              [0, 0, 0, 0]]),
-    #         dtype=tf.complex128
-    #     )
-    #     Z = tf_utils.tf_super(Z)
-    #     p = t_final * amp * self.dephasing_strength
-    #     if p.numpy() > 1 or p.numpy() < 0:
-    #         raise ValueError('strengh of dephasing channels outside [0,1]')
-    #         print('dephasing stength: ', p)
-    #     deph_ch = deph_ch * ((1-p) * Id + p * Z)
-    #     return deph_ch

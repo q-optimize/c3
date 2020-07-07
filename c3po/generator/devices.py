@@ -594,19 +594,19 @@ class AWG(Device):
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/store params scaled or not
 
-    def get_average_amp(self):
-        In = self.get_I()
-        Qu = self.get_Q()
+    def get_average_amp(self, line):
+        In = self.get_I(line)
+        Qu = self.get_Q(line)
         amp_per_bin = tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2)
         av = tf.reduce_mean(amp_per_bin)
         sum = tf.reduce_sum(amp_per_bin)
         return av, sum
 
-    def get_I(self):
-        return self.amp_tot * self.signal['inphase']
+    def get_I(self, line):
+        return self.amp_tot * self.signal[line]['inphase']
 
-    def get_Q(self):
-        return self.amp_tot * self.signal['quadrature']
+    def get_Q(self, line):
+        return self.amp_tot * self.signal[line]['quadrature']
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

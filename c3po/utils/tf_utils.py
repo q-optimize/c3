@@ -594,19 +594,17 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     return overlap
 
 
-def tf_average_fidelity(A, B, lvls=None):
-    if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
+def tf_average_fidelity(A, B, lvls):
     Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls)), B
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, superoper=False)), B
     )
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
-def tf_superoper_average_fidelity(A, B, lvls=None):
-    if lvls is None:
-        lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    lambda_super = tf.matmul(tf.linalg.adjoint(A), B)
+def tf_superoper_average_fidelity(A, B, lvls):
+    lambda_super = tf.matmul(
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, superoper=True)), B
+    )
     return tf_super_to_fid(lambda_super, lvls)
 
 
@@ -617,7 +615,7 @@ def tf_super_to_fid(err, lvls):
     return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
 
 
-def tf_project_to_comp(A, dims):
+def tf_project_to_comp(A, dims, superoper=False):
     proj_list = []
     for dim in dims:
         p = np.zeros([dim, 2])
@@ -627,5 +625,7 @@ def tf_project_to_comp(A, dims):
     proj = proj_list.pop()
     while not proj_list==[]:
         proj = np.kron(proj_list.pop(), proj)
+    if superoper:
+        proj = np.kron(proj, proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P,A,transpose_a=True), P)

@@ -124,48 +124,48 @@ def create_c1_opt_hk(
             raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
-        def unit_X90p(U_dict):
-            return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
-        def avfid_X90p(U_dict):
-            return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
-        def epc_ana(U_dict):
-            return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
+        def unit_X90p(U_dict, index, dims, proj):
+            return fidelities['lindbladian_unitary_infid'](U_dict, 'X90p', index, dims, proj=True)
+        def avfid_X90p(U_dict, index, dims, proj):
+            return fidelities['lindbladian_average_infid'](U_dict, 'X90p', index, dims, proj=True)
+        def epc_ana(U_dict, index, dims, proj):
+            return fidelities['lindbladian_epc_analytical'](U_dict, index, dims, proj=True)
     else:
-        def unit_X90p(U_dict):
-            return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
-        # def unit_Y90p(U_dict):
-        #     return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
-        # def unit_X90m(U_dict):
-        #     return fidelities.unitary_infid(U_dict, 'X90m', proj=True)
-        # def unit_Y90m(U_dict):
-        #     return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
-        def avfid_X90p(U_dict):
-            return fidelities.average_infid(U_dict, 'X90p', proj=True)
-        def epc_ana(U_dict):
-            return fidelities.epc_analytical(U_dict, proj=True)
+        def unit_X90p(U_dict, index, dims, proj):
+            return fidelities['unitary_infid'](U_dict, 'X90p', index, dims, proj=True)
+        # def unit_Y90p(U_dict, index, dims, proj):
+        #     return fidelities['unitary_infid'](U_dict, 'Y90p', proj=True)
+        # def unit_X90m(U_dict, index, dims, proj):
+        #     return fidelities['unitary_infid'](U_dict, 'X90m', proj=True)
+        # def unit_Y90m(U_dict, index, dims, proj):
+        #     return fidelities['unitary_infid'](U_dict, 'Y90m', proj=True)
+        def avfid_X90p(U_dict, index, dims, proj):
+            return fidelities['average_infid'](U_dict, 'X90p', index, dims, proj=True)
+        def epc_ana(U_dict, index, dims, proj):
+            return fidelities['epc_analytical'](U_dict, index, dims, proj=True)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
-    def orbit_no_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+    def orbit_no_noise(U_dict, index, dims, proj):
+        return fidelities['orbit_infid'](U_dict, lindbladian=lindblad,
             seqs=seqs)
-    def orbit_seq_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+    def orbit_seq_noise(U_dict, index, dims, proj):
+        return fidelities['orbit_infid'](U_dict, lindbladian=lindblad,
             RB_number=RB_number, RB_length=RB_length)
-    def orbit_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+    def orbit_shot_noise(U_dict, index, dims, proj):
+        return fidelities['orbit_infid'](U_dict, lindbladian=lindblad,
             seqs=seqs, shots=shots, noise=noise)
-    def orbit_seq_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict,lindbladian=lindblad,
+    def orbit_seq_shot_noise(U_dict, index, dims, proj):
+        return fidelities['orbit_infid'](U_dict,lindbladian=lindblad,
             shots=shots, noise=noise,
             RB_number=RB_number, RB_length=RB_length)
-    def epc_RB(U_dict):
-        return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad)[0]
-    def epc_leakage_RB(U_dict):
-        return fidelities.leakage_RB(U_dict,
+    def epc_RB(U_dict, index, dims, proj):
+        return fidelities['RB'](U_dict, logspace=True, lindbladian=lindblad)[0]
+    def epc_leakage_RB(U_dict, index, dims, proj):
+        return fidelities['leakage_RB'](U_dict,
             logspace=True, lindbladian=lindblad)[0]
     seqs100 = qt_utils.single_length_RB(RB_number=100, RB_length=RB_length)
-    def maw_orbit(U_dict):
+    def maw_orbit(U_dict, index, dims, proj):
         sampled_seqs = random.sample(seqs100, k=RB_number)
-        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+        return fidelities['orbit_infid'](U_dict, lindbladian=lindblad,
             seqs=sampled_seqs, shots=shots, noise=noise)
     fids = {
         'unitary_infid': unit_X90p,
