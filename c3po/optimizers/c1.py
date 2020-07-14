@@ -90,7 +90,7 @@ class C1(Optimizer):
         goal = self.fid_func(U_dict)
         goal_numpy = float(goal.numpy())
         display.plot_C1(self.logdir)
-
+        
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write(
@@ -110,4 +110,18 @@ class C1(Optimizer):
         ]
         self.optim_status['goal'] = goal_numpy
         self.evaluation += 1
+        
+        import os
+        import pickle
+        import numpy as np
+        if not os.path.exists(self.logdir + "unitaries/"):
+            os.mkdir(self.logdir + "unitaries/")
+        folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal_numpy) + "/"
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+        with open(folder + 'Us.pickle', 'wb+') as file:
+            pickle.dump(U_dict, file)
+        for key, value in U_dict.items():
+            np.savetxt(folder + key + ".txt", value)
+
         return goal

@@ -63,18 +63,18 @@ class Generator:
 
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
-                # plt.figure()
-                # plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
-                # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
-                # plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
-                # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
-                # plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
-                # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
-                # plt.show()
-                # plt.figure()
-                # plt.plot(lo_signal['ts'], signal, '-')
-                # plt.title("Multiplex")
-                # plt.show()
+                plt.figure()
+                plt.plot(awg.ts, awg_signal['inphase'], 'xb', label='AWG')
+                plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
+                plt.plot(lo_signal['ts'], flat_signal['inphase'], 'b-', label='interp')
+                plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
+                plt.plot(lo_signal['ts'], conv_signal['inphase'], 'g*:', label='convolved')
+                plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
+                plt.show()
+                plt.figure()
+                plt.plot(lo_signal['ts'], signal, '-')
+                plt.title("Multiplex")
+                plt.show()
         self.signal = gen_signal
         # TODO clean up output here: ts is redundant
         return gen_signal, lo_signal['ts']

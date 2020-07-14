@@ -151,6 +151,7 @@ class Experiment:
                         offset = 0
                     else:
                         offset = ctrls['gauss'].params['freq_offset'].get_value()
+                        print('offset: ', offset/2/np.pi/1e6)
 
                     freqs[line] = tf.cast(
                         ctrls['carrier'].params['freq'].get_value()
@@ -170,6 +171,7 @@ class Experiment:
                     freqs,
                     framechanges
                 )
+                print(repr(FR))
                 if self.model.lindbladian:
                     SFR = tf_utils.tf_super(FR)
                     U = tf.matmul(SFR, U)
