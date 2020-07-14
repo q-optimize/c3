@@ -94,9 +94,9 @@ def gaussian(t, params):
     """Normalized gaussian with fixed time/sigma ratio."""
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params['sigma'] = Qty(
-        value=params['t_final'].get_value()/4,
+        value=params['t_final'].get_value()/6,
         min=params['t_final'].get_value()/8,
-        max=params['t_final'].get_value()/2,
+        max=params['t_final'].get_value()/4,
         unit=params['t_final'].unit
     )
     return gaussian_sigma(t, params)
