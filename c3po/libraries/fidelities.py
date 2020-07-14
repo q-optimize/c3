@@ -44,6 +44,15 @@ def iswap_comp_sub(
     return infid
 
 @fid_reg_deco
+def cphase_comp_sub(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    U = {}
+    U["CZ"] = U_dict["Id:CZ"][:dims[1]*dims[2],:dims[1]*dims[2]]
+    infid = unitary_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
+    return infid
+
+@fid_reg_deco
 def iswap_leakage(
     U_dict: dict, index, dims, eval, proj=True
 ):

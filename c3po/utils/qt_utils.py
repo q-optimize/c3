@@ -208,7 +208,7 @@ def perfect_gate(
             gate = scipy_block_diag(C, NOT)
             # We increase gate_num since CNOT is a two qubit gate
             for ii in range(2, lvls):
-                pad_matrix(gate, lvls2, proj)
+                gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
             do_pad_gate = False
         elif gate_str == 'CZ':
@@ -218,7 +218,7 @@ def perfect_gate(
             gate = scipy_block_diag(C, Z)
             # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
-                pad_matrix(gate, lvls2, proj)
+                gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
             do_pad_gate = False
         elif gate_str == 'CR':
