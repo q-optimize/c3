@@ -78,7 +78,34 @@ class C3(Optimizer):
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
-            return indeces
+    return indeces
+
+    def learn_model_wih_keras(self):
+        """
+        Experimental. (More than others).
+        """
+        # TODO: Integrate learn model options.
+        self.start_log()
+        self.nice_print = self.exp.print_parameters
+        for cb_fig in self.callback_figs:
+            os.makedirs(self.logdir + cb_fig.__name__)
+        # os.makedirs(self.logdir + 'dynamics_seq')
+        # os.makedirs(self.logdir + 'dynamics_xyxy')
+        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
+        self.init_gateset_params = self.exp.gateset.get_parameters()
+        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
+        try:
+            opt = tf.keras.optimizers.SDG(learning_rate=0.1)
+            opt.minimize(self.fct_to_min)
+        except KeyboardInterrupt:
+            pass
+        display.plot_C3([self.logdir])
+        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
+            best_params = json.loads(file.readlines()[1])['params']
+        self.exp.set_parameters(best_params, self.opt_map)
+        self.end_log()
+        self.confirm()
 
     def learn_model(self):
         self.start_log()
@@ -92,7 +119,7 @@ class C3(Optimizer):
         self.init_gateset_params = self.exp.gateset.get_parameters()
         self.init_gateset_opt_map = self.exp.gateset.list_parameters()
         try:
-            # TODO deal with kears learning differently
+            # TODO deal with keras learning differently
             self.algorithm(
                 x0,
                 fun=self.fct_to_min,
@@ -207,8 +234,8 @@ class C3(Optimizer):
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         Shots"
-                        "       Diff\n"
+                        "Sequence    Simulation  Experiment  Std           Shots"
+                        "    Diff\n"
                     )
 
                 for iseq in range(len(sequences)):
@@ -224,8 +251,8 @@ class C3(Optimizer):
                                 f"{float(sim_val[ii]):8.6f}    "
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
-                                f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                                f"{float(shots[0]):8}     "
+                                f"{float(m_val[ii]-sim_val[ii]): 8.6f}\n"
                             )
                         logfile.flush()
 
