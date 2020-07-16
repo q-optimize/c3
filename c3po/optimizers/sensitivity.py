@@ -39,7 +39,8 @@ class SET(Optimizer):
         self.sampling = sampling
         self.batch_sizes = batch_sizes
         self.state_labels = state_labels
-        self.opt_map = sweep_map
+        self.sweep_map = sweep_map
+        self.opt_map = [sweep_map[0]]
         self.sweep_bounds = sweep_bounds
         self.options = options
         self.inverse = False
@@ -79,28 +80,32 @@ class SET(Optimizer):
             return indeces
 
     def sensitivity_test(self):
-        self.start_log()
         self.nice_print = self.exp.print_parameters
 
         print("Initial parameters:")
         print(self.exp.print_parameters())
-        self.dfname = "data.dat"
-        self.options['bounds'] = self.sweep_bounds
-
-        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.exp.get_parameters(self.opt_map, scaled=False)
-        self.init_gateset_params = self.exp.gateset.get_parameters()
-        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
-        try:
-            self.algorithm(
-                x0,
-                fun=self.fct_to_min,
-                fun_grad=self.fct_to_min_autograd,
-                grad_lookup=self.lookup_gradient,
-                options=self.options
-            )
-        except KeyboardInterrupt:
-            pass
+        for ii in range(len(self.sweep_map)):
+            self.dfname = "data.dat"
+            self.opt_map = [self.sweep_map[ii]]
+            self.options['bounds'] = [self.sweep_bounds[ii]]
+            print(f"C3:STATUS:Sweeping {self.opt_map}: {self.sweep_bounds[ii]}")
+            self.log_setup(self.dir_path, "_".join(self.opt_map[0]))
+            self.start_log()
+            print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
+            x0 = self.exp.get_parameters(self.opt_map, scaled=False)
+            self.init_gateset_params = self.exp.gateset.get_parameters()
+            self.init_gateset_opt_map = self.exp.gateset.list_parameters()
+            try:
+                self.algorithm(
+                    x0,
+                    fun=self.fct_to_min,
+                    fun_grad=self.fct_to_min_autograd,
+                    grad_lookup=self.lookup_gradient,
+                    options=self.options
+                )
+            except KeyboardInterrupt:
+                pass
+            self.exp.set_parameters(x0, self.opt_map, scaled=False)
 
         # #=== Get the resulting data ======================================
 
