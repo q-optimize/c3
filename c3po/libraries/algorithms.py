@@ -245,6 +245,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         es.disp()
 
         iter += 1
+    es.result_pretty()
     return es.result.xbest
 
 

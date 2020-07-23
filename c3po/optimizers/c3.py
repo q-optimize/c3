@@ -78,34 +78,7 @@ class C3(Optimizer):
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
-    return indeces
-
-    def learn_model_wih_keras(self):
-        """
-        Experimental. (More than others).
-        """
-        # TODO: Integrate learn model options.
-        self.start_log()
-        self.nice_print = self.exp.print_parameters
-        for cb_fig in self.callback_figs:
-            os.makedirs(self.logdir + cb_fig.__name__)
-        # os.makedirs(self.logdir + 'dynamics_seq')
-        # os.makedirs(self.logdir + 'dynamics_xyxy')
-        print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
-        self.init_gateset_params = self.exp.gateset.get_parameters()
-        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
-        try:
-            opt = tf.keras.optimizers.SDG(learning_rate=0.1)
-            opt.minimize(self.fct_to_min)
-        except KeyboardInterrupt:
-            pass
-        display.plot_C3([self.logdir])
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
-        self.exp.set_parameters(best_params, self.opt_map)
-        self.end_log()
-        self.confirm()
+            return indeces
 
     def learn_model(self):
         self.start_log()
