@@ -251,11 +251,11 @@ def create_c2_opt(optimizer_config, eval_func_path):
     )
     # if not os.path.isdir(logdir):
     #     os.makedirs(logdir)
-    if 'exp_right' in exp_eval_namespace:
-        exp_right = exp_eval_namespace['exp_right']
+    if 'exp' in exp_eval_namespace:
+        exp = exp_eval_namespace['exp']
         def eval(p):
             return eval_func(
-                p, exp_right, gateset_opt_map, state_labels, logdir
+                p, exp, gateset_opt_map, state_labels, logdir
             )
     else:
         eval = eval_func
@@ -271,7 +271,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
         algorithm=algorithm,
         options=options
     )
-    return opt, exp_right
+    return opt, exp
 
 
 def create_c3_opt(optimizer_config):
