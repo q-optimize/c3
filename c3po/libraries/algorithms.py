@@ -77,19 +77,6 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         points = 100
 
-    probe_list = []
-    if 'probe_list' in options:
-        for x in options['probe_list']:
-            probe_list.append(eval(x))
-
-    for p in probe_list:
-        if 'wrapper' in options:
-            val = copy.deepcopy(options['wrapper'])
-            val[val.index('x')] = p
-            fun([val])
-        else:
-            fun([p])
-
     if 'init_point' in options:
         init_point = bool(options.pop('init_point'))
         if init_point:
@@ -98,10 +85,24 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     bounds = options['bounds'][0]
     bound_min = bounds[0]
     bound_max = bounds[1]
-    probe_list_min = min(probe_list)
-    probe_list_max = max(probe_list)
-    bound_min = min(bound_min, probe_list_min)
-    bound_max = max(bound_max, probe_list_max)
+
+    probe_list = []
+    if 'probe_list' in options:
+        for x in options['probe_list']:
+            probe_list.append(x)
+        probe_list_min = min(probe_list)
+        probe_list_max = max(probe_list)
+        bound_min = min(bound_min, probe_list_min)
+        bound_max = max(bound_max, probe_list_max)
+
+        for p in probe_list:
+            if 'wrapper' in options:
+                val = copy.deepcopy(options['wrapper'])
+                val[val.index('x')] = p
+                fun([val])
+            else:
+                fun([p])
+
     xs = np.linspace(bound_min, bound_max, points)
     for x in xs:
         if 'wrapper' in options:
@@ -162,9 +163,9 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 @algo_reg_deco
 def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
-    # TODO print from the log not from hear
+    # TODO print from the log not from here
     options.update({'disp': True})
-    minimize(
+    return minimize(
         fun_grad,
         x0,
         jac=grad_lookup,
@@ -244,6 +245,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         es.disp()
 
         iter += 1
+    es.result_pretty()
     return es.result.xbest
 
 
@@ -253,6 +255,82 @@ def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     lbfgs(
         x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
     )
+
+@algo_reg_deco
+def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    custom_stop = False
+    options_cma = options['cmaes']
+    if 'noise' in options_cma:
+        noise = float(options_cma.pop('noise'))
+    else:
+        noise = 0
+
+    if 'init_point' in options_cma:
+        init_point = bool(options_cma.pop('init_point'))
+    else:
+        init_point = False
+
+    if 'spread' in options_cma:
+        spread = float(options_cma.pop('spread'))
+    else:
+        spread = 0.1
+
+    shrinked_check = False
+    if 'stop_at_convergence' in options_cma:
+        sigma_conv = int(options_cma.pop('stop_at_convergence'))
+        sigmas = []
+        shrinked_check = True
+
+    sigma_check = False
+    if 'stop_at_sigma' in options_cma:
+        stop_sigma = int(options_cma.pop('stop_at_sigma'))
+        sigma_check = True
+
+    settings = options_cma
+
+    es = cma.CMAEvolutionStrategy(x0, spread, settings)
+    iter = 0
+    while not es.stop():
+
+        if shrinked_check:
+            sigmas.append(es.sigma)
+            if iter > sigma_conv:
+                if(
+                    all(
+                        sigmas[-(i+1)]<sigmas[-(i+2)]
+                        for i in range(sigma_conv-1)
+                    )
+                ):
+                    print(
+                        f'C3:STATUS:Shrinked cloud for {sigma_conv} steps. '
+                        'Switching to gradients.'
+                    )
+                    break
+
+        if sigma_check:
+            if es.sigma < stop_sigma:
+                print(
+                    f'C3:STATUS:Goal sigma reached. Stopping CMA.'
+                )
+                break
+
+        samples = es.ask()
+        if init_point and iter == 0:
+            samples.insert(0,x0)
+            print('C3:STATUS:Adding initial point to CMA sample.')
+        solutions = []
+        points = []
+        for sample in samples:
+            r = lbfgs(
+                sample, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
+            )
+            solutions.append(r.fun)
+            points.append(r.x)
+        es.tell(points, solutions)
+        es.disp()
+
+        iter += 1
+    return es.result.xbest
 
 # def oneplusone(x0, goal_fun):
 #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])

@@ -93,6 +93,9 @@ def create_c1_opt(optimizer_config, lindblad):
             raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         store_unitaries = False
+    run_name = None
+    if "run_name" in cfg:
+        run_name = cfg['run_name']
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
@@ -104,7 +107,8 @@ def create_c1_opt(optimizer_config, lindblad):
         plot_dynamics=plot_dynamics,
         plot_pulses=plot_pulses,
         store_unitaries=store_unitaries,
-        options=options
+        options=options,
+        run_name=run_name
     )
     return opt
 
@@ -340,6 +344,9 @@ def create_c3_opt(optimizer_config):
     else:
         seqs_per_point = None
 
+    run_name = None
+    if "run_name" in cfg:
+        run_name = cfg['run_name']
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
@@ -352,6 +359,7 @@ def create_c3_opt(optimizer_config):
         callback_figs=callback_figs,
         algorithm=algorithm,
         options=options,
+        run_name=run_name
     )
     return opt
 
@@ -417,7 +425,7 @@ def create_sensitivity_test(task_config):
 
     sweep_bounds = []
     for a in cfg['sweep_bounds']:
-        sweep_bounds.append([eval(a[0]),eval(a[1])])
+        sweep_bounds.append([eval(a[0]), eval(a[1])])
 
     if 'same_dyn' in cfg:
         same_dyn = bool(cfg['same_dyn'])

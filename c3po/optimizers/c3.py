@@ -92,7 +92,7 @@ class C3(Optimizer):
         self.init_gateset_params = self.exp.gateset.get_parameters()
         self.init_gateset_opt_map = self.exp.gateset.list_parameters()
         try:
-            # TODO deal with kears learning differently
+            # TODO deal with keras learning differently
             self.algorithm(
                 x0,
                 fun=self.fct_to_min,
@@ -207,8 +207,8 @@ class C3(Optimizer):
                         )
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         Shots"
-                        "       Diff\n"
+                        "Sequence    Simulation  Experiment  Std           Shots"
+                        "    Diff\n"
                     )
 
                 for iseq in range(len(sequences)):
@@ -224,8 +224,8 @@ class C3(Optimizer):
                                 f"{float(sim_val[ii]):8.6f}    "
                                 f"{float(m_val[ii]):8.6f}    "
                                 f"{float(m_std[ii]):8.6f}    "
-                                f"{float(shots[0]):8}    "
-                                f"{float(m_val[ii]-sim_val[ii]):8.6f}\n"
+                                f"{float(shots[0]):8}     "
+                                f"{float(m_val[ii]-sim_val[ii]): 8.6f}\n"
                             )
                         logfile.flush()
 

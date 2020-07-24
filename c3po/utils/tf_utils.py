@@ -606,7 +606,9 @@ def tf_average_fidelity(A, B, lvls=None):
 def tf_superoper_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    lambda_super = tf.matmul(tf.linalg.adjoint(A), B)
+    lambda_super = tf.matmul(
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, True)), B
+    )
     return tf_super_to_fid(lambda_super, lvls)
 
 
@@ -617,12 +619,14 @@ def tf_super_to_fid(err, lvls):
     return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
 
 
-def tf_project_to_comp(A, dims):
+def tf_project_to_comp(A, dims, to_super=False):
     proj_list = []
     for dim in dims:
         p = np.zeros([dim, 2])
         p[0, 0] = 1
         p[1 ,1] = 1
+        if to_super:
+            p = np.kron(p,p)
         proj_list.append(p)
     proj = proj_list.pop()
     while not proj_list==[]:

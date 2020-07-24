@@ -231,7 +231,7 @@ def lindbladian_average_infid(
         dtype=tf.complex128
     )
     U_ideal = tf_super(ideal)
-    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=fid_lvls)
+    infid = 1 - tf_superoper_average_fidelity(U, U_ideal, lvls=dims)
     return infid
 
 @fid_reg_deco
