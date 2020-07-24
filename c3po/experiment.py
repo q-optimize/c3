@@ -23,8 +23,7 @@ class Experiment:
 
     """
 
-    def __init__(self, model, generator, gateset):
-        self.model = model
+    def __init__(self, model=None, generator=None, gateset=None):
         self.generator = generator
         self.gateset = gateset
 
@@ -32,9 +31,11 @@ class Experiment:
         self.dUs = {}
 
         components = {}
-        components.update(self.model.couplings)
-        components.update(self.model.subsystems)
-        components.update(self.model.tasks)
+        if model:
+            self.model = model
+            components.update(self.model.couplings)
+            components.update(self.model.subsystems)
+            components.update(self.model.tasks)
         components.update(self.generator.devices)
         self.components = components
 
