@@ -197,19 +197,18 @@ def lindbladian_unitary_infid_set(
 
 @fid_reg_deco
 def average_infid(
-    U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj=True
 ):
+    """
+    Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
+    always 2x2 (per qubit) and the actual unitary needs to be projected down.
+    """
     U = U_dict[gate]
-    projection = 'fulluni'
-    fid_lvls = np.prod([dims[i] for i in index])
-    if proj:
-        projection = 'wzeros'
-        fid_lvls = 2 ** len(index)
     U_ideal = tf.constant(
-        perfect_gate(gate, index, dims, projection),
+        perfect_gate(gate, index, dims=[2]*len(dims)),
         dtype=tf.complex128
     )
-    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=fid_lvls)
+    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=dims)
     return infid
 
 @fid_reg_deco
@@ -224,16 +223,11 @@ def average_infid_set(
 
 @fid_reg_deco
 def lindbladian_average_infid(
-    U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj=True
 ):
     U = U_dict[gate]
-    projection = 'fulluni'
-    fid_lvls = np.prod([dims[i] for i in index])
-    if proj:
-        projection = 'wzeros'
-        fid_lvls = 2 ** len(index)
     ideal = tf.constant(
-        perfect_gate(gate, index, dims, projection),
+        perfect_gate(gate, index, dims=[2]*len(dims)),
         dtype=tf.complex128
     )
     U_ideal = tf_super(ideal)

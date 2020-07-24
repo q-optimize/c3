@@ -48,7 +48,7 @@ def pauli_basis(dims=[2]):
     _SINGLE_QUBIT_PAULI_BASIS = (Id, X, Y, Z)
     paulis = []
     for dim in dims:
-        paulis.append([pad_matrix(P, dim-2, 'wzeros') for P in _SINGLE_QUBIT_PAULI_BASIS])
+        paulis.append([P for P in _SINGLE_QUBIT_PAULI_BASIS])
     result = [[]]
     res_tuple = []
     # TAKEN FROM ITERTOOLS
@@ -56,7 +56,7 @@ def pauli_basis(dims=[2]):
         result = [x+[y] for x in result for y in pauli_set]
     for prod in result:
         res_tuple.append(tuple(prod))
-    
+
     # TAKEN FROM QUTIP
     size = np.prod(np.array(dims)**2)
     B = np.zeros((size, size), dtype=complex)
@@ -65,7 +65,7 @@ def pauli_basis(dims=[2]):
             op = op_tuple[0]
         if nq == 2:
             op = np.kron(op_tuple[0],op_tuple[1])
-        if nq == 3:  
+        if nq == 3:
             op = np.kron(np.kron(op_tuple[0],op_tuple[1]),op_tuple[2])
         vec = np.reshape(np.transpose(op), [-1, 1])
         B[:, idx] = vec.T.conj()
