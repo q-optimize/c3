@@ -140,10 +140,10 @@ class Experiment:
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
+        gate_keys = self.gateset.instructions.keys()
         if "opt_gates" in self.__dict__:
-            gate_keys = self.opt_gates
-        else:
-            gate_keys = self.gateset.instructions.keys()
+            if self.opt_gates:
+                gate_keys = self.opt_gates
         for gate in gate_keys:
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
@@ -334,13 +334,14 @@ class Experiment:
             )
 
     def plot_pulses(self, instr, goal, debug=False):
-        # print(instr.name)
-        # print(instr.comps)
-        # print(self.generator.devices)
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
 
+#         print(instr.name)
+#         print(instr.t_end)
+#         print(awg_ts)
+        
         if debug:
             pass
         else:

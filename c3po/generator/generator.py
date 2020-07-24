@@ -49,6 +49,8 @@ class Generator:
                 resp = self.devices["resp"]
             if "fluxbias" in self.devices:
                 fluxbias = self.devices["fluxbias"]
+            if "noise" in self.devices:
+                noise = self.devices["noise"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -61,7 +63,9 @@ class Generator:
                     conv_signal = resp.process(flat_signal)
                 else:
                     conv_signal = flat_signal
-                signal = mixer.combine(lo_signal, conv_signal)
+                if "noise" in self.devices:
+                    lo_signal = noise.distort(lo_signal)
+                signal = mixer.combine(lo_signal, conv_signal)    
                 if "fluxbias" in self.devices and chan == "TC":
                     signal = fluxbias.frequency(signal)
                 else:

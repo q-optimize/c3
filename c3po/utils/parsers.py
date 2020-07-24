@@ -130,6 +130,8 @@ def create_c1_opt_hk(
             return fidelities['lindbladian_average_infid'](U_dict, 'X90p', index, dims, proj=True)
         def epc_ana(U_dict, index, dims, proj):
             return fidelities['lindbladian_epc_analytical'](U_dict, index, dims, proj=True)
+        def epc_ana_cliffords(U_dict, index, dims, proj):
+            return fidelities['lindbladian_epc_analytical'](U_dict, index, dims, proj=True, cliffords=True)
     else:
         def unit_X90p(U_dict, index, dims, proj):
             return fidelities['unitary_infid'](U_dict, 'X90p', index, dims, proj=True)
@@ -143,6 +145,8 @@ def create_c1_opt_hk(
             return fidelities['average_infid'](U_dict, 'X90p', index, dims, proj=True)
         def epc_ana(U_dict, index, dims, proj):
             return fidelities['epc_analytical'](U_dict, index, dims, proj=True)
+        def epc_ana_cliffords(U_dict, index, dims, proj):
+            return fidelities['epc_analytical'](U_dict, index, dims, proj=True, cliffords=True)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
     def orbit_no_noise(U_dict, index, dims, proj):
         return fidelities['orbit_infid'](U_dict, lindbladian=lindblad,
@@ -180,7 +184,8 @@ def create_c1_opt_hk(
         'maw_orbit': maw_orbit,
         'epc_RB': epc_RB,
         'epc_leakage_RB': epc_leakage_RB,
-        'epc_ana': epc_ana
+        'epc_ana': epc_ana,
+        'epc_ana_cliffords' : epc_ana_cliffords,
     }
     fid = cfg['fid_func']
     cb_fids = cfg['callback_fids']
@@ -223,7 +228,10 @@ def create_c1_opt_hk(
             raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         store_unitaries = False
-    opt_gates = cfg['opt_gates']
+    if 'opt_gates' in cfg:
+        opt_gates = cfg['opt_gates']
+    else:
+        opt_gates = None
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,

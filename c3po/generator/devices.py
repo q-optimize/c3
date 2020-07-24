@@ -56,8 +56,7 @@ class Device(C3obj):
         t_end: np.float64,
         centered: bool = True
     ):
-        if not hasattr(self, 'slice_num'):
-            self.calc_slice_num(t_start, t_end)
+        self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
         if centered:
             offset = dt/2
@@ -413,6 +412,37 @@ class Mixer(Device):
         self.signal = (inphase * cos + quadrature * sin)
         return self.signal
 
+    
+class LONoise(Device):
+    """Noise applied to the local oscillator"""
+
+    def __init__(
+            self,
+            name: str = "noise",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            noise_perc: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['noise_perc'] = noise_perc
+
+    def distort(self, lo_signal):
+        """Distort signal by adding noise."""
+        noise_perc = self.params['noise_perc'].get_value()
+        cos, sin = lo_signal["values"]
+        cos = cos + noise_perc * np.random.normal(loc=0.0,scale=1.0, size=len(cos))
+        sin = sin + noise_perc * np.random.normal(loc=0.0,scale=1.0, size=len(sin))
+        lo_signal["values"] = (cos, sin)
+        self.signal = lo_signal
+        return self.signal
+    
 
 class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""
@@ -496,6 +526,7 @@ class AWG(Device):
             quadrature_comps = []
 
             if (self.options == 'pwc'):
+                #TODO add buffer for pwc case
                 amp_tot_sq = 0
                 for key in components:
                     comp = components[key]
@@ -505,6 +536,16 @@ class AWG(Device):
                         quadrature = comp.params['quadrature'].get_value()
                         xy_angle = comp.params['xy_angle'].get_value()
                         phase = - xy_angle
+                        
+                        if len(inphase) != len(quadrature):
+                            raise ValueError('inphase and quadrature are of different lengths.')
+                        if len(inphase) < len(ts):
+                            zeros = tf.constant(
+                               np.zeros(len(ts)-len(inphase)),
+                               dtype=inphase.dtype
+                            )
+                            inphase = tf.concat([inphase, zeros], axis=0)
+                            quadrature = tf.concat([quadrature, zeros], axis=0)
                         inphase_comps.append(
                             inphase * tf.cos(phase)
                             + quadrature * tf.sin(phase)
@@ -588,6 +629,7 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
+        # TODO this normalization isn't used and should be done with maximum
         self.signal[channel]['inphase'] = inphase #/ norm
         self.signal[channel]['quadrature'] = quadrature #/ norm
         # self.log_shapes()
