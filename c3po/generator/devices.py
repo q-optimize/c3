@@ -535,7 +535,7 @@ class AWG(Device):
                         inphase = comp.params['inphase'].get_value()
                         quadrature = comp.params['quadrature'].get_value()
                         xy_angle = comp.params['xy_angle'].get_value()
-                        phase = - xy_angle
+                        phase = xy_angle
                         
                         if len(inphase) != len(quadrature):
                             raise ValueError('inphase and quadrature are of different lengths.')
@@ -548,11 +548,12 @@ class AWG(Device):
                             quadrature = tf.concat([quadrature, zeros], axis=0)
                         inphase_comps.append(
                             inphase * tf.cos(phase)
-                            + quadrature * tf.sin(phase)
+                            - quadrature * tf.sin(phase)
                         )
                         quadrature_comps.append(
-                            quadrature * tf.cos(phase)
-                            - inphase * tf.sin(phase)
+                            inphase * tf.sin(phase)
+                            + quadrature * tf.cos(phase)
+                            
                         )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -570,8 +571,7 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
-                        # TODO: check again the sign of this delta
-                        # [orbit:negative, manybird:positive] Fed guess: neg
+                        # TODO should we remove this redefinition?
                         delta = - comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
@@ -583,19 +583,17 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
-                        # TODO: check again the sign in front of offset
-                        # [orbit:positive, manybird:negative] Fed guess: pos
-                        phase = - xy_angle + freq_offset * ts
+                        phase = xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
-                                + denv * delta * tf.sin(phase)
+                                - denv * delta * tf.sin(phase)
                             )
                         )
                         quadrature_comps.append(
                             amp * (
-                                denv * delta * tf.cos(phase)
-                                - env * tf.sin(phase)
+                                env * tf.sin(phase)
+                                + denv * delta * tf.cos(phase)
                             )
                         )
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -616,12 +614,12 @@ class AWG(Device):
                         freq_offset = comp.params['freq_offset'].get_value()
                         # TODO: check again the sign in front of offset
                         # [orbit:positive, manybird:negative] Fed guess: pos
-                        phase = - xy_angle + freq_offset * ts
+                        phase = xy_angle - freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
                         )
                         quadrature_comps.append(
-                            - amp * comp.get_shape_values(ts) * tf.sin(phase)
+                            amp * comp.get_shape_values(ts) * tf.sin(phase)
                         )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -645,10 +643,10 @@ class AWG(Device):
         return av, sum
 
     def get_I(self, line):
-        return self.amp_tot * self.signal[line]['inphase']
+        return self.signal[line]['inphase'] # * self.amp_tot
 
     def get_Q(self, line):
-        return self.amp_tot * self.signal[line]['quadrature']
+        return self.signal[line]['quadrature'] # * self.amp_tot
 
     def log_shapes(self):
         # TODO log shapes in the generator instead
