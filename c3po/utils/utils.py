@@ -11,6 +11,7 @@ def log_setup(data_path, run_name=None):
         os.makedirs(data_path)
     pwd = os.path.join(
         data_path,
+        run_name,
         time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
     )
     try:
@@ -19,9 +20,6 @@ def log_setup(data_path, run_name=None):
         pass
     recent = os.path.join(data_path, 'recent')
     replace_symlink(pwd, recent)
-    if run_name is not None:
-        name = os.path.join(data_path, run_name)
-        replace_symlink(pwd, name)
     return os.path.join(pwd,'')
 
 
