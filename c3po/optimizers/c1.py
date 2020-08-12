@@ -1,6 +1,7 @@
 """Object that deals with the open loop optimal control."""
 
 import os
+import time
 import json
 import tensorflow as tf
 import c3po.utils.display as display
@@ -133,5 +134,6 @@ class C1(Optimizer):
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = goal_numpy
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal

@@ -1,6 +1,7 @@
 """Object that deals with the closed loop optimal control."""
 
 import os
+import time
 import json
 import pickle
 import c3po.utils.display as display
@@ -101,6 +102,7 @@ class C2(Optimizer):
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal)
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std, shots)
         display.plot_C2(self.dir_path, self.logdir)

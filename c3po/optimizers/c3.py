@@ -1,6 +1,7 @@
 """Object that deals with the model learning."""
 
 import os
+import time
 import json
 import pickle
 import itertools
@@ -102,7 +103,7 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        display.plot_C3([self.logdir])
+        # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
@@ -122,7 +123,7 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
-        display.plot_C3([self.logdir], only_iterations=False)
+        # display.plot_C3([self.logdir], only_iterations=False)
         exp_values = []
         sim_values = []
         exp_stds = []
@@ -155,11 +156,12 @@ class C3(Optimizer):
                     num_seqs = len(sequences) * 3
 
                 self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-                self.exp.gateset.set_parameters(
-                    self.init_gateset_params,
-                    self.init_gateset_opt_map,
-                    scaled=False
-                )
+                if "init_gateset_params" in self.__dict__.keys():
+                    self.exp.gateset.set_parameters(
+                        self.init_gateset_params,
+                        self.init_gateset_opt_map,
+                        scaled=False
+                    )
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
@@ -261,11 +263,12 @@ class C3(Optimizer):
             for par in self.exp.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = goal
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal
 
     def goal_run_with_grad(self, current_params):
-        display.plot_C3([self.logdir])
+        # display.plot_C3([self.logdir])
         exp_values = []
         sim_values = []
         exp_stds = []

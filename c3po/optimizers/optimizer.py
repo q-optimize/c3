@@ -110,7 +110,7 @@ class Optimizer:
             self.exp.store_Udict(self.optim_status['goal'])
             self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write(f"\nFinished evaluation {self.evaluation}\n")
+            logfile.write(f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n")
             # logfile.write(json.dumps(self.optim_status, indent=2))
             logfile.write(json.dumps(self.optim_status))
             logfile.write("\n")

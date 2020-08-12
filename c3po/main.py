@@ -11,6 +11,8 @@ import c3po.utils.parsers as parsers
 import c3po.utils.tf_utils as tf_utils
 import tensorflow as tf
 
+os.nice(5) # keep responsiveness when we overcommit memory
+
 #import os
 #import tensorflow as tf
 
