@@ -418,5 +418,6 @@ class C3(Optimizer):
         ]
         self.optim_status['goal'] = goal
         self.optim_status['gradient'] = list(grad.flatten())
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal, grad
