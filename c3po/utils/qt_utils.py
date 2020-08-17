@@ -333,6 +333,24 @@ def ramsey_sequence(length, target):
     S.extend(rotate_90)
     return S
 
+def ramsey_echo_sequence(length, target):
+    wait = ["Id:Id"]
+    hlength = length // 2
+    if target == "left":
+        rotate_90_p = ["X90p:Id"]
+        rotate_90_m =["X90m:Id"]
+    elif target == "right":
+        rotate_90_p = ["Id:X90p"]
+        rotate_90_m = ["Id:X90m"]
+    S = []
+    S.extend(rotate_90_p)
+    S.extend(wait * hlength)
+    S.extend(rotate_90_p)
+    S.extend(rotate_90_p)
+    S.extend(wait * hlength)
+    S.extend(rotate_90_m)
+    return S
+
 
 def single_length_RB(RB_number, RB_length, padding=""):
     """Given a length and number of repetitions it compiles RB sequences."""
