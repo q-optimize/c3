@@ -442,7 +442,40 @@ class LONoise(Device):
         lo_signal["values"] = (cos, sin)
         self.signal = lo_signal
         return self.signal
-    
+
+class Pink_Noise(Device):
+    """Device creating pink noise, i.e. 1/f noise."""
+
+    def __init__(
+            self,
+            name: str = "noise",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            noise_strength: Quantity = None,
+            bfl_num: int = None,
+            infrared_cutoff = None,
+            ultraviolet_cutoff = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['noise_strength'] = noise_strength
+        self.params['bfl_num'] = bfl_num
+        self.params['infrared_cutoff'] = infrared_cutoff
+        self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
+        
+    def pink_noise(self, lo_signal):
+        ts = lo_signal["ts"]
+        control = np.random.randint(2, size=10)
+        # for 
+        
+        
+        
 
 class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""

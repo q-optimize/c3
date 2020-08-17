@@ -332,6 +332,7 @@ class Experiment:
                 f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}_{goal}.png",
                 dpi=300
             )
+        plt.close("all")
 
     def plot_pulses(self, instr, goal, debug=False):
         signal, ts = self.generator.generate_signals(instr)
@@ -464,7 +465,7 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
                 dpi=300
             )
-
+        plt.close("all")
 
     def store_Udict(self, goal):
         folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
