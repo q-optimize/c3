@@ -9,7 +9,7 @@ import c3po.libraries.algorithms as algorithms
 
 
 class Optimizer:
-    """Optimizer object, where the optimal control is done."""
+    """General optimizer class from which specific classes are inherited."""
 
     def __init__(
         self,

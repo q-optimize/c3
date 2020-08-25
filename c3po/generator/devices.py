@@ -7,8 +7,15 @@ from c3po.signal.pulse import Envelope, Carrier
 from c3po.c3objs import Quantity, C3obj
 import matplotlib.pyplot as plt
 
+
 class Device(C3obj):
-    """Device that is part of the stack generating the instruction signals."""
+    """A Device that is part of the stack generating the instruction signals.
+
+    Parameters
+    ----------
+    resolution: np.float64
+        Number of samples per second this device operates at
+    """
 
     def __init__(
             self,
@@ -25,6 +32,9 @@ class Device(C3obj):
         self.resolution = resolution
 
     def write_config(self):
+        """
+        Return the current device as a JSON compatible dict.
+        """
         cfg = copy.deepcopy(self.__dict__)
         cfg.pop('signal', None)
         cfg.pop('ts', None)
@@ -45,7 +55,17 @@ class Device(C3obj):
             self,
             t_start: np.float64,
             t_end: np.float64
-            ):
+    ):
+        """
+        Effective number of time slices given start, end and resolution
+
+        Parameters
+        ----------
+        t_start: np.float64
+            Starting time for this device
+        t_end: np.float64
+            End time for this device
+        """
         res = self.resolution
         self.slice_num = int(np.abs(t_start - t_end) * res)
         # return self.slice_num
@@ -56,6 +76,18 @@ class Device(C3obj):
         t_end: np.float64,
         centered: bool = True
     ):
+        """
+        Compute time samples.
+
+        Parameters
+        ----------
+        t_start: np.float64
+            Starting time for this device
+        t_end: np.float64
+            End time for this device
+        centered: boolean
+            Sample in the middle of an interval, otherwise at the beginning
+        """
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
@@ -72,7 +104,13 @@ class Device(C3obj):
 
 
 class Readout(Device):
-    """Fake the readout process by multiplying a state phase with a factor."""
+    """Mimic the readout process by multiplying a state phase with a factor and offset.
+
+    Parameters
+    ----------
+    factor: Quantity
+    offset: Quantity
+    """
 
     def __init__(
             self,
@@ -94,13 +132,34 @@ class Readout(Device):
         self.params['offset'] = offset
 
     def readout(self, phase):
+        """
+        Apply the readout rescaling
+
+        Parameters
+        ----------
+        phase: tf.float64
+            Raw phase of a quantum state
+
+        Returns
+        -------
+        tf.float64
+            Rescaled readout value
+        """
         offset = self.params['offset'].get_value()
         factor = self.params['factor'].get_value()
         return phase * factor + offset
 
 
 class Volts_to_Hertz(Device):
-    """Upsacle the voltage signal to an amplitude to plug in the model."""
+    """Convert the voltage signal to an amplitude to plug into the model Hamiltonian.
+
+    Parameters
+    ----------
+    V_to_Hz: Quantity
+        Conversion factor
+    offset: tf.float64
+        Drive frequency offset
+    """
 
     def __init__(
             self,
@@ -123,9 +182,22 @@ class Volts_to_Hertz(Device):
             self.params['offset'] = offset
 
     def transform(self, mixed_signal, drive_frequency):
-        """Transform signal from value of V to Hz."""
+        """Transform signal from value of V to Hz.
+
+        Parameters
+        ----------
+        mixed_signal: tf.Tensor
+            Waveform as line voltages after IQ mixing
+        drive_frequency: Quantity
+            For frequency-dependent attenuation
+
+        Returns
+        -------
+        tf.Tensor
+            Waveform as control amplitudes
+        """
         v2hz = self.params['V_to_Hz'].get_value()
-        #TODO Fix scaling to be independent of drive frequency
+        # TODO Fix scaling to be independent of drive frequency
         if 'offset' in self.params:
             offset = self.params['offset'].get_value()
             att = v2hz / (drive_frequency + offset)
@@ -157,26 +229,37 @@ class Digital_to_Analog(Device):
         self.ts = None
 
     def resample(self, awg_signal, t_start, t_end):
-        """Resample the awg values to higher resolution."""
+        """Resample the awg values to higher resolution.
+
+        Parameters
+        ----------
+        awg_signal: tf.Tensor
+            Bandwith-limited, low-resolution AWG signal
+        t_start: np.float64
+            Beginning of the signal
+        t_end: np.float64
+            End of the signal
+
+        Returns
+        -------
+        dict
+            Inphase and Quadrature compontent of the upsampled signal
+        """
         ts = self.create_ts(t_start, t_end, centered=True)
         old_dim = awg_signal["inphase"].shape[0]
         new_dim = ts.shape[0]
         inphase = tf.reshape(
-                    tf.image.resize(
-                        tf.reshape(
-                            awg_signal["inphase"],
-                            shape=[1, old_dim, 1]),
-                        size=[1, new_dim],
-                        method='nearest'),
-                    shape=[new_dim])
+            tf.image.resize(
+                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+            ),
+            shape=[new_dim]
+        )
         quadrature = tf.reshape(
-                        tf.image.resize(
-                            tf.reshape(
-                                awg_signal["quadrature"],
-                                shape=[1, old_dim, 1]),
-                            size=[1, new_dim],
-                            method='nearest'),
-                        shape=[new_dim])
+            tf.image.resize(
+                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+            ),
+            shape=[new_dim]
+        )
         self.ts = ts
         self.signal['inphase'] = inphase
         self.signal['quadrature'] = quadrature
@@ -184,6 +267,7 @@ class Digital_to_Analog(Device):
 
 
 class Filter(Device):
+    # TODO This can apply a general function to a signal.
     """Apply a filter function to the signal."""
 
     def __init__(
@@ -210,6 +294,7 @@ class Filter(Device):
 
 
 class Transfer(Device):
+    # TODO Combine with filter
     """Apply a transfer function to the signal."""
 
     def __init__(
