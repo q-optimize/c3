@@ -47,6 +47,7 @@ extensions = [
     "autoapi.extension",
     "sphinx_rtd_theme",
     "sphinx.ext.graphviz",
+    "sphinx.ext.napoleon",
 ]
 
 # autoapi config
@@ -69,7 +70,7 @@ autoapi_options = [
 autosummary_generate = True
 
 # Sort members by type
-autodoc_member_order = "groupwise"
+# autodoc_member_order = "groupwise"
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -79,6 +80,9 @@ autodoc_member_order = "groupwise"
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+
+# Napoleon settings
+napoleon_numpy_docstring = True
 
 
 # -- Options for HTML output -------------------------------------------------
