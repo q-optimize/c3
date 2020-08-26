@@ -67,5 +67,7 @@ theoretically use LabVIEW to communicate with the experiment.
 ## Dependencies
 - [QuTip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
+- [Tensorflow](https://www.tensorflow.org/install)
+- [sphinx](https://www.sphinx-doc.org/en/master/usage/installation.html) [sphinx-autoapi](https://sphinx-autoapi.readthedocs.io/en/latest/) [sphinx-rtd-theme](https://github.com/readthedocs/sphinx_rtd_theme) for docs
 
 ![C3PO Logo](./C3PO_small.jpg)
