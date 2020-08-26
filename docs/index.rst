@@ -11,6 +11,7 @@ Welcome to q-optimize's documentation!
    :caption: Contents:
 
    generator
+   libraries
 
 
 
