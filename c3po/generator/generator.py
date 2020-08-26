@@ -1,4 +1,4 @@
-"""Singal generation stack."""
+"""Signal generation stack."""
 
 import copy
 import numpy as np
@@ -8,7 +8,17 @@ from c3po.signal.gates import Instruction
 
 
 class Generator:
-    """Generator, creates signal from digital to what arrives to the chip."""
+    """
+    Generator, creates signal from digital to what arrives to the chip.
+
+    Parameters
+    ----------
+    devices : list
+        Physical or abstract devices in the signal processing chain
+    resolution : np.float64
+        Resolution at which continuous functions are sampled
+
+    """
 
     def __init__(
             self,
@@ -36,6 +46,20 @@ class Generator:
         return cfg
 
     def generate_signals(self, instr: Instruction):
+        """
+        Perform the signal chain for a specified instruction, including local oscillator, AWG generation and IQ mixing.
+
+        Parameters
+        ----------
+        instr : Instruction
+            Operation to be performed, e.g. logical gate
+
+        Returns
+        -------
+        dict
+            Signal to be applied to the physical device
+
+        """
         # TODO deal with multiple instructions within GateSet
         with tf.name_scope('Signal_generation'):
             gen_signal = {}
@@ -110,4 +134,17 @@ class Generator:
         return gen_signal, lo_signal['ts']
 
     def readout_signal(self, phase):
+        """
+        Skeleton for modeling the readout process
+
+        Parameters
+        ----------
+        phase : tf.float64
+            Bare phase of a state, obtained from simulation
+
+        Returns
+        -------
+        tf.float64
+            Phase as readout signal
+        """
         return self.devices["readout"].readout(phase)

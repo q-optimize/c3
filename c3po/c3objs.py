@@ -20,6 +20,7 @@ class C3obj:
     params: dict
         Parameters in this dict can be accessed and optimized
     """
+    params: dict
 
     def __init__(
             self,

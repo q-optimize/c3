@@ -321,8 +321,20 @@ class Transfer(Device):
 
 
 class FluxTuning(Device):
-    """Get frequency response as a function of flux"""
+    # TODO Fed docs for flux tuning
+    """
+    Flux tunable qubit frequency
 
+    Parameters
+    ----------
+    phi_0 : Quantity
+        Flux bias
+    Phi : Quantity
+        Current flux
+    omega_0 : Quantity
+        Parking frequency
+
+    """
     def __init__(
             self,
             name: str = " ",
@@ -333,6 +345,7 @@ class FluxTuning(Device):
             Phi: np.float = 0.0,
             omega_0: np.float = 0.0
     ):
+
         super().__init__(
             name=name,
             desc=desc,
@@ -345,16 +358,26 @@ class FluxTuning(Device):
         self.freq = None
 
     def frequency(self, signal):
-        """Apply a transfer function to the signal."""
+        """
+        Compute the qubit frequency resulting from an applied flux.
+
+        Parameters
+        ----------
+        signal : tf.float64
+
+
+        Returns
+        -------
+        tf.float64
+            Qubit frequency
+        """
         pi = tf.constant(np.pi, dtype=tf.float64)
         Phi = self.params['Phi'].get_value()
         omega_0 = self.params['omega_0'].get_value()
         phi_0 = self.params['phi_0'].get_value()
 
         base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * Phi / phi_0)))
-        self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(
-            pi * (Phi + signal) / phi_0
-        ))) - base_freq
+        self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (Phi + signal) / phi_0))) - base_freq
         # print(self.params['Phi'])
         # print(self.params['phi_0'])
         # plt.figure()
@@ -405,9 +428,16 @@ class FluxTuning_AT(Device):
         ))
         return self.freq
 
+
 # TODO real AWG has 16bits plus noise
 class Response(Device):
-    """Make the AWG signal physical by including rise time."""
+    """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
+
+    Parameters
+    ----------
+    rise_time : Quantity
+        Time constant for the gaussian convolution
+    """
 
     def __init__(
             self,
@@ -427,26 +457,52 @@ class Response(Device):
         self.signal = None
 
     def convolve(self, signal: list, resp_shape: list):
+        """
+        Compute the convolution with a function
+
+        Parameters
+        ----------
+        signal : list
+            Potentially unlimited signal samples
+        resp_shape : list
+            Samples of the function to model limited bandwidth
+
+        Returns
+        -------
+        tf.Tensor
+            Processed signal
+
+        """
         convolution = tf.zeros(0, dtype=tf.float64)
         signal = tf.concat(
-                    [tf.zeros(len(resp_shape), dtype=tf.float64),
-                     signal,
-                     tf.zeros(len(resp_shape), dtype=tf.float64)],
-                    0)
+            [tf.zeros(len(resp_shape), dtype=tf.float64), signal, tf.zeros(len(resp_shape), dtype=tf.float64)], 0
+        )
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
-                [convolution,
-                 tf.reshape(
-                    tf.math.reduce_sum(
-                        tf.math.multiply(
-                         signal[p:p + len(resp_shape)],
-                         resp_shape)
-                    ), shape=[1])
-                 ],
-                0)
+                [
+                    convolution,
+                    tf.reshape(
+                        tf.math.reduce_sum(tf.math.multiply(signal[p:p + len(resp_shape)], resp_shape)), shape=[1]
+                    )
+                ], 0
+            )
         return convolution
 
     def process(self, iq_signal):
+        """
+        Apply a Gaussian shaped limiting function to an IQ signal.
+
+        Parameters
+        ----------
+        iq_signal : dict
+            I and Q components of an AWG signal
+
+        Returns
+        -------
+        dict
+            Bandwidth limited IQ signal
+
+        """
         n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(
             0.0,
@@ -462,13 +518,9 @@ class Response(Device):
         offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
         risefun = gauss - offset
-        inphase = self.convolve(iq_signal['inphase'],
-                                risefun / tf.reduce_sum(risefun))
-        quadrature = self.convolve(iq_signal['quadrature'],
-                                   risefun / tf.reduce_sum(risefun))
-        self.signal = {}
-        self.signal['inphase'] = inphase
-        self.signal['quadrature'] = quadrature
+        inphase = self.convolve(iq_signal['inphase'], risefun / tf.reduce_sum(risefun))
+        quadrature = self.convolve(iq_signal['quadrature'], risefun / tf.reduce_sum(risefun))
+        self.signal = {'inphase': inphase, 'quadrature': quadrature}
         return self.signal
 
 
@@ -491,7 +543,20 @@ class Mixer(Device):
         self.signal = None
 
     def combine(self, lo_signal, awg_signal):
-        """Combine signal from AWG and LO."""
+        """Combine signal from AWG and LO.
+
+        Parameters
+        ----------
+        lo_signal : dict
+            Local oscillator signal
+        awg_signal : dict
+            Waveform generator signal
+
+        Returns
+        -------
+        dict
+            Mixed signal
+        """
         cos, sin = lo_signal["values"]
         inphase = awg_signal["inphase"]
         quadrature = awg_signal["quadrature"]
@@ -519,6 +584,24 @@ class LO(Device):
         self.signal = {}
 
     def create_signal(self, channel: dict, t_start: float, t_end: float):
+        """
+        Generate a sinusodial signal.
+
+        Parameters
+        ----------
+        channel : dict
+            Drive channels
+        t_start : float
+            Beginning of the signal
+        t_end : float
+            End of the signal
+
+        Returns
+        -------
+        dict, tf.float64
+            Local oscillator signal and frequency
+
+        """
         # TODO check somewhere that there is only 1 carrier per instruction
         ts = self.create_ts(t_start, t_end, centered=True)
         for c in channel:
@@ -533,7 +616,13 @@ class LO(Device):
 
 
 class AWG(Device):
-    """AWG device, transforms digital input to analog signal."""
+    """AWG device, transforms digital input to analog signal.
+
+    Parameters
+    ----------
+    logdir : str
+        Filepath to store generated waveforms
+    """
 
     def __init__(
         self,
@@ -563,11 +652,26 @@ class AWG(Device):
     def create_IQ(self, channel: str, components: dict, t_start: float, t_end: float):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
-
         These are universal to either experiment or simulation.
         In the experiment these will be routed to AWG and mixer
         electronics, while in the simulation they provide the shapes of the
         instruction fields to be added to the Hamiltonian.
+
+        Parameters
+        ----------
+        channel : str
+            Identifier for the selected drive line
+        components : dict
+            Separate signals to be combined onto this drive line
+        t_start : float
+            Beginning of the signal
+        t_end : float
+            End of the signal
+
+        Returns
+        -------
+        dict
+            Waveforms as I and Q components
 
         """
         with tf.name_scope("I_Q_generation"):
@@ -680,6 +784,14 @@ class AWG(Device):
         # TODO decide when and where to return/store params scaled or not
 
     def get_average_amp(self):
+        """
+        Compute average and sum of the amplitudes. Used to estimate effective drive power for non-trivial shapes.
+
+        Returns
+        -------
+        tuple
+            Average and sum
+        """
         In = self.get_I()
         Qu = self.get_Q()
         amp_per_bin = tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2)
