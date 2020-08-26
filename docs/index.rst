@@ -10,15 +10,9 @@ Welcome to q-optimize's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   top-level
-   generator
-   libraries
-   optimizers
-   runs
-   signal
-   system
-   utils
-
+   introduction
+   installation-usage
+   modules-api
 
 
 Indices and tables
