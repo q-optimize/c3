@@ -10,6 +10,7 @@ Welcome to q-optimize's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   top-level
    generator
    libraries
    optimizers

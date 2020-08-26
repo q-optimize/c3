@@ -36,7 +36,6 @@ author = "Nicolas Wittler, \
         Stefan Filipp, \
         Frank K Wilhelm, \
         Shai Machnes"
-license = "Apache 2.0"
 
 # -- General configuration ---------------------------------------------------
 
@@ -55,7 +54,7 @@ autoapi_dirs = ["../c3po"]
 autoapi_file_patterns = ["*.py"]
 autoapi_ignore = ["*logs*", "__pycache__"]
 autoapi_member_order = "bysource"
-autoapi_keep_files = True
+autoapi_keep_files = False
 autoapi_add_toctree_entry = True
 autoapi_options = [
     "members",
