@@ -17,4 +17,4 @@ We present a working example of the method on a superconducting 2-qubit QPU.
 Starting from a roughly  characterized system, we are able to learn the model parameters to high accuracy and 
 derive a coherence limited 99.6\% CR gate.
 
-C3 software is made available under the Apache 2.0 open-source license at www.q-optimize.org
+C3 software is made available under the Apache 2.0 open-source license at `q-optimize.org <http://q-optimize.org>`_.
