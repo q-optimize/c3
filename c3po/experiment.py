@@ -145,6 +145,7 @@ class Experiment:
             if self.opt_gates:
                 gate_keys = self.opt_gates
         for gate in gate_keys:
+#             print(gate)
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)

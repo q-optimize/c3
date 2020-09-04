@@ -418,7 +418,7 @@ class LONoise(Device):
 
     def __init__(
             self,
-            name: str = "noise",
+            name: str = "lo_noise",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -448,14 +448,14 @@ class Pink_Noise(Device):
 
     def __init__(
             self,
-            name: str = "noise",
+            name: str = "pink_noise",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
             noise_strength: Quantity = None,
-            bfl_num: int = None,
-            infrared_cutoff = None,
-            ultraviolet_cutoff = None
+            bfl_num: Quantity = None,
+#             infrared_cutoff = None,
+#             ultraviolet_cutoff = None
     ):
         super().__init__(
             name=name,
@@ -465,15 +465,43 @@ class Pink_Noise(Device):
         )
         self.signal = None
         self.params['noise_strength'] = noise_strength
+        if not bfl_num:
+            bfl_num = Quantity(
+                value=5,
+                min=1,
+                max=10
+            )
         self.params['bfl_num'] = bfl_num
-        self.params['infrared_cutoff'] = infrared_cutoff
-        self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
+#         self.params['infrared_cutoff'] = infrared_cutoff
+#         self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
+        self.ts = None
+        self.signal = None
         
-    def pink_noise(self, lo_signal):
-        ts = lo_signal["ts"]
-        control = np.random.randint(2, size=10)
-        # for 
+    def distort(self, mixed_signal):
+        bfl_num = np.int(self.params['bfl_num'].get_value().numpy())
+        noise_strength = self.params['noise_strength'].get_value().numpy()
         
+#         noise = []
+#         bfls = np.random.randint(2, size=bfl_num)
+#         for step in range(len(mixed_signal)):
+#             for indx in range(bfl_num):
+#                 if np.floor(np.random.random() * (10^indx))==0:
+#                     bfls[indx] = not(bfls[indx])
+#             noise.append(np.sum(bfls) * noise_strength)
+
+        noise = []
+        bfls = 2 * np.random.randint(2, size=bfl_num) - 1
+        num_steps = len(mixed_signal)
+        flip_rates = np.logspace(0, np.log(num_steps), num=bfl_num+1, endpoint=True, base=10.0)
+        for step in range(num_steps):
+            for indx in range(bfl_num):
+                if np.floor(np.random.random() * flip_rates[indx+1])==0:
+                    bfls[indx] = - bfls[indx]
+            noise.append(np.sum(bfls) * noise_strength)
+
+        self.noise = noise
+        self.signal = mixed_signal + tf.constant(noise, shape=mixed_signal.shape, dtype= tf.float64)
+        return self.signal
         
         
 
@@ -485,7 +513,10 @@ class LO(Device):
         name: str = "lo",
         desc: str = " ",
         comment: str = " ",
-        resolution: np.float64 = 0.0
+        resolution: np.float64 = 0.0,
+        phase_noise: Quantity = None,
+        amp_noise: Quantity = None,
+        freq_noise: Quantity = None
     ):
         super().__init__(
             name=name,
@@ -493,19 +524,62 @@ class LO(Device):
             comment=comment,
             resolution=resolution
         )
-
+        self.phase_noise = phase_noise
+        self.freq_noise = freq_noise
+        self.amp_noise = amp_noise
         self.signal = {}
-
+        
     def create_signal(self, channel: dict, t_start: float, t_end: float):
         # TODO check somewhere that there is only 1 carrier per instruction
         ts = self.create_ts(t_start, t_end, centered=True)
+        dt = ts[1] - ts[0]
+        phase_noise = self.phase_noise
+        amp_noise = self.amp_noise
+        freq_noise = self.freq_noise
         for c in channel:
             comp = channel[c]
             if isinstance(comp, Carrier):
+                cos, sin = [], []
                 omega_lo = comp.params['freq'].get_value()
-                self.signal["values"] = (
-                    tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
-                )
+                if amp_noise and freq_noise:
+                    print('amp and freq noise')
+                    phi = omega_lo * ts[0]
+                    for t in ts:
+                        A = np.random.normal(loc=1.0, scale=amp_noise)
+                        cos.append(A * np.cos(phi))
+                        sin.append(A * np.sin(phi))
+                        omega = omega_lo + np.random.normal(loc=0.0,scale=freq_noise)
+                        phi = phi + omega * dt
+                elif amp_noise and phase_noise:
+                    print('amp and phase noise')
+                    for t in ts:
+                        A = np.random.normal(loc=1.0,scale=amp_noise)
+                        phi = np.random.normal(loc=0.0,scale=phase_noise)
+                        cos.append(A * np.cos(omega_lo * t + phi))
+                        sin.append(A * np.sin(omega_lo * t + phi))
+                elif amp_noise:
+                    print('amp noise')
+                    for t in ts:
+                        A = np.random.normal(loc=1.0,scale=amp_noise)
+                        cos.append(A * np.cos(omega_lo * t))
+                        sin.append(A * np.sin(omega_lo * t))
+                elif phase_noise:
+                    print('phase noise')
+                    for t in ts:
+                        phi = np.random.normal(loc=0.0,scale=phase_noise)
+                        cos.append(np.cos(omega_lo * t + phi))
+                        sin.append(np.sin(omega_lo * t + phi))
+                elif freq_noise:
+                    phi = omega_lo * ts[0]
+                    for t in ts:
+                        cos.append(np.cos(phi))
+                        sin.append(np.sin(phi))
+                        omega = omega_lo + np.random.normal(loc=0.0,scale=freq_noise)
+                        phi = phi + omega * dt
+                else:
+                    cos = tf.cos(omega_lo * ts)
+                    sin = tf.sin(omega_lo * ts)
+                self.signal["values"] = (cos, sin)
                 self.signal["ts"] = ts
                 return self.signal, omega_lo
 

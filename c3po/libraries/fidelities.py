@@ -350,7 +350,7 @@ def RB(
         pop0s = []
         for U in Us:
             pops = populations(tf.matmul(U, psi_init), lindbladian)
-            pop0s.append(float(pops[0]+pops[1]))
+            pop0s.append(float(pops[0]))
         surv_prob.append(pop0s)
 
     def RB_fit(len, r, A, B):
@@ -395,12 +395,12 @@ def RB(
                 pop0s = []
                 for U in Us:
                     pops = populations(tf.matmul(U, psi_init), lindbladian)
-                    pop0s.append(float(pops[0]+pops[1]))
+                    pop0s.append(float(pops[0]))
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
     # print("epc:", epc)
-    epg = 1 - ((1-epc)**(1/4))
+    epg = 1 - ((1-epc)**(1/4)) #TODO: adjust to be mean length of 
     # print("epg:", epg)
     # print('example seq: ', seqs[0])
 
@@ -427,9 +427,9 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-    plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
+#     plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
     return epc, r, A, B, fig, ax
-    # return epg
+#     return epg
 
 @fid_reg_deco
 def lindbladian_RB_left(
