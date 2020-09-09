@@ -1,4 +1,4 @@
-"""Component class and subclasses."""
+"""Component class and subclasses for the components making up the quantum device."""
 
 import types
 import numpy as np
@@ -11,7 +11,15 @@ from c3po.c3objs import C3obj
 
 
 class PhysicalComponent(C3obj):
-    """Represents the components making up a chip."""
+    """
+    Represents the components making up a chip.
+
+    Parameters
+    ----------
+    hilbert_dim : int
+        Dimension of the Hilbert space of this component
+
+    """
 
     def __init__(
             self,
@@ -82,6 +90,15 @@ class Qubit(PhysicalComponent):
             self.params['temp'] = temp
 
     def init_Hs(self, ann_oper):
+        """
+        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing oscillator is used.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
@@ -91,6 +108,16 @@ class Qubit(PhysicalComponent):
             )
 
     def get_Hamiltonian(self):
+        """
+        Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
+        the Duffing part and returns their sum.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+
+        """
         h = tf.cast(
                 self.params['freq'].get_value(),
                 tf.complex128
@@ -103,6 +130,15 @@ class Qubit(PhysicalComponent):
         return h
 
     def init_Ls(self, ann_oper):
+        """
+        Initialize Lindbladian components.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
         self.collapse_ops['t1'] = ann_oper
         self.collapse_ops['temp'] = ann_oper.T.conj()
         self.collapse_ops['t2star'] = 2 * tf.matmul(
@@ -111,6 +147,15 @@ class Qubit(PhysicalComponent):
         )
 
     def get_Lindbladian(self, dims):
+        """
+        Compute the Lindbladian, based on relaxation, dephasing constants and finite temperature.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+
+        """
         Ls = []
         if 't1' in self.params:
             t1 = self.params['t1'].get_value()
@@ -170,18 +215,30 @@ class Resonator(PhysicalComponent):
         self.params['freq'] = freq
 
     def init_Hs(self, ann_oper):
+        """
+        Initialize the Hamiltonian as a number operator
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space.
+
+        """
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
+        """NOT IMPLEMENTED"""
         pass
 
     def get_Hamiltonian(self):
+        """Compute the Hamiltonian."""
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         return freq * self.Hs['freq']
 
     def get_Lindbladian(self, dims):
+        """NOT IMPLEMENTED"""
         pass
 
 
@@ -368,7 +425,7 @@ class Drive(LineComponent):
     Parameters
     ----------
     connected: list
-        all physical components recieving driving signals via this line
+        all physical components receiving driving signals via this line
 
     """
 

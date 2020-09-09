@@ -16,11 +16,36 @@ class GateSet:
         return cfg
 
     def add_instruction(self, instr):
+        """
+        Add one instruction to the gateset.
+
+        Parameters
+        ----------
+        instr : Instruction
+            Instruction specifies an operation on the device.
+
+
+        """
         # TODO make this use ___dict___ ?
         self.instructions[instr.name] = instr
         self.update_par_lens()
 
     def list_parameters(self):
+        """
+        List all parameters in this gateset in a hierarchical way. Multiple grouped identifiers mean the same value is
+        used in all places. Structure is
+
+        [gate name, drive channel, component, parameter]
+
+        e.g.
+
+        ["X90p", "qubit 1 Drive", "local oscillator", "frequency"]
+
+        Returns
+        -------
+        list
+            Parameter identifiers.
+        """
         par_list = []
         for gate in self.instructions.keys():
             instr = self.instructions[gate]
@@ -31,6 +56,9 @@ class GateSet:
         return par_list
 
     def update_par_lens(self):
+        """
+        Helper to update the lengths of each parameter in the case of vector or matrix valued parameters.
+        """
         opt_map = self.list_parameters()
         id_list = []
         par_lens = []
@@ -100,7 +128,17 @@ class GateSet:
         return values
 
     def set_parameters(self, values: list, opt_map: list, scaled=False):
-        """Set the values in the original instruction class."""
+        """Set the values in the original instruction class.
+
+        Parameters
+        ----------
+        values : tf.Tensor
+            Linear vector of parameter values
+        opt_map : list
+            Nested list identifying each entry in the parameter vector
+        scaled : boolean
+            Use the bare, optimizer friendly scaling
+        """
         # TODO catch key errors
         val_indx = 0
         for indx in range(len(opt_map)):
@@ -133,6 +171,19 @@ class GateSet:
                 val_indx += 1
 
     def print_parameters(self, opt_map=None):
+        """
+        Human readable, printable string of the parameter ids and their values.
+
+        Parameters
+        ----------
+        opt_map : list
+            Nested list identifying the parameters of interest. If none is given, the full opt_map is used.
+
+        Returns
+        -------
+        str
+            Parameters and their values
+        """
         ret = []
         if opt_map is None:
             opt_map = self.id_list
@@ -204,4 +255,15 @@ class Instruction():
         return cfg
 
     def add_component(self, comp: InstructionComponent, chan: str):
+        """
+        Add one component, e.g. an envelope, local oscillator, to a channel.
+
+        Parameters
+        ----------
+        comp : InstructionComponent
+            Component to be added.
+        chan : str
+            Identifier for the target channel
+
+        """
         self.comps[chan][comp.name] = comp

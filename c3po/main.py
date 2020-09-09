@@ -45,7 +45,7 @@ if __name__ == '__main__':
             opt = parsers.create_c3_opt(opt_config)
         elif optim_type == "SET":
             print("C3:STATUS: creating set obj")
-            opt = parsers.create_sensitivity_test(opt_config)
+            opt = parsers.create_sensitivity(opt_config)
         elif optim_type == "confirm":
             print("C3:STATUS: creating c3 opt ...")
             opt = parsers.create_c3_opt(opt_config)
@@ -150,4 +150,4 @@ if __name__ == '__main__':
             )
 
             print("sensitivity test ...")
-            opt.sensitivity_test()
+            opt.sensitivity()

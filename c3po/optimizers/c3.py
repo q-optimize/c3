@@ -16,7 +16,36 @@ from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_p
 
 
 class C3(Optimizer):
-    """Object that deals with the model learning."""
+    """
+    Object that deals with the model learning.
+
+    Parameters
+    ----------
+    dir_path : str
+        Filepath to save results
+    fom : callable
+        Figure of merit from the estimator library
+    sampling : str
+        Sampling method from the sampling library
+    batch_sizes : list
+        Number of points to select from each dataset
+    seqs_per_point : int
+        Number of sequences that use the same parameter set
+    opt_map : list
+        Hierarchical identifiers for the model parameter vector
+    state_labels : list
+        Identifiers for the qubit subspaces
+    callback_foms : list
+        Figures of merit to additionally compute and store
+    callback_figs : list
+        List of plotting functions to run at every evaluation
+    algorithm : callable
+        From the algorithm library
+    run_name : str
+        User specified name for the run, will be used as root folder
+    options : dict
+        Options to be passed to the algorithm
+    """
 
     def __init__(
         self,
@@ -33,7 +62,8 @@ class C3(Optimizer):
         run_name=None,
         options={}
     ):
-        """Initiliase."""
+        """Initiliase.
+        """
         super().__init__(algorithm=algorithm)
         self.fom = fom
         self.sampling = sampling
@@ -49,6 +79,17 @@ class C3(Optimizer):
         self.log_setup(dir_path, run_name)
 
     def log_setup(self, dir_path, run_name):
+        """
+        Create the folders to store data.
+
+        Parameters
+        ----------
+        dir_path : str
+            Filepath
+        run_name : str
+            User specified name for the run
+
+        """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
             run_name = self.algorithm.__name__ + '-' \
@@ -58,11 +99,28 @@ class C3(Optimizer):
         self.logname = 'model_learn.log'
 
     def read_data(self, datafiles):
+        """
+        Open data files and read in experiment results.
+
+        Parameters
+        ----------
+        datafiles : list of str
+            List of paths for files that contain learning data.
+        """
         for target, datafile in datafiles.items():
             with open(datafile, 'rb+') as file:
                 self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
@@ -70,6 +128,19 @@ class C3(Optimizer):
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
+        """
+        Select a subset of each dataset to compute the goal function on.
+
+        Parameters
+        ----------
+        batch_size : int
+            Number of points to select
+
+        Returns
+        -------
+        list
+            Indeces of the selected data points.
+        """
         # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
         sampling = self.sampling
@@ -82,6 +153,9 @@ class C3(Optimizer):
             return indeces
 
     def learn_model(self):
+        """
+        Peroms the model learning by minimizing the figure of merit.
+        """
         self.start_log()
         self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
@@ -111,6 +185,10 @@ class C3(Optimizer):
         self.confirm()
 
     def confirm(self):
+        """
+        Compute the validation set, i.e. the value of the goal function on all points of the dataset that were not used
+        for learning.
+                """
         self.logname = 'confirm.log'
         self.inverse = True
         self.start_log()
@@ -123,6 +201,20 @@ class C3(Optimizer):
             pass
 
     def goal_run(self, current_params):
+        """
+        Evaluate the figure of merit for the current model parameters.
+
+        Parameters
+        ----------
+        current_params : tf.Tensor
+            Current model parameters
+
+        Returns
+        -------
+        tf.float64
+            Figure of merit
+
+        """
         # display.plot_C3([self.logdir], only_iterations=False)
         exp_values = []
         sim_values = []
@@ -268,6 +360,9 @@ class C3(Optimizer):
         return goal
 
     def goal_run_with_grad(self, current_params):
+        """
+        Same as goal_run but with gradient. Very resource intensive. Unoptimized at the moment.
+        """
         # display.plot_C3([self.logdir])
         exp_values = []
         sim_values = []

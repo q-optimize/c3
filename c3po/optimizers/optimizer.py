@@ -9,7 +9,20 @@ import c3po.libraries.algorithms as algorithms
 
 
 class Optimizer:
-    """General optimizer class from which specific classes are inherited."""
+    """
+    General optimizer class from which specific classes are inherited.
+
+    Parameters
+    ----------
+    algorithm : callable
+        From the algorithm library
+    plot_dynamics : boolean
+        Save plots of time-resolved dynamics in dir_path
+    plot_pulses : boolean
+        Save plots of control signals
+    store_unitaries : boolean
+        Store propagators as text and pickle
+    """
 
     def __init__(
         self,
@@ -18,6 +31,7 @@ class Optimizer:
         plot_pulses=False,
         store_unitaries=False
     ):
+
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
@@ -32,6 +46,14 @@ class Optimizer:
             self.algorithm = algorithms.lbfgs
 
     def replace_logdir(self, new_logdir):
+        """
+        Specify a new filepath to store the log.
+
+        Parameters
+        ----------
+        new_logdir
+
+        """
         old_logdir = self.logdir
         self.logdir = new_logdir
         os.remove(self.dir_path + '/recent')
@@ -42,6 +64,10 @@ class Optimizer:
         self.exp = exp
 
     def start_log(self):
+        """
+        Initialize the log with current time.
+
+        """
         self.start_time = time.time()
         start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
         with open(self.logdir + self.logname, 'a') as logfile:
@@ -53,6 +79,10 @@ class Optimizer:
             logfile.flush()
 
     def end_log(self):
+        """
+        Finish the log by recording current time and total runtime.
+
+        """
         self.end_time = time.time()
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(
@@ -64,23 +94,29 @@ class Optimizer:
             logfile.flush()
 
     def log_best_unitary(self):
-        if self.optim_status['goal'] < self.current_best_goal:
-            self.current_best_goal = self.optim_status['goal']
-            with open(
-                self.logdir + 'best_point_' + self.logname, 'w'
-            ) as best_point:
-                U_dict = self.exp.unitaries
-                for gate, U in U_dict.items():
-                    best_point.write("\n")
-                    best_point.write(f"Re {gate}: \n")
-                    best_point.write(f"{np.round(np.real(U), 3)}\n")
-                    best_point.write("\n")
-                    best_point.write(f"Im {gate}: \n")
-                    best_point.write(f"{np.round(np.imag(U), 3)}\n")
+        """
+        Save the best unitary in the log.
+        """
+        with open(self.logdir + 'best_point_' + self.logname, 'w') as best_point:
+            U_dict = self.exp.unitaries
+            for gate, U in U_dict.items():
+                best_point.write("\n")
+                best_point.write(f"Re {gate}: \n")
+                best_point.write(f"{np.round(np.real(U), 3)}\n")
+                best_point.write("\n")
+                best_point.write(f"Im {gate}: \n")
+                best_point.write(f"{np.round(np.imag(U), 3)}\n")
 
     def log_parameters(self):
+        """
+        Log the current status. Write parameters to log. Update the current best parameters. Call plotting functions as
+        set up.
+
+        """
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
+            if "U_dict" in self.exp.__dict__.keys():
+                self.log_best_unitary()
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
@@ -117,16 +153,40 @@ class Optimizer:
             logfile.flush()
 
     def fct_to_min(self, x):
+        """
+        Wrapper for the goal function.
+
+        Parameters
+        ----------
+        x : np.array
+            Vector of parameters in the optimizer friendly way.
+
+        Returns
+        -------
+        float
+            Value of the goal function.
+        """
         current_params = tf.constant(x)
         goal = self.goal_run(current_params)
         self.log_parameters()
-        if "U_dict" in self.exp.__dict__.keys():
-            self.log_best_unitary()
         if isinstance(goal, tf.Tensor):
             goal = float(goal.numpy())
         return goal
 
     def fct_to_min_autograd(self, x):
+        """
+        Wrapper for the goal function, including evaluation and storage of the gradient.
+
+       Parameters
+        ----------
+        x : np.array
+            Vector of parameters in the optimizer friendly way.
+
+        Returns
+        -------
+        float
+            Value of the goal function.
+        """
         current_params = tf.constant(x)
         goal, grad = self.goal_run_with_grad(current_params)
         if isinstance(grad, tf.Tensor):
@@ -135,13 +195,12 @@ class Optimizer:
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status['gradient'] = gradients.tolist()
         self.log_parameters()
-        if "U_dict" in self.exp.__dict__.keys():
-            self.log_best_unitary()
         if isinstance(goal, tf.Tensor):
             goal = float(goal.numpy())
         return goal
 
     def goal_run_with_grad(self, current_params):
+        """OBSOLETE?"""
         with tf.GradientTape() as t:
             t.watch(current_params)
             goal = self.goal_run(current_params)
@@ -149,6 +208,19 @@ class Optimizer:
         return goal, grad
 
     def lookup_gradient(self, x):
+        """
+        Return the stored gradient for a given parameter set.
+
+        Parameters
+        ----------
+        x : np.array
+            Parameter set.
+
+        Returns
+        -------
+        np.array
+            Value of the gradient.
+        """
         key = str(x)
         return self.gradients.pop(key)
 
