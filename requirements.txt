@@ -3,3 +3,4 @@ cython
 matplotlib
 qutip
 tensorflow
+sphinx-autoapi==1.4.0
