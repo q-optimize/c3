@@ -8,7 +8,7 @@ c<sup>3</sup>po  provides a simple Python API through which it may integrate wit
 
 The package is authored by the team at Saarland University. Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
 
-Documentation is available a [Doc](https://c3-toolset.readthedocs.io).
+Documentation is available [here](https://c3-toolset.readthedocs.io).
 
 NOTE: This is the 0.1 release. Therefore, expect significant changes as we progress towards v1.0.
 
