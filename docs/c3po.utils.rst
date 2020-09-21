@@ -1,10 +1,7 @@
-c3po.utils package
+Utilities package
 ==================
 
-Submodules
-----------
-
-c3po.utils.display module
+Display module
 -------------------------
 
 .. automodule:: c3po.utils.display
@@ -12,7 +9,7 @@ c3po.utils.display module
    :undoc-members:
    :show-inheritance:
 
-c3po.utils.parsers module
+Parsers module
 -------------------------
 
 .. automodule:: c3po.utils.parsers
@@ -20,7 +17,7 @@ c3po.utils.parsers module
    :undoc-members:
    :show-inheritance:
 
-c3po.utils.qt\_utils module
+Qutip utilitiess module
 ---------------------------
 
 .. automodule:: c3po.utils.qt_utils
@@ -28,7 +25,7 @@ c3po.utils.qt\_utils module
    :undoc-members:
    :show-inheritance:
 
-c3po.utils.tf\_utils module
+Tensorflow utilitiess module
 ---------------------------
 
 .. automodule:: c3po.utils.tf_utils
@@ -36,7 +33,7 @@ c3po.utils.tf\_utils module
    :undoc-members:
    :show-inheritance:
 
-c3po.utils.utils module
+Miscelaneous utilities module
 -----------------------
 
 .. automodule:: c3po.utils.utils

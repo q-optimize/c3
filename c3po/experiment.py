@@ -1,4 +1,11 @@
-"""Experiment class that models the whole experiment."""
+"""
+Experiment class that models and simulates the whole experiment.
+
+It combines the information about the model of the quantum device, the control stack and the operations that can be
+done on the device.
+
+Given this information an experiment run is simulated, returning either processes, states or populations.
+"""
 
 import os
 import json
@@ -55,6 +62,8 @@ class Experiment:
     def write_config(self):
         """
         Return the current experiment as a JSON compatible dict.
+
+        EXPERIMENTAL
         """
         cfg = {}
         cfg['model'] = self.model.write_config()
@@ -137,7 +146,6 @@ class Experiment:
             nice_id = f"{comp_id}-{par_id}"
             ret.append(f"{nice_id:32}: {par}\n")
         return "".join(ret)
-    # THE ROLE OF THE OLD SIMULATOR AND OTHERS
 
     def evaluate(self, seqs):
         """
@@ -146,7 +154,7 @@ class Experiment:
         Parameters
         ----------
         seqs: str list
-            A list of control pulses/gates to perform on the device
+            A list of control pulses/gates to perform on the device.
 
         """
         Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
@@ -172,7 +180,7 @@ class Experiment:
         Parameters
         ----------
         labels: list
-            List of state labels specifying a subspace
+            List of state labels specifying a subspace.
 
         Returns
         -------
@@ -211,8 +219,6 @@ class Experiment:
             A dictionary of gate names and their unitary representation.
         """
         gates = {}
-        # TODO allow for not passing model params
-        # model_params, _ = self.model.get_values_bounds()
         if "opt_gates" in self.__dict__:
             gate_keys = self.opt_gates
         else:
@@ -271,18 +277,11 @@ class Experiment:
                     amps = {}
                     for line, ctrls in instr.comps.items():
                         amp, sum = self.generator.devices['awg'].get_average_amp()
-                        # amp = ctrls['gauss'].params['amp'].get_value()
-                        # amp = tf.constant(1.0)
                         amps[line] = tf.cast(amp, tf.complex128)
                     t_final = tf.constant(
                         instr.t_end - instr.t_start,
                         dtype=tf.complex128
                     )
-                    # t_final = tf.cast(
-                    #     ctrls['gauss'].params['t_final'].get_value(),
-                    #     dtype=tf.complex128
-                    # )
-                    # t_final = tf.constant(1.0, tf.complex128)
                     dephasing_channel = self.model.get_dephasing_channel(
                         t_final,
                         amps
@@ -304,16 +303,16 @@ class Experiment:
         Parameters
         ----------
         signal: dict
-            Waveform of the control signal per drive line
+            Waveform of the control signal per drive line.
         ts: tf.float64
-            Vector of times
+            Vector of times.
         gate: str
             Identifier for one of the gates.
 
         Returns
         -------
         unitary
-            Matrix representation of the gate
+            Matrix representation of the gate.
         """
         h0, hctrls = self.model.get_Hamiltonians()
         signals = []
@@ -340,21 +339,21 @@ class Experiment:
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest
+        opt_gates: Identifiers of the gates of interest.
 
         """
         self.opt_gates = opt_gates
 
     def set_enable_dynamics_plots(self, flag, logdir):
         """
-        Plotting of time-resolved populations
+        Plotting of time-resolved populations.
 
         Parameters
         ----------
         flag: boolean
-            Enable or disable plotting
+            Enable or disable plotting.
         logdir: str
-            File path location for the resulting plots
+            File path location for the resulting plots.
         """
         self.enable_dynamics_plots = flag
         self.logdir = logdir
@@ -364,14 +363,14 @@ class Experiment:
 
     def set_enable_pules_plots(self, flag, logdir):
         """
-        Plotting of pulse shapes
+        Plotting of pulse shapes.
 
         Parameters
         ----------
         flag: boolean
-            Enable or disable plotting
+            Enable or disable plotting.
         logdir: str
-            File path location for the resulting plots
+            File path location for the resulting plots.
         """
         self.enable_pulses_plots = flag
         self.logdir = logdir
@@ -381,14 +380,14 @@ class Experiment:
 
     def set_enable_store_unitaries(self, flag, logdir):
         """
-        Saving of unitary propagators
+        Saving of unitary propagators.
 
         Parameters
         ----------
         flag: boolean
-            Enable or disable saving
+            Enable or disable saving.
         logdir: str
-            File path location for the resulting unitaries
+            File path location for the resulting unitaries.
         """
         self.enable_store_unitaries = flag
         self.logdir = logdir
@@ -399,18 +398,18 @@ class Experiment:
     def plot_dynamics(self, psi_init, seq, goal=-1, debug=False):
         # TODO double check if it works well
         """
-        Plotting code for time-resolved populations
+        Plotting code for time-resolved populations.
 
         Parameters
         ----------
         psi_init: tf.Tensor
-            Initial state or density matrix
+            Initial state or density matrix.
         seq: list
-            List of operations to apply to the initial state
+            List of operations to apply to the initial state.
         goal: tf.float64
-            Value of the goal function, if used
+            Value of the goal function, if used.
         debug: boolean
-            If true, return a matplotlib figure instead of saving
+            If true, return a matplotlib figure instead of saving.
         """
         dUs = self.dUs
         psi_t = psi_init.numpy()
@@ -453,6 +452,7 @@ class Experiment:
                 if self.model.lindbladian:
                     FR = tf_utils.tf_super(FR)
                 psi_t = tf.matmul(FR, psi_t)
+                # TODO added framchanged psi to list
 
         fig, axs = plt.subplots(1, 1)
         ts = self.ts
@@ -478,15 +478,12 @@ class Experiment:
         Parameters
         ----------
         instr : str
-            Identifier of the current instruction
+            Identifier of the current instruction.
         goal: tf.float64
-            Value of the goal function, if used
+            Value of the goal function, if used.
         debug: boolean
-            If true, return a matplotlib figure instead of saving
+            If true, return a matplotlib figure instead of saving.
         """
-        # print(instr.name)
-        # print(instr.comps)
-        # print(self.generator.devices)
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
@@ -501,9 +498,6 @@ class Experiment:
             os.mkdir(foldername + str(instr.name) + "/")
 
         fig, axs = plt.subplots(1, 1)
-        # ts = self.ts
-        # dt = ts[1] - ts[0]
-        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
 
         for channel in instr.comps:
             inphase = awg.signal[channel]["inphase"]
@@ -542,9 +536,6 @@ class Experiment:
         quadrature = dac.signal["quadrature"]
 
         fig, axs = plt.subplots(1, 1)
-        # ts = self.ts
-        # dt = ts[1] - ts[0]
-        # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
         axs.plot(dac_ts / 1e-9, inphase/1e-3)
         axs.grid()
         axs.set_xlabel('Time [ns]')
@@ -577,9 +568,6 @@ class Experiment:
             quadrature = resp.signal["quadrature"]
 
             fig, axs = plt.subplots(1, 1)
-            # ts = self.ts
-            # dt = ts[1] - ts[0]
-            # ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
             axs.plot(resp_ts / 1e-9, inphase/1e-3)
             axs.grid()
             axs.set_xlabel('Time [ns]')
@@ -628,7 +616,7 @@ class Experiment:
         Parameter
         ---------
         goal: tf.float64
-            Value of the goal function, if used
+            Value of the goal function, if used.
 
         """
         folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
@@ -641,19 +629,19 @@ class Experiment:
 
     def populations(self, state, lindbladian):
         """
-        Compute populations from a state or densitiy vector.
+        Compute populations from a state or density vector.
 
         Parameters
         ----------
         state: tf.Tensor
-            State or densitiy vector
+            State or densitiy vector.
         lindbladian: boolean
-            Specify if conversion to density matrix is needed
+            Specify if conversion to density matrix is needed.
 
         Returns
         -------
         tf.Tensor
-            Vector of populations
+            Vector of populations.
         """
         if lindbladian:
             rho = tf_utils.tf_vec_to_dm(state)

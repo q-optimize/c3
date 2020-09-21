@@ -1,10 +1,10 @@
-c3po.signal package
+Signal package
 ===================
 
 Submodules
 ----------
 
-c3po.signal.gates module
+Gates module
 ------------------------
 
 .. automodule:: c3po.signal.gates
@@ -12,7 +12,7 @@ c3po.signal.gates module
    :undoc-members:
    :show-inheritance:
 
-c3po.signal.pulse module
+Pulse module
 ------------------------
 
 .. automodule:: c3po.signal.pulse

@@ -52,6 +52,7 @@ class InitialiseGround(Task):
             Whether to include open system dynamics. Required for Temperature > 0.
         init_temp : Quantity
             Temperature of the device.
+
         Returns
         -------
         tf.Tensor
@@ -88,9 +89,8 @@ class InitialiseGround(Task):
                 return state
 
 
-
 class ConfusionMatrix(Task):
-    """Do confused assignment."""
+    """Allows for misclassificaiton of readout measurement."""
 
     def __init__(
             self,
@@ -122,21 +122,28 @@ class ConfusionMatrix(Task):
             Populations after misclassification.
 
         """
-        # if 'confusion_row' in self.params:
         conf_matrix = tf.constant([[1]], dtype=tf.float64)
         for conf_row in self.params.values():
             row1 = conf_row.get_value()
             row2 = tf.ones_like(row1) - row1
             conf_mat = tf.concat([[row1], [row2]], 0)
             conf_matrix = tf_utils.tf_kron(conf_matrix, conf_mat)
-        # elif 'confusion_matrix' in self.params:
-        #     conf_matrix = self.params['confusion_matrix'].get_value()
         pops = tf.linalg.matmul(conf_matrix, pops)
         return pops
 
 
 class MeasurementRescale(Task):
-    """Rescale the result of the measurements."""
+    """
+    Rescale the result of the measurements.
+    This is usually done to account for preparation errors.
+
+    Parameters
+    ----------
+    meas_offset : Quantity
+        Offset added to the measured signal.
+    meas_scale : Quantity
+        Factor multiplied to the measured signal.
+    """
 
     def __init__(
             self,
@@ -155,5 +162,17 @@ class MeasurementRescale(Task):
         self.params['meas_scale'] = meas_scale
 
     def rescale(self, pop1):
-        """Apply linear rescaling and offset to the readout value"""
+        """
+        Apply linear rescaling and offset to the readout value.
+
+        Parameters
+        ----------
+        pop1 : tf.float64
+            Population in first excited state.
+
+        Returns
+        -------
+        tf.float64
+            Population after rescaling.
+        """
         return pop1 * self.params['meas_scale'].get_value() + self.params['meas_offset'].get_value()

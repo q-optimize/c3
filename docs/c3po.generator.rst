@@ -1,10 +1,10 @@
-c3po.generator package
+Generator package
 ======================
 
 Submodules
 ----------
 
-c3po.generator.devices module
+Devices module
 -----------------------------
 
 .. automodule:: c3po.generator.devices
@@ -12,7 +12,7 @@ c3po.generator.devices module
    :undoc-members:
    :show-inheritance:
 
-c3po.generator.generator module
+Generator module
 -------------------------------
 
 .. automodule:: c3po.generator.generator

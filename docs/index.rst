@@ -8,7 +8,7 @@ C3 -  An integrated tool-set for control, calibration and characterization!
 
 .. toctree::
    :maxdepth: 4
-   :caption: Contents:
+   :caption: API documentation:
 
    c3po
 

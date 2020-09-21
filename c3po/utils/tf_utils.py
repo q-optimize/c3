@@ -103,7 +103,7 @@ def tf_limit_gpu_memory(memory_limit):
 def tf_measure_operator(M, rho):
     """
     Expectation value of a quantum operator by tracing with a density matrix.
-    
+
     Parameters
     ----------
     M : tf.tensor
@@ -547,7 +547,6 @@ def tf_spre(A):
     return reshaped
 
 
-
 def tf_spost(A):
     """Superoperator on the right of matrix A."""
     Id = Id_like(A)
@@ -558,7 +557,6 @@ def tf_spost(A):
         [dim**2, dim**2]
     )
     return reshaped
-
 
 
 def tf_super(A):
