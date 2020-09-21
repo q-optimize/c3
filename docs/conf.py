@@ -17,9 +17,8 @@ sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'c3po'
-copyright = '2020, Author'
-author = 'Author'
+project = 'C3'
+author = 'Nicolas Wittler, Federico Roy, Kevin Pack, Shai Machnes'
 
 
 # -- General configuration ---------------------------------------------------
@@ -28,12 +27,23 @@ author = 'Author'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'autoapi.sphinx',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.todo',
-    'sphinx.ext.napoleon',
-    "sphinx_rtd_theme",
-    'sphinx.ext.mathjax'
+    "autoapi.extension",
+]
+
+autoapi_dirs = ["../../src"]
+autoapi_file_patterns = ["*.py"]
+autoapi_ignore = ["*logs*", "__pycache__"]
+autoapi_member_order = "bysource"
+autoapi_keep_files = False
+autoapi_add_toctree_entry = False
+autoapi_options = [
+    "members",
+    "inherited-members",
+    "special-members",
+    "show-inheritance",
+    "special-members",
+    "imported-members",
+    "show-inheritance-diagram",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
