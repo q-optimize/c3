@@ -30,7 +30,7 @@ extensions = [
     "autoapi.extension",
 ]
 
-autoapi_dirs = ["../../src"]
+autoapi_dirs = ["../"]
 autoapi_file_patterns = ["*.py"]
 autoapi_ignore = ["*logs*", "__pycache__"]
 autoapi_member_order = "bysource"
