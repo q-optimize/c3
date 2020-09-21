@@ -1,3 +1,4 @@
+"""Miscellaneous, general utilities."""
 import time
 import os
 import numpy as np
@@ -5,24 +6,43 @@ import numpy as np
 
 # SYSTEM AND SETUP
 def log_setup(data_path, run_name=None):
-    # TODO make this plattform agnostic, i.e. work with Windows(tm)
-    # TODO Add the name to fhe folder
+    """
+    Make sure the file path to save data exists. Create an appropriately named folder with date and time.
+     Also creates a symlink "recent" to the folder.
+
+    Parameters
+    ----------
+    data_path : str
+        File path of where to store any data.
+    run_name : str
+        User specified name for the run.
+
+    Returns
+    -------
+    str
+        The file path to store new data.
+
+    """
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
+
     pwd = os.path.join(
         data_path,
+        run_name,
         time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
     )
-    try:
-        os.makedirs(pwd)
-    except FileExistsError:
-        pass
+    while os.path.exists(pwd):
+        time.sleep(1)
+        pwd = os.path.join(
+            data_path,
+            run_name,
+            time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
+        )
+
+    os.makedirs(pwd)
     recent = os.path.join(data_path, 'recent')
     replace_symlink(pwd, recent)
-    if run_name is not None:
-        name = os.path.join(data_path, run_name)
-        replace_symlink(pwd, name)
-    return os.path.join(pwd,'')
+    return os.path.join(pwd, '')
 
 
 def replace_symlink(path, alias):
@@ -33,8 +53,9 @@ def replace_symlink(path, alias):
     os.symlink(path, alias)
 
 
-# NICE PRINTNG FUNCTIONS
+# NICE PRINTING FUNCTIONS
 def eng_num(val):
+    """Convert a number to engineering notation by returning number and prefix."""
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
     sign = 1
@@ -54,6 +75,7 @@ def eng_num(val):
 
 
 def num3str(val, use_prefix=True):
+    """Convert a number to a human readable string in engineering notation. """
     ret = []
     if not hasattr(val, "__iter__"):
         val = np.array([val])
@@ -69,20 +91,21 @@ def num3str(val, use_prefix=True):
 
 # USER INTERACTION
 def ask_yn():
+    """Ask for y/n user decision in the command line."""
     asking = True
     text = input("(y/n): ")
-    if text == 'y' or text == 'HELL YEAH':
+    if text == 'y':
         asking = False
         boolean = True
-    elif text == 'n' or text == 'FUCK NO':
+    elif text == 'n':
         asking = False
         boolean = False
     while asking:
         text = input("Please write y or n and press enter: ")
-        if text == 'y' or text == 'HELL YEAH':
+        if text == 'y':
             asking = False
             boolean = True
-        elif text == 'n' or text == 'FUCK NO':
+        elif text == 'n':
             asking = False
             boolean = False
     return boolean

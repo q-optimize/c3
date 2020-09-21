@@ -7,6 +7,7 @@ import c3po.utils.qt_utils as qt_utils
 
 
 class Task(C3obj):
+    # TODO BETTER NAME FOR TASK!
     """Task that is part of the measurement setup."""
 
     def __init__(
@@ -40,6 +41,22 @@ class InitialiseGround(Task):
         self.params['init_temp'] = init_temp
 
     def initialise(self, drift_H, lindbladian=False, init_temp=None):
+        """
+        Prepare the initial state of the system. At the moment finite temperature requires open system dynamics.
+
+        Parameters
+        ----------
+        drift_H : tf.Tensor
+            Drift Hamiltonian.
+        lindbladian : boolean
+            Whether to include open system dynamics. Required for Temperature > 0.
+        init_temp : Quantity
+            Temperature of the device.
+        Returns
+        -------
+        tf.Tensor
+            State or density vector
+        """
         if init_temp is None:
             init_temp = tf.cast(
                 self.params['init_temp'].get_value(), dtype=tf.complex128
@@ -91,6 +108,20 @@ class ConfusionMatrix(Task):
             self.params['confusion_row_'+qubit] = conf_row
 
     def confuse(self, pops):
+        """
+        Apply the confusion (or misclassification) matrix to populations.
+
+        Parameters
+        ----------
+        pops : list
+            Populations
+
+        Returns
+        -------
+        list
+            Populations after misclassification.
+
+        """
         # if 'confusion_row' in self.params:
         conf_matrix = tf.constant([[1]], dtype=tf.float64)
         for conf_row in self.params.values():
@@ -124,6 +155,5 @@ class MeasurementRescale(Task):
         self.params['meas_scale'] = meas_scale
 
     def rescale(self, pop1):
-        pop1 = pop1 * self.params['meas_scale'].get_value()
-        pop1 = pop1 + self.params['meas_offset'].get_value()
-        return pop1
+        """Apply linear rescaling and offset to the readout value"""
+        return pop1 * self.params['meas_scale'].get_value() + self.params['meas_offset'].get_value()

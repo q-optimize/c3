@@ -21,7 +21,17 @@ def pwc(t, params):
 
 
 def fourier_sin(t, params):
-    """Fourier basis of the pulse constant pulse (sin)."""
+    """Fourier basis of the pulse constant pulse (sin).
+
+    Parameters
+    ----------
+    params : dict
+        amps : list
+            Weights of the fourier components
+        freqs : list
+            Frequencies of the fourier components
+
+    """
     amps = tf.reshape(
                 tf.cast(params['amps'].get_value(), dtype=tf.float64),
                 [params['amps'].shape[0], 1]
@@ -38,7 +48,17 @@ def fourier_sin(t, params):
 
 
 def fourier_cos(t, params):
-    """Fourier basis of the pulse constant pulse (cos)."""
+    """Fourier basis of the pulse constant pulse (cos).
+
+    Parameters
+    ----------
+    params : dict
+        amps : list
+            Weights of the fourier components
+        freqs : list
+            Frequencies of the fourier components
+
+    """
     amps = tf.reshape(
                 tf.cast(params['amps'].get_value(), dtype=tf.float64),
                 [params['amps'].shape[0], 1]
@@ -55,12 +75,24 @@ def fourier_cos(t, params):
 
 
 def rect(t, params):
-    """Rectangular pulse."""
+    """Rectangular pulse. Returns 1 at every time step."""
     return 1.0
 
 
 def flattop_risefall(t, params):
-    """Flattop gaussian with width of length risefall."""
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_up : float
+            Center of the ramp up.
+        t_down : float
+            Center of the ramp down.
+        risefall : float
+            Length of the ramps.
+
+    """
     t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
     t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
@@ -75,7 +107,18 @@ def flattop(t, params):
 
 
 def gaussian_sigma(t, params):
-    """Normalized gaussian."""
+    """
+    Normalized gaussian. Total area is 1, maximum is determined accordingly.
+
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of the Gaussian.
+        sigma: float
+            Width of the Gaussian.
+
+    """
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
@@ -87,7 +130,15 @@ def gaussian_sigma(t, params):
 
 
 def gaussian(t, params):
-    """Normalized gaussian with fixed time/sigma ratio."""
+    """
+    Normalized gaussian with fixed time/sigma ratio.
+
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of the Gaussian.
+    """
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params['sigma'] = Qty(
         value=params['t_final'].get_value()/4,
@@ -99,7 +150,18 @@ def gaussian(t, params):
 
 
 def gaussian_nonorm(t, params):
-    """Gaussian."""
+    """
+    Non-normalized gaussian. Maximum value is 1, area is given by length.
+
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of the Gaussian.
+        sigma: float
+            Width of the Gaussian.
+
+    """
     # TODO Add zeroes for t>t_final
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     sigma = params['sigma'].get_value()
@@ -160,11 +222,9 @@ def drag_der(t, params):
     return der
 
 
-def flattop_WMI(t, params):
+def flattop_variant(t, params):
     """
-    Flattop version used at WMI.
-
-    Specification added by Stephan T and Afonso L.
+    Flattop variant.
     """
     t_up = params['t_up']
     t_down = params['t_down']

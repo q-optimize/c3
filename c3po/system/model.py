@@ -7,6 +7,7 @@ import c3po.utils.tf_utils as tf_utils
 import c3po.utils.qt_utils as qt_utils
 from c3po.system.chip import Drive, Coupling
 
+
 class Model:
     """
     What the theorist thinks about from the system.
@@ -15,20 +16,19 @@ class Model:
     models can represent the same system.
 
     Parameters
-    ---------
-    hilbert_space : dict
-        Hilbert space dimensions of full space
+    ----------
+    subsystems : list
+        List of individual, non-interacting physical components like qubits or resonators
+    couplings : list
+        List of interaction operators between subsystems, like couplings or drives.
+    tasks : list
+        Badly named list of processing steps like line distortions and read out modelling
 
 
     Attributes
     ----------
     H0: :class: Drift Hamiltonian
 
-
-    Methods
-    -------
-    construct_Hamiltonian(component_parameters, hilbert_space)
-        Construct a model for this system, to be used in numerics.
 
     """
 
@@ -94,14 +94,33 @@ class Model:
             self.tasks[task.name] = task
 
     def set_dressed(self, dressed):
+        """
+        Go to a dressed frame where static couplings have been eliminated.
+
+        Parameters
+        ----------
+        dressed : boolean
+
+        """
         self.dressed = dressed
         self.update_model()
 
     def set_lindbladian(self, lindbladian):
+        """
+        Set whether to include open system dynamics.
+
+        Parameters
+        ----------
+        lindbladian : boolean
+
+
+        """
         self.lindbladian = lindbladian
         self.update_model()
 
     def set_FR(self, use_FR):
+        """Setter for the frame rotation option for adjusting the individual rotating frames of qubits when using
+        gate sequences"""
         self.use_FR = use_FR
 
     def set_dephasing_strength(self, dephasing_strength):
@@ -133,6 +152,7 @@ class Model:
             self.update_dressed()
 
     def update_Hamiltonians(self):
+        """Recompute the matrix representations of the Hamiltonians."""
         control_Hs = {}
         tot_dim = self.tot_dim
         drift_H = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
@@ -154,6 +174,8 @@ class Model:
         self.col_ops = col_ops
 
     def update_drift_eigen(self, ordered=True):
+        """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
+        transformation matrix."""
         e, v = tf.linalg.eigh(self.drift_H)
         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
@@ -166,6 +188,8 @@ class Model:
         self.transform = transform
 
     def update_dressed(self):
+        """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
+        transformation to the control Hamiltonians."""
         self.update_drift_eigen()
         dressed_control_Hs = {}
         dressed_col_ops = []
@@ -199,6 +223,24 @@ class Model:
         freqs: dict,
         framechanges: dict
     ):
+        """
+        Compute the frame rotation needed to align Lab frame and rotating Eigenframes of the qubits.
+
+        Parameters
+        ----------
+        t_final : tf.float64
+            Gate length
+        freqs : list
+            Frequencies of the local oscillators.
+        framechanges : list
+            List of framechanges. A phase shift applied to the control signal to compensate relative phases of drive
+            oscillator and qubit.
+
+        Returns
+        -------
+        tf.Tensor
+            A (diagonal) propagator that adjust phases
+        """
         tot_dim = self.tot_dim
         exponent = tf.constant(0., dtype = tf.complex128)
         for line in freqs.keys():

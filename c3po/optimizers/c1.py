@@ -1,6 +1,7 @@
 """Object that deals with the open loop optimal control."""
 
 import os
+import time
 import json
 import tensorflow as tf
 import c3po.utils.display as display
@@ -9,7 +10,36 @@ from c3po.utils.utils import log_setup
 
 
 class C1(Optimizer):
-    """Object that deals with the open loop optimal control."""
+    """
+    Object that deals with the open loop optimal control.
+
+    Parameters
+    ----------
+    dir_path : str
+        Filepath to save results
+    fid_func : callable
+        infidelity function to be minimized
+    fid_subspace : list
+        Indeces identifying the subspace to be compared
+    gateset_opt_map : list
+        Hierarchical identifiers for the parameter vector
+    opt_gates : list
+        List of identifiers of gate to be optimized, a subset of the full gateset
+    callback_fids : list of callable
+        Additional fidelity function to be evaluated and stored for reference
+    algorithm : callable
+        From the algorithm library
+    plot_dynamics : boolean
+        Save plots of time-resolved dynamics in dir_path
+    plot_pulses : boolean
+        Save plots of control signals
+    store_unitaries : boolean
+        Store propagators as text and pickle
+    options : dict
+        Options to be passed to the algorithm
+    run_name : str
+        User specified name for the run, will be used as root folder
+    """
 
     def __init__(
         self,
@@ -26,7 +56,6 @@ class C1(Optimizer):
         options={},
         run_name=None
     ):
-        """Initiliase."""
         super().__init__(
             algorithm=algorithm,
             plot_dynamics=plot_dynamics,
@@ -42,6 +71,17 @@ class C1(Optimizer):
         self.log_setup(dir_path, run_name)
 
     def log_setup(self, dir_path, run_name):
+        """
+        Create the folders to store data.
+
+        Parameters
+        ----------
+        dir_path : str
+            Filepath
+        run_name : str
+            User specified name for the run
+
+        """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
             run_name = (
@@ -51,6 +91,15 @@ class C1(Optimizer):
         self.logname = 'open_loop.log'
 
     def load_best(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_gateset_opt_map = [
@@ -61,6 +110,15 @@ class C1(Optimizer):
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
     def adjust_exp(self, adjust_exp):
+        """
+        Load values for model parameters from file.
+
+        Parameters
+        ----------
+        adjust_exp : str
+            File location for model parameters
+
+        """
         with open(adjust_exp) as file:
             best = file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
@@ -69,7 +127,7 @@ class C1(Optimizer):
 
     def optimize_controls(self):
         """
-        Apply a search algorightm to your gateset given a fidelity function.
+        Apply a search algorithm to your gateset given a fidelity function.
         """
         self.start_log()
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
@@ -99,6 +157,19 @@ class C1(Optimizer):
         self.end_log()
 
     def goal_run(self, current_params):
+        """
+        Evaluate the goal function for current parameters.
+
+        Parameters
+        ----------
+        current_params : tf.Tensor
+            Vector representing the current parameter values.
+
+        Returns
+        -------
+        tf.float64
+            Value of the goal function
+        """
         self.exp.gateset.set_parameters(
             current_params,
             self.opt_map,
@@ -133,5 +204,6 @@ class C1(Optimizer):
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = goal_numpy
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal

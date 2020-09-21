@@ -1,4 +1,4 @@
-"""Collection of estimator functions."""
+"""Collection of estimator functions, to compare two sets of (noisy) data."""
 
 import numpy as np
 import tensorflow as tf

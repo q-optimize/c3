@@ -1,3 +1,7 @@
+"""
+Collection of (optimization) algorithms. All entries share a common signature with optional arguments.
+"""
+
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
@@ -6,6 +10,8 @@ import adaptive
 import copy
 
 algorithms = dict()
+
+
 def algo_reg_deco(func):
     """
     Decorator for making registry of functions
@@ -16,12 +22,48 @@ def algo_reg_deco(func):
 
 @algo_reg_deco
 def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Return the function value at given point.
+
+    Parameters
+    ----------
+    x0 : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Algorithm specific options
+    """
     fun(x0)
 
 
 @algo_reg_deco
 def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
-    #TODO generalize grid to take any  number of dymensions
+    """
+    Two dimensional scan of the function values around the initial point.
+
+    Parameters
+    ----------
+    x0 : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options include
+        points : int
+            The number of samples
+        bounds : list
+            Range of the scan for both dimensions
+    """
+    #TODO generalize grid to take any  number of dimensions
 
     if 'points' in options:
         points = options['points']
@@ -69,16 +111,36 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
             else:
                 fun([x, y])
 
+
 @algo_reg_deco
 def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    One dimensional scan of the function values around the initial point.
 
+    Parameters
+    ----------
+    x0 : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options include
+        points : int
+            The number of samples
+        bounds : list
+            Range of the scan
+    """
     if 'points' in options:
         points = options['points']
     else:
         points = 100
 
     if 'init_point' in options:
-        init_point = bool(options.pop('init_point'))
+        init_point = bool(options['init_point'])
         if init_point:
             fun([x0[0].numpy()])
 
@@ -115,7 +177,29 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 @algo_reg_deco
 def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    One dimensional scan of the function values around the initial point, using adaptive sampling
 
+    Parameters
+    ----------
+    x0 : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options include
+
+        accuracy_goal: float
+            Targeted accuracy for the sampling algorithm
+        probe_list : list
+            Points to definitely include in the sampling
+        init_point : boolean
+            Include the initial point in the sampling
+    """
     if 'accuracy_goal' in options:
         accuracy_goal = options['accuracy_goal']
     else:
@@ -163,6 +247,29 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 @algo_reg_deco
 def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Wrapper for the scipy.optimize.minimize implementation of LBFG-S. See also:
+
+    https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html
+
+    Parameters
+    ----------
+    x0 : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options of scipy.optimize.minimize
+
+    Returns
+    -------
+    Result
+        Scipy result object.
+    """
     # TODO print from the log not from here
     options.update({'disp': True})
     return minimize(
@@ -176,6 +283,40 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 @algo_reg_deco
 def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Wrapper for the pycma implementation of CMA-Es. See also:
+
+    http://cma.gforge.inria.fr/apidocs-pycma/
+
+    Parameters
+    ----------
+    x0 : float
+        Initial point.
+    fun : callable
+        Goal function.
+    fun_grad : callable
+        Function that computes the gradient of the goal function.
+    grad_lookup : callable
+        Lookup a previously computed gradient.
+    options : dict
+        Options of pycma and the following custom options.
+
+        noise : float
+            Artificial noise added to a function evaluation.
+        init_point : boolean
+            Force the use of the initial point in the first generation.
+        spread : float
+            Adjust the parameter spread of the first generation cloud.
+        stop_at_convergence : int
+            Custom stopping condition. Stop if the cloud shrunk for this number of generations.
+        stop_at_sigma : float
+            Custom stopping condition. Stop if the cloud shrunk to this standard deviation.
+
+    Returns
+    -------
+    np.array
+        Parameters of the best point.
+    """
     custom_stop = False
     if 'noise' in options:
         noise = float(options.pop('noise'))
@@ -192,11 +333,11 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         spread = 0.1
 
-    shrinked_check = False
+    shrunk_check = False
     if 'stop_at_convergence' in options:
         sigma_conv = int(options.pop('stop_at_convergence'))
         sigmas = []
-        shrinked_check = True
+        shrunk_check = True
 
     sigma_check = False
     if 'stop_at_sigma' in options:
@@ -209,7 +350,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     iter = 0
     while not es.stop():
 
-        if shrinked_check:
+        if shrunk_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
                 if(
@@ -219,7 +360,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
                     )
                 ):
                     print(
-                        f'C3:STATUS:Shrinked cloud for {sigma_conv} steps. '
+                        f'C3:STATUS:Shrunk cloud for {sigma_conv} steps. '
                         'Switching to gradients.'
                     )
                     break
@@ -251,13 +392,22 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 @algo_reg_deco
 def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Performs a CMA-Es optimization and feeds the result into LBFG-S for further refinement.
+
+    """
     x1 = cmaes(x0, fun, options=options['cmaes'])
     lbfgs(
         x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
     )
 
+
 @algo_reg_deco
 def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the resulting cloud and results are
+    used for the CMA update.
+    """
     custom_stop = False
     options_cma = options['cmaes']
     if 'noise' in options_cma:

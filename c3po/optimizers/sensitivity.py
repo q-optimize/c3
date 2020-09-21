@@ -15,7 +15,31 @@ from c3po.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_p
 
 
 class SET(Optimizer):
-    """Object that deals with the sensitivity test."""
+    """Object that deals with the sensitivity test.
+
+    Parameters
+    ----------
+    dir_path : str
+        Filepath to save results
+    fom : callable
+        Figure of merit
+    sampling : str
+        Sampling method from the sampling library
+    batch_sizes : list
+        Number of points to select from each dataset
+    sweep_map : list
+        Identifiers to be swept
+    state_labels : list
+        Identifiers for the qubit subspaces
+    algorithm : callable
+        From the algorithm library
+    options : dict
+        Options to be passed to the algorithm
+    same_dyn : boolean
+        ?
+    run_name : str
+        User specified name for the run, will be used as root folder
+    """
 
     def __init__(
         self,
@@ -49,6 +73,17 @@ class SET(Optimizer):
         self.log_setup(dir_path, run_name)
 
     def log_setup(self, dir_path, run_name):
+        """
+        Create the folders to store data.
+
+        Parameters
+        ----------
+        dir_path : str
+            Filepath
+        run_name : str
+            User specified name for the run
+
+        """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
             run_name = "sensitivity" \
@@ -59,11 +94,29 @@ class SET(Optimizer):
         self.logname = "sensitivity.log"
 
     def read_data(self, datafiles):
+        # TODO move common methods of sensitivity and c3 to super class
+        """
+        Open data files and read in experiment results.
+
+        Parameters
+        ----------
+        datafiles : list of str
+            List of paths for files that contain learning data.
+        """
         for target, datafile in datafiles.items():
             with open(datafile, 'rb+') as file:
                 self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
@@ -71,15 +124,32 @@ class SET(Optimizer):
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
+        """
+        Select a subset of each dataset to compute the goal function on.
+
+        Parameters
+        ----------
+        batch_size : int
+            Number of points to select
+
+        Returns
+        -------
+        list
+            Indeces of the selected data points.
+        """
         learn_from = self.learn_from
         sampling = self.sampling
-        indeces =  sampling(learn_from, batch_size)
+        indeces = sampling(learn_from, batch_size)
         if self.inverse:
             return list(set(all) - set(indeces))
         else:
             return indeces
 
-    def sensitivity_test(self):
+    def sensitivity(self):
+        """
+        Run the sensitivity analysis.
+
+        """
         self.nice_print = self.exp.print_parameters
 
         print("Initial parameters:")
@@ -116,6 +186,20 @@ class SET(Optimizer):
         # Ys=Ys[Ks]
 
     def goal_run(self, val):
+        """
+        Evaluate the figure of merit for the current model parameters.
+
+        Parameters
+        ----------
+        val : tf.Tensor
+            Current model parameters
+
+        Returns
+        -------
+        tf.float64
+            Figure of merit
+
+        """
         exp_values = []
         exp_stds = []
         sim_values = []

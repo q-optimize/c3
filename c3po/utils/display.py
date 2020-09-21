@@ -1,3 +1,5 @@
+""" Abandon all hope, ye who enter here. """
+
 import os
 import json
 import numpy as np
@@ -16,6 +18,8 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 
 plots = dict()
+
+
 def plots_reg_deco(func):
     """
     Decorator for making registry of functions
@@ -23,13 +27,28 @@ def plots_reg_deco(func):
     plots[str(func.__name__)] = func
     return func
 
+
 def layout(n):
-    if not (n%2):
+    """
+    For a given number of plots, return a pleasing 2D arrangement.
+
+    Parameters
+    ----------
+    n : int
+        Number of plots
+
+    Returns
+    -------
+    tuple of int
+        Number of rows and columns
+    """
+    if not (n % 2):
         return n//2, 2
-    elif n==9:
+    elif n == 9:
         return 3, 3
     else:
         return n, 1
+
 
 nice_parameter_name = {
     "amp": "Amplitude",
@@ -118,6 +137,7 @@ def unit_conversion(desc, param):
     else:
         return p_val, unit
 
+
 @plots_reg_deco
 def exp_vs_sim(exps, sims, stds):
     fig = plt.figure()
@@ -128,6 +148,7 @@ def exp_vs_sim(exps, sims, stds):
     plt.xlabel('Experiment')
     plt.ylabel('Simulation')
     return fig
+
 
 @plots_reg_deco
 def exp_vs_sim_2d_hist(exps, sims, stds):

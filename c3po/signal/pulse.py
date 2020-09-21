@@ -10,12 +10,9 @@ class InstructionComponent(C3obj):
 
     Parameters
     ----------
-    parameters: dict
+    params: dict
         dictionary of the parameters needed for the shape-function to
         create the desired pulse
-    bounds: dict
-        boundaries of the parameters, i.e. technical limits of experimental
-        setup or physical boundaries. needed for optimizer
 
     """
 
@@ -97,7 +94,15 @@ class Envelope(InstructionComponent):
             )
 
     def get_shape_values(self, ts, t_before=None):
-        """Return the value of the shape function at the specified times."""
+        """Return the value of the shape function at the specified times.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        t_before : tf.float64
+            Offset the beginning of the shape by this time.
+        """
         t_final = self.params['t_final']
         if t_before:
             offset = self.shape(t_before, self.params)
