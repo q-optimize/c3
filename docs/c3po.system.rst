@@ -1,10 +1,10 @@
-c3po.system package
+System package
 ===================
 
 Submodules
 ----------
 
-c3po.system.chip module
+Chip module
 -----------------------
 
 .. automodule:: c3po.system.chip
@@ -12,7 +12,7 @@ c3po.system.chip module
    :undoc-members:
    :show-inheritance:
 
-c3po.system.model module
+Model module
 ------------------------
 
 .. automodule:: c3po.system.model
@@ -20,7 +20,7 @@ c3po.system.model module
    :undoc-members:
    :show-inheritance:
 
-c3po.system.tasks module
+Tasks module
 ------------------------
 
 .. automodule:: c3po.system.tasks

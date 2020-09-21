@@ -1,10 +1,7 @@
 C3 software package
 ===================
 
-Submodules
-----------
-
-c3objs
+C3objs
 ------
 
 .. automodule:: c3po.c3objs
@@ -12,7 +9,7 @@ c3objs
    :undoc-members:
    :show-inheritance:
 
-experiment module
+Experiment module
 -----------------
 
 .. automodule:: c3po.experiment
@@ -20,7 +17,7 @@ experiment module
    :undoc-members:
    :show-inheritance:
 
-main module
+Main module
 -----------
 
 .. automodule:: c3po.main

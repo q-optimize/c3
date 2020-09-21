@@ -97,7 +97,7 @@ if __name__ == '__main__':
                     )
                     shutil.copy(adjust_exp, dir+"adjust_exp.log")
                 except FileNotFoundError:
-                    raise Error(
+                    raise Exception(
                         f"C3:ERROR:No experimental values found at "
                         f"{os.path.abspath(adjust_exp)} "
                         "Continuing with default."

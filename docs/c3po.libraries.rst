@@ -1,10 +1,11 @@
-c3po.libraries package
+Libraries package
 ======================
 
-Submodules
-----------
+Libraries contain a collection of functions that all share a signature to be used interchangably.
+One entry of a library is selected in the corresponding config file.
 
-c3po.libraries.algorithms module
+
+Algorithms module
 --------------------------------
 
 .. automodule:: c3po.libraries.algorithms
@@ -12,7 +13,7 @@ c3po.libraries.algorithms module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.constants module
+Constants module
 -------------------------------
 
 .. automodule:: c3po.libraries.constants
@@ -20,7 +21,7 @@ c3po.libraries.constants module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.envelopes module
+Envelopes module
 -------------------------------
 
 .. automodule:: c3po.libraries.envelopes
@@ -28,7 +29,7 @@ c3po.libraries.envelopes module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.estimators module
+Estimators module
 --------------------------------
 
 .. automodule:: c3po.libraries.estimators
@@ -36,7 +37,7 @@ c3po.libraries.estimators module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.fidelities module
+Fidelities module
 --------------------------------
 
 .. automodule:: c3po.libraries.fidelities
@@ -44,7 +45,7 @@ c3po.libraries.fidelities module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.hamiltonians module
+Hamiltonians module
 ----------------------------------
 
 .. automodule:: c3po.libraries.hamiltonians
@@ -52,7 +53,7 @@ c3po.libraries.hamiltonians module
    :undoc-members:
    :show-inheritance:
 
-c3po.libraries.sampling module
+Sampling module
 ------------------------------
 
 .. automodule:: c3po.libraries.sampling
