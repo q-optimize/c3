@@ -6,14 +6,15 @@ Currently, only the closed-loop tune-up (calibration) functionality is provided,
 
 c<sup>3</sup>po  provides a simple Python API through which it may integrate with virtually any experimental setup. Such "drivers" are supplied for [LabVIEW](https://www.ni.com/en-us/shop/labview.html) and [Labber](https://labber.org/) -driven experiments, with additional integrations expected soon.
 
-The package is authored by the team at Saarland University. Contact us at [quantum.c3po@gmail.com](mailto://quantum.c3po@gmail.com).
+The package is authored by the team at Saarland University. Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
+
+Documentation is available [here](https://c3-toolset.readthedocs.io).
 
 NOTE: This is the 0.1 release. Therefore, expect significant changes as we progress towards v1.0.
 
 ## Table of Contents
 * [Downloading](#downloading)
 * [Installation](#installation)  
-* [Usage](#usage)  
 * [Requirements](#requirements)  
 * [Misc](#misc)  
 
@@ -40,32 +41,7 @@ local python packages. Deleting the c<sup>3</sup>po folder does therefore also r
 the deletion of the c<sup>3</sup>po package.
 
 
-<a name="usage"><a/>
-## Usage
-Examples for the usage of the c<sup>3</sup>po package can be found in:
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/](./c3po/examples/)
-
-
-### c<sup>3</sup>po for Calibration
-An introduction to calibration using c<sup>3</sup>po to send a list of
- parameters to an existing experimental framework (Pycqed, Labber) can be seen
-  in the jupyter notebook:
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration.ipynb](./c3po/examples/Single_gate_calibration.ipynb)
-
-An example for a more low level implementation with the generation of AWG
- signals and communication to a experimental setup is found in:
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[c3po/c3po/examples/Single_gate_calibration_labview_setup.ipynb](./c3po/examples/Single_gate_calibration_labview_setup.ipynb)
-
-There, an exemplary code can be seen for calibrating a single qubit X-gate in an experimental
-setup using LabVIEW. It is shown how to specifying a pulse and later on how to
-theoretically use LabVIEW to communicate with the experiment.
-
 <a name="requirements"><a/>
 ## Dependencies
 - [QuTip](http://qutip.org/)
 - [pycma](https://github.com/CMA-ES/pycma)
-
-![C3PO Logo](./C3PO_small.jpg)
