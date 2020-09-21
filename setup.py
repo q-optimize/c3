@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='c3po',
-    version='0.2dev',
+    version='1.0rc',
     packages=[
         'c3po',
         'c3po/utils',
@@ -21,5 +21,6 @@ setup(
         'matplotlib',
         'numpy',
         'scipy',
+        'adaptive'
     ]
 )
