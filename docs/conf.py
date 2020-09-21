@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = 'C3'
-author = 'Nicolas Wittler, Federico Roy, Kevin Pack, Shai Machnes'
+author = 'Nicolas Wittler, Federico Roy, Kevin Pack, Anurag Saha Roy, Max Werninghaus, Shai Machnes'
 
 
 # -- General configuration ---------------------------------------------------
