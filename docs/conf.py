@@ -12,7 +12,7 @@
 #
 import os
 import sys
-sys.path.insert(0, sys.path.abspath('../'))
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- Project information -----------------------------------------------------
@@ -28,7 +28,7 @@ author = 'Author'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    'autoapi.sphinx',
     'sphinx.ext.viewcode',
     'sphinx.ext.todo',
     'sphinx.ext.napoleon',
@@ -64,7 +64,7 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
+master_doc = 'index'
 # -- Extension configuration -------------------------------------------------
 
 # -- Options for todo extension ----------------------------------------------
