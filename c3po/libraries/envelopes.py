@@ -56,7 +56,7 @@ def fourier_cos(t, params):
 
 def rect(t, params):
     """Rectangular pulse."""
-    return 1.0
+    return tf.ones_like(t, dtype=tf.float64)
 
 
 def flattop_risefall(t, params):
