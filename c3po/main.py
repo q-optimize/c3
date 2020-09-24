@@ -14,7 +14,7 @@ import tensorflow as tf
 logging.getLogger('tensorflow').disabled = True
 if __name__ == '__main__':
 
-    os.nice(5)  # keep responsiveness when we overcommit memory
+#     os.nice(5)  # keep responsiveness when we overcommit memory
 
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
