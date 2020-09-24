@@ -182,6 +182,7 @@ class Experiment:
                     freqs,
                     framechanges
                 )
+                print(repr(FR))
                 if self.model.lindbladian:
                     SFR = tf_utils.tf_super(FR)
                     U = tf.matmul(SFR, U)

@@ -129,7 +129,7 @@ class Volts_to_Hertz(Device):
         if 'offset' in self.params:
             offset = self.params['offset'].get_value()
             att = v2hz / (drive_frequency + offset)
-            print("BE CAREFUL BEING STUPID, v2hz")
+            print('*****  doing stupid thing of v2hz *** * ** * * ** **')
         else:
             att = v2hz
         self.signal = mixed_signal * att
