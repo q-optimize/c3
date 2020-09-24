@@ -784,7 +784,6 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
-                        # TODO should we remove this redefinition?
                         delta = - comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
@@ -801,12 +800,12 @@ class AWG(Device):
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
-                                - denv * delta * tf.sin(phase)
+                                + denv * delta * tf.sin(phase)
                             )
                         )
                         quadrature_comps.append(
                             amp * (
-                                env * tf.sin(phase)
+                                - env * tf.sin(phase)
                                 + denv * delta * tf.cos(phase)
                             )
                         )
@@ -831,7 +830,7 @@ class AWG(Device):
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
                         )
                         quadrature_comps.append(
-                            amp * comp.get_shape_values(ts) * tf.sin(phase)
+                            - amp * comp.get_shape_values(ts) * tf.sin(phase)
                         )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))

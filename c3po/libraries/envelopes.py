@@ -142,52 +142,6 @@ def gaussian_sigma(t, params):
             - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
     offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
     return (gauss - offset) / norm
-#     return gauss / norm
-
-
-# def gaussian(width, amp, sigma=None, sigmawide=4):
-#     """Gaussian pulse centered about the number of width."""
-#     if sigma is None:
-#         # Prevent division by zero error for zero-width pulse.  It
-#         # doesn't matter what sigma is then anyway.
-#         if width == 0:
-#             sigma = 1
-#         else:
-#             sigma = float(width) / float(sigmawide)
-#     xvals = np.arange(0, width, dtype='d')
-#     cen = float(width - 1)/2
-#     func = lambda x: amp * np.exp(-(x - cen)**2/(2 * sigma * sigma))
-#     # The third term in the return gets rid of abrupt step at end
-#     return func(xvals) - func(-1)
-
-# def gaussian_deriv(width, amp, sigma):
-#     """Derivative of Gaussian pulse centered about the number of width."""
-#     xvals = np.arange(0, width, dtype='d')
-#     cen = float(width - 1)/2
-#     yvals = (-amp * (xvals - cen) *
-#              np.exp(-(xvals - cen)**2/(2 * sigma * sigma))/(sigma * sigma))
-#     return yvals # pulse is odd about center
-
-# def drag(width, amp, delta, sigma=None, sigmawide=4, phi=0, skew=0):
-#     """Drag Gaussian pulse
-#     If sigma is specified, give a truncated gaussian with sigma=sigma,
-#     ignoring sigmawide.  If sigma is None, make sigma = width/sigmawide.
-#     """
-#     if sigma is None:
-#         # Prevent division by zero error for zero-width pulse.  It
-#         # doesn't matter what sigma is then anyway.
-#         if width == 0:
-#             sigma = 1
-#         else:
-#             sigma = float(width) / float(sigmawide)
-#     deriv = gaussian_deriv(width, amp, sigma)
-#     pulse = ((gaussian(width, amp, sigma) +
-#              1j * delta*deriv +  # Drag
-#              1j * skew * abs(deriv) * np.sign(amp) + # Drag-skew
-#              phi * deriv))  # on-phase drag
-#     return pulse
-# ; no way to remove step
-
 
 
 def gaussian(t, params):
@@ -225,7 +179,7 @@ def gaussian_nonorm(t, params):
     """
     # TODO Add zeroes for t>t_final
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = params['sigma'].get_value()
+    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
     return gauss
 

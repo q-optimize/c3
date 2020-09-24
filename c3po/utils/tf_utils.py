@@ -708,7 +708,5 @@ def tf_project_to_comp(A, dims, to_super=False):
     proj = proj_list.pop()
     while not proj_list == []:
         proj = np.kron(proj_list.pop(), proj)
-    if superoper:
-        proj = np.kron(proj, proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
