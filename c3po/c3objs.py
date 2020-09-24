@@ -149,7 +149,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
-            raise ValueError
+            raise ValueError(f"Value {val} out of bounds ({self.offset},{self.offset+self.scale})for quantity.")
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)

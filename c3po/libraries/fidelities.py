@@ -10,7 +10,7 @@ from c3po.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
     evaluate_sequences
 from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
-    cliffords_decomp, cliffords_decomp_xId, single_length_RB
+    cliffords_decomp, cliffords_decomp_xId, single_length_RB, cliffords_string
 
 fidelities = dict()
 def fid_reg_deco(func):
@@ -230,10 +230,12 @@ def lindbladian_average_infid_set(
     return tf.reduce_mean(infids)
 
 @fid_reg_deco
-def epc_analytical(U_dict: dict, index, dims, proj: bool):
+def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
     # TODO make this work with new index and dims (double-check)
     num_gates = len(dims)
-    if num_gates == 1:
+    if cliffords:
+        real_cliffords = evaluate_sequences(U_dict, [[C] for C in cliffords_string])
+    elif num_gates == 1:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
@@ -254,9 +256,11 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool):
     return infid
 
 @fid_reg_deco
-def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool):
+def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
     num_gates = len(dims)
-    if num_gates == 1:
+    if cliffords:
+        real_cliffords = evaluate_sequences(U_dict, [[C] for C in cliffords_string])
+    elif num_gates == 1:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
@@ -346,7 +350,7 @@ def RB(
         pop0s = []
         for U in Us:
             pops = populations(tf.matmul(U, psi_init), lindbladian)
-            pop0s.append(float(pops[0]+pops[1]))
+            pop0s.append(float(pops[0]))
         surv_prob.append(pop0s)
 
     def RB_fit(len, r, A, B):
@@ -391,12 +395,12 @@ def RB(
                 pop0s = []
                 for U in Us:
                     pops = populations(tf.matmul(U, psi_init), lindbladian)
-                    pop0s.append(float(pops[0]+pops[1]))
+                    pop0s.append(float(pops[0]))
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
     # print("epc:", epc)
-    epg = 1 - ((1-epc)**(1/4))
+    epg = 1 - ((1-epc)**(1/4)) #TODO: adjust to be mean length of 
     # print("epg:", epg)
     # print('example seq: ', seqs[0])
 
@@ -423,9 +427,9 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-    plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
+#     plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
     return epc, r, A, B, fig, ax
-    # return epg
+#     return epg
 
 @fid_reg_deco
 def lindbladian_RB_left(

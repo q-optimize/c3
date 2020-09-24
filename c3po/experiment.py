@@ -140,11 +140,12 @@ class Experiment:
         gates = {}
         # TODO allow for not passing model params
         # model_params, _ = self.model.get_values_bounds()
+        gate_keys = self.gateset.instructions.keys()
         if "opt_gates" in self.__dict__:
-            gate_keys = self.opt_gates
-        else:
-            gate_keys = self.gateset.instructions.keys()
+            if self.opt_gates:
+                gate_keys = self.opt_gates
         for gate in gate_keys:
+#             print(gate)
             instr = self.gateset.instructions[gate]
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
@@ -269,16 +270,19 @@ class Experiment:
             os.mkdir(self.logdir + "unitaries/")
             self.store_unitaries_counter = 0
 
-    def plot_dynamics(self, psi_init, seq, goal, debug=False):
+    def plot_dynamics(self, psi_init, seq, goal=None, debug=False, oper=None):
         # TODO double check if it works well
         dUs = self.dUs
         psi_t = psi_init.numpy()
-        pop_t = self.populations(psi_t, self.model.lindbladian)
+        pop_t = self.populations(psi_t, self.model.lindbladian, oper=oper)
+        dt = self.ts[1] - self.ts[0]
+        times = np.array([0.0])
         for gate in seq:
             for du in dUs[gate]:
                 psi_t = np.matmul(du.numpy(), psi_t)
-                pops = self.populations(psi_t, self.model.lindbladian)
+                pops = self.populations(psi_t, self.model.lindbladian, oper=oper)
                 pop_t = np.append(pop_t, pops, axis=1)
+                times = np.append(times, times[-1]+dt)
             if self.model.use_FR:
                 instr = self.gateset.instructions[gate]
                 signal, ts = self.generator.generate_signals(instr)
@@ -312,12 +316,12 @@ class Experiment:
                 if self.model.lindbladian:
                     FR = tf_utils.tf_super(FR)
                 psi_t = tf.matmul(FR, psi_t)
+                pops = self.populations(psi_t, self.model.lindbladian, oper=oper)
+                pop_t = np.append(pop_t, pops, axis=1)
+                times = np.append(times, times[-1])
 
         fig, axs = plt.subplots(1, 1)
-        ts = self.ts
-        dt = ts[1] - ts[0]
-        ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(ts / 1e-9, pop_t.T)
+        axs.plot(times / 1e-9, pop_t.T, '-')
         axs.grid(linestyle="--")
         axs.tick_params(
             direction="in", left=True, right=True, top=True, bottom=True
@@ -333,15 +337,17 @@ class Experiment:
                 f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}_{goal}.png",
                 dpi=300
             )
+        plt.close("all")
 
     def plot_pulses(self, instr, goal, debug=False):
-        # print(instr.name)
-        # print(instr.comps)
-        # print(self.generator.devices)
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
 
+#         print(instr.name)
+#         print(instr.t_end)
+#         print(awg_ts)
+        
         if debug:
             pass
         else:
@@ -464,7 +470,7 @@ class Experiment:
                 self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/signal_{list(instr.comps.keys())}.png",
                 dpi=300
             )
-
+        plt.close("all")
 
     def store_Udict(self, goal):
         folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
@@ -476,10 +482,24 @@ class Experiment:
             np.savetxt(folder + key + ".txt", value)
 
 
-    def populations(self, state, lindbladian):
-        if lindbladian:
-            rho = tf_utils.tf_vec_to_dm(state)
-            pops = tf.math.real(tf.linalg.diag_part(rho))
-            return tf.reshape(pops, shape=[pops.shape[0], 1])
+    def populations(self, state, lindbladian, oper=None):
+        if oper is not None:
+            if lindbladian:
+                rho = tf_utils.tf_vec_to_dm(state)
+            else:
+                rho = tf_utils.tf_state_to_dm(state)
+            trace = np.trace(np.matmul(rho,oper))
+#             print(rho)
+#             print(oper)
+#             print(np.matmul(rho,oper))
+#             print(trace)
+#             print(abs(trace))
+            return [[np.real(trace)]] #,[np.imag(trace)]]
         else:
-            return tf.abs(state)**2
+            if lindbladian:
+                rho = tf_utils.tf_vec_to_dm(state)
+                pops = tf.math.real(tf.linalg.diag_part(rho))
+                return tf.reshape(pops, shape=[pops.shape[0], 1])
+            else:
+                return tf.abs(state)**2
+            

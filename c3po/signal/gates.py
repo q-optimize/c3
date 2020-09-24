@@ -205,3 +205,11 @@ class Instruction():
 
     def add_component(self, comp: InstructionComponent, chan: str):
         self.comps[chan][comp.name] = comp
+
+
+def merge_instructions(gates: list):
+    pass
+
+
+def stack_instructions(gates: list):
+    pass

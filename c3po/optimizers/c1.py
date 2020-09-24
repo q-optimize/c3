@@ -75,7 +75,10 @@ class C1(Optimizer):
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
-        self.exp.set_opt_gates(self.opt_gates)
+        if self.opt_gates:
+            self.exp.set_opt_gates(self.opt_gates)
+        else:
+            self.opt_gates = self.exp.gateset.instructions.keys()
         self.nice_print = self.exp.gateset.print_parameters
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []

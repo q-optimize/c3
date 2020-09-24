@@ -30,8 +30,10 @@ def replace_symlink(path, alias):
         os.remove(alias)
     except FileNotFoundError:
         pass
-    os.symlink(path, alias)
-
+    try:
+        os.symlink(path, alias)
+    except FileExistsError:
+        pass
 
 # NICE PRINTNG FUNCTIONS
 def eng_num(val):

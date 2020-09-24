@@ -25,6 +25,9 @@ class Optimizer:
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
         self.store_unitaries = store_unitaries
+        self.set_algorithm(algorithm)
+        
+    def set_algorithm(self, algorithm):
         if algorithm is not None:
             self.algorithm = algorithm
         else:
@@ -34,9 +37,15 @@ class Optimizer:
     def replace_logdir(self, new_logdir):
         old_logdir = self.logdir
         self.logdir = new_logdir
-        os.remove(self.dir_path + '/recent')
+        try:
+            os.remove(self.dir_path + '/recent')
+        except FileNotFoundError:
+            pass
         #os.remove(self.dir_path + self.string)
-        os.rmdir(old_logdir)
+        try:
+            os.rmdir(old_logdir)
+        except OSError:
+            pass
 
     def set_exp(self, exp):
         self.exp = exp

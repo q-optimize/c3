@@ -49,6 +49,12 @@ class Generator:
                 resp = self.devices["resp"]
             if "fluxbias" in self.devices:
                 fluxbias = self.devices["fluxbias"]
+            if "lo_noise" in self.devices:
+                lo_noise = self.devices["lo_noise"]
+            if "pink_noise" in self.devices:
+                pink_noise = self.devices["pink_noise"]
+            if "awg_pink_noise" in self.devices:
+                awg_pink_noise = self.devices["awg_pink_noise"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -61,7 +67,13 @@ class Generator:
                     conv_signal = resp.process(flat_signal)
                 else:
                     conv_signal = flat_signal
+                if "awg_pink_noise" in self.devices:
+                    signal = awg_pink_noise.distort(conv_signal)
+                if "lo_noise" in self.devices:
+                    lo_signal = lo_noise.distort(lo_signal)
                 signal = mixer.combine(lo_signal, conv_signal)
+                if "pink_noise" in self.devices:
+                    signal = pink_noise.distort(signal)
                 if "fluxbias" in self.devices and chan == "TC":
                     signal = fluxbias.frequency(signal)
                 else:
