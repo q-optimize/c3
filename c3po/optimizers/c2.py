@@ -1,6 +1,7 @@
 """Object that deals with the closed loop optimal control."""
 
 import os
+import time
 import json
 import pickle
 import c3po.utils.display as display
@@ -9,7 +10,24 @@ from c3po.utils.utils import log_setup
 
 
 class C2(Optimizer):
-    """Object that deals with the closed loop optimal control."""
+    """
+    Object that deals with the closed loop optimal control.
+
+    Parameters
+    ----------
+    dir_path : str
+        Filepath to save results
+    eval_func : callable
+        infidelity function to be minimized
+    gateset_opt_map : list
+        Hierarchical identifiers for the parameter vector
+    algorithm : callable
+        From the algorithm library
+    options : dict
+        Options to be passed to the algorithm
+    run_name : str
+        User specified name for the run, will be used as root folder
+    """
 
     def __init__(
         self,
@@ -20,7 +38,6 @@ class C2(Optimizer):
         options={},
         run_name=None,
     ):
-        """Initiliase."""
         super().__init__(
             algorithm=algorithm
             )
@@ -30,9 +47,29 @@ class C2(Optimizer):
         self.log_setup(dir_path, run_name)
 
     def set_eval_func(self, eval_func):
+        """
+        Setter for the eval function.
+
+        Parameters
+        ----------
+        eval_func : callable
+            Function to be evaluated
+
+        """
         self.eval_func = eval_func
 
     def log_setup(self, dir_path, run_name):
+        """
+        Create the folders to store data.
+
+        Parameters
+        ----------
+        dir_path : str
+            Filepath
+        run_name : str
+            User specified name for the run
+
+        """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
             run_name = self.eval_func.__name__ + self.algorithm.__name__
@@ -40,6 +77,15 @@ class C2(Optimizer):
         self.logname = 'calibration.log'
 
     def load_best(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_gateset_opt_map = [
@@ -86,6 +132,19 @@ class C2(Optimizer):
             pickle.dump(learn_from, file)
 
     def goal_run(self, current_params):
+        """
+        Evaluate the goal function for current parameters.
+
+        Parameters
+        ----------
+        current_params : tf.Tensor
+            Vector representing the current parameter values.
+
+        Returns
+        -------
+        tf.float64
+            Value of the goal function
+        """
         self.exp.gateset.set_parameters(
             current_params,
             self.opt_map,
@@ -101,17 +160,30 @@ class C2(Optimizer):
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
         self.optim_status['goal'] = float(goal)
+        self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std, shots)
         display.plot_C2(self.dir_path, self.logdir)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std, shots):
-        m = {}
-        m['params'] = params
-        m['seqs'] = seqs
-        m['results'] = results
-        m['results_std'] = results_std
-        m['shots'] = shots
+        """
+        Save a pickled version of the performed experiment, suitable for model learning.
+
+        Parameters
+        ----------
+        params : tf.Tensor
+            Vector of parameter values
+        seqs : list
+            Strings identifying the performed instructions
+        results : list
+            Values of the goal function
+        results_std : list
+            Standard deviation of the results, in the case of noisy data
+        shots : list
+            Number of repetitions used in averaging noisy data
+
+        """
+        m = {'params': params, 'seqs': seqs, 'results': results, 'results_std': results_std, 'shots': shots}
         with open(self.picklefilename, "ab") as file:
             pickle.dump(m, file)

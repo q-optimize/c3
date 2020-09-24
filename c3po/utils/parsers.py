@@ -1,3 +1,5 @@
+"""Parsers to read in config files and construct the corresponding objects."""
+
 import os
 import json
 import time
@@ -18,6 +20,7 @@ from c3po.optimizers.sensitivity import SET
 
 
 def create_experiment(exp_setup, datafile=''):
+    """Create an experiment by running a script. Note: This is horrible. Don't do this. Write a proper parser."""
     exp_namespace = run_path(exp_setup)
     if datafile:
         exp = exp_namespace['create_experiment'](datafile)
@@ -27,6 +30,21 @@ def create_experiment(exp_setup, datafile=''):
 
 
 def create_c1_opt(optimizer_config, lindblad):
+    """
+    Create an object for C1 optimal control.
+
+    Parameters
+    ----------
+    optimizer_config : str
+        File path to a JSON file containing the C1 configuration.
+    lindblad : boolean
+        Include lindbladian dynamics.
+    Returns
+    -------
+    C1
+        Open loop optimizer object
+
+    """
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -93,6 +111,9 @@ def create_c1_opt(optimizer_config, lindblad):
             raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         store_unitaries = False
+    run_name = None
+    if "run_name" in cfg:
+        run_name = cfg['run_name']
     opt = C1(
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
@@ -104,7 +125,8 @@ def create_c1_opt(optimizer_config, lindblad):
         plot_dynamics=plot_dynamics,
         plot_pulses=plot_pulses,
         store_unitaries=store_unitaries,
-        options=options
+        options=options,
+        run_name=run_name
     )
     return opt
 
@@ -249,6 +271,23 @@ def create_c1_opt_hk(
 
 
 def create_c2_opt(optimizer_config, eval_func_path):
+    """
+    Create a C2 Calibration object. Can be used to simulate the calibration process, if the eval_func_path contains
+    a ''real'' experiment.
+
+    Parameters
+    ----------
+    optimizer_config : str
+        File path to a JSON configuration file.
+    eval_func_path : str
+        File path to a python script, containing the functions used perform an experiment.
+
+    Returns
+    -------
+    C2, Experiment
+        The C2 optimizer and, in the case of simulated calibration, the ''real'' experiment object.
+
+    """
     with open(optimizer_config, "r") as cfg_file:
         try:
             cfg = json.loads(cfg_file.read())
@@ -287,11 +326,11 @@ def create_c2_opt(optimizer_config, eval_func_path):
     )
     # if not os.path.isdir(logdir):
     #     os.makedirs(logdir)
-    if 'exp_right' in exp_eval_namespace:
-        exp_right = exp_eval_namespace['exp_right']
+    if 'exp' in exp_eval_namespace:
+        exp = exp_eval_namespace['exp']
         def eval(p):
             return eval_func(
-                p, exp_right, gateset_opt_map, state_labels, logdir
+                p, exp, gateset_opt_map, state_labels, logdir
             )
     else:
         eval = eval_func
@@ -307,10 +346,19 @@ def create_c2_opt(optimizer_config, eval_func_path):
         algorithm=algorithm,
         options=options
     )
-    return opt, exp_right
+    return opt, exp
 
 
 def create_c3_opt(optimizer_config):
+    """
+    The optimizer object for C3 model learning, or characterization.
+
+    Parameters
+    ----------
+    optimizer_config : str
+        Path to the JSON configuration file.
+
+    """
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -318,7 +366,6 @@ def create_c3_opt(optimizer_config):
     if "state_labels" in cfg:
         for target, labels in cfg["state_labels"].items():
             state_labels[target] = [tuple(l) for l in labels]
-
 
     try:
         estimator = cfg['estimator']
@@ -380,6 +427,9 @@ def create_c3_opt(optimizer_config):
     else:
         seqs_per_point = None
 
+    run_name = None
+    if "run_name" in cfg:
+        run_name = cfg['run_name']
     opt = C3(
         dir_path=cfg['dir_path'],
         fom=fom,
@@ -392,10 +442,25 @@ def create_c3_opt(optimizer_config):
         callback_figs=callback_figs,
         algorithm=algorithm,
         options=options,
+        run_name=run_name
     )
     return opt
 
-def create_sensitivity_test(task_config):
+
+def create_sensitivity(task_config):
+    """
+    Create the object to perform a sensitivity analysis.
+
+    Parameters
+    ----------
+    task_config : str
+        File path to the JSON configuration file.
+
+    Returns
+    -------
+        Sensitivity object.
+
+    """
     with open(task_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -457,7 +522,7 @@ def create_sensitivity_test(task_config):
 
     sweep_bounds = []
     for a in cfg['sweep_bounds']:
-        sweep_bounds.append([eval(a[0]),eval(a[1])])
+        sweep_bounds.append([eval(a[0]), eval(a[1])])
 
     if 'same_dyn' in cfg:
         same_dyn = bool(cfg['same_dyn'])

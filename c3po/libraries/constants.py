@@ -1,4 +1,5 @@
-"""All constants used in out code."""
+"""All physical constants used in other code."""
+# TODO Constants could be used more
 global kb, h, hbar
 
 kb = 1.380649e-23

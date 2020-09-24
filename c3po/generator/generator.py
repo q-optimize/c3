@@ -1,4 +1,13 @@
-"""Singal generation stack."""
+"""
+Signal generation stack.
+
+Contrary to most quanutm simulators, C^3 includes a detailed simulation of the control
+stack. Each component in the stack and its functions are simulated individually and
+combined here.
+
+Example: A local oscillator and arbitrary waveform generator signal
+are put through via a mixer device to produce an effective modulated signal.
+"""
 
 import copy
 import numpy as np
@@ -8,7 +17,17 @@ from c3po.signal.gates import Instruction
 
 
 class Generator:
-    """Generator, creates signal from digital to what arrives to the chip."""
+    """
+    Generator, creates signal from digital to what arrives to the chip.
+
+    Parameters
+    ----------
+    devices : list
+        Physical or abstract devices in the signal processing chain.
+    resolution : np.float64
+        Resolution at which continuous functions are sampled.
+
+    """
 
     def __init__(
             self,
@@ -36,6 +55,20 @@ class Generator:
         return cfg
 
     def generate_signals(self, instr: Instruction):
+        """
+        Perform the signal chain for a specified instruction, including local oscillator, AWG generation and IQ mixing.
+
+        Parameters
+        ----------
+        instr : Instruction
+            Operation to be performed, e.g. logical gate.
+
+        Returns
+        -------
+        dict
+            Signal to be applied to the physical device.
+
+        """
         # TODO deal with multiple instructions within GateSet
         with tf.name_scope('Signal_generation'):
             gen_signal = {}
@@ -80,46 +113,6 @@ class Generator:
                     signal = v_to_hz.transform(signal, omega_lo)
                 gen_signal[chan]["values"] = signal
                 gen_signal[chan]["ts"] = lo_signal['ts']
-                # plt.figure()
-                # plt.plot(awg.ts/1e-9, awg_signal['inphase']/1e-3, 'x', label='AWG', color="tab:red")
-                # # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
-                # plt.plot(lo_signal['ts']/1e-9, flat_signal['inphase']/1e-3, '-', label='interp', color="tab:blue")
-                # plt.xlabel("Time[ns]")
-                # plt.ylabel("Pulse amplitude[mV]")
-                # plt.grid()
-                # plt.savefig("/home/users/niwitt/awg.png", dpi=300)
-                # plt.figure()
-                # # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
-                # plt.plot(lo_signal['ts']/1e-9, conv_signal['inphase']/1e-3, 'g-', label='convolved')
-                # plt.xlabel("Time[ns]")
-                # plt.ylabel("Pulse amplitude[mV]")
-                # plt.grid()
-                # plt.savefig("/home/users/niwitt/awg_smooth.png", dpi=300)
-                # plt.figure()
-                # plt.plot(awg.ts/1e-9, awg_signal['inphase']/1e-3, 'x', label='AWG', color="tab:red")
-                # # plt.plot(awg.ts, awg_signal['quadrature'], 'xr')
-                # plt.plot(lo_signal['ts']/1e-9, flat_signal['inphase']/1e-3, '-', label='interp', color="tab:blue")
-                # # plt.plot(lo_signal['ts'], flat_signal['quadrature'], 'r-')
-                # plt.plot(lo_signal['ts']/1e-9, conv_signal['inphase']/1e-3, 'g-', label='convolved')
-                # plt.xlabel("Time[ns]")
-                # plt.ylabel("Pulse amplitude[mV]")
-                # plt.grid()
-                # plt.legend(
-                #     ["AWG samples", "upsampled", "convolution"]
-                # )
-                # plt.savefig("/home/users/niwitt/awg_combined.png", dpi=300)
-                # plt.figure()
-                # # plt.plot(lo_signal['ts'], conv_signal['quadrature'], 'y*:')
-                # plt.plot(lo_signal['ts']/1e-9, signal/1e6, '-')
-                # plt.title("Mixed with local oscillator")
-                # plt.xlabel("Time[ns]")
-                # plt.ylabel("Pulse amplitude[MHz]")
-                # plt.grid()
-                # plt.savefig("/home/users/niwitt/iq_mixer.png", dpi=300)
-                # plt.show()
         self.signal = gen_signal
         # TODO clean up output here: ts is redundant
         return gen_signal, lo_signal['ts']
-
-    def readout_signal(self, phase):
-        return self.devices["readout"].readout(phase)
