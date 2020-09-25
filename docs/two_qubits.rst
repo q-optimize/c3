@@ -8,7 +8,7 @@ and conduct the measurements needed to extract the relaxation time
 Imports
 ^^^^^^^
 
-.. code:: ipython3
+.. code-block:: python
 
     # System imports
     import copy
@@ -54,7 +54,7 @@ a Transmon modelled as a Duffing oscillator with frequency
 The “name” will be used to identify this qubit (or other component)
 later and should thus be chosen carefully.
 
-.. code:: ipython3
+.. code-block:: python
 
     qubit_lvls = 3
     freq_q1 = 5e9 * 2 * np.pi
@@ -101,7 +101,7 @@ later and should thus be chosen carefully.
 
 And the same for a second qubit.
 
-.. code:: ipython3
+.. code-block:: python
 
     freq_q2 = 5.6e9 * 2 * np.pi
     anhar_q2 = -240e6 * 2 * np.pi
@@ -149,7 +149,7 @@ supply the type of coupling by selecting int_XX
 The “connected” property contains the list of qubit names to be coupled,
 in this case “Q1” and “Q2”.
 
-.. code:: ipython3
+.. code-block:: python
 
     coupling_strength = 20e6 * 2 * np.pi
     q1q2 = chip.Coupling(
@@ -171,7 +171,7 @@ Again “connected” connected tells us which qubit this drive acts on and
 “name” will later be used to assign the correct control signal to this
 drive line.
 
-.. code:: ipython3
+.. code-block:: python
 
     drive = chip.Drive(
         name="d1",
@@ -193,7 +193,7 @@ read-out. We simulate this by constructing a *confusion matrix*,
 containing the probabilities for one qubit state being mistaken for
 another.
 
-.. code:: ipython3
+.. code-block:: python
 
     m00_q1 = 0.97 # Prop to read qubit 1 state 0 as 0
     m01_q1 = 0.04 # Prop to read qubit 1 state 0 as 1
@@ -214,7 +214,7 @@ another.
 The following task creates an initial thermal state with given
 temperature.
 
-.. code:: ipython3
+.. code-block:: python
 
     init_temp = 50e-3
     init_ground = tasks.InitialiseGround(
@@ -228,7 +228,7 @@ temperature.
 
 We collect the parts specified above in the Model.
 
-.. code:: ipython3
+.. code-block:: python
 
     model = Mdl(
         [q1, q2], # Individual, self-contained components
@@ -240,7 +240,7 @@ Further, we can decide between coherent or open-system dynamics using
 set_lindbladian() and whether to eliminate the static coupling by going
 to the dressed frame with set_dressed().
 
-.. code:: ipython3
+.. code-block:: python
 
     model.set_lindbladian(True)
     model.set_dressed(True)
@@ -254,7 +254,7 @@ by creating an envelope signal with an arbitrary waveform generator
 (AWG) with limited bandwith and mixing it with a fast, stable local
 oscillator (LO).
 
-.. code:: ipython3
+.. code-block:: python
 
     sim_res = 100e9 # Resolution for numerical simulation
     awg_res = 2e9 # Realistic, limited resolution of an AWG
@@ -266,7 +266,7 @@ Waveform generators exhibit a rise time, the time it takes until the
 target voltage is set. This has a smoothing effect on the resulting
 pulse shape.
 
-.. code:: ipython3
+.. code-block:: python
 
     resp = devices.Response(
         name='resp',
@@ -282,7 +282,7 @@ pulse shape.
 In simulation, we translate between AWG resolution and simulation (or
 “analog”) resolultion by including an up-sampling device.
 
-.. code:: ipython3
+.. code-block:: python
 
     dig_to_an = devices.Digital_to_Analog(
         name="dac",
@@ -296,7 +296,7 @@ multiple stages of attenuation and for example the conversion of a line
 voltage in an antenna to a dipole field coupling to the qubit. The
 following device represents a simple, linear conversion factor.
 
-.. code:: ipython3
+.. code-block:: python
 
     v2hz = 1e9
     v_to_hz = devices.Volts_to_Hertz(
@@ -311,7 +311,7 @@ following device represents a simple, linear conversion factor.
 
 The generator combines the parts of the signal generation.
 
-.. code:: ipython3
+.. code-block:: python
 
     generator = Gnr([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
@@ -322,14 +322,14 @@ It remains to write down what kind of operations we want to perform on
 the device. For a gate based quantum computing chip, we define a
 gate-set.
 
-.. code:: ipython3
+.. code-block:: python
 
     gateset = gates.GateSet()
 
 We choose a gate time and a gaussian envelope shape with a list of
 parameters.
 
-.. code:: ipython3
+.. code-block:: python
 
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
@@ -375,7 +375,7 @@ parameters.
 Here we take gaussian_nonorm() from the libraries as the function to
 define the shape.
 
-.. code:: ipython3
+.. code-block:: python
 
     gauss_env_single = pulse.Envelope(
         name="gauss",
@@ -386,7 +386,7 @@ define the shape.
 
 We also define a gate that represents no driving.
 
-.. code:: ipython3
+.. code-block:: python
 
     nodrive_env = pulse.Envelope(
         name="no_drive",
@@ -405,7 +405,7 @@ We specify the drive tones with an offset from the qubit frequencies. As
 in experiment, we will later adjust the resonance by modulating the
 envelope function.
 
-.. code:: ipython3
+.. code-block:: python
 
     lo_freq_q1 = 5e9 * 2 * np.pi + sideband
     carrier_parameters = {
@@ -432,7 +432,7 @@ For the second qubit drive tone, we copy the first one and replace the
 frequency. The deepcopy is to ensure that we don’t just create a pointer
 to the first drive.
 
-.. code:: ipython3
+.. code-block:: python
 
     lo_freq_q2 = 5.6e9 * 2 * np.pi + sideband
     carr_2 = copy.deepcopy(carr)
@@ -447,7 +447,7 @@ lines we specified earlier. As a start we write down 90 degree rotations
 in the positive :math:`x`-direction and identity gates for both qubits.
 Then we add a carrier and envelope to each.
 
-.. code:: ipython3
+.. code-block:: python
 
     X90p_q1 = gates.Instruction(
         name="X90p",
@@ -488,7 +488,7 @@ When later compiling gates into sequences, we have to take care of the
 relative rotating frames of the qubits and local oscillators. We do this
 by adding a phase after each gate that realigns the frames.
 
-.. code:: ipython3
+.. code-block:: python
 
     QId_q1.comps['d1']['carrier'].params['framechange'].set_value(
         (-sideband * t_final) % (2*np.pi)
@@ -500,7 +500,7 @@ by adding a phase after each gate that realigns the frames.
 The remainder of the gates-set can be derived from the X90p gate by
 shifting its phase by multiples of :math:`\pi/2`.
 
-.. code:: ipython3
+.. code-block:: python
 
     Y90p_q1 = copy.deepcopy(X90p_q1)
     Y90p_q1.name = "Y90p"
@@ -528,7 +528,7 @@ shifting its phase by multiples of :math:`\pi/2`.
 With the single qubit gates in place, we can combine them to get all
 possible combinations of simultaneous gates on both qubits.
 
-.. code:: ipython3
+.. code-block:: python
 
     all_1q_gates_comb = []
     for g1 in Q1_gates:
@@ -560,7 +560,7 @@ The experiment
 Finally everything is collected in the experiment that provides the
 functions to interact with the system.
 
-.. code:: ipython3
+.. code-block:: python
 
     exp = Exp(model=model, generator=generator, gateset=gateset)
 
@@ -571,21 +571,21 @@ With our experiment all set-up, we can perform simulations. We first
 decide which basic gates to simulate, in this case only the 90 degree
 rotation on one qubit and the identity.
 
-.. code:: ipython3
+.. code-block:: python
 
     exp.opt_gates = ['X90p:Id', 'Id:Id']
 
 The actual numerical simulation is done by calling exp.get_gates().
 *WARNING:* This is resource intensive.
 
-.. code:: ipython3
+.. code-block:: python
 
     gates = exp.get_gates()
 
 After this step the unitaries or process matrices are stored in the exp
 object. We can look at their names and matrix representations.
 
-.. code:: ipython3
+.. code-block:: python
 
     exp.unitaries
 
@@ -652,7 +652,7 @@ object. We can look at their names and matrix representations.
 To investigate dynamics, we define an initial state with finite
 temperature we set earlier.
 
-.. code:: ipython3
+.. code-block:: python
 
     psi_init = exp.model.tasks["init_ground"].initialise(
                     exp.model.drift_H,
@@ -662,14 +662,14 @@ temperature we set earlier.
 Since we stored the process matrices, we can now relatively cheaply
 evaluate sequences. We start with just one gate
 
-.. code:: ipython3
+.. code-block:: python
 
     barely_a_seq = ['X90p:Id']
 
 and plot system dynamics. The “debug” options shows the plot in this
 notebook. Otherwise the plot is stored as a file in a given directory.
 
-.. code:: ipython3
+.. code-block:: python
 
     exp.plot_dynamics(psi_init, barely_a_seq, debug=True)
 
@@ -682,7 +682,7 @@ We can see a bad, un-optimized gate. The labels indicate qubit states in
 the product basis. Next we increase the number of repetitions of the
 same gate.
 
-.. code:: ipython3
+.. code-block:: python
 
     barely_a_seq * 10
 
@@ -704,7 +704,7 @@ same gate.
 
 
 
-.. code:: ipython3
+.. code-block:: python
 
     exp.plot_dynamics(psi_init, barely_a_seq * 5, debug=True)
 
@@ -713,7 +713,7 @@ same gate.
 .. image:: dyn_5X.png
 
 
-.. code:: ipython3
+.. code-block:: python
 
     exp.plot_dynamics(psi_init, barely_a_seq * 10, debug=True)
 
