@@ -28,6 +28,8 @@ author = 'Nicolas Wittler, Federico Roy, Kevin Pack, Anurag Saha Roy, Max Wernin
 # ones.
 extensions = [
     "autoapi.extension",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode"
 ]
 
 autoapi_dirs = ["../"]

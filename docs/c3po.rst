@@ -1,5 +1,5 @@
-C3 software package
-===================
+API Documentation
+=================
 
 C3objs
 ------
