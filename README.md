@@ -5,13 +5,9 @@ The c<sup>3</sup>po package is intended to close the loop between open-loop cont
 c<sup>3</sup>po  provides a simple Python API through which it may integrate with virtually any experimental setup.
 Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
 
-Documentation is available [here](https://c3-toolset.readthedocs.io).
+The paper introducing c<sup>3</sup> as a concept can be found on the [arxiv](https://arxiv.org/abs/2009.09866).
 
-## Table of Contents
-* [Downloading](#downloading)
-* [Installation](#installation)  
-* [Requirements](#requirements)  
-* [Misc](#misc)  
+Documentation is available [here](https://c3-toolset.readthedocs.io).
 
 <a name="downloading"><a/>
 ## Downloading
@@ -34,9 +30,3 @@ To update c<sup>3</sup>po at any point, simply update the files in the <c3po sou
 **Attention:** As explained above, this does only link the c<sup>3</sup>po folder to your
 local python packages. Deleting the c<sup>3</sup>po folder does therefore also result in
 the deletion of the c<sup>3</sup>po package.
-
-
-<a name="requirements"><a/>
-## Dependencies
-- [QuTip](http://qutip.org/)
-- [pycma](https://github.com/CMA-ES/pycma)
