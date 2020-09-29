@@ -1,3 +1,5 @@
+.. _setup-example:
+
 Setup of a two-qubit chip with :math:`C^3`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -21,6 +21,7 @@ When combined in sequence, these three procedures represent a recipe for system 
    :caption: Contents:
    
    two_qubits
+   optimal_control
    c3po
 
 
