@@ -625,7 +625,7 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
                 freq_offset = 0.0
 
-            elif (self.options == 'drag') or (self.options == 'IBM_drag'):
+            elif (self.options == 'drag') or (self.options == 'drag_2'):
                 for key in components:
                     comp = components[key]
                     if isinstance(comp, Envelope):
@@ -636,7 +636,7 @@ class AWG(Device):
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
                         delta = - comp.params['delta'].get_value()
-                        if (self.options == 'IBM_drag'):
+                        if (self.options == 'drag_2'):
                             delta = delta * dt
 
                         with tf.GradientTape() as t:

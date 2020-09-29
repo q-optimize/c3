@@ -9,6 +9,7 @@ from matplotlib import colors as clrs
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
 from c3po.utils.utils import eng_num
+from IPython.display import clear_output
 import warnings
 import glob
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -57,11 +58,11 @@ nice_parameter_name = {
     "v_to_hz": "$\\Phi$",
     "V_to_Hz": "Line response",
     "freq_offset": "Detuning $\\delta\\omega_d$",
-    "delta": "DRAG parameter $\\Delta$",
+    "delta": "DRAG parameter $\\eta$",
     "t_final": "$t_{final}$",
     "t1": "$T_{1}$",
     "t2star": "$T_{2}^*$",
-    "xy_angle": "$\\alpha_{xy}$",
+    "xy_angle": "$\\phi_{xy}$",
     "Q1": "Qubit 1",
     "Q2": "Qubit 2",
     "init_ground" : "",
@@ -265,6 +266,7 @@ def plot_distribution(logfilename=""):
 
 
 def plot_C1(logfolder="", only_iterations=True):
+    clear_output(wait=True)
     logfilename = logfolder + "open_loop.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
@@ -339,7 +341,7 @@ def plot_C1(logfolder="", only_iterations=True):
         nrows = len(subplot_ids)
         ncols = 1
         fig, axs = plt.subplots(
-            figsize=(5, 2 * nrows), nrows=nrows, ncols=ncols, sharex=True
+            figsize=(6, 3 * nrows), nrows=nrows, ncols=ncols, sharex=True
         )
         fig.subplots_adjust(hspace=0)
         for key in parameters.keys():
@@ -358,12 +360,14 @@ def plot_C1(logfolder="", only_iterations=True):
         ax.set_xlabel(xlabel)
         for p_type, legend in subplot_legends.items():
             subplots[p_type].legend(legend)
+        plt.show(block=False)
         plt.savefig(logfolder + "open_loop.png")
-        plt.figure()
+        fig = plt.figure(figsize=(6, 4))
         plt.title("Goal")
         plt.grid()
         plt.xlabel(xlabel)
         plt.semilogy(its, goal_function)
+        plt.show(block=False)
         plt.savefig(logfolder + "goal.png")
 
 
