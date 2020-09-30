@@ -2,11 +2,11 @@ Open-loop optimal control
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In order to improve the gate from the previous example :ref:`setup-example`, 
-we create the optimizer object for open-loop optimal control. 
-
+we create the optimizer object for open-loop optimal control. Examining the
+previous dynamics
 .. image:: dyn_singleX.png
 
-In addition to over-rotation, we notice some leakage 
+in addition to over-rotation, we notice some leakage 
 into the :math:`|2,0>` state and enable a DRAG option. 
 Details on DRAG can be found 
 `here <https://arxiv.org/abs/1809.04919>`_. The main principle is adding a
@@ -42,7 +42,7 @@ nested list of tuples that identifies each parameter.
         ]
     ]
 
-We can look at the two parameters this opt_map specified with
+We can look at the parameter values this opt_map specified with
 
 .. code-block:: python
 
