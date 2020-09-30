@@ -321,7 +321,7 @@ class Experiment:
         for key in signal:
             signals.append(signal[key]["values"])
             hks.append(hctrls[key])
-        dt = ts[1].numpy() - ts[0].numpy()
+        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if self.model.lindbladian:
             col_ops = self.model.get_Lindbladians()

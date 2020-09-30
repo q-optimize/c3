@@ -420,9 +420,9 @@ class Response(Device):
         """
         n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(
-            0.0,
+            tf.constant(0.0, dtype=tf.float64),
             self.params['rise_time'].get_value(),
-            tf.cast(n_ts, dtype=tf.int32)
+            tf.cast(n_ts, tf.int32)
         )
         cen = tf.cast(
             (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,

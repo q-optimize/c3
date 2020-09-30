@@ -149,6 +149,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         ii += 1
     terms = int(1e12 * dt) + 2
     dU = tf_expm(-1j * h * dt, terms)
+    print(dU)
     # dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
@@ -478,7 +479,7 @@ def tf_expm(A, terms):
     r += A
 
     for ii in range(2, terms):
-        A_powers = tf.matmul(A_powers, A) / ii
+        A_powers = tf.matmul(A_powers, A) / tf.cast(ii, tf.complex128)
         ii += 1
         r += A_powers
     return r
