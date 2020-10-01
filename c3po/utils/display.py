@@ -372,6 +372,7 @@ def plot_C1(logfolder="", only_iterations=True):
 
 
 def plot_C2(cfgfolder="", logfolder=""):
+    clear_output(wait=True)
     logfilename = logfolder + "calibration.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/calibration.log"
@@ -379,19 +380,11 @@ def plot_C2(cfgfolder="", logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = 0
-    path = logfolder+"*.cfg"
-    for filename in glob.glob(path):
-        with open(filename, "r") as cfg_file:
-            cfg = json.loads(cfg_file.read())
-            try:
-                batch_size = cfg['options']['popsize']
-            except KeyError:
-                print(
-                    "Couldn't find ORBIT config file. No plot for you."
-                )
-                break
+    options = json.loads(log[6])
+    batch_size = options['popsize']
+
     eval = 0
-    for line in log[5:]:
+    for line in log[7:]:
         if line[0] == "{":
             if not eval % batch_size:
                 batch = int(eval / batch_size)
@@ -416,6 +409,7 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.axis('tight')
     plt.ylabel('Goal function')
     plt.xlabel('Evaluations')
+    plt.show(block=False)
     plt.savefig(logfolder + "closed_loop.png")
 
 

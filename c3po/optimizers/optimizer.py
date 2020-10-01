@@ -76,6 +76,9 @@ class Optimizer:
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
             logfile.write(json.dumps(self.opt_map))
+            logfile.write("\n\n")
+            logfile.write("Algorithm options:\n")
+            logfile.write(json.dumps(self.options))
             logfile.write("\n")
             logfile.flush()
 
