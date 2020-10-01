@@ -5,7 +5,7 @@ import time
 import json
 import tensorflow as tf
 import numpy as np
-import c3po.libraries.algorithms as algorithms
+import c3.libraries.algorithms as algorithms
 
 
 class Optimizer:

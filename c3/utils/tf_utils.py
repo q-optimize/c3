@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-import c3po.utils.qt_utils as qt_utils
+import c3.utils.qt_utils as qt_utils
 
 
 def tf_setup():

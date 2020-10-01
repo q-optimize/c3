@@ -8,7 +8,7 @@ from matplotlib import rc
 from matplotlib import colors as clrs
 from matplotlib.ticker import MaxNLocator
 from matplotlib.widgets import Slider
-from c3po.utils.utils import eng_num
+from c3.utils.utils import eng_num
 from IPython.display import clear_output
 import warnings
 import glob

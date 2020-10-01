@@ -3,8 +3,8 @@ import json
 import copy
 import tensorflow as tf
 import numpy as np
-from c3po.signal.pulse import Envelope, Carrier
-from c3po.c3objs import Quantity, C3obj
+from c3.signal.pulse import Envelope, Carrier
+from c3.c3objs import Quantity, C3obj
 import matplotlib.pyplot as plt
 
 

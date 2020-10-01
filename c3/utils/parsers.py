@@ -6,17 +6,17 @@ import time
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-from c3po.libraries.algorithms import algorithms
-from c3po.libraries.estimators import estimators
-from c3po.libraries.fidelities import fidelities
-from c3po.libraries.sampling import sampling
-from c3po.utils.display import plots
-import c3po.utils.qt_utils as qt_utils
+from c3.libraries.algorithms import algorithms
+from c3.libraries.estimators import estimators
+from c3.libraries.fidelities import fidelities
+from c3.libraries.sampling import sampling
+from c3.utils.display import plots
+import c3.utils.qt_utils as qt_utils
 from runpy import run_path
-from c3po.optimizers.c1 import C1
-from c3po.optimizers.c2 import C2
-from c3po.optimizers.c3 import C3
-from c3po.optimizers.sensitivity import SET
+from c3.optimizers.c1 import C1
+from c3.optimizers.c2 import C2
+from c3.optimizers.c3 import C3
+from c3.optimizers.sensitivity import SET
 
 
 def create_experiment(exp_setup, datafile=''):

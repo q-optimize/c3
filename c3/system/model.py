@@ -3,9 +3,9 @@
 import numpy as np
 import itertools
 import tensorflow as tf
-import c3po.utils.tf_utils as tf_utils
-import c3po.utils.qt_utils as qt_utils
-from c3po.system.chip import Drive, Coupling
+import c3.utils.tf_utils as tf_utils
+import c3.utils.qt_utils as qt_utils
+from c3.system.chip import Drive, Coupling
 
 
 class Model:

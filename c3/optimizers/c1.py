@@ -4,9 +4,9 @@ import os
 import time
 import json
 import tensorflow as tf
-import c3po.utils.display as display
-from c3po.optimizers.optimizer import Optimizer
-from c3po.utils.utils import log_setup
+import c3.utils.display as display
+from c3.optimizers.optimizer import Optimizer
+from c3.utils.utils import log_setup
 
 
 class C1(Optimizer):

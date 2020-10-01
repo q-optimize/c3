@@ -1,5 +1,5 @@
-from c3po.c3objs import C3obj
-from c3po.c3objs import Quantity as Qty
+from c3.c3objs import C3obj
+from c3.c3objs import Quantity as Qty
 import tensorflow as tf
 import types
 
