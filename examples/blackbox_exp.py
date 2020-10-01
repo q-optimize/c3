@@ -1,25 +1,25 @@
 import copy
 import numpy as np
-from c3po.system.model import Model as Mdl
-from c3po.c3objs import Quantity as Qty
-from c3po.experiment import Experiment as Exp
-from c3po.generator.generator import Generator as Gnr
-import c3po.signal.gates as gates
-import c3po.system.chip as chip
-import c3po.generator.devices as devices
-import c3po.libraries.hamiltonians as hamiltonians
-import c3po.signal.pulse as pulse
-import c3po.libraries.envelopes as envelopes
-import c3po.system.tasks as tasks
+from c3.system.model import Model as Mdl
+from c3.c3objs import Quantity as Qty
+from c3.experiment import Experiment as Exp
+from c3.generator.generator import Generator as Gnr
+import c3.signal.gates as gates
+import c3.system.chip as chip
+import c3.generator.devices as devices
+import c3.libraries.hamiltonians as hamiltonians
+import c3.signal.pulse as pulse
+import c3.libraries.envelopes as envelopes
+import c3.system.tasks as tasks
 
 import time
 import itertools
-import c3po.libraries.fidelities as fidelities
+import c3.libraries.fidelities as fidelities
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_probability as tfp
-import c3po.utils.qt_utils as qt_utils
-import c3po.utils.tf_utils as tf_utils
+import c3.utils.qt_utils as qt_utils
+import c3.utils.tf_utils as tf_utils
 
 def create_experiment():
     lindblad = True
