@@ -225,7 +225,11 @@ class Experiment:
         else:
             gate_keys = self.gateset.instructions.keys()
         for gate in gate_keys:
-            instr = self.gateset.instructions[gate]
+            try:
+                instr = self.gateset.instructions[gate]
+            except KeyError:
+                raise Exception(f"C3:Error: Gate \'{gate}\' is not defined."
+                                f" Available gates are:\n {list(self.gateset.instructions.keys())}.")
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
             if self.model.use_FR:

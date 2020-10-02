@@ -144,7 +144,10 @@ class GateSet:
         for indx in range(len(opt_map)):
             ids = opt_map[indx]
             for id in ids:
-                id_indx = self.id_list.index(id)
+                try:
+                    id_indx = self.id_list.index(id)
+                except ValueError:
+                    raise Exception(f"C3:ERROR: Parameter \'{id}\' is not in this gate-set.")
                 par_len = self.par_lens[id_indx]
                 gate = id[0]
                 par_id = id[1:4]
