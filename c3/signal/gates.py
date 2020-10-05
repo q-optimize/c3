@@ -77,10 +77,8 @@ class GateSet:
 
     def get_parameters(self, opt_map=None, scaled=False, to_str=False):
         """
-        Return list of values and bounds of parameters in opt_map.
-
-        Takes a list of paramaters that are supposed to be optimized
-        and returns the corresponding values and bounds.
+        Return list of parameter values in opt_map in physical units. If scaled is set, the internal value between
+        [-1, 1] is returned.
 
         Parameters
         -------
@@ -90,12 +88,12 @@ class GateSet:
             Parameters that are copies of each other are collected in lists.
 
             Example:
-            opt_map = [
-                [('X90p','line1','gauss1','sigma'),
-                 ('Y90p','line1','gauss1','sigma')],
-                [('X90p','line1','gauss2','amp')],
-                [('Cnot','line1','flattop','amp')],
-                [('Cnot','line2','DC','amp')]
+                opt_map = [
+                        [('X90p','line1','gauss1','sigma'),
+                         ('Y90p','line1','gauss1','sigma')],
+                        [('X90p','line1','gauss2','amp')],
+                        [('Cnot','line1','flattop','amp')],
+                        [('Cnot','line2','DC','amp')]
                 ]
 
         Returns
@@ -104,9 +102,9 @@ class GateSet:
             Dictionary with values, bounds lists.
 
             Example:
-            opt_params = (
-                [0,           0,           0,             0],    # Values
-                )
+                opt_params = (
+                    [0,           0,           0,             0],    # Values
+                    )
 
         """
         values = []
@@ -128,7 +126,8 @@ class GateSet:
         return values
 
     def set_parameters(self, values: list, opt_map: list, scaled=False):
-        """Set the values in the original instruction class.
+        """
+        Set the values in the original instruction class. If scaled is set, internal values between [-1, 1] are used.
 
         Parameters
         ----------
