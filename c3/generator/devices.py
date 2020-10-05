@@ -3,8 +3,8 @@ import json
 import copy
 import tensorflow as tf
 import numpy as np
-from c3po.signal.pulse import Envelope, Carrier
-from c3po.c3objs import Quantity, C3obj
+from c3.signal.pulse import Envelope, Carrier
+from c3.c3objs import Quantity, C3obj
 import matplotlib.pyplot as plt
 
 
@@ -420,9 +420,9 @@ class Response(Device):
         """
         n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
         ts = tf.linspace(
-            0.0,
+            tf.constant(0.0, dtype=tf.float64),
             self.params['rise_time'].get_value(),
-            tf.cast(n_ts, dtype=tf.int32)
+            tf.cast(n_ts, tf.int32)
         )
         cen = tf.cast(
             (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
@@ -625,7 +625,7 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
                 freq_offset = 0.0
 
-            elif (self.options == 'drag') or (self.options == 'IBM_drag'):
+            elif (self.options == 'drag') or (self.options == 'drag_2'):
                 for key in components:
                     comp = components[key]
                     if isinstance(comp, Envelope):
@@ -636,7 +636,7 @@ class AWG(Device):
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
                         delta = - comp.params['delta'].get_value()
-                        if (self.options == 'IBM_drag'):
+                        if (self.options == 'drag_2'):
                             delta = delta * dt
 
                         with tf.GradientTape() as t:

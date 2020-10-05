@@ -13,7 +13,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import c3po.utils.tf_utils as tf_utils
+import c3.utils.tf_utils as tf_utils
 
 
 # TODO add case where one only wants to pass a list of quantity objects?
@@ -225,7 +225,11 @@ class Experiment:
         else:
             gate_keys = self.gateset.instructions.keys()
         for gate in gate_keys:
-            instr = self.gateset.instructions[gate]
+            try:
+                instr = self.gateset.instructions[gate]
+            except KeyError:
+                raise Exception(f"C3:Error: Gate \'{gate}\' is not defined."
+                                f" Available gates are:\n {list(self.gateset.instructions.keys())}.")
             signal, ts = self.generator.generate_signals(instr)
             U = self.propagation(signal, ts, gate)
             if self.model.use_FR:
@@ -321,7 +325,7 @@ class Experiment:
         for key in signal:
             signals.append(signal[key]["values"])
             hks.append(hctrls[key])
-        dt = ts[1].numpy() - ts[0].numpy()
+        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if self.model.lindbladian:
             col_ops = self.model.get_Lindbladians()

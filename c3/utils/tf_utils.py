@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-import c3po.utils.qt_utils as qt_utils
+import c3.utils.qt_utils as qt_utils
 
 
 def tf_setup():
@@ -478,7 +478,7 @@ def tf_expm(A, terms):
     r += A
 
     for ii in range(2, terms):
-        A_powers = tf.matmul(A_powers, A) / ii
+        A_powers = tf.matmul(A_powers, A) / tf.cast(ii, tf.complex128)
         ii += 1
         r += A_powers
     return r

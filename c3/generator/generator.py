@@ -13,7 +13,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from c3po.signal.gates import Instruction
+from c3.signal.gates import Instruction
 
 
 class Generator:

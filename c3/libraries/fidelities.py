@@ -5,11 +5,11 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-from c3po.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
+from c3.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, tf_dm_to_vec, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
     evaluate_sequences
-from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
+from c3.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
     cliffords_decomp, cliffords_decomp_xId, single_length_RB
 
 fidelities = dict()

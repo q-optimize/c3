@@ -7,8 +7,8 @@ import shutil
 import json
 import pickle
 import argparse
-import c3po.utils.parsers as parsers
-import c3po.utils.tf_utils as tf_utils
+import c3.utils.parsers as parsers
+import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
 
 logging.getLogger('tensorflow').disabled = True

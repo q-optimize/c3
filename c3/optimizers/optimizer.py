@@ -5,7 +5,7 @@ import time
 import json
 import tensorflow as tf
 import numpy as np
-import c3po.libraries.algorithms as algorithms
+import c3.libraries.algorithms as algorithms
 
 
 class Optimizer:
@@ -35,6 +35,7 @@ class Optimizer:
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
+        self.current_best_params = None
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
@@ -75,6 +76,9 @@ class Optimizer:
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
             logfile.write(json.dumps(self.opt_map))
+            logfile.write("\n\n")
+            logfile.write("Algorithm options:\n")
+            logfile.write(json.dumps(self.options))
             logfile.write("\n")
             logfile.flush()
 
@@ -115,6 +119,7 @@ class Optimizer:
         """
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
+            self.current_best_params = self.optim_status['params']
             if "U_dict" in self.exp.__dict__.keys():
                 self.log_best_unitary()
             with open(

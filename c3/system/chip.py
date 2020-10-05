@@ -3,11 +3,11 @@
 import types
 import numpy as np
 import tensorflow as tf
-from c3po.libraries.hamiltonians import resonator, duffing
-from c3po.libraries.constants import kb, hbar
-from c3po.utils.tf_utils import tf_diff
-from c3po.utils.qt_utils import hilbert_space_kron as hskron
-from c3po.c3objs import C3obj
+from c3.libraries.hamiltonians import resonator, duffing
+from c3.libraries.constants import kb, hbar
+from c3.utils.tf_utils import tf_diff
+from c3.utils.qt_utils import hilbert_space_kron as hskron
+from c3.c3objs import C3obj
 
 
 class PhysicalComponent(C3obj):

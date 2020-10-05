@@ -1,9 +1,9 @@
-from c3po.c3objs import C3obj, Quantity
+from c3.c3objs import C3obj, Quantity
 import tensorflow as tf
 import numpy as np
-import c3po.libraries.constants as constants
-import c3po.utils.tf_utils as tf_utils
-import c3po.utils.qt_utils as qt_utils
+import c3.libraries.constants as constants
+import c3.utils.tf_utils as tf_utils
+import c3.utils.qt_utils as qt_utils
 
 
 class Task(C3obj):

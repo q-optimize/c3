@@ -6,7 +6,7 @@ All functions assume the input of a time vector.
 
 import numpy as np
 import tensorflow as tf
-from c3po.c3objs import Quantity as Qty
+from c3.c3objs import Quantity as Qty
 
 
 def no_drive(t, params):
