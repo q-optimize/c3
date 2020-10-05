@@ -396,8 +396,10 @@ def plot_C2(cfgfolder="", logfolder=""):
 
     fig = plt.figure()
     plt.title("Calibration")
+    mins = []
     means = []
     for ii in range(len(goal_function)):
+        mins.append(np.min(np.array(goal_function[ii])))
         means.append(np.mean(np.array(goal_function[ii])))
         for pt in goal_function[ii]:
             plt.scatter(ii+1, pt, color='tab:blue')
@@ -405,10 +407,12 @@ def plot_C2(cfgfolder="", logfolder=""):
     # ax.set_yscale('log')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid()
-    plt.plot(range(1, len(goal_function)+1), means, color="tab:red")
+    plt.scatter(range(1, len(goal_function)+1), mins, color="tab:green", label="best")
+    plt.scatter(range(1, len(goal_function)+1), means, color="tab:red", label="mean")
     plt.axis('tight')
     plt.ylabel('Goal function')
     plt.xlabel('Evaluations')
+    plt.legend()
     plt.show(block=False)
     plt.savefig(logfolder + "closed_loop.png")
 

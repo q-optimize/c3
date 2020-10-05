@@ -22,7 +22,7 @@ import c3.utils.qt_utils as qt_utils
 import c3.utils.tf_utils as tf_utils
 
 def create_experiment():
-    lindblad = True
+    lindblad = False
     dressed = True
     qubit_lvls = 3
     freq_q1 = 5e9 * 2 * np.pi
@@ -34,15 +34,14 @@ def create_experiment():
     t1_q2 = 23e-6
     t2star_q1 = 39e-6
     t2star_q2 = 31e-6
-    init_temp = 50e-3
-    qubit_temp = 50e-3
+    init_temp = 0
+    qubit_temp = 0
     m00_q1 = 0.97
     m01_q1 = 0.04
     m00_q2 = 0.96
     m01_q2 = 0.05
     v2hz = 1e9
     t_final = 7e-9   # Time for single qubit gates
-    cr_time = 100e-9  # Two qubit gate
     sim_res = 100e9
     awg_res = 2e9
     meas_offset = 0.0
@@ -225,13 +224,13 @@ def create_experiment():
 
     device_list = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     generator = Gnr(device_list)
-    generator.devices['awg'].options = 'IBM_drag'
+    generator.devices['awg'].enable_drag_2()
 
     # ### MAKE GATESET
     gateset = gates.GateSet()
     gauss_params_single = {
         'amp': Qty(
-            value=0.5,
+            value=0.45,
             min=0.4,
             max=0.6,
             unit="V"
@@ -255,9 +254,9 @@ def create_experiment():
             unit='rad'
         ),
         'freq_offset': Qty(
-            value=-sideband - 3e6 * 2 * np.pi,
-            min=-56 * 1e6 * 2 * np.pi,
-            max=-52 * 1e6 * 2 * np.pi,
+            value=-sideband - 0.5e6 * 2 * np.pi,
+            min=-53 * 1e6 * 2 * np.pi,
+            max=-47 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
@@ -267,126 +266,12 @@ def create_experiment():
             unit=""
         )
     }
-    
-    gauss_params_cr = {
-        'amp': Qty(
-            value=2,
-            min=-5,
-            max=5,
-            unit="V"
-        ),
-        't_up': Qty(
-            value=5e-9,
-            min=0.0 * cr_time,
-            max=0.5 * cr_time,
-            unit="s"
-        ),
-        't_down': Qty(
-            value=cr_time-5e-9,
-            min=0.5 * cr_time,
-            max=1.0 * cr_time,
-            unit="s"
-        ),
-        't_final': Qty(
-            value=cr_time,
-            min=0.5 * cr_time,
-            max=1.1 * cr_time,
-            unit="s"
-        ),
-        'risefall': Qty(
-            value=4e-9,
-            min=0.0 * cr_time,
-            max=1.0 * cr_time,
-            unit="s"
-        ),
-        'xy_angle': Qty(
-            value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
-            unit='pi'
-        ),
-        'freq_offset': Qty(
-            value=-sideband,
-            min=-70 * 1e6 * 2 * np.pi,
-            max=-30 * 1e6 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
-        'delta': Qty(
-            value=0,
-            min=-5,
-            max=5,
-            unit=""
-        )
-    }
-    gauss_params_cr_2 = {
-        'amp': Qty(
-            value=0.032,
-            min=-5,
-            max=5,
-            unit="V"
-        ),
-        't_up': Qty(
-            value=5e-9,
-            min=0.0 * cr_time,
-            max=0.5 * cr_time,
-            unit="s"
-        ),
-        't_down': Qty(
-            value=cr_time-5e-9,
-            min=0.5 * cr_time,
-            max=1.0 * cr_time,
-            unit="s"
-        ),
-        't_final': Qty(
-            value=cr_time,
-            min=0.5 * cr_time,
-            max=1.1 * cr_time,
-            unit="s"
-        ),
-        'risefall': Qty(
-            value=4e-9,
-            min=0.0 * cr_time,
-            max=1.0 * cr_time,
-            unit="s"
-        ),
-        'xy_angle': Qty(
-            value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
-            unit='pi'
-        ),
-        'freq_offset': Qty(
-            value=-sideband,
-            min=-70 * 1e6 * 2 * np.pi,
-            max=-30 * 1e6 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
-        'delta': Qty(
-            value=0,
-            min=-5,
-            max=5,
-            unit=""
-        )
-    }        
-     
 
     gauss_env_single = pulse.Envelope(
         name="gauss",
         desc="Gaussian comp for single-qubit gates",
         params=gauss_params_single,
         shape=envelopes.gaussian_nonorm
-    )
-    gauss_env_cr = pulse.Envelope(
-        name="gauss",
-        desc="Gaussian comp for two-qubit gates",
-        params=gauss_params_cr,
-        shape=envelopes.flattop_risefall
-    )
-    gauss_env_cr_2 = pulse.Envelope(
-        name="gauss",
-        desc="Gaussian comp for two-qubit gates",
-        params=gauss_params_cr_2,
-        shape=envelopes.flattop_risefall
     )
     nodrive_env = pulse.Envelope(
         name="no_drive",
@@ -506,24 +391,6 @@ def create_experiment():
 
     for gate in all_1q_gates_comb:
         gateset.add_instruction(gate)
-
-    CR = gates.Instruction(
-        name="CR90",
-        t_start=0.0,
-        t_end=cr_time,
-        channels=["d1","d2"]
-    )
-    CR.add_component(gauss_env_cr, "d1")
-    CR.add_component(carr_2, "d1")
-    CR.add_component(gauss_env_cr_2, "d2")
-    CR.add_component(carr_2, "d2")
-    CR.comps['d1']['carrier'].params['framechange'].set_value(
-            (-sideband * cr_time) % (2*np.pi)
-        )
-    CR.comps['d2']['carrier'].params['framechange'].set_value(
-            (-sideband * cr_time) % (2*np.pi)
-        )
-    gateset.add_instruction(CR)
 
     # ### MAKE EXPERIMENT
     exp = Exp(model=model, generator=generator, gateset=gateset)
