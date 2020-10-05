@@ -35,6 +35,7 @@ class Optimizer:
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
+        self.current_best_params = None
         self.evaluation = 0
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
@@ -115,6 +116,7 @@ class Optimizer:
         """
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
+            self.current_best_params = self.optim_status['params']
             if "U_dict" in self.exp.__dict__.keys():
                 self.log_best_unitary()
             with open(
