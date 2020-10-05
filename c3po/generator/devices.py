@@ -14,7 +14,7 @@ class Device(C3obj):
     Parameters
     ----------
     resolution: np.float64
-        Number of samples per second this device operates at
+        Number of samples per second this device operates at.
     """
 
     def __init__(
@@ -57,14 +57,14 @@ class Device(C3obj):
             t_end: np.float64
     ):
         """
-        Effective number of time slices given start, end and resolution
+        Effective number of time slices given start, end and resolution.
 
         Parameters
         ----------
         t_start: np.float64
-            Starting time for this device
+            Starting time for this device.
         t_end: np.float64
-            End time for this device
+            End time for this device.
         """
         res = self.resolution
         self.slice_num = int(np.abs(t_start - t_end) * res)
@@ -82,11 +82,11 @@ class Device(C3obj):
         Parameters
         ----------
         t_start: np.float64
-            Starting time for this device
+            Starting time for this device.
         t_end: np.float64
-            End time for this device
+            End time for this device.
         centered: boolean
-            Sample in the middle of an interval, otherwise at the beginning
+            Sample in the middle of an interval, otherwise at the beginning.
         """
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
@@ -156,9 +156,9 @@ class Volts_to_Hertz(Device):
     Parameters
     ----------
     V_to_Hz: Quantity
-        Conversion factor
+        Conversion factor.
     offset: tf.float64
-        Drive frequency offset
+        Drive frequency offset.
     """
 
     def __init__(
@@ -178,8 +178,6 @@ class Volts_to_Hertz(Device):
         )
         self.signal = None
         self.params['V_to_Hz'] = V_to_Hz
-        if offset:
-            self.params['offset'] = offset
 
     def transform(self, mixed_signal, drive_frequency):
         """Transform signal from value of V to Hz.
@@ -197,14 +195,7 @@ class Volts_to_Hertz(Device):
             Waveform as control amplitudes
         """
         v2hz = self.params['V_to_Hz'].get_value()
-        # TODO Fix scaling to be independent of drive frequency
-        if 'offset' in self.params:
-            offset = self.params['offset'].get_value()
-            att = v2hz / (drive_frequency + offset)
-            print("BE CAREFUL BEING STUPID, v2hz")
-        else:
-            att = v2hz
-        self.signal = mixed_signal * att
+        self.signal = mixed_signal * v2hz
         return self.signal
 
 
@@ -234,16 +225,16 @@ class Digital_to_Analog(Device):
         Parameters
         ----------
         awg_signal: tf.Tensor
-            Bandwith-limited, low-resolution AWG signal
+            Bandwith-limited, low-resolution AWG signal.
         t_start: np.float64
-            Beginning of the signal
+            Beginning of the signal.
         t_end: np.float64
-            End of the signal
+            End of the signal.
 
         Returns
         -------
         dict
-            Inphase and Quadrature compontent of the upsampled signal
+            Inphase and Quadrature compontent of the upsampled signal.
         """
         ts = self.create_ts(t_start, t_end, centered=True)
         old_dim = awg_signal["inphase"].shape[0]
@@ -276,7 +267,7 @@ class Filter(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
-            filter_fuction: types.FunctionType = None,
+            filter_function: types.FunctionType = None,
     ):
         super().__init__(
             name=name,
@@ -284,57 +275,30 @@ class Filter(Device):
             comment=comment,
             resolution=resolution
         )
-        self.filter_fuction = filter_fuction
+        self.filter_function = filter_function
         self.signal = None
 
     def filter(self, Hz_signal):
         """Apply a filter function to the signal."""
-        self.signal = self.filter_fuction(Hz_signal)
-        return self.signal
-
-
-class Transfer(Device):
-    # TODO Combine with filter
-    """Apply a transfer function to the signal."""
-
-    def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            transfer_fuction: types.FunctionType = None,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
-        self.transfer_fuction = transfer_fuction
-        self.signal = None
-
-    def transfer(self, filter_signal):
-        """Apply a transfer function to the signal."""
-        self.signal = self.transfer_fuction(filter_signal)
+        self.signal = self.filter_function(Hz_signal)
         return self.signal
 
 
 class FluxTuning(Device):
-    # TODO Fed docs for flux tuning
     """
-    Flux tunable qubit frequency
+    Flux tunable qubit frequency.
 
     Parameters
     ----------
     phi_0 : Quantity
-        Flux bias
+        Flux bias.
     Phi : Quantity
-        Current flux
+        Current flux.
     omega_0 : Quantity
-        Parking frequency
+        Maximum frequency.
 
     """
+
     def __init__(
             self,
             name: str = " ",
@@ -369,7 +333,7 @@ class FluxTuning(Device):
         Returns
         -------
         tf.float64
-            Qubit frequency
+            Qubit frequency.
         """
         pi = tf.constant(np.pi, dtype=tf.float64)
         Phi = self.params['Phi'].get_value()
@@ -378,65 +342,16 @@ class FluxTuning(Device):
 
         base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * Phi / phi_0)))
         self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (Phi + signal) / phi_0))) - base_freq
-        # print(self.params['Phi'])
-        # print(self.params['phi_0'])
-        # plt.figure()
-        # plt.plot(signal[1000:4000])
-        # plt.savefig("signal")
-        # plt.figure()
-        # plt.plot(self.freq[1000:4000])
-        # plt.savefig("freqs")
         return self.freq
 
 
-class FluxTuning_AT(Device):
-    """Get frequency response as a function of flux"""
-
-    def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            omega_0: np.float = 0.0,
-            Phi: np.float64 = 0.0,
-            phi_0: np.float64 = 0.0,
-            gamma: np.float64 = 0.0
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
-        self.params['phi_0'] = phi_0
-        self.params['Phi'] = Phi
-        self.params['omega_0'] = omega_0
-        self.params['gamma'] = gamma
-        self.freq = None
-
-    def frequency(self, signal):
-        """Apply a transfer function to the signal."""
-        pi = tf.constant(np.pi, dtype=tf.float64)
-        omega_0 = tf.cast(self.params['omega_0'].get_value(), tf.complex128)
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['Phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
-        self.freq = gamma * tf.sqrt(tf.sqrt(
-            tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
-        ))
-        return self.freq
-
-
-# TODO real AWG has 16bits plus noise
 class Response(Device):
     """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
 
     Parameters
     ----------
     rise_time : Quantity
-        Time constant for the gaussian convolution
+        Time constant for the gaussian convolution.
     """
 
     def __init__(
@@ -458,19 +373,19 @@ class Response(Device):
 
     def convolve(self, signal: list, resp_shape: list):
         """
-        Compute the convolution with a function
+        Compute the convolution with a function.
 
         Parameters
         ----------
         signal : list
-            Potentially unlimited signal samples
+            Potentially unlimited signal samples.
         resp_shape : list
-            Samples of the function to model limited bandwidth
+            Samples of the function to model limited bandwidth.
 
         Returns
         -------
         tf.Tensor
-            Processed signal
+            Processed signal.
 
         """
         convolution = tf.zeros(0, dtype=tf.float64)
@@ -495,12 +410,12 @@ class Response(Device):
         Parameters
         ----------
         iq_signal : dict
-            I and Q components of an AWG signal
+            I and Q components of an AWG signal.
 
         Returns
         -------
         dict
-            Bandwidth limited IQ signal
+            Bandwidth limited IQ signal.
 
         """
         n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
@@ -548,19 +463,20 @@ class Mixer(Device):
         Parameters
         ----------
         lo_signal : dict
-            Local oscillator signal
+            Local oscillator signal.
         awg_signal : dict
-            Waveform generator signal
+            Waveform generator signal.
 
         Returns
         -------
         dict
-            Mixed signal
+            Mixed signal.
         """
         cos, sin = lo_signal["values"]
         inphase = awg_signal["inphase"]
         quadrature = awg_signal["quadrature"]
         self.signal = (inphase * cos + quadrature * sin)
+        #TODO: check if signs are right
         return self.signal
 
 
@@ -590,16 +506,16 @@ class LO(Device):
         Parameters
         ----------
         channel : dict
-            Drive channels
+            Drive channels.
         t_start : float
-            Beginning of the signal
+            Beginning of the signal.
         t_end : float
-            End of the signal
+            End of the signal.
 
         Returns
         -------
         dict, tf.float64
-            Local oscillator signal and frequency
+            Local oscillator signal and frequency.
 
         """
         # TODO check somewhere that there is only 1 carrier per instruction
@@ -615,13 +531,14 @@ class LO(Device):
                 return self.signal, omega_lo
 
 
+# TODO real AWG has 16bits plus noise
 class AWG(Device):
     """AWG device, transforms digital input to analog signal.
 
     Parameters
     ----------
     logdir : str
-        Filepath to store generated waveforms
+        Filepath to store generated waveforms.
     """
 
     def __init__(
@@ -660,18 +577,18 @@ class AWG(Device):
         Parameters
         ----------
         channel : str
-            Identifier for the selected drive line
+            Identifier for the selected drive line.
         components : dict
-            Separate signals to be combined onto this drive line
+            Separate signals to be combined onto this drive line.
         t_start : float
-            Beginning of the signal
+            Beginning of the signal.
         t_end : float
-            End of the signal
+            End of the signal.
 
         Returns
         -------
         dict
-            Waveforms as I and Q components
+            Waveforms as I and Q components.
 
         """
         with tf.name_scope("I_Q_generation"):
@@ -718,8 +635,6 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
-                        # TODO: check again the sign of this delta
-                        # [orbit:negative, manybird:positive] Fed guess: neg
                         delta = - comp.params['delta'].get_value()
                         if (self.options == 'IBM_drag'):
                             delta = delta * dt
@@ -731,8 +646,6 @@ class AWG(Device):
                         denv = t.gradient(env, ts)
                         if denv is None:
                             denv = tf.zeros_like(ts, dtype=tf.float64)
-                        # TODO: check again the sign in front of offset
-                        # [orbit:positive, manybird:negative] Fed guess: pos
                         phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * (
@@ -753,7 +666,6 @@ class AWG(Device):
             else:
                 for key in components:
                     comp = components[key]
-                    # TODO makeawg code more general to allow for fourier basis
                     if isinstance(comp, Envelope):
 
                         amp = comp.params['amp'].get_value()
@@ -762,8 +674,6 @@ class AWG(Device):
 
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
-                        # TODO: check again the sign in front of offset
-                        # [orbit:positive, manybird:negative] Fed guess: pos
                         phase = - xy_angle + freq_offset * ts
                         inphase_comps.append(
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
@@ -777,8 +687,8 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.signal[channel]['inphase'] = inphase #/ norm
-        self.signal[channel]['quadrature'] = quadrature #/ norm
+        self.signal[channel]['inphase'] = inphase
+        self.signal[channel]['quadrature'] = quadrature
         # self.log_shapes()
         return {"inphase": inphase, "quadrature": quadrature}
         # TODO decide when and where to return/store params scaled or not
@@ -790,7 +700,7 @@ class AWG(Device):
         Returns
         -------
         tuple
-            Average and sum
+            Average and sum.
         """
         In = self.get_I()
         Qu = self.get_Q()

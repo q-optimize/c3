@@ -241,8 +241,7 @@ class Model:
         tf.Tensor
             A (diagonal) propagator that adjust phases
         """
-        tot_dim = self.tot_dim
-        exponent = tf.constant(0., dtype = tf.complex128)
+        exponent = tf.constant(0., dtype=tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
@@ -261,7 +260,6 @@ class Model:
                     tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
                     self.transform
                 )
-            else:
             exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)
@@ -272,6 +270,21 @@ class Model:
         pass
 
     def get_dephasing_channel(self, t_final, amps):
+        """
+        Compute the matrix of the dephasing channel to be applied on the operation.
+
+        Parameters
+        ----------
+        t_final : tf.float64
+            Duration of the operation.
+        amps : dict of tf.float64
+            Dictionary of average amplitude on each drive line.
+        Returns
+        -------
+        tf.tensor
+            Matrix representation of the dephasing channel.
+        """
+
         tot_dim = self.tot_dim
         ones = tf.ones(tot_dim, dtype=tf.complex128)
         Id = tf_utils.tf_super(tf.linalg.diag(ones))
@@ -297,25 +310,3 @@ class Model:
                 print('dephasing stength: ', p)
             deph_ch = deph_ch * ((1-p) * Id + p * Z)
         return deph_ch
-
-    # def simple_dephasing_channel(self, t_final, amps):
-    #     amp = amps['d1']
-    #     diag = tf.constant([1, 1, 0, 0], dtype=tf.complex128)
-    #     Id = tf.linalg.diag(diag)
-    #     Id = tf_utils.tf_super(Id)
-    #     deph_ch = Id
-    #     Z = tf.constant(
-    #         np.array(
-    #             [[1, 0, 0, 0],
-    #              [0, -1, 0, 0],
-    #              [0, 0, 0, 0],
-    #              [0, 0, 0, 0]]),
-    #         dtype=tf.complex128
-    #     )
-    #     Z = tf_utils.tf_super(Z)
-    #     p = t_final * amp * self.dephasing_strength
-    #     if p.numpy() > 1 or p.numpy() < 0:
-    #         raise ValueError('strengh of dephasing channels outside [0,1]')
-    #         print('dephasing stength: ', p)
-    #     deph_ch = deph_ch * ((1-p) * Id + p * Z)
-    #     return deph_ch
