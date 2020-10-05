@@ -1,5 +1,6 @@
-C3 software package
-===================
+=================
+API Documentation
+=================
 
 C3objs
 ------
@@ -32,7 +33,7 @@ Module contents
    :members:
    :undoc-members:
    :show-inheritance:
-   
+
 Subpackages
 -----------
 

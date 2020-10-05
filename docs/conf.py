@@ -10,16 +10,15 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-# import os
-# import sys
-# sys.path.insert(0, '/home/nico/c3po/c3po')
+import os
+import sys
+sys.path.insert(0, os.path.abspath('../'))
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'c3po'
-copyright = '2020, Author'
-author = 'Author'
+project = 'C3'
+author = 'Nicolas Wittler, Federico Roy, Kevin Pack, Anurag Saha Roy, Max Werninghaus, Shai Machnes'
 
 
 # -- General configuration ---------------------------------------------------
@@ -28,12 +27,25 @@ author = 'Author'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.todo',
-    'sphinx.ext.napoleon',
-    "sphinx_rtd_theme",
-    'sphinx.ext.mathjax'
+    "autoapi.extension",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode"
+]
+
+autoapi_dirs = ["../c3po"]
+autoapi_file_patterns = ["*.py"]
+autoapi_ignore = ["*logs*", "__pycache__"]
+autoapi_member_order = "bysource"
+autoapi_keep_files = False
+autoapi_add_toctree_entry = False
+autoapi_options = [
+    "members",
+    "inherited-members",
+    "special-members",
+    "show-inheritance",
+    "special-members",
+    "imported-members",
+    "show-inheritance-diagram",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -64,7 +76,7 @@ html_theme = "sphinx_rtd_theme"
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
 
-
+master_doc = 'index'
 # -- Extension configuration -------------------------------------------------
 
 # -- Options for todo extension ----------------------------------------------
