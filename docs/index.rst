@@ -9,7 +9,7 @@
    :maxdepth: 4
    :caption: API documentation:
 
-=======
+===================================================================================
 :math:`C^3` -  An integrated tool-set for control, calibration and characterization
 ===================================================================================
 
