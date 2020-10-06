@@ -1,4 +1,4 @@
-.. c3po documentation master file, created by
+.. c3 documentation master file, created by
    sphinx-quickstart on Tue Aug 25 10:24:31 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
@@ -29,7 +29,7 @@ When combined in sequence, these three procedures represent a recipe for system 
 
    two_qubits
    optimal_control
-   c3po
+   c3
 
 
 Indices and tables

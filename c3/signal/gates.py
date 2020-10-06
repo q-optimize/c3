@@ -188,7 +188,7 @@ class GateSet:
         """
         ret = []
         if opt_map is None:
-            opt_map = self.id_list
+            opt_map = [[par_id] for par_id in self.id_list]
         for indx in range(len(opt_map)):
             ids = opt_map[indx]
             for id in ids:
@@ -200,7 +200,7 @@ class GateSet:
                 gate_instr = self.instructions[gate]
                 par = gate_instr.comps[chan][comp].params[param]
             nice_id = gate + "-" + "-".join(par_id)
-            ret.append(f"{nice_id:28}: {par}\n")
+            ret.append(f"{nice_id:38}: {par}\n")
         return "".join(ret)
 
 

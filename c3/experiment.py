@@ -48,7 +48,8 @@ class Experiment:
             components.update(self.model.couplings)
             components.update(self.model.subsystems)
             components.update(self.model.tasks)
-        components.update(self.generator.devices)
+        if generator:
+            components.update(self.generator.devices)
         self.components = components
 
         id_list = []

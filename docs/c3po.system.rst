@@ -7,7 +7,7 @@ Submodules
 Chip module
 -----------------------
 
-.. automodule:: c3po.system.chip
+.. automodule:: c3.system.chip
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ Chip module
 Model module
 ------------------------
 
-.. automodule:: c3po.system.model
+.. automodule:: c3.system.model
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ Model module
 Tasks module
 ------------------------
 
-.. automodule:: c3po.system.tasks
+.. automodule:: c3.system.tasks
    :members:
    :undoc-members:
    :show-inheritance:
@@ -31,7 +31,7 @@ Tasks module
 Module contents
 ---------------
 
-.. automodule:: c3po.system
+.. automodule:: c3.system
    :members:
    :undoc-members:
    :show-inheritance:
