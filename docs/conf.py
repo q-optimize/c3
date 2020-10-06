@@ -32,7 +32,7 @@ extensions = [
     "sphinx.ext.viewcode"
 ]
 
-autoapi_dirs = ["../c3po"]
+autoapi_dirs = ["../c3"]
 autoapi_file_patterns = ["*.py"]
 autoapi_ignore = ["*logs*", "__pycache__"]
 autoapi_member_order = "bysource"

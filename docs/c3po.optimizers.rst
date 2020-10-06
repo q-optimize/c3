@@ -4,7 +4,7 @@ Optimizers
 C1 - Optimal control
 --------------------
 
-.. automodule:: c3po.optimizers.c1
+.. automodule:: c3.optimizers.c1
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ C1 - Optimal control
 C2 - Calibration
 ----------------
 
-.. automodule:: c3po.optimizers.c2
+.. automodule:: c3.optimizers.c2
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ C2 - Calibration
 C3 - Characterization
 ---------------------
 
-.. automodule:: c3po.optimizers.c3
+.. automodule:: c3.optimizers.c3
    :members:
    :undoc-members:
    :show-inheritance:
@@ -28,7 +28,7 @@ C3 - Characterization
 Optimizer module
 ----------------
 
-.. automodule:: c3po.optimizers.optimizer
+.. automodule:: c3.optimizers.optimizer
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ Optimizer module
 Sensitivity analysis
 ----------------------------------
 
-.. automodule:: c3po.optimizers.sensitivity
+.. automodule:: c3.optimizers.sensitivity
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,7 +44,7 @@ Sensitivity analysis
 Module contents
 ---------------
 
-.. automodule:: c3po.optimizers
+.. automodule:: c3.optimizers
    :members:
    :undoc-members:
    :show-inheritance:

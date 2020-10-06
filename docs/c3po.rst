@@ -5,7 +5,7 @@ API Documentation
 C3objs
 ------
 
-.. automodule:: c3po.c3objs
+.. automodule:: c3.c3objs
    :members:
    :undoc-members:
    :show-inheritance:
@@ -13,7 +13,7 @@ C3objs
 Experiment module
 -----------------
 
-.. automodule:: c3po.experiment
+.. automodule:: c3.experiment
    :members:
    :undoc-members:
    :show-inheritance:
@@ -21,7 +21,7 @@ Experiment module
 Main module
 -----------
 
-.. automodule:: c3po.main
+.. automodule:: c3.main
    :members:
    :undoc-members:
    :show-inheritance:
@@ -29,7 +29,7 @@ Main module
 Module contents
 ---------------
 
-.. automodule:: c3po
+.. automodule:: c3
    :members:
    :undoc-members:
    :show-inheritance:
@@ -40,9 +40,9 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   c3po.generator
-   c3po.libraries
-   c3po.optimizers
-   c3po.signal
-   c3po.system
-   c3po.utils
+   c3.generator
+   c3.libraries
+   c3.optimizers
+   c3.signal
+   c3.system
+   c3.utils

@@ -7,7 +7,7 @@ Submodules
 Devices module
 --------------
 
-.. automodule:: c3po.generator.devices
+.. automodule:: c3.generator.devices
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ Devices module
 Generator module
 ----------------
 
-.. automodule:: c3po.generator.generator
+.. automodule:: c3.generator.generator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ Generator module
 Module contents
 ---------------
 
-.. automodule:: c3po.generator
+.. automodule:: c3.generator
    :members:
    :undoc-members:
    :show-inheritance:
