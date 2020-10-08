@@ -8,3 +8,5 @@ Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
 The paper introducing C<sup>3</sup> as a concept can be found on the [arxiv](https://arxiv.org/abs/2009.09866).
 
 Documentation is available [here](https://c3-toolset.readthedocs.io).
+
+github is at [https://github.com/q-optimize/c3](https://github.com/q-optimize/c3).
