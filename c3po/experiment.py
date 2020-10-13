@@ -14,7 +14,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import c3po.utils.tf_utils as tf_utils
-
+plt.rcParams['figure.figsize'] = 16,8
 
 # TODO add case where one only wants to pass a list of quantity objects?
 class Experiment:
@@ -263,7 +263,7 @@ class Experiment:
                     freqs,
                     framechanges
                 )
-                print(repr(FR))
+                # print(repr(FR))
                 if self.model.lindbladian:
                     SFR = tf_utils.tf_super(FR)
                     U = tf.matmul(SFR, U)
@@ -463,6 +463,8 @@ class Experiment:
                 times = np.append(times, times[-1])
 
         fig, axs = plt.subplots(1, 1)
+        axs.set_prop_cycle(color = plt.cm.tab20(np.linspace(0, 0.9, len(pop_t))))
+#         axs.set_prop_cycle(color = plt.cm.gist_ncar(np.linspace(0, 0.9, len(pop_t))))
         axs.plot(times / 1e-9, pop_t.T, '-')
         axs.grid(linestyle="--")
         axs.tick_params(

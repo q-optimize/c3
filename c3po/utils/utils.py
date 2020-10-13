@@ -5,7 +5,7 @@ import numpy as np
 
 
 # SYSTEM AND SETUP
-def log_setup(data_path, run_name=None):
+def log_setup(data_path, run_name='run'):
     """
     Make sure the file path to save data exists. Create an appropriately named folder with date and time.
      Also creates a symlink "recent" to the folder.

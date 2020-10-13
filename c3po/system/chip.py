@@ -318,7 +318,8 @@ class AsymmetricTransmon(PhysicalComponent):
             freq: np.float64 = 0.0,
             phi: np.float64 = 0.0,
             phi_0: np.float64 = 0.0,
-            gamma: np.float64 = 0.0
+#             gamma: np.float64 = 0.0,
+            d: np.float64 = 0.0,
             ):
         super().__init__(
             name=name,
@@ -327,22 +328,27 @@ class AsymmetricTransmon(PhysicalComponent):
             hilbert_dim=hilbert_dim
             )
         self.params['freq'] = freq
-        self.parama['phi'] = phi
-        self.parama['phi_0'] = phi_0
-        self.parama['gamma'] = gamma
+        self.params['phi'] = phi
+        self.params['phi_0'] = phi_0
+        self.params['d'] = d
+#         self.params['gamma'] = gamma
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
 
+    def init_Ls(self, ann_oper):
+        pass
+
     def get_Hamiltonian(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         pi = tf.constant(np.pi, dtype=tf.complex128)
         phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
-        d = (gamma - 1) / (gamma + 1)
+        d = tf.cast(self.params['d'].get_value(), tf.complex128)
+#         gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+#         d = (gamma - 1) / (gamma + 1)
         factor = tf.sqrt(tf.sqrt(
             tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
         ))

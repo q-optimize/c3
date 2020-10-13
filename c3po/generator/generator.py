@@ -101,7 +101,7 @@ class Generator:
                 else:
                     conv_signal = flat_signal
                 if "awg_pink_noise" in self.devices:
-                    signal = awg_pink_noise.distort(conv_signal)
+                    conv_signal = awg_pink_noise.distort(conv_signal)
                 if "lo_noise" in self.devices:
                     lo_signal = lo_noise.distort(lo_signal)
                 signal = mixer.combine(lo_signal, conv_signal)

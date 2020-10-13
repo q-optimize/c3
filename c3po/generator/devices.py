@@ -305,8 +305,9 @@ class FluxTuning(Device):
             comment: str = " ",
             resolution: np.float64 = 0.0,
             phi_0: np.float = 0.0,
-            Phi: np.float = 0.0,
-            omega_0: np.float = 0.0
+            phi: np.float = 0.0,
+            omega_0: np.float = 0.0,
+            d = None
     ):
 
         super().__init__(
@@ -316,8 +317,10 @@ class FluxTuning(Device):
             resolution=resolution
         )
         self.params['phi_0'] = phi_0
-        self.params['Phi'] = Phi
+        self.params['phi'] = phi
         self.params['omega_0'] = omega_0
+        if d:
+            self.params['d'] = d
         self.freq = None
 
     def frequency(self, signal):
@@ -335,12 +338,22 @@ class FluxTuning(Device):
             Qubit frequency.
         """
         pi = tf.constant(np.pi, dtype=tf.float64)
-        Phi = self.params['Phi'].get_value()
+        phi = self.params['phi'].get_value()
         omega_0 = self.params['omega_0'].get_value()
         phi_0 = self.params['phi_0'].get_value()
 
-        base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * Phi / phi_0)))
-        self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (Phi + signal) / phi_0))) - base_freq
+        if 'd' in self.params:
+            d = self.params['d'].get_value()
+#             print('assuming asymmetric transmon with d=', d)
+            base_freq = omega_0 * tf.sqrt(tf.sqrt(
+                tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
+            ))
+            self.freq = omega_0 * tf.sqrt(tf.sqrt(
+                tf.cos(pi * (phi + signal) / phi_0)**2 + d**2 * tf.sin(pi * (phi + signal) / phi_0)**2
+            )) - base_freq
+        else:
+            base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
+            self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0))) - base_freq
         return self.freq
 
 
@@ -761,10 +774,10 @@ class AWG(Device):
                             quadrature = tf.concat([quadrature, zeros], axis=0)
                         inphase_comps.append(
                             inphase * tf.cos(phase)
-                            - quadrature * tf.sin(phase)
+                            + quadrature * tf.sin(phase)
                         )
                         quadrature_comps.append(
-                            inphase * tf.sin(phase)
+                            - inphase * tf.sin(phase)
                             + quadrature * tf.cos(phase)
 
                         )
@@ -791,7 +804,9 @@ class AWG(Device):
 
                         with tf.GradientTape() as t:
                             t.watch(ts)
-                            env = comp.get_shape_values(ts, t_before)
+                            env = comp.get_shape_values(ts)
+                            # TODO option to have t_before = 0
+                            # env = comp.get_shape_values(ts, t_before)
 
                         denv = t.gradient(env, ts)
                         if denv is None:
@@ -801,12 +816,12 @@ class AWG(Device):
                         inphase_comps.append(
                             amp * (
                                 env * tf.cos(phase)
-                                - denv * delta * tf.sin(phase)
+                                + denv * delta * tf.sin(phase)
                             )
                         )
                         quadrature_comps.append(
                             amp * (
-                                env * tf.sin(phase)
+                                - env * tf.sin(phase)
                                 + denv * delta * tf.cos(phase)
                             )
                         )
@@ -831,7 +846,7 @@ class AWG(Device):
                             amp * comp.get_shape_values(ts) * tf.cos(phase)
                         )
                         quadrature_comps.append(
-                            amp * comp.get_shape_values(ts) * tf.sin(phase)
+                            - amp * comp.get_shape_values(ts) * tf.sin(phase)
                         )
 
                 norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
