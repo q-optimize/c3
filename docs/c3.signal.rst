@@ -7,7 +7,7 @@ Submodules
 Gates module
 ------------------------
 
-.. automodule:: c3po.signal.gates
+.. automodule:: c3.signal.gates
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ Gates module
 Pulse module
 ------------------------
 
-.. automodule:: c3po.signal.pulse
+.. automodule:: c3.signal.pulse
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ Pulse module
 Module contents
 ---------------
 
-.. automodule:: c3po.signal
+.. automodule:: c3.signal
    :members:
    :undoc-members:
    :show-inheritance:

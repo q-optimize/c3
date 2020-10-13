@@ -556,7 +556,7 @@ class AWG(Device):
             resolution=resolution
         )
 
-        self.options = ""
+        self.__options = ""
         self.logdir = logdir
         self.logname = "awg.log"
         # TODO move the options pwc & drag to the instruction object
@@ -570,7 +570,7 @@ class AWG(Device):
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
-        In the experiment these will be routed to AWG and mixer
+        In the xperiment these will be routed to AWG and mixer
         electronics, while in the simulation they provide the shapes of the
         instruction fields to be added to the Hamiltonian.
 
@@ -601,7 +601,7 @@ class AWG(Device):
             inphase_comps = []
             quadrature_comps = []
 
-            if (self.options == 'pwc'):
+            if (self.__options == 'pwc'):
                 amp_tot_sq = 0
                 for key in components:
                     comp = components[key]
@@ -625,7 +625,7 @@ class AWG(Device):
                 quadrature = tf.add_n(quadrature_comps, name="quadrature")
                 freq_offset = 0.0
 
-            elif (self.options == 'drag') or (self.options == 'drag_2'):
+            elif (self.__options == 'drag') or (self.__options == 'drag_2'):
                 for key in components:
                     comp = components[key]
                     if isinstance(comp, Envelope):
@@ -636,7 +636,7 @@ class AWG(Device):
                         xy_angle = comp.params['xy_angle'].get_value()
                         freq_offset = comp.params['freq_offset'].get_value()
                         delta = - comp.params['delta'].get_value()
-                        if (self.options == 'drag_2'):
+                        if (self.__options == 'drag_2'):
                             delta = delta * dt
 
                         with tf.GradientTape() as t:
@@ -714,6 +714,12 @@ class AWG(Device):
 
     def get_Q(self):
         return self.amp_tot * self.signal['quadrature']
+
+    def enable_drag(self):
+        self.__options = 'drag'
+
+    def enable_drag_2(self):
+        self.__options = 'drag_2'
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

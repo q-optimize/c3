@@ -64,7 +64,7 @@ class Quantity:
     speficiation. For arithmetic operations just the numeric value is used. The
     value itself is stored in an optimizer friendly way as a float between -1
     and 1. The conversion is given by
-    scale (value + 1) / 2 + offset
+        scale (value + 1) / 2 + offset
 
     Parameters
     ----------

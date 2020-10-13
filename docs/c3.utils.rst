@@ -4,7 +4,7 @@ Utilities package
 Display module
 --------------
 
-.. automodule:: c3po.utils.display
+.. automodule:: c3.utils.display
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Display module
 Parsers module
 --------------
 
-.. automodule:: c3po.utils.parsers
+.. automodule:: c3.utils.parsers
    :members:
    :undoc-members:
    :show-inheritance:
@@ -20,7 +20,7 @@ Parsers module
 Qutip utilitiess module
 -----------------------
 
-.. automodule:: c3po.utils.qt_utils
+.. automodule:: c3.utils.qt_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -28,7 +28,7 @@ Qutip utilitiess module
 Tensorflow utilitiess module
 ----------------------------
 
-.. automodule:: c3po.utils.tf_utils
+.. automodule:: c3.utils.tf_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ Tensorflow utilitiess module
 Miscelaneous utilities module
 -----------------------------
 
-.. automodule:: c3po.utils.utils
+.. automodule:: c3.utils.utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,7 +44,7 @@ Miscelaneous utilities module
 Module contents
 ---------------
 
-.. automodule:: c3po.utils
+.. automodule:: c3.utils
    :members:
    :undoc-members:
    :show-inheritance:
