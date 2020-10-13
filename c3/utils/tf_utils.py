@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-import c3.utils.qt_utils as qt_utils
+from c3.utils import qt_utils
 
 
 def tf_setup():
@@ -99,7 +99,6 @@ def tf_limit_gpu_memory(memory_limit):
             print(e)
 
 
-
 def tf_measure_operator(M, rho):
     """
     Expectation value of a quantum operator by tracing with a density matrix.
@@ -149,6 +148,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         ii += 1
     terms = int(1e12 * dt) + 2
     dU = tf_expm(-1j * h * dt, terms)
+    # TODO Make an option for the exponentation method
     # dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
@@ -195,7 +195,7 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    terms = int(1e12 * dt) + 2 # Eyeball number of terms in expm
+    terms = int(1e12 * dt) + 2  # Eyeball number of terms in expm
     dU = tf_expm(lind_op * dt, terms)
     # Built-in tensorflow exponential below
     # dU = tf.linalg.expm(lind_op * dt)
@@ -424,12 +424,7 @@ def tf_log10(x):
 
 def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
-    return tf.reshape(
-        tf.cast(
-            tf.math.conj(x)*x,
-            dtype=tf.float64),
-        shape=[1]
-    )
+    return tf.reshape(tf.cast(tf.math.conj(x)*x, dtype=tf.float64), shape=[1])
 
 
 def tf_abs(x):
@@ -453,6 +448,7 @@ def tf_diff(l):
     offdiagonal = tf.constant([1] * dim, dtype=l.dtype)
     proj = tf.linalg.diag(diagonal) + tf.linalg.diag(offdiagonal, k=1)
     return tf.linalg.matvec(proj, l)
+
 
 # MATRIX FUNCTIONS
 

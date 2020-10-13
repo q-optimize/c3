@@ -13,7 +13,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import c3.utils.tf_utils as tf_utils
+from c3.utils import tf_utils
 
 
 # TODO add case where one only wants to pass a list of quantity objects?
