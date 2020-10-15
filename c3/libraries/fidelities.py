@@ -657,7 +657,7 @@ def RB(
 
 @fid_reg_deco
 def lindbladian_RB_left(
-    U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj: bool = False,
 ):
     return RB(
        U_dict,

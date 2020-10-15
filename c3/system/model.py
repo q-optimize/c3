@@ -60,7 +60,7 @@ class Model:
         self.state_labels = list(itertools.product(*state_labels))
         self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
-        # Create anninhilation operators for physical comps
+        # Create annihilation operators for physical comps
         ann_opers = []
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)

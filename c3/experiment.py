@@ -193,18 +193,28 @@ class Experiment:
         populations_final = []
         for pops in self.pops:
             # TODO: Loop over all tasks in a general fashion
+            # TODO: Selecting states by label in the case of computational space 
             if "conf_matrix" in self.model.tasks:
                 pops = self.model.tasks["conf_matrix"].confuse(pops)
-            if labels is not None:
-                pops_select = 0
-                for label in labels:
-                    pops_select += pops[
-                        self.model.comp_state_labels.index(label)
-                    ]
-                pops = pops_select
+                if labels is not None:
+                    pops_select = 0
+                    for label in labels:
+                        pops_select += pops[
+                            self.model.comp_state_labels.index(label)
+                        ]
+                    pops = pops_select
+                else:
+                    pops = tf.reshape(pops, [pops.shape[0]])
             else:
-                pops = tf.reshape(pops, [pops.shape[0]])
-
+                if labels is not None:
+                    pops_select = 0
+                    for label in labels:
+                        pops_select += pops[
+                            self.model.state_labels.index(label)
+                        ]
+                    pops = pops_select
+                else:
+                    pops = tf.reshape(pops, [pops.shape[0]])
             if "meas_rescale" in self.model.tasks:
                 pops = self.model.tasks["meas_rescale"].rescale(pops)
             populations_final.append(pops)
