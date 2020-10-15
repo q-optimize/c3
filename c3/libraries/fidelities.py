@@ -651,7 +651,7 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-    plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
+    plt.show()
     # return epc, r, A, B, fig, ax
     return epg
 
