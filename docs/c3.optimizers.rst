@@ -1,0 +1,50 @@
+Optimizers
+==========
+
+C1 - Optimal control
+--------------------
+
+.. automodule:: c3.optimizers.c1
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C2 - Calibration
+----------------
+
+.. automodule:: c3.optimizers.c2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C3 - Characterization
+---------------------
+
+.. automodule:: c3.optimizers.c3
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Optimizer module
+----------------
+
+.. automodule:: c3.optimizers.optimizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Sensitivity analysis
+----------------------------------
+
+.. automodule:: c3.optimizers.sensitivity
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: c3.optimizers
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,48 @@
+=================
+API Documentation
+=================
+
+C3objs
+------
+
+.. automodule:: c3.c3objs
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Experiment module
+-----------------
+
+.. automodule:: c3.experiment
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Main module
+-----------
+
+.. automodule:: c3.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: c3
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   c3.generator
+   c3.libraries
+   c3.optimizers
+   c3.signal
+   c3.system
+   c3.utils
