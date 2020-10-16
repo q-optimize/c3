@@ -244,7 +244,7 @@ class Resonator(PhysicalComponent):
 
 class SymmetricTransmon(PhysicalComponent):
     """
-    Represents the element in a chip functioning as tunanble coupler.
+    Represents the element in a chip functioning as tunable coupler.
 
     Parameters
     ----------

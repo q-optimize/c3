@@ -107,7 +107,7 @@ class Generator:
                 signal = mixer.combine(lo_signal, conv_signal)
                 if "pink_noise" in self.devices:
                     signal = pink_noise.distort(signal)
-                if "fluxbias" in self.devices and chan == "TC":
+                if "fluxbias" in self.devices and (chan == "TC" or chan == "FluxDrive"):
                     signal = fluxbias.frequency(signal)
                 else:
                     signal = v_to_hz.transform(signal, omega_lo)
