@@ -9,13 +9,9 @@ from c3.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, tf_dm_to_vec, \
     tf_average_fidelity, tf_superoper_average_fidelity, tf_state_to_dm, \
     evaluate_sequences
-<<<<<<< HEAD:c3po/libraries/fidelities.py
-from c3po.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
-    cliffords_decomp, cliffords_decomp_xId, single_length_RB, cliffords_string
-=======
 from c3.utils.qt_utils import basis, perfect_gate, perfect_cliffords, \
-    cliffords_decomp, cliffords_decomp_xId, single_length_RB
->>>>>>> origin/dev:c3/libraries/fidelities.py
+    cliffords_decomp, cliffords_decomp_xId, single_length_RB, cliffords_string
+
 
 fidelities = dict()
 
@@ -640,15 +636,9 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-<<<<<<< HEAD:c3po/libraries/fidelities.py
-#     plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
-    return epc, r, A, B, fig, ax
-#     return epg
-=======
     plt.show()
     # return epc, r, A, B, fig, ax
     return epg
->>>>>>> origin/dev:c3/libraries/fidelities.py
 
 @fid_reg_deco
 def lindbladian_RB_left(
