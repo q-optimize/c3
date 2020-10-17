@@ -2,6 +2,7 @@ from c3.c3objs import C3obj
 from c3.c3objs import Quantity as Qty
 import tensorflow as tf
 import types
+import copy
 
 
 class InstructionComponent(C3obj):
@@ -29,6 +30,15 @@ class InstructionComponent(C3obj):
             comment=comment
             )
         self.params = params
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for param in self.params:
+            if isinstance(self.params[param], Qty):
+                cfg['params'][param] = self.params[param].numpy()
+        if 'shape' in self.__dict__:
+            cfg['shape'] = str(self.shape)
+        return cfg
 
 
 class Envelope(InstructionComponent):

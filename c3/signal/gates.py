@@ -253,7 +253,7 @@ class Instruction():
         cfg = copy.deepcopy(self.__dict__)
         for chan in self.comps:
             for comp in self.comps[chan]:
-                cfg['comps'][chan][comp] = 0
+                cfg['comps'][chan][comp] = self.comps[chan][comp].write_config()
         return cfg
 
     def add_component(self, comp: InstructionComponent, chan: str):

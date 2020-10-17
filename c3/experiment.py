@@ -492,7 +492,7 @@ class Experiment:
         else:
             plt.savefig(
                 self.logdir +
-                f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}_{goal}.png",
+                f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0].replace(':','.')}_{goal}.png",
                 dpi=300
             )
         plt.close("all")
@@ -656,8 +656,9 @@ class Experiment:
         with open(folder + 'Us.pickle', 'wb+') as file:
             pickle.dump(self.unitaries, file)
         for key, value in self.unitaries.items():
-            np.savetxt(folder + key + ".txt", value)
-
+            # Windows is not able to parse ":" as file path
+            np.savetxt(folder + key.replace(':','.') + ".txt", value)
+            
     def populations(self, state, lindbladian, oper=None):
         """
         Compute populations from a state or density vector.
