@@ -157,6 +157,11 @@ class Experiment:
         ----------
         seqs: str list
             A list of control pulses/gates to perform on the device.
+            
+        Returns
+        -------
+        list
+            A list of populations
 
         """
         Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
@@ -172,15 +177,18 @@ class Experiment:
                 psi_final, self.model.lindbladian
             )
             populations.append(pops)
-        self.pops = populations
+        return populations
 
-    def process(self, labels=None):
+    def process(self, populations,  labels=None):
         """
         Apply a readout procedure to a population vector. Very specialized
         at the moment.
 
         Parameters
         ----------
+        populations: list
+            List of populations from evaluating.
+        
         labels: list
             List of state labels specifying a subspace.
 
@@ -191,7 +199,7 @@ class Experiment:
 
         """
         populations_final = []
-        for pops in self.pops:
+        for pops in populations:
             # TODO: Loop over all tasks in a general fashion
             # TODO: Selecting states by label in the case of computational space 
             if "conf_matrix" in self.model.tasks:
@@ -209,9 +217,12 @@ class Experiment:
                 if labels is not None:
                     pops_select = 0
                     for label in labels:
-                        pops_select += pops[
-                            self.model.state_labels.index(label)
-                        ]
+                        try:
+                            pops_select += pops[
+                                self.model.state_labels.index(label)
+                            ]
+                        except ValueError:
+                            raise Exception(f"C3:ERROR:State {label} not defined. Available are:\n {self.model.state_labels}")
                     pops = pops_select
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
