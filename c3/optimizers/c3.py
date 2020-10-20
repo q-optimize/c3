@@ -126,6 +126,7 @@ class C3(Optimizer):
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
             init_p = json.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
+            # TODO Update model
 
     def select_from_data(self, batch_size):
         """
@@ -181,6 +182,7 @@ class C3(Optimizer):
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
+        # TODO Update model
         self.end_log()
         self.confirm()
 
@@ -248,6 +250,7 @@ class C3(Optimizer):
                     num_seqs = len(sequences) * 3
 
                 self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+                # TODO Update model
                 if "init_gateset_params" in self.__dict__.keys():
                     self.exp.gateset.set_parameters(
                         self.init_gateset_params,
@@ -397,6 +400,7 @@ class C3(Optimizer):
                 with tf.GradientTape() as t:
                     t.watch(current_params)
                     self.exp.set_parameters(current_params, self.opt_map, scaled=True)
+                    # TODO Update model
                     self.exp.gateset.set_parameters(
                         self.init_gateset_params,
                         self.init_gateset_opt_map,

@@ -40,11 +40,11 @@ class C3obj:
         list
             A list of parameters this object has.
         """
-        par_list = []
+        par_ids = []
         for par_key in sorted(self.params.keys()):
             par_id = (self.name, par_key)
-            par_list.append(par_id)
-        return par_list
+            par_ids.append(par_id)
+        return par_ids
 
     def print_parameter(self, par_id):
         """
@@ -201,3 +201,175 @@ class Quantity:
         self.value = tf.acos(tf.cos(
             (tf.reshape(val, self.shape) + 1) * np.pi / 2
         )) / np.pi * 2 - 1
+
+
+class ParameterMap:
+    """
+    Collects information about control and model parameters and provides different representations depending on use.
+    """
+
+    def __init__(
+        self,
+        instructions: list,
+        generator,
+        model
+    ):
+        self.__instructions = {}
+        for instr in instructions:
+            self.__instructions[instr.name] = instr
+
+        # Collecting model components
+        components = {}
+        if model:
+            self.__model = model
+            components.update(model.couplings)
+            components.update(model.subsystems)
+            components.update(model.tasks)
+        if generator:
+            components.update(generator.devices)
+        self.__components = components
+
+        par_lens = {}
+        pars = {}
+        # Initializing model parameters
+        for comp in self.__components.values():
+            for par_name, par_value in comp.params.items():
+                par_id = (comp.name, par_name)
+                par_lens[par_id] = par_value.length
+                pars[par_id] = par_value
+
+        # Initializing control parameters
+        for gate in self.__instructions.keys():
+            instr = self.__instructions[gate]
+            for chan in instr.comps.keys():
+                for comp in instr.comps[chan]:
+                    for par_name, par_value in instr.comps[chan][comp].params.items():
+                        par_id = (gate, chan, comp, par_name)
+                        par_lens[par_id] = par_value.length
+                        pars[par_id] = par_value
+
+        self.__par_lens = par_lens
+        self.__pars = pars
+
+    def write_config(self):
+        cfg = {}
+        for instr in self.__instructions:
+            cfg[instr] = self.__instructions[instr].write_config()
+        return cfg
+
+    def get_full_params(self):
+        return self.__pars
+
+    def get_parameters(self, opt_map=None):
+        """
+        Return the current parameters.
+
+        Parameters
+        ----------
+        opt_map: tuple
+            Hierarchical identifier for parameters.
+
+        Returns
+        -------
+        list of Quantity
+
+        """
+        values = []
+        for equiv_ids in opt_map:
+            try:
+                values.append(self.__pars[equiv_ids[0]])
+            except KeyError:
+                for id in self.__pars.keys():
+                    if id[0] == equiv_ids[0][0]:
+                        print(f"Found {id[0]}.")
+                raise Exception(f"C3:ERROR:Parameter {equiv_ids[0]} not defined.")
+        return values
+
+    def set_parameters(self, values: list, opt_map: list):
+        """Set the values in the original instruction class.
+
+        Parameters
+        ----------
+        values: list
+            List of parameter values. Can be nested, if a parameter is matrix valued.
+        opt_map: list
+            Corresponding identifiers for the parameter values.
+
+        """
+        val_indx = 0
+        for equiv_ids in opt_map:
+            for id in equiv_ids:
+                try:
+                    par = self.__pars[id]
+                except ValueError:
+                    raise Exception(f"C3:ERROR:{id} not defined.")
+                try:
+                    par.set_value(values[val_indx])
+                    val_indx += 1
+                except ValueError:
+                    raise Exception(
+                        f"C3:ERROR:Trying to set {'-'.join(id)} to value {values[val_indx]} "
+                        f"but has to be within {par.offset:.3} .. {(par.offset + par.scale):.3}."
+                    )
+
+    def get_parameters_scaled(self, opt_map=None):
+        """
+        Return the current parameters.
+
+        Parameters
+        ----------
+        opt_map: tuple
+            Hierarchical identifier for parameters.
+
+        Returns
+        -------
+        list of Quantity
+
+        """
+        values = []
+        for equiv_ids in opt_map:
+            par = self.__pars[equiv_ids[0]]
+            values.append(par.get_opt_value())
+        return values
+
+    def set_parameters_scaled(self, values: list, opt_map: list):
+        """Set the values in the original instruction class.
+
+        Parameters
+        ----------
+        values: list
+            List of parameter values. Matrix valued parameters need to be flattened.
+        opt_map: list
+            Corresponding identifiers for the parameter values.
+
+        """
+        val_indx = 0
+        for equiv_ids in opt_map:
+            for id in equiv_ids:
+                par = self.__pars[id]
+                par_len = self.__par_lens[id]
+                par.set_opt_value(values[val_indx:val_indx+par_len])
+                val_indx += par_len
+
+    def print_parameters(self, opt_map=None):
+        """
+        Return a multi-line human-readable string of the parameter names and
+        current values.
+
+        Parameters
+        ----------
+        opt_map: list
+            Optionally use only the specified parameters.
+
+        Returns
+        -------
+        str
+            Parameters and their values
+        """
+        ret = []
+
+        for par_id, par in self.__pars.items():
+            nice_id = "-".join(par_id)
+            ret.append(f"{nice_id:38}: {par}\n")
+
+        return "".join(ret)

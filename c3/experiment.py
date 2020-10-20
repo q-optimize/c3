@@ -42,25 +42,6 @@ class Experiment:
         self.unitaries = {}
         self.dUs = {}
 
-        components = {}
-        if model:
-            self.model = model
-            components.update(self.model.couplings)
-            components.update(self.model.subsystems)
-            components.update(self.model.tasks)
-        if generator:
-            components.update(self.generator.devices)
-        self.components = components
-
-        id_list = []
-        par_lens = []
-        for comp in self.components.values():
-            id_list.extend(comp.list_parameters())
-            for par in comp.params.values():
-                par_lens.append(par.length)
-        self.id_list = id_list
-        self.par_lens = par_lens
-
     def write_config(self):
         """
         Return the current experiment as a JSON compatible dict.
@@ -73,82 +54,6 @@ class Experiment:
         cfg['gateset'] = self.gateset.write_config()
         return cfg
 
-    def get_parameters(self, opt_map=None, scaled=False):
-        """
-        Return the current parameters.
-
-        Parameters
-        ----------
-        opt_map: tuple
-            Hierarchical identifier for parameters.
-        scaled: boolean
-            If true, return the optimizer friendly version. See Quantity.
-
-        """
-        if opt_map is None:
-            opt_map = self.id_list
-        values = []
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            par = self.components[comp_id].params[par_id]
-            if scaled:
-                values.extend(par.get_opt_value())
-            else:
-                values.append(par.get_value())
-        return values
-
-    def set_parameters(self, values: list, opt_map: list, scaled=False):
-        """Set the values in the original instruction class.
-
-        Parameters
-        ----------
-        values: list
-            List of parameter values.
-        opt_map: list
-            Corresponding identifiers for the parameter values.
-
-        """
-        val_indx = 0
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            id_indx = self.id_list.index(id)
-            par_len = self.par_lens[id_indx]
-            par = self.components[comp_id].params[par_id]
-            if scaled:
-                par.set_opt_value(values[val_indx:val_indx+par_len])
-                val_indx += par_len
-            else:
-                try:
-                    par.set_value(values[val_indx])
-                    val_indx += 1
-                except ValueError:
-                    raise ValueError(f"Trying to set {id} to value {values[val_indx]}")
-        self.model.update_model()
-
-    def print_parameters(self, opt_map=None):
-        """
-        Return a multi-line human-readable string of the parameter names and
-        current values.
-
-        Parameters
-        ----------
-        opt_map: list
-            Optionally use only the specified parameters.
-
-        """
-        ret = []
-        if opt_map is None:
-            opt_map = self.id_list
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            par = self.components[comp_id].params[par_id]
-            nice_id = f"{comp_id}-{par_id}"
-            ret.append(f"{nice_id:32}: {par}\n")
-        return "".join(ret)
-
     def evaluate(self, seqs):
         """
         Compute the population values for a given sequence of operations.
@@ -157,7 +62,7 @@ class Experiment:
         ----------
         seqs: str list
             A list of control pulses/gates to perform on the device.
-            
+
         Returns
         -------
         list
@@ -188,7 +93,7 @@ class Experiment:
         ----------
         populations: list
             List of populations from evaluating.
-        
+
         labels: list
             List of state labels specifying a subspace.
 
@@ -201,7 +106,7 @@ class Experiment:
         populations_final = []
         for pops in populations:
             # TODO: Loop over all tasks in a general fashion
-            # TODO: Selecting states by label in the case of computational space 
+            # TODO: Selecting states by label in the case of computational space
             if "conf_matrix" in self.model.tasks:
                 pops = self.model.tasks["conf_matrix"].confuse(pops)
                 if labels is not None:
@@ -222,7 +127,10 @@ class Experiment:
                                 self.model.state_labels.index(label)
                             ]
                         except ValueError:
-                            raise Exception(f"C3:ERROR:State {label} not defined. Available are:\n {self.model.state_labels}")
+                            raise Exception(
+                                f"C3:ERROR:State {label} not defined. Available are:\n"
+                                f"{self.model.state_labels}"
+                            )
                     pops = pops_select
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
