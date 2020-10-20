@@ -12,7 +12,7 @@ the previous example in a helper ``single_qubit_blackbox_exp.py``.
 .. code-block:: python
 
     from single_qubit_blackbox_exp import create_experiment
-    
+
     blackbox = create_experiment()
 
 This blackbox is constructed the same way as in the C1 example. The
@@ -20,7 +20,13 @@ difference will be in how we interact with it. First, we decide on what
 experiment we want to perform and need to specify it as a python
 function. A general, minimal example would be
 
-``def exp_communication(params):     # Send parameters to experiment controller     # and recieve a measurement result.     return measurement_result``
+.. code-block:: python
+
+    def exp_communication(params):
+      # Send parameters to experiment controller
+      # and receive a measurement result.
+      return measurement_result
+
 
 Again, ``params`` is a linear vector of bare numbers. The measurement
 result can be a single number or a set of results. It can also include
@@ -89,46 +95,46 @@ Some of the following code is specific to the fact that this a
     import itertools
     import numpy as np
     import tensorflow as tf
-    
+
     def ORBIT(params, exp, opt_map, qubit_labels, logdir):
-        
+
         ### ORBIT meta-parameters ###
         RB_length = 60 # How long each sequence is
         RB_number = 40  # How many sequences
         shots = 1000    # How many averages per readout
-    
+
         ################################
         ### Simulation specific part ###
         ################################
-        
+
         do_noise = False  # Whether to add artificial noise to the results
-        
+
         qubit_label = list(qubit_labels.keys())[0]
         state_labels = qubit_labels[qubit_label]
         state_label = [tuple(l) for l in state_labels]
-        
+
         # Creating the RB sequences #
         seqs = qt_utils.single_length_RB(
                 RB_number=RB_number, RB_length=RB_length
         )
-    
+
         # Transmitting the parameters to the experiment #
         exp.gateset.set_parameters(params, opt_map, scaled=False)
         exp.opt_gates = list(
             set(itertools.chain.from_iterable(seqs))
         )
-        
+
         # Simulating the gates #
         U_dict = exp.get_gates()
-        
+
         # Running the RB sequences and read-out the results #
         pops = exp.evaluate(seqs)
         pop1s = exp.process(pops, labels=state_label)
-        
+
         results = []
         results_std = []
         shots_nums = []
-    
+
         # Collecting results and statistics, add noise #
         if do_noise:
             for p1 in pop1s:
@@ -145,11 +151,11 @@ Some of the following code is specific to the fact that this a
                 results.append(p1.numpy())
                 results_std.append([0])
                 shots_nums.append([shots])
-        
+
         #######################################
         ### End of Simulation specific part ###
         #######################################
-        
+
         goal = np.mean(results)
         return goal, results, results_std, seqs, shots_nums
 
@@ -161,7 +167,7 @@ We first import algorithms and the correct optimizer object.
 .. code-block:: python
 
     import copy
-    
+
     from c3.experiment import Experiment as Exp
     from c3.c3objs import Quantity as Qty
     from c3.libraries import algorithms, envelopes
@@ -216,7 +222,7 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
     lo_freq = 5e9 * 2 * np.pi + sideband
-    
+
      # ### MAKE GATESET
     gateset = gates.GateSet()
     gauss_params_single = {
@@ -257,7 +263,7 @@ the blackbox. We mirror the blackbox by creating an experiment in the
             unit=""
         )
     }
-    
+
     gauss_env_single = pulse.Envelope(
         name="gauss",
         desc="Gaussian comp for single-qubit gates",
@@ -295,7 +301,7 @@ the blackbox. We mirror the blackbox by creating an experiment in the
         desc="Frequency of the local oscillator",
         params=carrier_parameters
     )
-    
+
     X90p = gates.Instruction(
         name="X90p",
         t_start=0.0,
@@ -308,7 +314,7 @@ the blackbox. We mirror the blackbox by creating an experiment in the
         t_end=t_final,
         channels=["d1"]
     )
-    
+
     X90p.add_component(gauss_env_single, "d1")
     X90p.add_component(carr, "d1")
     QId.add_component(nodrive_env, "d1")
@@ -325,10 +331,10 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
     X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    
+
     for gate in [QId, X90p, Y90p, X90m, Y90m]:
         gateset.add_instruction(gate)
-    
+
     # ### MAKE EXPERIMENT
     exp = Exp(gateset=gateset)
 
@@ -342,11 +348,11 @@ value. This leaves 4 values to optimize.
 
 .. parsed-literal::
 
-    Y90m-d1-gauss-amp                     : 450.000 mV 
-    Y90m-d1-gauss-delta                   : -1.000  
-    Y90m-d1-gauss-freq_offset             : -50.500 MHz 2pi 
-    Id-d1-carrier-framechange             : 4.084 rad 
-    
+    Y90m-d1-gauss-amp                     : 450.000 mV
+    Y90m-d1-gauss-delta                   : -1.000
+    Y90m-d1-gauss-freq_offset             : -50.500 MHz 2pi
+    Id-d1-carrier-framechange             : 4.084 rad
+
 
 
 It is important to note that in this example, we are transmitting only
@@ -430,7 +436,3 @@ And run the calibration:
     final/bestever f-value = 1.557235e-01 1.329754e-01
     incumbent solution: [-0.40581604993823245, -0.0005859716897853456, -0.020653590731025552, 0.1461736852226334]
     std deviation: [0.015007549485140903, 0.007691055155016825, 0.0311819805480421, 0.0006222775472235989]
-
-
-
-
