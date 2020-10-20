@@ -178,7 +178,6 @@ class C1(Optimizer):
         dims = self.exp.model.dims
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
-        goal_numpy = float(goal.numpy())
         try:
             display.plot_C1(self.logdir)
         except TypeError:
@@ -187,7 +186,7 @@ class C1(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write(
-                "goal: {}: {}\n".format(self.fid_func.__name__, goal_numpy)
+                "goal: {}: {}\n".format(self.fid_func.__name__, float(goal))
             )
             for cal in self.callback_fids:
                 val = cal(
@@ -203,7 +202,7 @@ class C1(Optimizer):
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal_numpy
+        self.optim_status['goal'] = float(goal)
         self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal

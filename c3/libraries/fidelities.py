@@ -651,13 +651,13 @@ def RB(
              'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
              size=16,
              transform=ax.transAxes)
-    plt.savefig('\\home\\users\\froy\\final_data\\RB.png')
+    plt.show()
     # return epc, r, A, B, fig, ax
     return epg
 
 @fid_reg_deco
 def lindbladian_RB_left(
-    U_dict: dict, gate: str, index, dims, proj: bool
+    U_dict: dict, gate: str, index, dims, proj: bool = False,
 ):
     return RB(
        U_dict,
