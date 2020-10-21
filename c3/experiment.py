@@ -550,7 +550,7 @@ class Experiment:
             foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
             if not os.path.exists(foldername):
                 os.mkdir(foldername)
-            os.mkdir(foldername + str(instr.name) + "/")
+            os.mkdir(foldername + str(instr.name).replace(':','.') + "/")
 
         fig, axs = plt.subplots(1, 1)
 
@@ -568,8 +568,9 @@ class Experiment:
             if debug:
                 pass
             else:
+                # TODO better way of changing name of instruction on Windows.
                 with open(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/awg.log",
                     'a+'
                 ) as logfile:
                     logfile.write(f"{channel}, inphase :\n")
@@ -582,7 +583,7 @@ class Experiment:
             plt.show()
         else:
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                 f"awg_{list(instr.comps.keys())}.png",
                 dpi=300
             )
@@ -603,7 +604,7 @@ class Experiment:
             plt.show()
         else:
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                 f"dac_inphase_{list(instr.comps.keys())}.png", dpi=300
             )
 
@@ -618,7 +619,7 @@ class Experiment:
             plt.show()
         else:
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                 f"dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
             )
 
@@ -639,7 +640,7 @@ class Experiment:
                 plt.show()
             else:
                 plt.savefig(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                     f"resp_inphase_{list(instr.comps.keys())}.png", dpi=300
                 )
 
@@ -654,7 +655,7 @@ class Experiment:
                 plt.show()
             else:
                 plt.savefig(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                     f"resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
                 )
 
@@ -671,7 +672,7 @@ class Experiment:
             plt.show()
         else:
             plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
+                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
                 f"signal_{list(instr.comps.keys())}.png",
                 dpi=300
             )

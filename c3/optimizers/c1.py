@@ -214,7 +214,7 @@ class C1(Optimizer):
         import numpy as np
         if not os.path.exists(self.logdir + "unitaries/"):
             os.mkdir(self.logdir + "unitaries/")
-        folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal_numpy) + "/"
+        folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal) + "/"
         if not os.path.exists(folder):
             os.mkdir(folder)
         with open(folder + 'Us.pickle', 'wb+') as file:

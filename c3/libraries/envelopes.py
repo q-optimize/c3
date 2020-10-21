@@ -78,6 +78,25 @@ def rect(t, params):
     """Rectangular pulse. Returns 1 at every time step."""
     return tf.ones_like(t, dtype=tf.float64)
 
+def trapezoid(t, params):
+    """Trapezoidal pulse. Width of linear slope.
+    
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of pulse.
+        risefall : float
+            Length of the slope
+    """
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+
+    envelope = tf.ones_like(t, dtype=tf.float64)
+    envelope = tf.where(tf.less_equal(t, risefall), t / risefall, envelope)
+    envelope = tf.where(tf.greater_equal(t, t_final - risefall), (t_final - t) / risefall, envelope)
+    return envelope
+
 
 def flattop_risefall(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
