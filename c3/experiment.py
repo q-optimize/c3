@@ -60,6 +60,7 @@ class Experiment:
                 par_lens.append(par.length)
         self.id_list = id_list
         self.par_lens = par_lens
+        self.name = ""
 
     def write_config(self):
         """
@@ -72,6 +73,17 @@ class Experiment:
         cfg['generator'] = self.generator.write_config()
         cfg['gateset'] = self.gateset.write_config()
         return cfg
+
+    def set_name(self, name):
+        """
+        Define a name for this experiment
+
+        Parameters
+        ----------
+        name: string
+            New name of the experiment.
+        """
+        self.name = name
 
     def get_parameters(self, opt_map=None, scaled=False):
         """
@@ -412,7 +424,7 @@ class Experiment:
             os.mkdir(self.logdir + "unitaries/")
             self.store_unitaries_counter = 0
 
-    def plot_dynamics(self, psi_init, seq, goal=None, debug=False, oper=None):
+    def plot_dynamics(self, psi_init, seq, goal=None, debug=False, oper=None, title=False):
         # TODO double check if it works well
         """
         Plotting code for time-resolved populations.
@@ -484,20 +496,33 @@ class Experiment:
         axs.tick_params(
             direction="in", left=True, right=True, top=True, bottom=True
         )
+        if title:
+            axs.set_title(self.name)
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
         plt.legend(self.model.state_labels)
         if debug:
             plt.show()
         else:
-            plt.savefig(
+            dynamics_dict = dict()
+            dynamics_dict['times'] = list(times)
+            for i, labl in enumerate(self.model.state_labels):
+                dynamics_dict[str(labl)] = list(pop_t[i])
+            with open(
                 self.logdir +
-                f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0].replace(':','.')}_{goal}.png",
-                dpi=300
+                f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0].replace(':','.')}_{goal}.json",
+                'a+'
+            ) as logfile:
+                logfile.write(json.dumps(dynamics_dict))
+
+            plt.savefig(
+            self.logdir +
+            f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0].replace(':','.')}_{goal}.png",
+            dpi=300
             )
         plt.close("all")
 
-    def plot_pulses(self, instr, goal=-1, debug=False):
+    def plot_pulses(self, instr, goal=-1, debug=False, title=False):
         """
         Plotting of pulse shapes.
 
@@ -535,6 +560,8 @@ class Experiment:
             axs.plot(awg_ts / 1e-9, inphase/1e-3, label="I " + channel)
             axs.plot(awg_ts / 1e-9, quadrature/1e-3, label="Q " + channel)
             axs.grid()
+            if title:
+                axs.set_title(self.name)
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             plt.legend()
@@ -568,6 +595,8 @@ class Experiment:
         fig, axs = plt.subplots(1, 1)
         axs.plot(dac_ts / 1e-9, inphase/1e-3)
         axs.grid()
+        if title:
+            axs.set_title(self.name)
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
         if debug:
@@ -581,6 +610,8 @@ class Experiment:
         fig, axs = plt.subplots(1, 1)
         axs.plot(dac_ts / 1e-9, quadrature/1e-3)
         axs.grid()
+        if title:
+            axs.set_title(self.name)
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Pulse amplitude[mV]')
         if debug:
@@ -600,6 +631,8 @@ class Experiment:
             fig, axs = plt.subplots(1, 1)
             axs.plot(resp_ts / 1e-9, inphase/1e-3)
             axs.grid()
+            if title:
+                axs.set_title(self.name)
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             if debug:
@@ -613,6 +646,8 @@ class Experiment:
             fig, axs = plt.subplots(1, 1)
             axs.plot(resp_ts / 1e-9, quadrature/1e-3)
             axs.grid()
+            if title:
+                axs.set_title(self.name)
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('Pulse amplitude[mV]')
             if debug:
@@ -627,6 +662,8 @@ class Experiment:
             fig, axs = plt.subplots(1, 1)
             axs.plot(ts / 1e-9, signal[channel]["values"], label=channel)
             axs.grid()
+            if title:
+                axs.set_title(self.name)
             axs.set_xlabel('Time [ns]')
             axs.set_ylabel('signal')
             plt.legend()
