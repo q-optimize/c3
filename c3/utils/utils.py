@@ -76,17 +76,11 @@ def eng_num(val):
 
 def num3str(val, use_prefix=True):
     """Convert a number to a human readable string in engineering notation. """
-    ret = []
-    if not hasattr(val, "__iter__"):
-        val = np.array([val])
-    for idx in range(val.shape[0]):
-        v = val[idx]
-        if use_prefix:
-            num, prefix = eng_num(v)
-            ret.append(f"{num:.3f} " + prefix)
-        else:
-            ret.append(f"{v:.3f} ")
-    return ret
+    if use_prefix:
+        num, prefix = eng_num(val)
+        return f"{num:.3f} " + prefix
+    else:
+        return f"{val:.3f} "
 
 
 # USER INTERACTION

@@ -149,8 +149,8 @@ class Quantity:
             val = val / np.pi
             use_prefix = False
         ret = ""
-        for q in num3str(val, use_prefix):
-            ret += q + self.unit + " "
+        for q in np.nditer(val):
+            ret += num3str(q, use_prefix) + self.unit + " "
         return ret
 
     def numpy(self):
@@ -214,14 +214,14 @@ class ParameterMap:
         generator,
         model
     ):
-        self.__instructions = {}
+        self.instructions = {}
+        self.opt_map = []
         for instr in instructions:
-            self.__instructions[instr.name] = instr
+            self.instructions[instr.name] = instr
 
         # Collecting model components
         components = {}
         if model:
-            self.__model = model
             components.update(model.couplings)
             components.update(model.subsystems)
             components.update(model.tasks)
@@ -239,8 +239,8 @@ class ParameterMap:
                 pars[par_id] = par_value
 
         # Initializing control parameters
-        for gate in self.__instructions.keys():
-            instr = self.__instructions[gate]
+        for gate in self.instructions:
+            instr = self.instructions[gate]
             for chan in instr.comps.keys():
                 for comp in instr.comps[chan]:
                     for par_name, par_value in instr.comps[chan][comp].params.items():
@@ -251,16 +251,22 @@ class ParameterMap:
         self.__par_lens = par_lens
         self.__pars = pars
 
+        self.model = model
+        self.generator = generator
+
     def write_config(self):
         cfg = {}
-        for instr in self.__instructions:
-            cfg[instr] = self.__instructions[instr].write_config()
+        for instr in self.instructions:
+            cfg[instr] = self.instructions[instr].write_config()
         return cfg
 
     def get_full_params(self):
+        """
+        Returns the full parameter vector, including model and control parameters.
+        """
         return self.__pars
 
-    def get_parameters(self, opt_map=None):
+    def get_parameters(self):
         """
         Return the current parameters.
 
@@ -275,17 +281,17 @@ class ParameterMap:
 
         """
         values = []
-        for equiv_ids in opt_map:
+        for equiv_ids in self.opt_map:
             try:
                 values.append(self.__pars[equiv_ids[0]])
-            except KeyError:
-                for id in self.__pars.keys():
+            except KeyError as ke:
+                for id in self.__pars:
                     if id[0] == equiv_ids[0][0]:
                         print(f"Found {id[0]}.")
-                raise Exception(f"C3:ERROR:Parameter {equiv_ids[0]} not defined.")
+                raise Exception(f"C3:ERROR:Parameter {equiv_ids[0]} not defined.") from ke
         return values
 
-    def set_parameters(self, values: list, opt_map: list):
+    def set_parameters(self, values: list, opt_map=None):
         """Set the values in the original instruction class.
 
         Parameters
@@ -297,24 +303,26 @@ class ParameterMap:
 
         """
         val_indx = 0
+        if opt_map is None:
+            opt_map = self.opt_map
         for equiv_ids in opt_map:
             for id in equiv_ids:
                 try:
                     par = self.__pars[id]
-                except ValueError:
-                    raise Exception(f"C3:ERROR:{id} not defined.")
+                except ValueError as ve:
+                    raise Exception(f"C3:ERROR:{id} not defined.") from ve
                 try:
                     par.set_value(values[val_indx])
                     val_indx += 1
-                except ValueError:
+                except ValueError as ve:
                     raise Exception(
                         f"C3:ERROR:Trying to set {'-'.join(id)} to value {values[val_indx]} "
                         f"but has to be within {par.offset:.3} .. {(par.offset + par.scale):.3}."
-                    )
+                    ) from ve
 
-    def get_parameters_scaled(self, opt_map=None):
+    def get_parameters_scaled(self):
         """
-        Return the current parameters.
+        Return the current parameters. This fuction should only be called by an optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -327,13 +335,14 @@ class ParameterMap:
 
         """
         values = []
-        for equiv_ids in opt_map:
+        for equiv_ids in self.opt_map:
             par = self.__pars[equiv_ids[0]]
             values.append(par.get_opt_value())
         return values
 
-    def set_parameters_scaled(self, values: list, opt_map: list):
-        """Set the values in the original instruction class.
+    def set_parameters_scaled(self, values: list):
+        """Set the values in the original instruction class. This fuction should only be called by an optimizer.
+        Are you an optimizer?
 
         Parameters
         ----------
@@ -344,14 +353,17 @@ class ParameterMap:
 
         """
         val_indx = 0
-        for equiv_ids in opt_map:
+        for equiv_ids in self.opt_map:
             for id in equiv_ids:
                 par = self.__pars[id]
-                par_len = self.__par_lens[id]
+                par_len = par.length
                 par.set_opt_value(values[val_indx:val_indx+par_len])
                 val_indx += par_len
 
-    def print_parameters(self, opt_map=None):
+    def set_opt_map(self, opt_map):
+        self.opt_map = opt_map
+
+    def __str__(self):
         """
         Return a multi-line human-readable string of the parameter names and
         current values.
@@ -373,3 +385,21 @@ class ParameterMap:
             ret.append(f"{nice_id:38}: {par}\n")
 
         return "".join(ret)
+
+    def str_parameters(self, opt_map):
+        ret = []
+        for equiv_ids in opt_map:
+            par_id = equiv_ids[0]
+            par = self.__pars[equiv_ids[0]]
+            nice_id = "-".join(par_id)
+            ret.append(f"{nice_id:38}: {par}\n")
+            if len(equiv_ids) > 1:
+                ret.append("same as ")
+                for id in equiv_ids[1:]:
+                    ret.append("-".join(id))
+                    ret.append(", ")
+                ret.append("\n\n")
+        return "".join(ret)
+
+    def print_parameters(self):
+        print(self.str_parameters(self.opt_map))

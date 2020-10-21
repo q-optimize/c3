@@ -46,8 +46,7 @@ class C1(Optimizer):
         dir_path,
         fid_func,
         fid_subspace,
-        gateset_opt_map,
-        opt_gates,
+        pmap,
         callback_fids=[],
         algorithm=None,
         plot_dynamics=False,
@@ -62,15 +61,16 @@ class C1(Optimizer):
             plot_pulses=plot_pulses,
             store_unitaries=store_unitaries
             )
-        self.opt_map = gateset_opt_map
-        self.opt_gates = opt_gates
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
+        self.pmap = pmap
         self.callback_fids = callback_fids
         self.options = options
-        self.log_setup(dir_path, run_name)
+        self.nice_print = None
+        self.__dir_path = dir_path
+        self.__run_name = run_name
 
-    def log_setup(self, dir_path, run_name):
+    def log_setup(self):
         """
         Create the folders to store data.
 
@@ -82,12 +82,13 @@ class C1(Optimizer):
             User specified name for the run
 
         """
-        self.dir_path = os.path.abspath(dir_path)
+        dir_path = os.path.abspath(self.__dir_path)
+        run_name = self.__run_name
         if run_name is None:
             run_name = (
                 'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
             )
-        self.logdir = log_setup(self.dir_path, run_name)
+        self.logdir = log_setup(dir_path, self.__run_name)
         self.logname = 'open_loop.log'
 
     def load_best(self, init_point):
@@ -103,11 +104,10 @@ class C1(Optimizer):
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_gateset_opt_map = [
-                [tuple(par) for par in set]
-                for set in json.loads(best[0])
+                [tuple(par) for par in pset] for pset in json.loads(best[0])
             ]
             init_p = json.loads(best[1])['params']
-            self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
+            self.pmap.set_parameters(init_p, best_gateset_opt_map)
 
     def adjust_exp(self, adjust_exp):
         """
@@ -123,24 +123,25 @@ class C1(Optimizer):
             best = file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
             p = json.loads(best[1])['params']
-            self.exp.set_parameters(p, best_exp_opt_map)
+            self.pmap.set_parameters(p, best_exp_opt_map)
+            self.pmap.model.update_model()
 
     def optimize_controls(self):
         """
         Apply a search algorithm to your gateset given a fidelity function.
         """
+        self.log_setup()
         self.start_log()
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
-        self.exp.set_opt_gates(self.opt_gates)
-        self.nice_print = self.exp.gateset.print_parameters
+        self.nice_print = self.pmap.str_parameters
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
-            index.append(self.exp.model.names.index(name))
+            index.append(self.pmap.model.names.index(name))
         self.index = index
-        x0 = self.exp.gateset.get_parameters(self.opt_map, scaled=True)
+        x0 = self.pmap.get_parameters_scaled()
         try:
             self.algorithm(
                 x0,
@@ -153,7 +154,7 @@ class C1(Optimizer):
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
-        self.exp.gateset.set_parameters(best_params, self.opt_map)
+        self.pmap.set_parameters(best_params)
         self.end_log()
 
     def goal_run(self, current_params):
@@ -170,14 +171,10 @@ class C1(Optimizer):
         tf.float64
             Value of the goal function
         """
-        self.exp.gateset.set_parameters(
-            current_params,
-            self.opt_map,
-            scaled=True
-        )
-        dims = self.exp.model.dims
-        U_dict = self.exp.get_gates()
-        goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
+        self.pmap.set_parameters_scaled(current_params)
+        dims = self.pmap.model.dims
+        propagators = self.exp.get_gates()
+        goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
         try:
             display.plot_C1(self.logdir)
         except TypeError:
@@ -190,7 +187,7 @@ class C1(Optimizer):
             )
             for cal in self.callback_fids:
                 val = cal(
-                    U_dict, self.index, dims, self.logdir, self.evaluation + 1
+                    propagators, self.index, dims, self.logdir, self.evaluation + 1
                 )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
@@ -200,7 +197,7 @@ class C1(Optimizer):
 
         self.optim_status['params'] = [
             par.numpy().tolist()
-            for par in self.exp.gateset.get_parameters(self.opt_map)
+            for par in self.pmap.get_parameters()
         ]
         self.optim_status['goal'] = float(goal)
         self.optim_status['time'] = time.asctime()

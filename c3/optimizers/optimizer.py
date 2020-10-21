@@ -75,7 +75,7 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.opt_map))
+            logfile.write(json.dumps(self.pmap.opt_map))
             logfile.write("\n\n")
             logfile.write("Algorithm options:\n")
             logfile.write(json.dumps(self.options))
@@ -125,17 +125,17 @@ class Optimizer:
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
-                best_point.write(json.dumps(self.opt_map))
+                best_point.write(json.dumps(self.pmap.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
-                best_point.write(self.nice_print(self.opt_map))
+                best_point.write(self.nice_print(self.pmap.opt_map))
         if self.plot_dynamics:
-            psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
+            psi_init = self.pmap.model.tasks["init_ground"].initialise(
+                self.pmap.model.drift_H,
+                self.pmap.model.lindbladian
             )
-            #dim = np.prod(self.exp.model.dims)
+            #dim = np.prod(self.pmap.model.dims)
             #psi_init = [0] * dim
             #psi_init[1] = 1
             #psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
@@ -144,7 +144,7 @@ class Optimizer:
             self.exp.dynamics_plot_counter += 1
         if self.plot_pulses:
             for gate in self.opt_gates:
-                instr = self.exp.gateset.instructions[gate]
+                instr = self.pmap.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
             self.exp.pulses_plot_counter += 1
         if self.store_unitaries:
