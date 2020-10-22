@@ -211,8 +211,8 @@ class ParameterMap:
     def __init__(
         self,
         instructions: list,
-        generator,
-        model
+        generator=None,
+        model=None
     ):
         self.instructions = {}
         self.opt_map = []
@@ -394,11 +394,10 @@ class ParameterMap:
             nice_id = "-".join(par_id)
             ret.append(f"{nice_id:38}: {par}\n")
             if len(equiv_ids) > 1:
-                ret.append("same as ")
                 for id in equiv_ids[1:]:
                     ret.append("-".join(id))
-                    ret.append(", ")
-                ret.append("\n\n")
+                    ret.append("\n")
+                ret.append("\n")
         return "".join(ret)
 
     def print_parameters(self):

@@ -10,6 +10,7 @@ Given this information an experiment run is simulated, returning either processe
 import os
 import json
 import pickle
+import itertools
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
@@ -273,16 +274,16 @@ class Experiment:
         self.U = U
         return U
 
-    def set_opt_gates(self, opt_gates):
+    def set_opt_gates(self, seqs):
         """
         Specify a selection of gates to be computed.
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest.
+        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
 
         """
-        self.__opt_gates = opt_gates
+        self.__opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
     def set_enable_dynamics_plots(self, flag, logdir):
         """
