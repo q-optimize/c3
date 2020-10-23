@@ -120,8 +120,6 @@ class Optimizer:
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
             self.current_best_params = self.optim_status['params']
-            if "U_dict" in self.exp.__dict__.keys():
-                self.log_best_unitary()
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
@@ -129,7 +127,7 @@ class Optimizer:
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
                 best_point.write("\n")
-                best_point.write(self.nice_print(self.pmap.opt_map))
+                best_point.write(self.pmap.str_parameters(self.pmap.opt_map))
         if self.plot_dynamics:
             psi_init = self.pmap.model.tasks["init_ground"].initialise(
                 self.pmap.model.drift_H,

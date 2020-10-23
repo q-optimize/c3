@@ -21,10 +21,10 @@ class C1(Optimizer):
         infidelity function to be minimized
     fid_subspace : list
         Indeces identifying the subspace to be compared
-    gateset_opt_map : list
-        Hierarchical identifiers for the parameter vector
+    pmap : ParameterMap
+        Identifiers for the parameter vector
     opt_gates : list
-        List of identifiers of gate to be optimized, a subset of the full gateset
+        Identifiers of gate to be optimized, a subset of the full gateset
     callback_fids : list of callable
         Additional fidelity function to be evaluated and stored for reference
     algorithm : callable
@@ -66,7 +66,7 @@ class C1(Optimizer):
         self.pmap = pmap
         self.callback_fids = callback_fids
         self.options = options
-        self.nice_print = None
+        self.pmap.str_parameters = None
         self.__dir_path = dir_path
         self.__run_name = run_name
 
@@ -88,7 +88,7 @@ class C1(Optimizer):
             run_name = (
                 'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
             )
-        self.logdir = log_setup(dir_path, self.__run_name)
+        self.logdir = log_setup(dir_path, run_name)
         self.logname = 'open_loop.log'
 
     def load_best(self, init_point):
@@ -135,7 +135,6 @@ class C1(Optimizer):
         self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
         self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
-        self.nice_print = self.pmap.str_parameters
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
