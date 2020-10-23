@@ -313,12 +313,12 @@ class ParameterMap:
                     raise Exception(f"C3:ERROR:{id} not defined.") from ve
                 try:
                     par.set_value(values[val_indx])
-                    val_indx += 1
                 except ValueError as ve:
                     raise Exception(
                         f"C3:ERROR:Trying to set {'-'.join(id)} to value {values[val_indx]} "
                         f"but has to be within {par.offset:.3} .. {(par.offset + par.scale):.3}."
                     ) from ve
+            val_indx += 1
 
     def get_parameters_scaled(self):
         """
@@ -338,7 +338,7 @@ class ParameterMap:
         for equiv_ids in self.opt_map:
             par = self.__pars[equiv_ids[0]]
             values.append(par.get_opt_value())
-        return values
+        return np.array(values).flatten()
 
     def set_parameters_scaled(self, values: list):
         """Set the values in the original instruction class. This fuction should only be called by an optimizer.
@@ -353,12 +353,12 @@ class ParameterMap:
 
         """
         val_indx = 0
-        for equiv_ids in self.opt_map:
+        for equiv_ids in self.opt_map:        
+            par_len = self.__pars[equiv_ids[0]].length
             for id in equiv_ids:
                 par = self.__pars[id]
-                par_len = par.length
                 par.set_opt_value(values[val_indx:val_indx+par_len])
-                val_indx += par_len
+            val_indx += par_len
 
     def set_opt_map(self, opt_map):
         self.opt_map = opt_map

@@ -37,7 +37,7 @@ class Experiment:
     """
 
     def __init__(self, pmap=None):
-        self.__pmap = pmap
+        self.pmap = pmap
 
         self.unitaries = {}
         self.dUs = {}
@@ -51,7 +51,7 @@ class Experiment:
         cfg = {}
         cfg['model'] = model.write_config()
         cfg['generator'] = generator.write_config()
-        cfg['gateset'] = self.__pmap.write_config()
+        cfg['gateset'] = self.pmap.write_config()
         return cfg
 
     def evaluate(self, seqs):
@@ -69,7 +69,7 @@ class Experiment:
             A list of populations
 
         """
-        model = self.__pmap.model
+        model = self.pmap.model
         Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
         psi_init = model.tasks["init_ground"].initialise(
             model.drift_H,
@@ -104,7 +104,7 @@ class Experiment:
             A list of processed populations.
 
         """
-        model = self.__pmap.model
+        model = self.pmap.model
         populations_final = []
         for pops in populations:
             # TODO: Loop over all tasks in a general fashion
@@ -151,9 +151,9 @@ class Experiment:
         dict
             A dictionary of gate names and their unitary representation.
         """
-        model = self.__pmap.model
-        generator = self.__pmap.generator
-        instructions = self.__pmap.instructions
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
         gates = {}
         if "opt_gates" in self.__dict__:
             gate_keys = self.__opt_gates
@@ -254,7 +254,7 @@ class Experiment:
         unitary
             Matrix representation of the gate.
         """
-        model = self.__pmap.model
+        model = self.pmap.model
         h0, hctrls = model.get_Hamiltonians()
         signals = []
         hks = []
@@ -352,7 +352,7 @@ class Experiment:
         debug: boolean
             If true, return a matplotlib figure instead of saving.
         """
-        model = self.__pmap.model
+        model = self.pmap.model
         dUs = self.dUs
         psi_t = psi_init.numpy()
         pop_t = self.populations(psi_t, model.lindbladian)
@@ -362,8 +362,8 @@ class Experiment:
                 pops = self.populations(psi_t, model.lindbladian)
                 pop_t = np.append(pop_t, pops, axis=1)
             if model.use_FR:
-                instr = self.__pmap.instructions[gate]
-                signal, ts = self.__pmap.generator.generate_signals(instr)
+                instr = self.pmap.instructions[gate]
+                signal, ts = self.pmap.generator.generate_signals(instr)
                 # TODO change LO freq to at the level of a line
                 freqs = {}
                 framechanges = {}
@@ -426,7 +426,7 @@ class Experiment:
         debug: boolean
             If true, return a matplotlib figure instead of saving.
         """
-        generator = self.__pmap.generator
+        generator = self.pmap.generator
         signal, ts = generator.generate_signals(instr)
         awg = generator.devices["awg"]
         awg_ts = awg.ts
