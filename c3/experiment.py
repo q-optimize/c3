@@ -155,7 +155,7 @@ class Experiment:
         generator = self.pmap.generator
         instructions = self.pmap.instructions
         gates = {}
-        if "opt_gates" in self.__dict__:
+        if "__opt_gates" in self.__dict__:
             gate_keys = self.__opt_gates
         else:
             gate_keys = instructions.keys()

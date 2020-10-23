@@ -328,26 +328,17 @@ def create_c3_opt(optimizer_config):
             state_labels[target] = [tuple(l) for l in labels]
 
     try:
-        estimator = cfg['estimator']
-    except KeyError:
-        print(
-            "C3:WARNING: Non estimator given."
-            " Using default estimator RMS distance."
-        )
-        estimator = 'rms_dist'
-    try:
-        fom = estimators[estimator]
-    except KeyError:
-        print(
-            f"C3:WARNING: No estimator named \'{estimator}\' found."
-            " Using default estimator RMS distance."
-        )
-        fom = estimators['rms_dist']
+        if "estimator" in cfg
+            raise Exception(
+                f"C3:ERROR: Setting estimators is currently not supported."
+                "Only the standard logarithmic likelihood can be used at the moment."
+                "Please remove this setting."
+            )
 
     try:
         cb_foms = cfg['callback_est']
     except KeyError:
-        print("C3:WARNING: Non callback estimators given.")
+        print("C3:WARNING: Unknown callback estimators given.")
         cb_foms = []
 
     callback_foms = []
@@ -392,7 +383,6 @@ def create_c3_opt(optimizer_config):
         run_name = cfg['run_name']
     opt = C3(
         dir_path=cfg['dir_path'],
-        fom=fom,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
         seqs_per_point=seqs_per_point,
