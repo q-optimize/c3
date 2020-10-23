@@ -40,6 +40,7 @@ class Device(C3obj):
         cfg.pop('ts', None)
         cfg.pop('amp_tot', None)
         cfg.pop('amp_tot_sq', None)
+        cfg.pop('freq', None)
         for p in cfg['params']:
             cfg['params'][p] = float(cfg['params'][p])
         return cfg

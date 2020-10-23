@@ -1,6 +1,7 @@
 """Component class and subclasses for the components making up the quantum device."""
 
 import types
+import copy
 import numpy as np
 import tensorflow as tf
 from c3.libraries.hamiltonians import resonator, duffing
@@ -37,9 +38,17 @@ class PhysicalComponent(C3obj):
         self.Hs = {}
         self.collapse_ops = {}
 
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for param in self.params:
+            cfg['params'][param] = float(self.params[param])
+        del cfg['Hs']
+        del cfg['collapse_ops']
+        return cfg
+
     def set_subspace_index(self, index):
         self.index = index
-
+    
 
 class Qubit(PhysicalComponent):
     """
@@ -380,6 +389,17 @@ class LineComponent(C3obj):
             )
         self.connected = connected
         self.Hs = {}
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        if 'hamiltonian_func' in cfg:
+            cfg['hamiltonian_func'] = self.hamiltonian_func.__name__
+        for param in self.params:
+            cfg['params'][param] = float(self.params[param])
+        del cfg['Hs']
+        if 'h' in cfg:
+            del cfg['h']
+        return cfg
 
 
 class Coupling(LineComponent):

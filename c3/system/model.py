@@ -2,6 +2,7 @@
 
 import numpy as np
 import itertools
+import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
@@ -92,6 +93,26 @@ class Model:
         self.tasks = {}
         for task in tasks:
             self.tasks[task.name] = task
+
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for subsys in self.subsystems:
+                cfg['subsystems'][subsys]= self.subsystems[subsys].write_config()
+        for coupling in self.couplings:
+                cfg['couplings'][coupling]= self.couplings[coupling].write_config()
+        for task in self.tasks:
+                cfg['tasks'][task]= self.tasks[task].write_config()
+        if 'tot_dim' in cfg:
+            cfg['tot_dim'] = float(self.tot_dim)
+        for elem in list(cfg.keys()):
+            if 'EagerTensor' in cfg[elem].__class__.__name__:
+                print(elem)
+                del cfg[elem]
+        del cfg['ann_opers']
+        del cfg['control_Hs']
+        del cfg['dressed_control_Hs']
+        
+        return cfg
 
     def set_dressed(self, dressed):
         """

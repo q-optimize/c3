@@ -36,8 +36,8 @@ class InstructionComponent(C3obj):
         for param in self.params:
             if isinstance(self.params[param], Qty):
                 cfg['params'][param] = self.params[param].numpy()
-        if 'shape' in self.__dict__:
-            cfg['shape'] = str(self.shape)
+        if 'shape' in cfg:
+            cfg['shape'] = self.shape.__name__
         return cfg
 
 

@@ -1,4 +1,5 @@
 from c3.c3objs import C3obj, Quantity
+import copy
 import tensorflow as tf
 import numpy as np
 import c3.libraries.constants as constants
@@ -21,6 +22,12 @@ class Task(C3obj):
             desc=desc,
             comment=comment
         )
+    
+    def write_config(self):
+        cfg = copy.deepcopy(self.__dict__)
+        for param in self.params:
+            cfg['params'][param] = float(self.params[param])
+        return cfg
 
 
 class InitialiseGround(Task):
