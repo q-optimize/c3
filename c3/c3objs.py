@@ -361,6 +361,10 @@ class ParameterMap:
             val_indx += par_len
 
     def set_opt_map(self, opt_map):
+        for equiv_ids in opt_map:
+            for pid in equiv_ids:
+                if not pid in self.__pars:
+                        raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
         self.opt_map = opt_map
 
     def __str__(self):
