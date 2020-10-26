@@ -142,7 +142,7 @@ class C3(Optimizer):
         # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
         sampling = self.sampling
-        indeces =  sampling(learn_from, batch_size)
+        indeces = sampling(learn_from, batch_size)
         total_size = len(learn_from)
         all = list(range(total_size))
         if self.inverse:
@@ -249,7 +249,7 @@ class C3(Optimizer):
 
                 self.pmap.set_parameters_scaled(current_params)
                 self.pmap.model.update_model()
-                
+
                 # We make sure to reset the control parameters
                 # self.exp.gateset.set_parameters(self.init_gateset_params, self.init_gateset_opt_map)
                 self.pmap.set_parameters(gateset_params, gateset_opt_map)
