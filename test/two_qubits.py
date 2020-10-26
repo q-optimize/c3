@@ -1,36 +1,36 @@
+
+import copy
+import numpy as np
+import time
+import itertools
+import matplotlib.pyplot as plt
+import tensorflow as tf
+import tensorflow_probability as tfp
+
+# Main C3 objects
+from c3.c3objs import Quantity as Qty
+from c3.experiment import Experiment as Exp
+from c3.system.model import Model as Mdl
+from c3.generator.generator import Generator as Gnr
+
+# Building blocks
+import c3.generator.devices as devices
+import c3.system.chip as chip
+import c3.signal.pulse as pulse
+import c3.system.tasks as tasks
+
+# Libs and helpers
+import c3.libraries.algorithms as algorithms
+import c3.libraries.hamiltonians as hamiltonians
+import c3.libraries.fidelities as fidelities
+import c3.libraries.envelopes as envelopes
+import c3.utils.qt_utils as qt_utils
+import c3.utils.tf_utils as tf_utils
+
+from c3.optimizers.c1 import C1
+
+
 def two_qubits() -> float:
-
-    import copy
-    import numpy as np
-    import time
-    import itertools
-    import matplotlib.pyplot as plt
-    import tensorflow as tf
-    import tensorflow_probability as tfp
-
-    # Main C3 objects
-    from c3.c3objs import Quantity as Qty
-    from c3.experiment import Experiment as Exp
-    from c3.system.model import Model as Mdl
-    from c3.generator.generator import Generator as Gnr
-
-    # Building blocks
-    import c3.generator.devices as devices
-    import c3.signal.gates as gates
-    import c3.system.chip as chip
-    import c3.signal.pulse as pulse
-    import c3.system.tasks as tasks
-
-    # Libs and helpers
-    import c3.libraries.algorithms as algorithms
-    import c3.libraries.hamiltonians as hamiltonians
-    import c3.libraries.fidelities as fidelities
-    import c3.libraries.envelopes as envelopes
-    import c3.utils.qt_utils as qt_utils
-    import c3.utils.tf_utils as tf_utils
-
-    from c3.optimizers.c1 import C1
-
 
     qubit_lvls = 3
     freq_q1 = 5e9 * 2 * np.pi
@@ -219,6 +219,7 @@ def two_qubits() -> float:
 
     generator = Gnr([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
+    import c3.signal.gates as gates
     gateset = gates.GateSet()
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
@@ -427,9 +428,6 @@ def two_qubits() -> float:
         ("X90p:Id", "d1", "gauss", "delta"),
         ]
     ]
-
-    print(exp.gateset.print_parameters(gateset_opt_map))
-
     
     opt = C1(
         dir_path="/tmp/c3log/",
@@ -447,5 +445,3 @@ def two_qubits() -> float:
     opt.optimize_controls()
 
     return (opt.current_best_goal)
-
-two_qubits()
