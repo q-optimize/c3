@@ -36,7 +36,7 @@ if __name__ == '__main__':
         exp = parsers.create_experiment(exp_setup)
 
         if optim_type == "C1":
-            opt = parsers.create_c1_opt(opt_config, exp.model.lindbladian)
+            opt = parsers.create_c1_opt(opt_config, exp)
         elif optim_type == "C2":
             eval_func = cfg['eval_func']
             opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
@@ -53,10 +53,9 @@ if __name__ == '__main__':
         else:
             raise Exception("C3:ERROR:Unknown optimization type specified.")
         opt.set_exp(exp)
-        dir = opt.logdir
+        opt.set_created_by(opt_config)
 
-        shutil.copy2(exp_setup, dir)
-        shutil.copy2(opt_config, dir)
+
         if optim_type == "C2":
             shutil.copy2(eval_func, dir)
 

@@ -1,6 +1,7 @@
 """Object that deals with the open loop optimal control."""
 
 import os
+import shutil
 import time
 import json
 import tensorflow as tf
@@ -37,6 +38,8 @@ class C1(Optimizer):
         Store propagators as text and pickle
     options : dict
         Options to be passed to the algorithm
+    update_model : boolean
+        Include the model in the optimization process
     run_name : str
         User specified name for the run, will be used as root folder
     """
@@ -66,9 +69,11 @@ class C1(Optimizer):
         self.pmap = pmap
         self.callback_fids = callback_fids
         self.options = options
-        self.pmap.str_parameters = None
         self.__dir_path = dir_path
         self.__run_name = run_name
+        
+        self.pmap.str_parameters = None
+        self.update_model = False
 
     def log_setup(self):
         """
@@ -90,6 +95,8 @@ class C1(Optimizer):
             )
         self.logdir = log_setup(dir_path, run_name)
         self.logname = 'open_loop.log'
+        shutil.copy2(self.exp.created_by, self.logdir)
+        shutil.copy2(self.created_by, self.logdir)
 
     def load_best(self, init_point):
         """
@@ -171,6 +178,8 @@ class C1(Optimizer):
             Value of the goal function
         """
         self.pmap.set_parameters_scaled(current_params)
+        if self.update_model:
+            self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.get_gates()
         goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
@@ -202,3 +211,6 @@ class C1(Optimizer):
         self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         return goal
+
+    def include_model(self):
+        self.update_model = True

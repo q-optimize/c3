@@ -64,6 +64,12 @@ class Optimizer:
     def set_exp(self, exp):
         self.exp = exp
 
+    def set_created_by(self, config):
+        """
+        Store the config file location used to created this optimizer.
+        """
+        self.created_by = config
+        
     def start_log(self):
         """
         Initialize the log with current time.

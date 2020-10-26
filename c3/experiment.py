@@ -54,6 +54,12 @@ class Experiment:
         cfg['gateset'] = self.pmap.write_config()
         return cfg
 
+    def set_created_by(self, config):
+        """
+        Store the config file location used to created this experiment.
+        """
+        self.created_by = config
+    
     def evaluate(self, seqs):
         """
         Compute the population values for a given sequence of operations.
