@@ -360,15 +360,15 @@ def plot_C1(logfolder="", only_iterations=True):
         ax.set_xlabel(xlabel)
         for p_type, legend in subplot_legends.items():
             subplots[p_type].legend(legend)
-        plt.show(block=False)
         plt.savefig(logfolder + "open_loop.png")
+        plt.show(block=False)
         fig = plt.figure(figsize=(6, 4))
         plt.title("Goal")
         plt.grid()
         plt.xlabel(xlabel)
         plt.semilogy(its, goal_function)
-        plt.show(block=False)
         plt.savefig(logfolder + "goal.png")
+        plt.show(block=False)
 
 
 def plot_C2(cfgfolder="", logfolder=""):
