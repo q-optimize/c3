@@ -12,11 +12,12 @@ from c3.utils.utils import eng_num
 from IPython.display import clear_output
 import warnings
 import glob
+
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
+rc("font", **{"family": "sans-serif", "sans-serif": ["Helvetica"]})
 # for Palatino and other serif fonts use:
 # rc('font',**{'family':'serif','serif':['Palatino']})
-rc('text', usetex=True)
+rc("text", usetex=True)
 
 plots = dict()
 
@@ -44,7 +45,7 @@ def layout(n):
         Number of rows and columns
     """
     if not (n % 2):
-        return n//2, 2
+        return n // 2, 2
     elif n == 9:
         return 3, 3
     else:
@@ -65,7 +66,7 @@ nice_parameter_name = {
     "xy_angle": "$\\phi_{xy}$",
     "Q1": "Qubit 1",
     "Q2": "Qubit 2",
-    "init_ground" : "",
+    "init_ground": "",
     "init_temp": "temperature $T$",
     "conf_matrix": "$M$",
     "confusion_row_Q1": "Confusion",
@@ -78,7 +79,7 @@ nice_parameter_name = {
     "X90p:Id": "$X_{+\\frac{\\pi}{2}}\\otimes\\mathcal{I}$",
     "Id:X90p": "$\\mathcal{I}\\otimes X_{+\\frac{\\pi}{2}}$",
     "t_up": "$T_{up}$",
-    "t_down": "$T_{down}$"
+    "t_down": "$T_{down}$",
 }
 
 
@@ -87,54 +88,54 @@ def unit_conversion(desc, param):
     use_prefix = True
     for key, item in nice_parameter_name.items():
         # Yes, this is that stupid
-        if item==desc:
+        if item == desc:
             desc = key
     for ii in range(2):
         if desc == "freq_offset":
             p_val = param / 2 / np.pi
-            unit = 'Hz'
+            unit = "Hz"
         elif desc == "xy_angle":
             p_val = param / np.pi
-            unit = '[$\\pi$]'
+            unit = "[$\\pi$]"
             use_prefix = False
-        elif desc == 'freq':
+        elif desc == "freq":
             p_val = param / 2 / np.pi
-            unit = 'Hz'
-        elif desc == 'strength':
+            unit = "Hz"
+        elif desc == "strength":
             p_val = param / 2 / np.pi
-            unit = 'Hz'
-        elif desc == 'anhar':
+            unit = "Hz"
+        elif desc == "anhar":
             p_val = param / 2 / np.pi
-            unit = 'Hz'
-        elif desc == 'delta':
+            unit = "Hz"
+        elif desc == "delta":
             p_val = param
-            unit = ''
+            unit = ""
             use_prefix = False
-        elif desc == 't1' or desc == 't2star':
+        elif desc == "t1" or desc == "t2star":
             p_val = param
-            unit = 's'
-        elif desc == 'V_to_Hz':
+            unit = "s"
+        elif desc == "V_to_Hz":
             p_val = param
-            unit = 'Hz/V'
+            unit = "Hz/V"
         elif desc == "Amplitude":
             p_val = param
-            unit = 'V'
-        elif desc == 'rise_time':
+            unit = "V"
+        elif desc == "rise_time":
             p_val = param
-            unit = 's'
-        elif desc == 'init_temp':
+            unit = "s"
+        elif desc == "init_temp":
             p_val = param
-            unit = 'K'
+            unit = "K"
         elif desc == "amp":
             p_val = param
-            unit = 'V'
+            unit = "V"
         else:
             p_val = param
             use_prefix = False
             unit = ""
     if use_prefix:
         value, prefix = eng_num(p_val)
-        return value, " ["+prefix+unit+"]"
+        return value, " [" + prefix + unit + "]"
     else:
         return p_val, unit
 
@@ -145,9 +146,9 @@ def exp_vs_sim(exps, sims, stds):
     exps = np.reshape(exps, exps.shape[0])
     sims = np.reshape(sims, sims.shape[0])
     plt.scatter(exps, sims)
-    plt.title('Infidelity correlation')
-    plt.xlabel('Experiment')
-    plt.ylabel('Simulation')
+    plt.title("Infidelity correlation")
+    plt.xlabel("Experiment")
+    plt.ylabel("Simulation")
     return fig
 
 
@@ -164,15 +165,15 @@ def exp_vs_sim_2d_hist(exps, sims, stds):
     H = np.zeros([n_bins, n_bins]) + (H.T / n_exps)
     plt.imshow(
         H,
-        origin='lower',
+        origin="lower",
         # interpolation='bilinear',
         # extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]]
         extent=[0, 1, 0, 1],
-        aspect="equal"
+        aspect="equal",
     )
-    plt.title('Infidelity correlation')
-    plt.xlabel('Experiment')
-    plt.ylabel('Simulation')
+    plt.title("Infidelity correlation")
+    plt.xlabel("Experiment")
+    plt.ylabel("Simulation")
     plt.colorbar()
     return fig
 
@@ -191,7 +192,7 @@ def get_sim_exp_std_diff(logfilename=""):
     for line in log[::-1]:
         if line[0] == "{":
             par_lines_count += 1
-        if par_lines_count == 1 and line[:12] == '  Simulation':
+        if par_lines_count == 1 and line[:12] == "  Simulation":
             line_split = line.split()
             sims.append(np.abs(float(line_split[1])))
             exps.append(np.abs(float(line_split[3])))
@@ -205,17 +206,17 @@ def get_sim_exp_std_diff(logfilename=""):
 def plot_exp_vs_sim(logfilename=""):
     plt.figure()
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
-    pixel_size = (72./300) ** 2
+    pixel_size = (72.0 / 300) ** 2
     plt.scatter(exps, sims, s=pixel_size)
-    plt.title('Infidelity correlation')
-    plt.xlabel('Experiment')
-    plt.ylabel('Simulation')
-    data_path = "/".join(logfilename.split("/")[:-1])+"/"
+    plt.title("Infidelity correlation")
+    plt.xlabel("Experiment")
+    plt.ylabel("Simulation")
+    data_path = "/".join(logfilename.split("/")[:-1]) + "/"
     if data_path == "/":
         data_path = "./"
-    plt.savefig(data_path+"exp_vs_sim.png", dpi=300)
+    plt.savefig(data_path + "exp_vs_sim.png", dpi=300)
     fig = exp_vs_sim_2d_hist(exps, sims, stds)
-    plt.savefig(data_path+"exp_vs_sim_2d_hist.png", dpi=300)
+    plt.savefig(data_path + "exp_vs_sim_2d_hist.png", dpi=300)
     return fig
 
 
@@ -223,9 +224,9 @@ def plot_exp_vs_err(logfilename=""):
     plt.figure()
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     plt.scatter(exps, diffs)
-    plt.title('Exp vs Diff')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Sim/Exp fidelity diff')
+    plt.title("Exp vs Diff")
+    plt.xlabel("Exp fidelity")
+    plt.ylabel("Sim/Exp fidelity diff")
     plt.show(block=False)
 
 
@@ -234,11 +235,11 @@ def plot_exp_vs_errstd(logfilename=""):
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     errs = []
     for indx in range(len(diffs)):
-        errs.append(diffs[indx]/stds[indx])
+        errs.append(diffs[indx] / stds[indx])
     plt.scatter(exps, errs)
-    plt.title('Exp vs Diff (in std)')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Sim/Exp fidelity diff (in std)')
+    plt.title("Exp vs Diff (in std)")
+    plt.xlabel("Exp fidelity")
+    plt.ylabel("Sim/Exp fidelity diff (in std)")
     plt.show(block=False)
 
 
@@ -247,11 +248,11 @@ def plot_exp_vs_std(logfilename=""):
     sims, exps, stds, diffs = get_sim_exp_std_diff(logfilename)
     errs = []
     for indx in range(len(diffs)):
-        errs.append(diffs[indx]/stds[indx])
+        errs.append(diffs[indx] / stds[indx])
     plt.scatter(exps, stds)
-    plt.title('Exp vs std')
-    plt.xlabel('Exp fidelity')
-    plt.ylabel('Exp fidelity std')
+    plt.title("Exp vs std")
+    plt.xlabel("Exp fidelity")
+    plt.ylabel("Exp fidelity std")
     plt.show(block=False)
 
 
@@ -260,7 +261,7 @@ def plot_distribution(logfilename=""):
     plt.hist(diffs, bins=101)
     print(f"RMS: {np.sqrt(np.mean(np.square(diffs)))}")
     print(f"Median: {np.median(diffs)}")
-    plt.title('distribution of difference')
+    plt.title("distribution of difference")
     plt.show()
     return diffs
 
@@ -277,7 +278,7 @@ def plot_C1(logfolder="", only_iterations=True):
         xlabel = "Evaluations"
 
     goal_function = []
-    best_goal=987654321
+    best_goal = 987654321
     parameters = {}
     opt_map = json.loads(log[3])
 
@@ -287,21 +288,21 @@ def plot_C1(logfolder="", only_iterations=True):
     for line in log[4:]:
         if line[0] == "{":
             point = json.loads(line)
-            if 'goal' in point.keys():
-                if only_iterations and point['goal']<best_goal:
-                    goal_function.append(point['goal'])
-                    best_goal = point['goal']
-                    for iparam in range(len(point['params'])):
-                        param = point['params'][iparam]
-                        unit = ''
-                        p_name = ''
+            if "goal" in point.keys():
+                if only_iterations and point["goal"] < best_goal:
+                    goal_function.append(point["goal"])
+                    best_goal = point["goal"]
+                    for iparam in range(len(point["params"])):
+                        param = point["params"][iparam]
+                        unit = ""
+                        p_name = ""
                         for desc in opt_map[iparam][0]:
                             try:
                                 nice_name = nice_parameter_name[desc]
                             except KeyError:
                                 nice_name = desc
-                            p_name += '-' + nice_name
-                        if not(p_name in parameters.keys()):
+                            p_name += "-" + nice_name
+                        if not (p_name in parameters.keys()):
                             parameters[p_name] = []
                         parameters[p_name].append(param)
                         p_name_splt = p_name.split("-")
@@ -347,12 +348,10 @@ def plot_C1(logfolder="", only_iterations=True):
         for key in parameters.keys():
             p_type = key.split("-")[-1]
             if not p_type in subplots.keys():
-                subplots[p_type] = axs[subplot_ids[p_type]-1]
+                subplots[p_type] = axs[subplot_ids[p_type] - 1]
             ax = subplots[p_type]
             ax.plot(its, scaling[key] * parameters[key])
-            ax.tick_params(
-                direction="in", left=True, right=True, top=True, bottom=True
-            )
+            ax.tick_params(direction="in", left=True, right=True, top=True, bottom=True)
             ax.set_ylabel(p_type + units[key])
             ax.xaxis.set_major_locator(MaxNLocator(integer=True))
             ax.grid(linestyle="--")
@@ -381,7 +380,7 @@ def plot_C2(cfgfolder="", logfolder=""):
     goal_function = []
     batch = 0
     options = json.loads(log[6])
-    batch_size = options['popsize']
+    batch_size = options["popsize"]
 
     eval = 0
     for line in log[7:]:
@@ -391,8 +390,8 @@ def plot_C2(cfgfolder="", logfolder=""):
                 goal_function.append([])
             eval += 1
             point = json.loads(line)
-            if 'goal' in point.keys():
-                goal_function[batch].append(point['goal'])
+            if "goal" in point.keys():
+                goal_function[batch].append(point["goal"])
 
     fig = plt.figure()
     plt.title("Calibration")
@@ -402,24 +401,27 @@ def plot_C2(cfgfolder="", logfolder=""):
         mins.append(np.min(np.array(goal_function[ii])))
         means.append(np.mean(np.array(goal_function[ii])))
         for pt in goal_function[ii]:
-            plt.scatter(ii+1, pt, color='tab:blue')
+            plt.scatter(ii + 1, pt, color="tab:blue")
     ax = plt.gca()
     # ax.set_yscale('log')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid()
-    plt.scatter(range(1, len(goal_function)+1), mins, color="tab:green", label="best")
-    plt.scatter(range(1, len(goal_function)+1), means, color="tab:red", label="mean")
-    plt.axis('tight')
-    plt.ylabel('Goal function')
-    plt.xlabel('Evaluations')
+    plt.scatter(range(1, len(goal_function) + 1), mins, color="tab:green", label="best")
+    plt.scatter(range(1, len(goal_function) + 1), means, color="tab:red", label="mean")
+    plt.axis("tight")
+    plt.ylabel("Goal function")
+    plt.xlabel("Evaluations")
     plt.legend()
     plt.show(block=False)
     plt.savefig(logfolder + "closed_loop.png")
 
 
 def plot_C3(
-    logfolders=["./"], change_thresh=0, only_iterations=True,
-    combine_plots=False, interactive=False
+    logfolders=["./"],
+    change_thresh=0,
+    only_iterations=True,
+    combine_plots=False,
+    interactive=False,
 ):
     """
     Generates model learning plots. Default options assume the function is
@@ -427,18 +429,18 @@ def plot_C3(
     """
     logs = []
     for logfolder in logfolders:
-        logfilename = logfolder + 'model_learn.log'
+        logfilename = logfolder + "model_learn.log"
         with open(logfilename, "r") as filename:
             log = filename.readlines()
 
-        synthetic_model = logfolder + 'real_model_params.log'
+        synthetic_model = logfolder + "real_model_params.log"
 
         use_synthetic = os.path.isfile(synthetic_model)
 
         if use_synthetic:
             with open(synthetic_model, "r") as filename:
                 synth_model = filename.readlines()
-            real_params = json.loads(synth_model[1])['params']
+            real_params = json.loads(synth_model[1])["params"]
             real_parameters = {}
             synth_opt_map = json.loads(synth_model[0])
 
@@ -453,42 +455,42 @@ def plot_C3(
         for line in log[4:]:
             if line[0] == "{":
                 point = json.loads(line)
-                if 'goal' in point.keys():
-                    if only_iterations and point['goal']>best_goal:
+                if "goal" in point.keys():
+                    if only_iterations and point["goal"] > best_goal:
                         pass
                     else:
-                        best_goal = point['goal']
-                        goal_function.append(point['goal'])
+                        best_goal = point["goal"]
+                        goal_function.append(point["goal"])
 
-                        for iparam in range(len(point['params'])):
-                            param = point['params'][iparam]
+                        for iparam in range(len(point["params"])):
+                            param = point["params"][iparam]
                             if type(param) is list:
-                                param=param[0]
-                            unit = ''
-                            p_name = ''
+                                param = param[0]
+                            unit = ""
+                            p_name = ""
                             for desc in opt_map[iparam]:
                                 try:
                                     nice_name = nice_parameter_name[desc]
                                 except KeyError:
                                     nice_name = desc
-                                p_name += '-' + nice_name
-                            if not(p_name in parameters.keys()):
+                                p_name += "-" + nice_name
+                            if not (p_name in parameters.keys()):
                                 parameters[p_name] = []
                                 if use_synthetic:
                                     real_parameters[p_name] = []
                             parameters[p_name].append(param)
                             if use_synthetic:
                                 real_value = real_params[
-                                        synth_opt_map.index(opt_map[iparam])
-                                    ]
+                                    synth_opt_map.index(opt_map[iparam])
+                                ]
                                 if type(real_value) is list:
-                                    real_value=real_value[0]
+                                    real_value = real_value[0]
                                 real_parameters[p_name].append(real_value)
                             p_name_splt = p_name.split("-")
                             p_type = p_name_splt[-1]
                             if (
-                                p_type == nice_parameter_name["freq"] or
-                                p_type == nice_parameter_name["anhar"]
+                                p_type == nice_parameter_name["freq"]
+                                or p_type == nice_parameter_name["anhar"]
                             ):
                                 if not p_name in subplot_names:
                                     subplot_names.append(p_name)
@@ -497,11 +499,7 @@ def plot_C3(
                                 if not p_type in subplot_names:
                                     subplot_names.append(p_type)
 
-
-        this_log = {
-            "parameters": parameters,
-            "goal_function": goal_function
-        }
+        this_log = {"parameters": parameters, "goal_function": goal_function}
         if use_synthetic:
             this_log["real_paramters"] = real_parameters
 
@@ -517,7 +515,7 @@ def plot_C3(
 
         pars_to_delete = []
         for p_name, par in parameters.items():
-            if change_thresh > 0 :
+            if change_thresh > 0:
                 rel_change = np.max(np.abs(np.diff(par))) / par[0]
                 if rel_change < change_thresh:
                     pars_to_delete.append(p_name)
@@ -545,19 +543,18 @@ def plot_C3(
         if len(subplot_ids) > 0:
             nrows, ncols = layout(len(subplot_ids))
             fig, axes = plt.subplots(
-                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols,
-                sharex='col'
+                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols, sharex="col"
             )
             ii = 1
             for p_name in parameters.keys():
                 p_type = p_name.split("-")[-1]
                 if (
-                    p_type == nice_parameter_name["freq"] or
-                    p_type == nice_parameter_name["anhar"]
+                    p_type == nice_parameter_name["freq"]
+                    or p_type == nice_parameter_name["anhar"]
                 ):
                     if not p_name in subplots.keys():
                         id = subplot_ids[p_name] - 1
-                        if ncols>1:
+                        if ncols > 1:
                             subplots[p_name] = axes[id // ncols][id % ncols]
                         else:
                             subplots[p_name] = axes[id % nrows]
@@ -566,26 +563,32 @@ def plot_C3(
                     par_identifier = p_name.split("-")[1]
                     if not p_type in subplots.keys():
                         id = subplot_ids[p_type] - 1
-                        if ncols>1:
+                        if ncols > 1:
                             subplots[p_type] = axes[id // ncols][id % ncols]
                         else:
                             subplots[p_type] = axes[id % nrows]
                     ax = subplots[p_type]
                 try:
                     l = ax.plot(
-                        its, scaling[p_name] * parameters[p_name], ".-",
-                        markersize=12, linewidth=0.5, label=par_identifier
+                        its,
+                        scaling[p_name] * parameters[p_name],
+                        ".-",
+                        markersize=12,
+                        linewidth=0.5,
+                        label=par_identifier,
                     )
                     if use_synthetic:
                         sim_color = l[-1].get_color()
                         real_color = clrs.hsv_to_rgb(
-                            clrs.rgb_to_hsv(clrs.to_rgb(sim_color))
-                            - [0, 0, 0.25]
+                            clrs.rgb_to_hsv(clrs.to_rgb(sim_color)) - [0, 0, 0.25]
                         )
                         ax.plot(
-                            its, scaling[p_name] *  real_parameters[p_name], "--",
-                            color=real_color, label = par_identifier + " real",
-                            linewidth=2
+                            its,
+                            scaling[p_name] * real_parameters[p_name],
+                            "--",
+                            color=real_color,
+                            label=par_identifier + " real",
+                            linewidth=2,
                         )
                         ax.tick_params(
                             direction="in", left=True, right=True, top=True, bottom=True
@@ -597,8 +600,8 @@ def plot_C3(
                         ax.legend()
                 except:
                     pass
-                    #print(f"Error plotting {p_name}")
-    plt.xlabel('Evaluation')
+                    # print(f"Error plotting {p_name}")
+    plt.xlabel("Evaluation")
     for p_type, legend in subplot_legends.items():
         subplots[p_type].legend(legend)
     plt.tight_layout()
@@ -618,17 +621,16 @@ def plot_C3(
         its = range(1, len(goal_function) + 1)
         c = colors.pop(0)
         line = plt.semilogx(
-            its, goal_function, marker=markers[idx], color=c,
-            label=line_names[idx]
+            its, goal_function, marker=markers[idx], color=c, label=line_names[idx]
         )
         leg_formatted.append(line)
         idx += 1
-        if goal_function: #Do only if not empty
+        if goal_function:  # Do only if not empty
             plt.semilogx(its[-1], goal_function[-1], "x", color=c)
-    leg = [fldr.replace('_', '\\_').replace("/", "") for fldr in logfolders]
+    leg = [fldr.replace("_", "\\_").replace("/", "") for fldr in logfolders]
     plt.legend(leg)
-    plt.xlabel('Evaluation')
-    plt.ylabel('model match')
+    plt.xlabel("Evaluation")
+    plt.ylabel("model match")
     plt.tight_layout()
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
     if interactive:
@@ -641,20 +643,21 @@ def plot_envelope_history(logfilename):
     point = json.loads(log[-1])
     fig, ax = plt.subplots()
     plt.subplots_adjust(left=0.25, bottom=0.25)
-    l1, = plt.plot(point['inphase'], lw=2)
-    l2, = plt.plot(point['quadrature'], lw=2)
+    (l1,) = plt.plot(point["inphase"], lw=2)
+    (l2,) = plt.plot(point["quadrature"], lw=2)
     # plt.legend(['inphase', 'quadrature'])
     # plt.grid()
     axit = plt.axes([0.25, 0.1, 0.65, 0.03])
-    s = Slider(axit, 'Iterations', 0, len(log), valinit=len(log))
+    s = Slider(axit, "Iterations", 0, len(log), valinit=len(log))
 
     def update(val):
         it = int(s.val)
         point = json.loads(log[it])
-        l1.set_ydata(point['inphase'])
-        l2.set_ydata(point['quadrature'])
+        l1.set_ydata(point["inphase"])
+        l2.set_ydata(point["quadrature"])
         ax.autoscale()
         fig.canvas.draw_idle()
+
     s.on_changed(update)
     plt.show()
 
@@ -665,18 +668,18 @@ def plot_awg(logfolder="", num_plots=1):
         logfilename = "/tmp/c3logs/recent/awg.log"
     with open(logfilename, "r") as filename:
         log = filename.readlines()
-    plt.figure(figsize=(8, 2*num_plots))
+    plt.figure(figsize=(8, 2 * num_plots))
     for ii in range(num_plots):
-        point = json.loads(log[-ii-1])
-        plt.subplot(num_plots, 1, ii+1)
-        plt.plot(point['inphase'], lw=2)
-        plt.plot(point['quadrature'], lw=2)
+        point = json.loads(log[-ii - 1])
+        plt.subplot(num_plots, 1, ii + 1)
+        plt.plot(point["inphase"], lw=2)
+        plt.plot(point["quadrature"], lw=2)
         plt.grid()
-    plt.savefig(logfolder+"awg.png", dpi=300)
+    plt.savefig(logfolder + "awg.png", dpi=300)
 
 
 def plot_foms(logfolder=""):
-    logfilename = logfolder + 'learn_model.log'
+    logfilename = logfolder + "learn_model.log"
     if not os.path.isfile(logfilename):
         logfilename = "/tmp/c3logs/recent/learn_from.log"
     with open(logfilename, "r") as filename:
@@ -692,9 +695,9 @@ def plot_foms(logfolder=""):
             batch += 1
             foms.append([0, 0, 0, 0, 0])
             fom_id = 0
-        elif split[0:2] == ['Finished', 'batch']:
+        elif split[0:2] == ["Finished", "batch"]:
             foms[batch][fom_id] = float(split[4])
-            names[fom_id] = split[3].split(":")[0].replace('_', '\\_')
+            names[fom_id] = split[3].split(":")[0].replace("_", "\\_")
             fom_id += 1
     plt.semilogy(np.array(foms))
     plt.legend(names)

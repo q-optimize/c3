@@ -54,14 +54,14 @@ class C1(Optimizer):
         plot_pulses=False,
         store_unitaries=False,
         options={},
-        run_name=None
+        run_name=None,
     ):
         super().__init__(
             algorithm=algorithm,
             plot_dynamics=plot_dynamics,
             plot_pulses=plot_pulses,
-            store_unitaries=store_unitaries
-            )
+            store_unitaries=store_unitaries,
+        )
         self.opt_map = gateset_opt_map
         self.opt_gates = opt_gates
         self.fid_func = fid_func
@@ -84,11 +84,9 @@ class C1(Optimizer):
         """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
-            run_name = (
-                'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
-            )
+            run_name = "c1_" + self.fid_func.__name__ + "_" + self.algorithm.__name__
         self.logdir = log_setup(self.dir_path, run_name)
-        self.logname = 'open_loop.log'
+        self.logname = "open_loop.log"
 
     def load_best(self, init_point):
         """
@@ -103,10 +101,9 @@ class C1(Optimizer):
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_gateset_opt_map = [
-                [tuple(par) for par in set]
-                for set in json.loads(best[0])
+                [tuple(par) for par in set] for set in json.loads(best[0])
             ]
-            init_p = json.loads(best[1])['params']
+            init_p = json.loads(best[1])["params"]
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
     def adjust_exp(self, adjust_exp):
@@ -122,7 +119,7 @@ class C1(Optimizer):
         with open(adjust_exp) as file:
             best = file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            p = json.loads(best[1])['params']
+            p = json.loads(best[1])["params"]
             self.exp.set_parameters(p, best_exp_opt_map)
 
     def optimize_controls(self):
@@ -147,12 +144,12 @@ class C1(Optimizer):
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
-                options=self.options
+                options=self.options,
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+        with open(self.logdir + "best_point_" + self.logname, "r") as file:
+            best_params = json.loads(file.readlines()[1])["params"]
         self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
 
@@ -170,11 +167,7 @@ class C1(Optimizer):
         tf.float64
             Value of the goal function
         """
-        self.exp.gateset.set_parameters(
-            current_params,
-            self.opt_map,
-            scaled=True
-        )
+        self.exp.gateset.set_parameters(current_params, self.opt_map, scaled=True)
         dims = self.exp.model.dims
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
@@ -183,26 +176,22 @@ class C1(Optimizer):
         except TypeError:
             pass
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
-            logfile.write(
-                "goal: {}: {}\n".format(self.fid_func.__name__, float(goal))
-            )
+            logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
-                val = cal(
-                    U_dict, self.index, dims, self.logdir, self.evaluation + 1
-                )
+                val = cal(U_dict, self.index, dims, self.logdir, self.evaluation + 1)
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
                 logfile.write("{}: {}\n".format(cal.__name__, val))
                 self.optim_status[cal.__name__] = val
             logfile.flush()
 
-        self.optim_status['params'] = [
+        self.optim_status["params"] = [
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = float(goal)
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["goal"] = float(goal)
+        self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal

@@ -29,11 +29,7 @@ class Generator:
 
     """
 
-    def __init__(
-            self,
-            devices: list,
-            resolution: np.float64 = 0.0
-    ):
+    def __init__(self, devices: list, resolution: np.float64 = 0.0):
         # TODO consider making the dict into a list of devices
         # TODO check that you get at least 1 set of LO, AWG and mixer.
         self.devices = {}
@@ -51,7 +47,7 @@ class Generator:
             dev = self.devices[key]
             devcfg[dev.name] = dev.write_config()
         cfg["devices"] = devcfg
-        cfg.pop('signal', None)
+        cfg.pop("signal", None)
         return cfg
 
     def generate_signals(self, instr: Instruction):
@@ -70,7 +66,7 @@ class Generator:
 
         """
         # TODO deal with multiple instructions within GateSet
-        with tf.name_scope('Signal_generation'):
+        with tf.name_scope("Signal_generation"):
             gen_signal = {}
             lo = self.devices["lo"]
             awg = self.devices["awg"]
@@ -100,7 +96,7 @@ class Generator:
                 else:
                     signal = v_to_hz.transform(signal, omega_lo)
                 gen_signal[chan]["values"] = signal
-                gen_signal[chan]["ts"] = lo_signal['ts']
+                gen_signal[chan]["ts"] = lo_signal["ts"]
         self.signal = gen_signal
         # TODO clean up output here: ts is redundant
-        return gen_signal, lo_signal['ts']
+        return gen_signal, lo_signal["ts"]

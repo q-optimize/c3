@@ -20,14 +20,10 @@ class C3obj:
     params: dict
         Parameters in this dict can be accessed and optimized
     """
+
     params: dict
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " "
-            ):
+    def __init__(self, name: str, desc: str = " ", comment: str = " "):
         self.name = name
         self.desc = desc
         self.comment = comment
@@ -87,8 +83,8 @@ class Quantity:
         value,
         min,
         max,
-        symbol: str = '\\alpha',
-        unit: str = 'unspecified'
+        symbol: str = "\\alpha",
+        unit: str = "unspecified",
     ):
         value = np.array(value)
         self.offset = np.array(min)
@@ -98,8 +94,7 @@ class Quantity:
             self.set_value(value)
         except ValueError:
             raise ValueError(
-                f"Value has to be within {min:.3} .. {max:.3}"
-                f" but is {value:.3}."
+                f"Value has to be within {min:.3} .. {max:.3}" f" but is {value:.3}."
             )
         self.symbol = symbol
         self.unit = unit
@@ -174,7 +169,7 @@ class Quantity:
         return self.scale * (val + 1) / 2 + self.offset
 
     def set_value(self, val):
-        """ Set the value of this quantity as tensorflow. Value needs to be
+        """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
         tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
@@ -191,13 +186,14 @@ class Quantity:
         return self.value.numpy().flatten()
 
     def set_opt_value(self, val):
-        """ Set value optimizer friendly.
+        """Set value optimizer friendly.
 
         Parameters
         ----------
         val : tf.float64
             Tensorflow number that will be mapped to a value between -1 and 1.
         """
-        self.value = tf.acos(tf.cos(
-            (tf.reshape(val, self.shape) + 1) * np.pi / 2
-        )) / np.pi * 2 - 1
+        self.value = (
+            tf.acos(tf.cos((tf.reshape(val, self.shape) + 1) * np.pi / 2)) / np.pi * 2
+            - 1
+        )

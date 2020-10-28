@@ -64,9 +64,7 @@ class Model:
         ann_opers = []
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
-            ann_opers.append(
-                qt_utils.hilbert_space_kron(a, indx, dims)
-            )
+            ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
 
         self.dims = dims
         self.ann_opers = ann_opers
@@ -193,36 +191,27 @@ class Model:
         self.update_drift_eigen()
         dressed_control_Hs = {}
         dressed_col_ops = []
-        dressed_drift_H = tf.matmul(tf.matmul(
-            tf.linalg.adjoint(self.transform),
-            self.drift_H),
-            self.transform
+        dressed_drift_H = tf.matmul(
+            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_H), self.transform
         )
         for key in self.control_Hs:
-            dressed_control_Hs[key] = tf.matmul(tf.matmul(
-                tf.linalg.adjoint(self.transform),
-                self.control_Hs[key]),
-                self.transform
+            dressed_control_Hs[key] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), self.control_Hs[key]),
+                self.transform,
             )
         self.dressed_drift_H = dressed_drift_H
         self.dressed_control_Hs = dressed_control_Hs
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(
-                    tf.matmul(tf.matmul(
-                        tf.linalg.adjoint(self.transform),
-                        col_op),
-                        self.transform
+                    tf.matmul(
+                        tf.matmul(tf.linalg.adjoint(self.transform), col_op),
+                        self.transform,
                     )
                 )
             self.dressed_col_ops = dressed_col_ops
 
-    def get_Frame_Rotation(
-        self,
-        t_final: np.float64,
-        freqs: dict,
-        framechanges: dict
-    ):
+    def get_Frame_Rotation(self, t_final: np.float64, freqs: dict, framechanges: dict):
         """
         Compute the frame rotation needed to align Lab frame and rotating Eigenframes of the qubits.
 
@@ -241,27 +230,23 @@ class Model:
         tf.Tensor
             A (diagonal) propagator that adjust phases
         """
-        exponent = tf.constant(0., dtype=tf.complex128)
+        exponent = tf.constant(0.0, dtype=tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
-            ann_oper = self.ann_opers[
-                self.names.index(qubit)
-            ]
+            ann_oper = self.ann_opers[self.names.index(qubit)]
             num_oper = tf.constant(
-                np.matmul(ann_oper.T.conj(), ann_oper),
-                dtype=tf.complex128
+                np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
             # TODO test this
             if self.dressed:
                 num_oper = tf.matmul(
                     tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
-                    self.transform
+                    self.transform,
                 )
-            exponent = exponent +\
-                1.0j * num_oper * (freq * t_final + framechange)
+            exponent = exponent + 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)
         return FR
 
@@ -295,8 +280,7 @@ class Model:
             # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[qubit]
             num_oper = tf.constant(
-                np.matmul(ann_oper.T.conj(), ann_oper),
-                dtype=tf.complex128
+                np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
             Z = tf_utils.tf_super(
                 tf.linalg.expm(
@@ -304,9 +288,9 @@ class Model:
                 )
             )
             p = t_final * amp * self.dephasing_strength
-            print('dephasing stength: ', p)
+            print("dephasing stength: ", p)
             if p.numpy() > 1 or p.numpy() < 0:
-                raise ValueError('strengh of dephasing channels outside [0,1]')
-                print('dephasing stength: ', p)
-            deph_ch = deph_ch * ((1-p) * Id + p * Z)
+                raise ValueError("strengh of dephasing channels outside [0,1]")
+                print("dephasing stength: ", p)
+            deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch

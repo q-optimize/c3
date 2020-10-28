@@ -146,7 +146,9 @@ class GateSet:
                 try:
                     id_indx = self.id_list.index(id)
                 except ValueError:
-                    raise Exception(f"C3:ERROR: Parameter \'{id}\' is not in this gate-set.")
+                    raise Exception(
+                        f"C3:ERROR: Parameter '{id}' is not in this gate-set."
+                    )
                 par_len = self.par_lens[id_indx]
                 gate = id[0]
                 par_id = id[1:4]
@@ -156,7 +158,7 @@ class GateSet:
                 gate_instr = self.instructions[gate]
                 par = gate_instr.comps[chan][comp].params[param]
                 if scaled:
-                    val = values[val_indx:val_indx+par_len]
+                    val = values[val_indx : val_indx + par_len]
                     par.set_opt_value(val)
                 else:
                     try:
@@ -204,7 +206,7 @@ class GateSet:
         return "".join(ret)
 
 
-class Instruction():
+class Instruction:
     """
     Collection of components making up the control signal for a line.
 
@@ -235,12 +237,12 @@ class Instruction():
     """
 
     def __init__(
-            self,
-            name: str = " ",
-            channels: list = [],
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
-            ):
+        self,
+        name: str = " ",
+        channels: list = [],
+        t_start: np.float64 = 0.0,
+        t_end: np.float64 = 0.0,
+    ):
         self.name = name
         self.t_start = t_start
         self.t_end = t_end
@@ -253,7 +255,7 @@ class Instruction():
         cfg = copy.deepcopy(self.__dict__)
         for chan in self.comps:
             for comp in self.comps[chan]:
-                cfg['comps'][chan][comp] = 0
+                cfg["comps"][chan][comp] = 0
         return cfg
 
     def add_component(self, comp: InstructionComponent, chan: str):
