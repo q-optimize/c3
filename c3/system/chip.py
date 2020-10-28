@@ -329,6 +329,9 @@ class AsymmetricTransmon(PhysicalComponent):
             phi_0: np.float64 = 0.0,
 #             gamma: np.float64 = 0.0,
             d: np.float64 = 0.0,
+            t1: np.float64 = 0.0,
+            t2star: np.float64 = 0.0,
+            temp: np.float64 = 0.0
             ):
         super().__init__(
             name=name,
@@ -341,16 +344,14 @@ class AsymmetricTransmon(PhysicalComponent):
         self.params['phi_0'] = phi_0
         self.params['d'] = d
 #         self.params['gamma'] = gamma
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
 
-    def init_Hs(self, ann_oper):
-        self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
-        )
-
-    def init_Ls(self, ann_oper):
-        pass
-
-    def get_Hamiltonian(self):
+    def get_freq(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         pi = tf.constant(np.pi, dtype=tf.complex128)
         phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
@@ -361,7 +362,67 @@ class AsymmetricTransmon(PhysicalComponent):
         factor = tf.sqrt(tf.sqrt(
             tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
         ))
-        return freq * factor * self.Hs['freq']
+        return freq * factor 
+
+    def init_Hs(self, ann_oper):
+        self.Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+
+    def init_Ls(self, ann_oper):
+        """
+        Initialize Lindbladian components.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
+        self.collapse_ops['t1'] = ann_oper
+        self.collapse_ops['temp'] = ann_oper.T.conj()
+        self.collapse_ops['t2star'] = 2 * tf.matmul(
+            ann_oper.T.conj(),
+            ann_oper
+        )
+
+    def get_Hamiltonian(self):
+        return self.get_freq() * self.Hs['freq']
+    
+    def get_Lindbladian(self, dims):
+        """
+        Compute the Lindbladian, based on relaxation, dephasing constants and finite temperature.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+
+        """
+        Ls = []
+        if 't1' in self.params:
+            t1 = self.params['t1'].get_value()
+            gamma = (0.5 / t1) ** 0.5
+            L = gamma * self.collapse_ops['t1']
+            Ls.append(L)
+            if 'temp' in self.params:
+                if self.params['temp'].get_value().numpy():
+                    freq_diff = np.array(
+                        [self.get_freq(), 0]
+                    )
+                    beta = 1 / (self.params['temp'].get_value() * kb)
+                    det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
+                    det_bal_mat = hskron(
+                        tf.linalg.tensor_diag(det_bal), self.index, dims
+                    )
+                    L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
+                    Ls.append(L)
+        if 't2star' in self.params:
+            gamma = (0.5/self.params['t2star'].get_value())**0.5
+            L = gamma * self.collapse_ops['t2star']
+            Ls.append(L)
+        return tf.cast(sum(Ls), tf.complex128)
+
 
 class LineComponent(C3obj):
     """

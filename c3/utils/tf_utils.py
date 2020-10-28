@@ -153,7 +153,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     return dU
 
 
-@tf.function
+# @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     """
     Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
@@ -195,8 +195,9 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
                                     tf_spost(tf.linalg.adjoint(col_op))
                                     )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    terms = int(1e12 * dt) + 2  # Eyeball number of terms in expm
-    dU = tf_expm(lind_op * dt, terms)
+#     terms = int(1e12 * dt) # Eyeball number of terms in expm
+#     print('terms in exponential: ', terms)
+#     dU = tf_expm(lind_op * dt, terms)
     # Built-in tensorflow exponential below
     dU = tf.linalg.expm(lind_op * dt)
     return dU
@@ -704,7 +705,5 @@ def tf_project_to_comp(A, dims, to_super=False):
     proj = proj_list.pop()
     while not proj_list == []:
         proj = np.kron(proj_list.pop(), proj)
-    if superoper:
-        proj = np.kron(proj, proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)

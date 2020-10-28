@@ -148,6 +148,9 @@ class Optimizer:
             psi_init = [0] * dim
             psi_init[4] = 1
             psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
+#             psi_init = [0] * dim**2
+#             psi_init[dim*4 + 4] = 1
+#             psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim**2 ,1])
             for gate in self.exp.dUs.keys():
                 self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
             self.exp.dynamics_plot_counter += 1

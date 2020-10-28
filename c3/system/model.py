@@ -7,6 +7,7 @@ import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 from c3.system.chip import Drive, Coupling
+import scipy.linalg
 
 
 class Model:
@@ -194,6 +195,7 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
+    
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
         transformation matrix."""
@@ -203,7 +205,7 @@ class Model:
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
             transform = tf.matmul(v, tf.transpose(reorder_matrix))
         else:
-            eigenframe = tf.linalg.diag(e)
+            eigenframe = e
             transform = v
         self.eigenframe = eigenframe
         self.transform = transform
