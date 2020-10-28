@@ -9,7 +9,7 @@ attrs==20.2.0
 Babel==2.8.0
 cachetools==4.1.1
 cloudpickle==1.6.0
-cma=3.0.3
+cma==3.0.3
 cycler==0.10.0
 Cython==0.29.21
 decorator==4.4.2
