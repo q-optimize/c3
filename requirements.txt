@@ -23,7 +23,7 @@ google-pasta==0.2.0
 grpcio==1.32.0
 h5py==2.10.0
 imagesize==1.2.0
-ipython==7.18.1
+ipython==7.15.0
 Jinja2==2.11.2
 jupyter==1.0.0
 Keras-Preprocessing==1.1.2
