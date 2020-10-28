@@ -39,7 +39,7 @@ def duffing(a):
     """
     a_dag = a.T.conj()
     n = np.matmul(a_dag, a)
-    return 1/2 * np.matmul(n - np.eye(int(n.shape[0]), dtype=np.complex128), n)
+    return 1 / 2 * np.matmul(n - np.eye(int(n.shape[0]), dtype=np.complex128), n)
 
 
 def int_XX(anhs):

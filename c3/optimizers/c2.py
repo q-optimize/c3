@@ -38,9 +38,7 @@ class C2(Optimizer):
         options={},
         run_name=None,
     ):
-        super().__init__(
-            algorithm=algorithm
-            )
+        super().__init__(algorithm=algorithm)
         self.eval_func = eval_func
         self.opt_map = gateset_opt_map
         self.options = options
@@ -74,7 +72,7 @@ class C2(Optimizer):
         if run_name is None:
             run_name = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(self.dir_path, run_name)
-        self.logname = 'calibration.log'
+        self.logname = "calibration.log"
 
     def load_best(self, init_point):
         """
@@ -89,10 +87,9 @@ class C2(Optimizer):
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_gateset_opt_map = [
-                [tuple(par) for par in set]
-                for set in json.loads(best[0])
+                [tuple(par) for par in set] for set in json.loads(best[0])
             ]
-            init_p = json.loads(best[1])['params']
+            init_p = json.loads(best[1])["params"]
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
     def optimize_controls(self):
@@ -110,12 +107,12 @@ class C2(Optimizer):
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
-                options=self.options
+                options=self.options,
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+        with open(self.logdir + "best_point_" + self.logname, "r") as file:
+            best_params = json.loads(file.readlines()[1])["params"]
         self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
         measurements = []
@@ -126,8 +123,8 @@ class C2(Optimizer):
                 except EOFError:
                     break
         learn_from = {}
-        learn_from['seqs_grouped_by_param_set'] = measurements
-        learn_from['opt_map'] = self.opt_map
+        learn_from["seqs_grouped_by_param_set"] = measurements
+        learn_from["opt_map"] = self.opt_map
         with open(self.picklefilename, "wb+") as file:
             pickle.dump(learn_from, file)
 
@@ -145,22 +142,18 @@ class C2(Optimizer):
         tf.float64
             Value of the goal function
         """
-        self.exp.gateset.set_parameters(
-            current_params,
-            self.opt_map,
-            scaled=True
-        )
+        self.exp.gateset.set_parameters(current_params, self.opt_map, scaled=True)
         # There could be more processing happening here, i.e. the exp could
         # generate signals for an experiment and send those to eval_func.
         params = self.exp.gateset.get_parameters(self.opt_map, scaled=False)
 
         goal, results, results_std, seqs, shots = self.eval_func(params)
-        self.optim_status['params'] = [
+        self.optim_status["params"] = [
             par.numpy().tolist()
             for par in self.exp.gateset.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = float(goal)
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["goal"] = float(goal)
+        self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std, shots)
         display.plot_C2(self.dir_path, self.logdir)
@@ -184,6 +177,12 @@ class C2(Optimizer):
             Number of repetitions used in averaging noisy data
 
         """
-        m = {'params': params, 'seqs': seqs, 'results': results, 'results_std': results_std, 'shots': shots}
+        m = {
+            "params": params,
+            "seqs": seqs,
+            "results": results,
+            "results_std": results_std,
+            "shots": shots,
+        }
         with open(self.picklefilename, "ab") as file:
             pickle.dump(m, file)

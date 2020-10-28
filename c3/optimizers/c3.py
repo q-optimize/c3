@@ -12,7 +12,12 @@ from c3.optimizers.optimizer import Optimizer
 import matplotlib.pyplot as plt
 from c3.utils.utils import log_setup
 import c3.utils.display as display
-from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
+from c3.libraries.estimators import (
+    dv_g_LL_prime,
+    g_LL_prime_combined,
+    g_LL_prime,
+    neg_loglkh_multinom_norm,
+)
 
 
 class C3(Optimizer):
@@ -60,10 +65,9 @@ class C3(Optimizer):
         callback_figs=[],
         algorithm=None,
         run_name=None,
-        options={}
+        options={},
     ):
-        """Initiliase.
-        """
+        """Initiliase."""
         super().__init__(algorithm=algorithm)
         self.fom = fom
         self.sampling = sampling
@@ -92,11 +96,15 @@ class C3(Optimizer):
         """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
-            run_name = self.algorithm.__name__ + '-' \
-                + self.sampling.__name__ + '-' \
+            run_name = (
+                self.algorithm.__name__
+                + "-"
+                + self.sampling.__name__
+                + "-"
                 + self.fom.__name__
+            )
         self.logdir = log_setup(self.dir_path, run_name)
-        self.logname = 'model_learn.log'
+        self.logname = "model_learn.log"
 
     def read_data(self, datafiles):
         """
@@ -108,7 +116,7 @@ class C3(Optimizer):
             List of paths for files that contain learning data.
         """
         for target, datafile in datafiles.items():
-            with open(datafile, 'rb+') as file:
+            with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)
 
     def load_best(self, init_point):
@@ -124,7 +132,7 @@ class C3(Optimizer):
         with open(init_point) as init_file:
             best = init_file.readlines()
             best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
+            init_p = json.loads(best[1])["params"]
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
@@ -144,7 +152,7 @@ class C3(Optimizer):
         # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
         sampling = self.sampling
-        indeces =  sampling(learn_from, batch_size)
+        indeces = sampling(learn_from, batch_size)
         total_size = len(learn_from)
         all = list(range(total_size))
         if self.inverse:
@@ -173,13 +181,13 @@ class C3(Optimizer):
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
-                options=self.options
+                options=self.options,
             )
         except KeyboardInterrupt:
             pass
         # display.plot_C3([self.logdir])
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+        with open(self.logdir + "best_point_" + self.logname, "r") as file:
+            best_params = json.loads(file.readlines()[1])["params"]
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_log()
         self.confirm()
@@ -188,8 +196,8 @@ class C3(Optimizer):
         """
         Compute the validation set, i.e. the value of the goal function on all points of the dataset that were not used
         for learning.
-                """
-        self.logname = 'confirm.log'
+        """
+        self.logname = "confirm.log"
         self.inverse = True
         self.start_log()
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
@@ -225,26 +233,26 @@ class C3(Optimizer):
         seq_weigths = []
         count = 0
         seqs_pp = self.seqs_per_point
-        #TODO: seq per point is not constant. Remove.
+        # TODO: seq per point is not constant. Remove.
 
         for target, data in self.learn_data.items():
 
-            self.learn_from = data['seqs_grouped_by_param_set']
-            self.gateset_opt_map = data['opt_map']
+            self.learn_from = data["seqs_grouped_by_param_set"]
+            self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
 
                 count += 1
                 m = self.learn_from[ipar]
-                gateset_params = m['params']
+                gateset_params = m["params"]
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results'][:seqs_pp]
-                m_stds = m['results_std'][:seqs_pp]
-                m_shots = m['shots'][:seqs_pp]
-                sequences = m['seqs'][:seqs_pp]
+                m_vals = m["results"][:seqs_pp]
+                m_stds = m["results_std"][:seqs_pp]
+                m_shots = m["shots"][:seqs_pp]
+                sequences = m["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
-                if target == 'all':
+                if target == "all":
                     num_seqs = len(sequences) * 3
 
                 self.exp.set_parameters(current_params, self.opt_map, scaled=True)
@@ -252,16 +260,14 @@ class C3(Optimizer):
                     self.exp.gateset.set_parameters(
                         self.init_gateset_params,
                         self.init_gateset_opt_map,
-                        scaled=False
+                        scaled=False,
                     )
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
                 # We find the unique gates used in the sequence and compute
                 # only them.
-                self.exp.opt_gates = list(
-                    set(itertools.chain.from_iterable(sequences))
-                )
+                self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
                 self.exp.get_gates()
                 self.exp.evaluate(sequences)
                 sim_vals = self.exp.process(labels=self.state_labels[target])
@@ -269,26 +275,26 @@ class C3(Optimizer):
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
 
-                if target == 'all':
+                if target == "all":
                     goal = neg_loglkh_multinom_norm(
                         m_vals,
                         tf.stack(sim_vals),
                         tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 else:
                     goal = g_LL_prime(
                         m_vals,
                         tf.stack(sim_vals),
                         tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 goals.append(goal.numpy())
                 seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
 
-                with open(self.logdir + self.logname, 'a') as logfile:
+                with open(self.logdir + self.logname, "a") as logfile:
                     logfile.write(
                         "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
                             ipar + 1,
@@ -311,7 +317,7 @@ class C3(Optimizer):
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
-                    with open(self.logdir + self.logname, 'a') as logfile:
+                    with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
                                 f"{iseq + 1:8}    "
@@ -326,14 +332,12 @@ class C3(Optimizer):
         goal = g_LL_prime_combined(goals, seq_weigths)
         # TODO make gradient free function use any fom
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal))
             # print("{}: {}".format(self.fom.__name__, goal))
             for cb_fom in self.callback_foms:
-                val = float(
-                    cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
-                )
+                val = float(cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
                 # print("{}: {}".format(cb_fom.__name__, val))
             # print("")
@@ -343,19 +347,22 @@ class C3(Optimizer):
             fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
             fig.savefig(
                 self.logdir
-                + cb_fig.__name__ + '/'
-                + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal, 3))
-                + '.png'
+                + cb_fig.__name__
+                + "/"
+                + "eval:"
+                + str(self.evaluation)
+                + "__"
+                + self.fom.__name__
+                + str(round(goal, 3))
+                + ".png"
             )
             plt.close(fig)
 
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["goal"] = goal
+        self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal
 
@@ -376,22 +383,22 @@ class C3(Optimizer):
 
         for target, data in self.learn_data.items():
 
-            self.learn_from = data['seqs_grouped_by_param_set']
-            self.gateset_opt_map = data['opt_map']
+            self.learn_from = data["seqs_grouped_by_param_set"]
+            self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
 
                 count += 1
                 m = self.learn_from[ipar]
-                gateset_params = m['params']
+                gateset_params = m["params"]
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results'][:seqs_pp]
-                m_stds = np.array(m['results_std'][:seqs_pp])
-                m_shots = m['shots'][:seqs_pp]
-                sequences = m['seqs'][:seqs_pp]
+                m_vals = m["results"][:seqs_pp]
+                m_stds = np.array(m["results_std"][:seqs_pp])
+                m_shots = m["shots"][:seqs_pp]
+                sequences = m["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
-                if target == 'all':
+                if target == "all":
                     num_seqs = len(sequences) * 3
 
                 with tf.GradientTape() as t:
@@ -400,7 +407,7 @@ class C3(Optimizer):
                     self.exp.gateset.set_parameters(
                         self.init_gateset_params,
                         self.init_gateset_opt_map,
-                        scaled=False
+                        scaled=False,
                     )
                     self.exp.gateset.set_parameters(
                         gateset_params, gateset_opt_map, scaled=False
@@ -417,19 +424,19 @@ class C3(Optimizer):
                     exp_stds.extend(m_stds)
                     exp_shots.extend(m_shots)
 
-                    if target == 'all':
+                    if target == "all":
                         g = neg_loglkh_multinom_norm(
                             m_vals,
                             tf.stack(sim_vals),
                             tf.constant(m_stds, dtype=tf.float64),
-                            tf.constant(m_shots, dtype=tf.float64)
+                            tf.constant(m_shots, dtype=tf.float64),
                         )
                     else:
                         g = g_LL_prime(
                             m_vals,
                             tf.stack(sim_vals),
                             tf.constant(m_stds, dtype=tf.float64),
-                            tf.constant(m_shots, dtype=tf.float64)
+                            tf.constant(m_shots, dtype=tf.float64),
                         )
 
                 seq_weigths.append(num_seqs)
@@ -439,7 +446,7 @@ class C3(Optimizer):
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
 
-                with open(self.logdir + self.logname, 'a') as logfile:
+                with open(self.logdir + self.logname, "a") as logfile:
                     logfile.write(
                         "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
                             ipar + 1,
@@ -462,7 +469,7 @@ class C3(Optimizer):
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
-                    with open(self.logdir + self.logname, 'a') as logfile:
+                    with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
                                 f"{iseq + 1:8}    "
@@ -474,7 +481,6 @@ class C3(Optimizer):
                             )
                         logfile.flush()
 
-
         # exp_values = tf.constant(exp_values, dtype=tf.float64)
         # sim_values =  tf.stack(sim_values)
         # exp_stds = tf.constant(exp_stds, dtype=tf.float64)
@@ -483,14 +489,12 @@ class C3(Optimizer):
         goal = g_LL_prime_combined(goals, seq_weigths)
         grad = dv_g_LL_prime(goals, grads, seq_weigths)
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal))
             # print("{}: {}".format(self.fom.__name__, goal))
             for cb_fom in self.callback_foms:
-                val = float(
-                    cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
-                )
+                val = float(cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
                 # print("{}: {}".format(cb_fom.__name__, val))
             # print("")
@@ -500,19 +504,22 @@ class C3(Optimizer):
             fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
             fig.savefig(
                 self.logdir
-                + cb_fig.__name__ + '/'
-                + 'eval:' + str(self.evaluation) + "__"
-                + self.fom.__name__ + str(round(goal, 3))
-                + '.png'
+                + cb_fig.__name__
+                + "/"
+                + "eval:"
+                + str(self.evaluation)
+                + "__"
+                + self.fom.__name__
+                + str(round(goal, 3))
+                + ".png"
             )
             plt.close(fig)
 
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal
-        self.optim_status['gradient'] = list(grad.flatten())
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["goal"] = goal
+        self.optim_status["gradient"] = list(grad.flatten())
+        self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal, grad

@@ -21,6 +21,7 @@ import tensorflow_probability as tfp
 import c3.utils.qt_utils as qt_utils
 import c3.utils.tf_utils as tf_utils
 
+
 def create_experiment():
     lindblad = False
     dressed = True
@@ -37,7 +38,7 @@ def create_experiment():
     init_temp = 0
     qubit_temp = 0
     v2hz = 1e9
-    t_final = 7e-9   # Time for single qubit gates
+    t_final = 7e-9  # Time for single qubit gates
     sim_res = 100e9
     awg_res = 2e9
     meas_offset = 0.0
@@ -54,33 +55,18 @@ def create_experiment():
             value=freq_q1,
             min=4.995e9 * 2 * np.pi,
             max=5.005e9 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
         anhar=Qty(
             value=anhar_q1,
             min=-380e6 * 2 * np.pi,
             max=-120e6 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
         hilbert_dim=qubit_lvls,
-        t1=Qty(
-            value=t1_q1,
-            min=1e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        t2star=Qty(
-            value=t2star_q1,
-            min=10e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        temp=Qty(
-            value=qubit_temp,
-            min=0.0,
-            max=0.12,
-            unit='K'
-        )
+        t1=Qty(value=t1_q1, min=1e-6, max=90e-6, unit="s"),
+        t2star=Qty(value=t2star_q1, min=10e-6, max=90e-6, unit="s"),
+        temp=Qty(value=qubit_temp, min=0.0, max=0.12, unit="K"),
     )
     q2 = chip.Qubit(
         name="Q2",
@@ -89,33 +75,18 @@ def create_experiment():
             value=freq_q2,
             min=5.595e9 * 2 * np.pi,
             max=5.605e9 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
         anhar=Qty(
             value=anhar_q2,
             min=-380e6 * 2 * np.pi,
             max=-120e6 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
         hilbert_dim=qubit_lvls,
-        t1=Qty(
-            value=t1_q2,
-            min=1e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        t2star=Qty(
-            value=t2star_q2,
-            min=10e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        temp=Qty(
-            value=qubit_temp,
-            min=0.0,
-            max=0.12,
-            unit='K'
-        )
+        t1=Qty(value=t1_q2, min=1e-6, max=90e-6, unit="s"),
+        t2star=Qty(value=t2star_q2, min=10e-6, max=90e-6, unit="s"),
+        temp=Qty(value=qubit_temp, min=0.0, max=0.12, unit="K"),
     )
 
     q1q2 = chip.Coupling(
@@ -127,9 +98,9 @@ def create_experiment():
             value=coupling_strength,
             min=-1 * 1e3 * 2 * np.pi,
             max=200e6 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
-        hamiltonian_func=hamiltonians.int_XX
+        hamiltonian_func=hamiltonians.int_XX,
     )
 
     drive = chip.Drive(
@@ -137,25 +108,20 @@ def create_experiment():
         desc="Drive 1",
         comment="Drive line 1 on qubit 1",
         connected=["Q1"],
-        hamiltonian_func=hamiltonians.x_drive
+        hamiltonian_func=hamiltonians.x_drive,
     )
     drive2 = chip.Drive(
         name="d2",
         desc="Drive 2",
         comment="Drive line 2 on qubit 2",
         connected=["Q2"],
-        hamiltonian_func=hamiltonians.x_drive
+        hamiltonian_func=hamiltonians.x_drive,
     )
     phys_components = [q1, q2]
     line_components = [drive, drive2, q1q2]
 
     init_ground = tasks.InitialiseGround(
-        init_temp=Qty(
-            value=init_temp,
-            min=-0.001,
-            max=0.22,
-            unit='K'
-        )
+        init_temp=Qty(value=init_temp, min=-0.001, max=0.22, unit="K")
     )
     task_list = [init_ground]
     model = Mdl(phys_components, line_components, task_list)
@@ -163,150 +129,84 @@ def create_experiment():
     model.set_dressed(dressed)
 
     # ### MAKE GENERATOR
-    lo = devices.LO(name='lo', resolution=sim_res)
-    awg = devices.AWG(name='awg', resolution=awg_res)
-    mixer = devices.Mixer(name='mixer')
+    lo = devices.LO(name="lo", resolution=sim_res)
+    awg = devices.AWG(name="awg", resolution=awg_res)
+    mixer = devices.Mixer(name="mixer")
 
     v_to_hz = devices.Volts_to_Hertz(
-        name='v_to_hz',
-        V_to_Hz=Qty(
-            value=v2hz,
-            min=0.9e9,
-            max=1.1e9,
-            unit='Hz 2pi/V'
-        )
+        name="v_to_hz", V_to_Hz=Qty(value=v2hz, min=0.9e9, max=1.1e9, unit="Hz 2pi/V")
     )
-    dig_to_an = devices.Digital_to_Analog(
-        name="dac",
-        resolution=sim_res
-    )
+    dig_to_an = devices.Digital_to_Analog(name="dac", resolution=sim_res)
     resp = devices.Response(
-        name='resp',
-        rise_time=Qty(
-            value=0.3e-9,
-            min=0.05e-9,
-            max=0.6e-9,
-            unit='s'
-        ),
-        resolution=sim_res
+        name="resp",
+        rise_time=Qty(value=0.3e-9, min=0.05e-9, max=0.6e-9, unit="s"),
+        resolution=sim_res,
     )
 
     device_list = [lo, awg, mixer, v_to_hz, dig_to_an, resp]
     generator = Gnr(device_list)
-    generator.devices['awg'].enable_drag_2()
+    generator.devices["awg"].enable_drag_2()
 
     # ### MAKE GATESET
     gateset = gates.GateSet()
     gauss_params_single = {
-        'amp': Qty(
-            value=0.45,
-            min=0.4,
-            max=0.6,
-            unit="V"
-        ),
-        't_final': Qty(
-            value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
-            unit="s"
-        ),
-        'sigma': Qty(
-            value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
-            unit="s"
-        ),
-        'xy_angle': Qty(
-            value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
-            unit='rad'
-        ),
-        'freq_offset': Qty(
+        "amp": Qty(value=0.45, min=0.4, max=0.6, unit="V"),
+        "t_final": Qty(value=t_final, min=0.5 * t_final, max=1.5 * t_final, unit="s"),
+        "sigma": Qty(value=t_final / 4, min=t_final / 8, max=t_final / 2, unit="s"),
+        "xy_angle": Qty(value=0.0, min=-0.5 * np.pi, max=2.5 * np.pi, unit="rad"),
+        "freq_offset": Qty(
             value=-sideband - 0.5e6 * 2 * np.pi,
             min=-53 * 1e6 * 2 * np.pi,
             max=-47 * 1e6 * 2 * np.pi,
-            unit='Hz 2pi'
+            unit="Hz 2pi",
         ),
-        'delta': Qty(
-            value=-1,
-            min=-5,
-            max=3,
-            unit=""
-        )
+        "delta": Qty(value=-1, min=-5, max=3, unit=""),
     }
 
     gauss_env_single = pulse.Envelope(
         name="gauss",
         desc="Gaussian comp for single-qubit gates",
         params=gauss_params_single,
-        shape=envelopes.gaussian_nonorm
+        shape=envelopes.gaussian_nonorm,
     )
     nodrive_env = pulse.Envelope(
         name="no_drive",
         params={
-            't_final': Qty(
-                value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
-                unit="s"
+            "t_final": Qty(
+                value=t_final, min=0.5 * t_final, max=1.5 * t_final, unit="s"
             )
         },
-        shape=envelopes.no_drive
+        shape=envelopes.no_drive,
     )
     carrier_parameters = {
-        'freq': Qty(
-            value=lo_freq_q1,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
-            unit='Hz 2pi'
+        "freq": Qty(
+            value=lo_freq_q1, min=4.5e9 * 2 * np.pi, max=6e9 * 2 * np.pi, unit="Hz 2pi"
         ),
-        'framechange': Qty(
-            value=0.0,
-            min= -np.pi,
-            max= 3 * np.pi,
-            unit='rad'
-        )
+        "framechange": Qty(value=0.0, min=-np.pi, max=3 * np.pi, unit="rad"),
     }
     carr = pulse.Carrier(
         name="carrier",
         desc="Frequency of the local oscillator",
-        params=carrier_parameters
+        params=carrier_parameters,
     )
     carr_2 = copy.deepcopy(carr)
-    carr_2.params['freq'].set_value(lo_freq_q2)
+    carr_2.params["freq"].set_value(lo_freq_q2)
 
     X90p_q1 = gates.Instruction(
-        name="X90p",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d1"]
+        name="X90p", t_start=0.0, t_end=t_final, channels=["d1"]
     )
     X90p_q2 = gates.Instruction(
-        name="X90p",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
+        name="X90p", t_start=0.0, t_end=t_final, channels=["d2"]
     )
-    QId_q1 = gates.Instruction(
-        name="Id",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d1"]
-    )
-    QId_q2 = gates.Instruction(
-        name="Id",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
-    )
+    QId_q1 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
+    QId_q2 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d2"])
 
     X90p_q1.add_component(gauss_env_single, "d1")
     X90p_q1.add_component(carr, "d1")
     QId_q1.add_component(nodrive_env, "d1")
     QId_q1.add_component(copy.deepcopy(carr), "d1")
-    QId_q1.comps['d1']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final) % (2*np.pi)
+    QId_q1.comps["d1"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final) % (2 * np.pi)
     )
     Y90p_q1 = copy.deepcopy(X90p_q1)
     Y90p_q1.name = "Y90p"
@@ -314,17 +214,17 @@ def create_experiment():
     X90m_q1.name = "X90m"
     Y90m_q1 = copy.deepcopy(X90p_q1)
     Y90m_q1.name = "Y90m"
-    Y90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    Y90p_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
+    X90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
+    Y90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
     Q1_gates = [QId_q1, X90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
 
     X90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
     X90p_q2.add_component(carr_2, "d2")
     QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
     QId_q2.add_component(copy.deepcopy(carr_2), "d2")
-    QId_q2.comps['d2']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final) % (2*np.pi)
+    QId_q2.comps["d2"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final) % (2 * np.pi)
     )
     Y90p_q2 = copy.deepcopy(X90p_q2)
     Y90p_q2.name = "Y90p"
@@ -332,20 +232,15 @@ def create_experiment():
     X90m_q2.name = "X90m"
     Y90m_q2 = copy.deepcopy(X90p_q2)
     Y90m_q2.name = "Y90m"
-    Y90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    Y90p_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
+    X90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(np.pi)
+    Y90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
     Q2_gates = [QId_q2, X90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
 
     all_1q_gates_comb = []
     for g1 in Q1_gates:
         for g2 in Q2_gates:
-            g = gates.Instruction(
-                name="NONE",
-                t_start=0.0,
-                t_end=t_final,
-                channels=[]
-            )
+            g = gates.Instruction(name="NONE", t_start=0.0, t_end=t_final, channels=[])
             g.name = g1.name + ":" + g2.name
             channels = []
             channels.extend(g1.comps.keys())

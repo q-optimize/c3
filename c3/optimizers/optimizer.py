@@ -29,7 +29,7 @@ class Optimizer:
         algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
-        store_unitaries=False
+        store_unitaries=False,
     ):
 
         self.optim_status = {}
@@ -57,8 +57,8 @@ class Optimizer:
         """
         old_logdir = self.logdir
         self.logdir = new_logdir
-        os.remove(self.dir_path + '/recent')
-        #os.remove(self.dir_path + self.string)
+        os.remove(self.dir_path + "/recent")
+        # os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
     def set_exp(self, exp):
@@ -71,7 +71,7 @@ class Optimizer:
         """
         self.start_time = time.time()
         start_time_str = str(f"{time.asctime(time.localtime())}\n\n")
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
@@ -88,20 +88,16 @@ class Optimizer:
 
         """
         self.end_time = time.time()
-        with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write(
-                f"Finished at {time.asctime(time.localtime())}\n"
-            )
-            logfile.write(
-                f"Total runtime: {self.end_time-self.start_time}\n\n"
-            )
+        with open(self.logdir + self.logname, "a") as logfile:
+            logfile.write(f"Finished at {time.asctime(time.localtime())}\n")
+            logfile.write(f"Total runtime: {self.end_time-self.start_time}\n\n")
             logfile.flush()
 
     def log_best_unitary(self):
         """
         Save the best unitary in the log.
         """
-        with open(self.logdir + 'best_point_' + self.logname, 'w') as best_point:
+        with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
             U_dict = self.exp.unitaries
             for gate, U in U_dict.items():
                 best_point.write("\n")
@@ -117,14 +113,12 @@ class Optimizer:
         set up.
 
         """
-        if self.optim_status['goal'] < self.current_best_goal:
-            self.current_best_goal = self.optim_status['goal']
-            self.current_best_params = self.optim_status['params']
+        if self.optim_status["goal"] < self.current_best_goal:
+            self.current_best_goal = self.optim_status["goal"]
+            self.current_best_params = self.optim_status["params"]
             if "U_dict" in self.exp.__dict__.keys():
                 self.log_best_unitary()
-            with open(
-                self.logdir + 'best_point_' + self.logname, 'w'
-            ) as best_point:
+            with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
                 best_point.write(json.dumps(self.opt_map))
                 best_point.write("\n")
                 best_point.write(json.dumps(self.optim_status))
@@ -132,26 +126,27 @@ class Optimizer:
                 best_point.write(self.nice_print(self.opt_map))
         if self.plot_dynamics:
             psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
+                self.exp.model.drift_H, self.exp.model.lindbladian
             )
-            #dim = np.prod(self.exp.model.dims)
-            #psi_init = [0] * dim
-            #psi_init[1] = 1
-            #psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
+            # dim = np.prod(self.exp.model.dims)
+            # psi_init = [0] * dim
+            # psi_init[1] = 1
+            # psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
             for gate in self.exp.dUs.keys():
-                self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
+                self.exp.plot_dynamics(psi_init, [gate], self.optim_status["goal"])
             self.exp.dynamics_plot_counter += 1
         if self.plot_pulses:
             for gate in self.opt_gates:
                 instr = self.exp.gateset.instructions[gate]
-                self.exp.plot_pulses(instr, self.optim_status['goal'])
+                self.exp.plot_pulses(instr, self.optim_status["goal"])
             self.exp.pulses_plot_counter += 1
         if self.store_unitaries:
-            self.exp.store_Udict(self.optim_status['goal'])
+            self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1
-        with open(self.logdir + self.logname, 'a') as logfile:
-            logfile.write(f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n")
+        with open(self.logdir + self.logname, "a") as logfile:
+            logfile.write(
+                f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n"
+            )
             # logfile.write(json.dumps(self.optim_status, indent=2))
             logfile.write(json.dumps(self.optim_status))
             logfile.write("\n")
@@ -180,17 +175,17 @@ class Optimizer:
 
     def fct_to_min_autograd(self, x):
         """
-        Wrapper for the goal function, including evaluation and storage of the gradient.
+         Wrapper for the goal function, including evaluation and storage of the gradient.
 
-       Parameters
-        ----------
-        x : np.array
-            Vector of parameters in the optimizer friendly way.
+        Parameters
+         ----------
+         x : np.array
+             Vector of parameters in the optimizer friendly way.
 
-        Returns
-        -------
-        float
-            Value of the goal function.
+         Returns
+         -------
+         float
+             Value of the goal function.
         """
         current_params = tf.constant(x)
         goal, grad = self.goal_run_with_grad(current_params)
@@ -198,7 +193,7 @@ class Optimizer:
             grad = grad.numpy()
         gradients = grad.flatten()
         self.gradients[str(current_params.numpy())] = gradients
-        self.optim_status['gradient'] = gradients.tolist()
+        self.optim_status["gradient"] = gradients.tolist()
         self.log_parameters()
         if isinstance(goal, tf.Tensor):
             goal = float(goal.numpy())
@@ -237,11 +232,11 @@ class Optimizer:
         with open(filename, "r") as cfg_file:
             cfg = json.loads(cfg_file.read(1))
         for key in cfg:
-            if key == 'gateset':
+            if key == "gateset":
                 self.gateset.load_config(cfg[key])
-            elif key == 'sim':
+            elif key == "sim":
                 self.sim.load_config(cfg[key])
-            elif key == 'exp':
+            elif key == "exp":
                 self.exp.load_config(cfg[key])
             else:
                 self.__dict__[key] = cfg[key]
