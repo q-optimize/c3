@@ -19,6 +19,7 @@ setup(
         "cma==3.0.3",
         "cython",
         "ipython==7.15.0",
+        "latex==0.7.0",
         "matplotlib==3.3.2",
         "numpy==1.18.5",
         "scipy==1.5.2",
