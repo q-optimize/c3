@@ -9,7 +9,6 @@ setup(
         'c3po/system',
         'c3po/libraries',
         'c3po/optimizers',
-        'c3po/runs',
         'c3po/signal',
         'c3po/generator'
     ],
