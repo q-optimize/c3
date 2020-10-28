@@ -56,6 +56,18 @@ def cphase_comp_sub(
     infid = unitary_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
     return infid
 
+@fid_reg_deco
+def lindbladian_cphase_comp_sub(
+    U_dict: dict, index, dims, eval, proj=True
+):
+    U = {}
+    proj = np.zeros([dims[0],1])
+    proj[0,0] = 1
+    p = np.kron(proj,np.eye(dims[1]*dims[2]))
+    pr = tf.constant(np.kron(p,p), dtype=tf.complex128)
+    U["CZ"] = tf.matmul(tf.transpose(pr),tf.matmul(U_dict["Id:CZ"], pr))
+    infid = lindbladian_average_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
+    return infid
 
 @fid_reg_deco
 def iswap_leakage(

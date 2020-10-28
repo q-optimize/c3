@@ -182,15 +182,15 @@ class Model:
             eigenframe = tf.linalg.matvec(reorder_matrix, e)
             transform = tf.matmul(v, tf.transpose(reorder_matrix))
         else:
-            eigenframe = tf.linalg.diag(e)
+            eigenframe = e
             transform = v
         self.eigenframe = eigenframe
         self.transform = transform
 
-    def update_dressed(self):
+    def update_dressed(self, ordered=True):
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
-        self.update_drift_eigen()
+        self.update_drift_eigen(ordered=ordered)
         dressed_control_Hs = {}
         dressed_col_ops = []
         dressed_drift_H = tf.matmul(tf.matmul(
