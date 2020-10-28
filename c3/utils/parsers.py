@@ -1,22 +1,26 @@
 """Parsers to read in config files and construct the corresponding objects."""
 
-import os
 import json
-import time
 import random
+import time
+from runpy import run_path
+
 import numpy as np
-import matplotlib.pyplot as plt
+
+import c3.utils.qt_utils as qt_utils
+from c3.c3objs import Quantity
 from c3.libraries.algorithms import algorithms
 from c3.libraries.estimators import estimators
 from c3.libraries.fidelities import fidelities
+from c3.libraries.hamiltonians import hamiltonians
 from c3.libraries.sampling import sampling
-from c3.utils.display import plots
-import c3.utils.qt_utils as qt_utils
-from runpy import run_path
 from c3.optimizers.c1 import C1
 from c3.optimizers.c2 import C2
 from c3.optimizers.c3 import C3
 from c3.optimizers.sensitivity import SET
+from c3.system import chip
+from c3.system.model import Model
+from c3.utils.display import plots
 
 
 def create_experiment(exp_setup, datafile=''):
@@ -27,6 +31,99 @@ def create_experiment(exp_setup, datafile=''):
     else:
         exp = exp_namespace['create_experiment']()
     return exp
+
+
+# TODO complete and move this to utils
+PREFIXES = {
+    "K": 1e3,
+    "M": 1e6,
+    "G": 1e9,
+    "T": 1e12,
+    "m": 1e-3,
+    "µ": 1e-6,
+    "n": 1e-9,
+    "p": 1e-12
+}
+
+
+def create_Qty(cfg: dict) -> Quantity:
+    """
+    Creates a quantity object from a dictionary.
+
+    Parameters
+    ----------
+    cfg : dict
+        Dict read from a JSON
+
+    Returns
+    -------
+    Quantity
+
+    """
+    pref = PREFIXES[cfg["unit"][0]]
+    unit = cfg["unit"][1:]
+    if unit[-3:] == "2pi":
+        pref = pref * 2 * np.pi
+    value = cfg["value"] * pref
+    lower = cfg["min"] * pref
+    upper = cfg["max"] * pref
+    return Quantity(
+        value=value,
+        min=lower,
+        max=upper,
+        unit=unit
+    )
+
+
+def create_model(filepath: str) -> Model:
+    """
+    Load a file and parse it to create a Model object.
+
+    Parameters
+    ----------
+    filepath : str
+        Location of the configuration file
+
+    Returns
+    -------
+    Model
+
+    """
+    with open(filepath, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+    phys_components = []
+    for name, props in cfg["Qubits"].items():
+        freq = create_Qty(props["freq"])
+        phys_components.append(
+            chip.Qubit(
+                name=name,
+                desc=props["desc"],
+                freq=freq,
+                hilbert_dim=props["hilbert_dim"]
+            )
+        )
+    line_components = []
+    for name, props in cfg["Couplings"].items():
+        strength = create_Qty(props["strength"])
+        line_components.append(
+            chip.Coupling(
+                name=name,
+                desc=props["desc"],
+                strength=strength,
+                connected=props["connected"],
+                hamiltonian_func=hamiltonians[props["hamiltonian_func"]]
+            )
+        )
+    for name, props in cfg["Drives"].items():
+        line_components.append(
+            chip.Drive(
+                name=name,
+                desc=props["desc"],
+                connected=props["connected"],
+                hamiltonian_func=hamiltonians[props["hamiltonian_func"]]
+            )
+        )
+    return Model(phys_components, line_components)
 
 
 def create_c1_opt(optimizer_config, lindblad):
@@ -71,7 +168,7 @@ def create_c1_opt(optimizer_config, lindblad):
             cb_fid_func = fidelities[cb_fid]
         except KeyError:
             raise Exception(
-                f"C3:ERROR:Unkown goal function: {cb_fid}"
+                f"C3:ERROR:Unknown goal function: {cb_fid}"
             )
         print(f"C3:STATUS:Found {cb_fid} in libraries.")
         callback_fids.append(cb_fid_func)
@@ -90,7 +187,7 @@ def create_c1_opt(optimizer_config, lindblad):
         elif cfg['plot_dynamics'] == "True":
             plot_dynamics = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+            raise (Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         plot_dynamics = False
     if 'plot_pulses' in cfg:
@@ -99,7 +196,7 @@ def create_c1_opt(optimizer_config, lindblad):
         elif cfg['plot_pulses'] == "True":
             plot_pulses = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_pulses'"))
+            raise (Exception("Couldn't resolve setting of 'plot_pulses'"))
     else:
         plot_pulses = False
     if 'store_unitaries' in cfg:
@@ -108,7 +205,7 @@ def create_c1_opt(optimizer_config, lindblad):
         elif cfg['store_unitaries'] == "True":
             store_unitaries = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+            raise (Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         store_unitaries = False
     run_name = None
@@ -132,12 +229,12 @@ def create_c1_opt(optimizer_config, lindblad):
 
 
 def create_c1_opt_hk(
-    optimizer_config,
-    lindblad,
-    RB_number,
-    RB_length,
-    shots,
-    noise
+        optimizer_config,
+        lindblad,
+        RB_number,
+        RB_length,
+        shots,
+        noise
 ):
     with open(optimizer_config, "r") as cfg_file:
         try:
@@ -148,13 +245,16 @@ def create_c1_opt_hk(
     if lindblad:
         def unit_X90p(U_dict):
             return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+
         def avfid_X90p(U_dict):
             return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+
         def epc_ana(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
     else:
         def unit_X90p(U_dict):
             return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+
         # def unit_Y90p(U_dict):
         #     return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
         # def unit_X90m(U_dict):
@@ -163,32 +263,41 @@ def create_c1_opt_hk(
         #     return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
         def avfid_X90p(U_dict):
             return fidelities.average_infid(U_dict, 'X90p', proj=True)
+
         def epc_ana(U_dict):
             return fidelities.epc_analytical(U_dict, proj=True)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
+
     def orbit_no_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=seqs)
+                                      seqs=seqs)
+
     def orbit_seq_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            RB_number=RB_number, RB_length=RB_length)
+                                      RB_number=RB_number, RB_length=RB_length)
+
     def orbit_shot_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=seqs, shots=shots, noise=noise)
+                                      seqs=seqs, shots=shots, noise=noise)
+
     def orbit_seq_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict,lindbladian=lindblad,
-            shots=shots, noise=noise,
-            RB_number=RB_number, RB_length=RB_length)
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+                                      shots=shots, noise=noise,
+                                      RB_number=RB_number, RB_length=RB_length)
+
     def epc_RB(U_dict):
         return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad)[0]
+
     def epc_leakage_RB(U_dict):
         return fidelities.leakage_RB(U_dict,
-            logspace=True, lindbladian=lindblad)[0]
+                                     logspace=True, lindbladian=lindblad)[0]
+
     seqs100 = qt_utils.single_length_RB(RB_number=100, RB_length=RB_length)
+
     def maw_orbit(U_dict):
         sampled_seqs = random.sample(seqs100, k=RB_number)
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=sampled_seqs, shots=shots, noise=noise)
+                                      seqs=sampled_seqs, shots=shots, noise=noise)
 
     fids = {
         'unitary_infid': unit_X90p,
@@ -288,6 +397,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
     #     os.makedirs(logdir)
     if 'exp' in exp_eval_namespace:
         exp = exp_eval_namespace['exp']
+
         def eval(p):
             return eval_func(
                 p, exp, gateset_opt_map, state_labels, logdir
@@ -492,7 +602,7 @@ def create_sensitivity(task_config):
     set = SET(
         dir_path=cfg['dir_path'],
         fom=fom,
-        estimator_list = estimator_list,
+        estimator_list=estimator_list,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
         state_labels=state_labels,

@@ -32,7 +32,7 @@ class Model:
 
     """
 
-    def __init__(self, subsystems, couplings, tasks):
+    def __init__(self, subsystems, couplings, tasks=[]):
         self.dressed = False
         self.lindbladian = False
         self.use_FR = True
@@ -83,7 +83,10 @@ class Model:
             conn = line.connected
             opers_list = []
             for sub in conn:
-                indx = names.index(sub)
+                try:
+                    indx = names.index(sub)
+                except ValueError as ve:
+                    raise Exception(f"C3:ERROR: Trying to couple to unkown subcomponent: {sub}")
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
 
