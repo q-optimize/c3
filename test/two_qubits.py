@@ -1,11 +1,7 @@
 
 import copy
 import numpy as np
-import time
-import itertools
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -24,8 +20,6 @@ import c3.libraries.algorithms as algorithms
 import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
-import c3.utils.qt_utils as qt_utils
-import c3.utils.tf_utils as tf_utils
 
 from c3.optimizers.c1 import C1
 
