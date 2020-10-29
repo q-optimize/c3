@@ -32,7 +32,7 @@ class Model:
 
     """
 
-    def __init__(self, subsystems, couplings, tasks):
+    def __init__(self, subsystems, couplings, tasks=[]):
         self.dressed = False
         self.lindbladian = False
         self.use_FR = True

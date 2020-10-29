@@ -108,23 +108,6 @@ class C3(Optimizer):
             with open(datafile, 'rb+') as file:
                 self.learn_data[target] = pickle.load(file)
 
-    def load_best(self, init_point):
-        """
-        Load a previous parameter point to start the optimization from.
-
-        Parameters
-        ----------
-        init_point : str
-            File location of the initial point
-
-        """
-        with open(init_point) as init_file:
-            best = init_file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
-            self.pmap.set_parameters(init_p, best_exp_opt_map)
-            self.pmap.model.update_model()
-
     def select_from_data(self, batch_size):
         """
         Select a subset of each dataset to compute the goal function on.

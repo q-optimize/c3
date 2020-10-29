@@ -265,6 +265,15 @@ class ParameterMap:
         Returns the full parameter vector, including model and control parameters.
         """
         return self.__pars
+    
+    def get_opt_units(self):
+        """
+        Returns a list of the units of the optimized quantities.
+        """
+        units = []
+        for equiv_ids in self.opt_map:
+            units.append(self.__pars[equiv_ids[0]].unit)    
+        return units
 
     def get_parameters(self):
         """

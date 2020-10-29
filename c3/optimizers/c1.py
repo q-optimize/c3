@@ -98,41 +98,6 @@ class C1(Optimizer):
         shutil.copy2(self.exp.created_by, self.logdir)
         shutil.copy2(self.created_by, self.logdir)
 
-    def load_best(self, init_point):
-        """
-        Load a previous parameter point to start the optimization from.
-
-        Parameters
-        ----------
-        init_point : str
-            File location of the initial point
-
-        """
-        with open(init_point) as init_file:
-            best = init_file.readlines()
-            best_gateset_opt_map = [
-                [tuple(par) for par in pset] for pset in json.loads(best[0])
-            ]
-            init_p = json.loads(best[1])['params']
-            self.pmap.set_parameters(init_p, best_gateset_opt_map)
-
-    def adjust_exp(self, adjust_exp):
-        """
-        Load values for model parameters from file.
-
-        Parameters
-        ----------
-        adjust_exp : str
-            File location for model parameters
-
-        """
-        with open(adjust_exp) as file:
-            best = file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            p = json.loads(best[1])['params']
-            self.pmap.set_parameters(p, best_exp_opt_map)
-            self.pmap.model.update_model()
-
     def optimize_controls(self):
         """
         Apply a search algorithm to your gateset given a fidelity function.
@@ -158,9 +123,7 @@ class C1(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
-        self.pmap.set_parameters(best_params)
+        self.load_best(self.logdir + 'best_point_' + self.logname)
         self.end_log()
 
     def goal_run(self, current_params):

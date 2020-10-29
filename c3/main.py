@@ -37,6 +37,8 @@ if __name__ == '__main__':
 
         if optim_type == "C1":
             opt = parsers.create_c1_opt(opt_config, exp)
+            if cfg['include_model']:
+                opt.include_model()
         elif optim_type == "C2":
             eval_func = cfg['eval_func']
             opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
@@ -89,7 +91,8 @@ if __name__ == '__main__':
             if 'adjust_exp' in cfg:
                 try:
                     adjust_exp = cfg['adjust_exp']
-                    opt.adjust_exp(adjust_exp)
+                    opt.load_best(adjust_exp)
+                    opt.pmap.model.update_model()
                     print(
                         "C3:STATUS:Loading experimental values from : "
                         f"{os.path.abspath(adjust_exp)}"

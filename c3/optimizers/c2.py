@@ -79,25 +79,6 @@ class C2(Optimizer):
         self.logdir = log_setup(dir_path, run_name)
         self.logname = 'calibration.log'
 
-    def load_best(self, init_point):
-        """
-        Load a previous parameter point to start the optimization from.
-
-        Parameters
-        ----------
-        init_point : str
-            File location of the initial point
-
-        """
-        with open(init_point) as init_file:
-            best = init_file.readlines()
-            best_gateset_opt_map = [
-                [tuple(par) for par in set]
-                for set in json.loads(best[0])
-            ]
-            init_p = json.loads(best[1])['params']
-            self.pmap.set_parameters(init_p, best_gateset_opt_map)
-
     def optimize_controls(self):
         """
         Apply a search algorithm to your gateset given a fidelity function.
