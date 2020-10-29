@@ -25,15 +25,8 @@ def create_experiment():
     lindblad = False
     dressed = True
     qubit_lvls = 3
-    freq_q1 = 5e9 * 2 * np.pi
-    freq_q2 = 5.6e9 * 2 * np.pi
-    anhar_q1 = -210e6 * 2 * np.pi
-    anhar_q2 = -240e6 * 2 * np.pi
-    coupling_strength = 20e6 * 2 * np.pi
-    t1_q1 = 27e-6
-    t1_q2 = 23e-6
-    t2star_q1 = 39e-6
-    t2star_q2 = 31e-6
+    freq = 5e9 * 2 * np.pi
+    anhar = -210e6 * 2 * np.pi
     init_temp = 0
     qubit_temp = 0
     v2hz = 1e9
@@ -43,93 +36,31 @@ def create_experiment():
     meas_offset = 0.0
     meas_scale = 1.0
     sideband = 50e6 * 2 * np.pi
-    lo_freq_q1 = 5e9 * 2 * np.pi + sideband
-    lo_freq_q2 = 5.6e9 * 2 * np.pi + sideband
+    lo_freq = 5e9 * 2 * np.pi + sideband
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
         name="Q1",
         desc="Qubit 1",
         freq=Qty(
-            value=freq_q1,
+            value=freq,
             min=4.995e9 * 2 * np.pi,
             max=5.005e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         anhar=Qty(
-            value=anhar_q1,
+            value=anhar,
             min=-380e6 * 2 * np.pi,
             max=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hilbert_dim=qubit_lvls,
-        t1=Qty(
-            value=t1_q1,
-            min=1e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        t2star=Qty(
-            value=t2star_q1,
-            min=10e-6,
-            max=90e-6,
-            unit='s'
-        ),
         temp=Qty(
             value=qubit_temp,
             min=0.0,
             max=0.12,
             unit='K'
         )
-    )
-    q2 = chip.Qubit(
-        name="Q2",
-        desc="Qubit 2",
-        freq=Qty(
-            value=freq_q2,
-            min=5.595e9 * 2 * np.pi,
-            max=5.605e9 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
-        anhar=Qty(
-            value=anhar_q2,
-            min=-380e6 * 2 * np.pi,
-            max=-120e6 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
-        hilbert_dim=qubit_lvls,
-        t1=Qty(
-            value=t1_q2,
-            min=1e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        t2star=Qty(
-            value=t2star_q2,
-            min=10e-6,
-            max=90e-6,
-            unit='s'
-        ),
-        temp=Qty(
-            value=qubit_temp,
-            min=0.0,
-            max=0.12,
-            unit='K'
-        )
-    )
-
-    q1q2 = chip.Coupling(
-        name="Q1-Q2",
-        desc="coupling",
-        comment="Coupling qubit 1 to qubit 2",
-        connected=["Q1", "Q2"],
-        strength=Qty(
-            value=coupling_strength,
-            min=-1 * 1e3 * 2 * np.pi,
-            max=200e6 * 2 * np.pi,
-            unit='Hz 2pi'
-        ),
-        hamiltonian_func=hamiltonians.int_XX
     )
 
     drive = chip.Drive(
@@ -139,15 +70,8 @@ def create_experiment():
         connected=["Q1"],
         hamiltonian_func=hamiltonians.x_drive
     )
-    drive2 = chip.Drive(
-        name="d2",
-        desc="Drive 2",
-        comment="Drive line 2 on qubit 2",
-        connected=["Q2"],
-        hamiltonian_func=hamiltonians.x_drive
-    )
-    phys_components = [q1, q2]
-    line_components = [drive, drive2, q1q2]
+    phys_components = [q1]
+    line_components = [drive]
 
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
@@ -224,8 +148,8 @@ def create_experiment():
         ),
         'freq_offset': Qty(
             value=-sideband - 0.5e6 * 2 * np.pi,
-            min=-53 * 1e6 * 2 * np.pi,
-            max=-47 * 1e6 * 2 * np.pi,
+            min=-60 * 1e6 * 2 * np.pi,
+            max=-40 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
@@ -256,7 +180,7 @@ def create_experiment():
     )
     carrier_parameters = {
         'freq': Qty(
-            value=lo_freq_q1,
+            value=lo_freq,
             min=4.5e9 * 2 * np.pi,
             max=6e9 * 2 * np.pi,
             unit='Hz 2pi'
@@ -273,92 +197,38 @@ def create_experiment():
         desc="Frequency of the local oscillator",
         params=carrier_parameters
     )
-    carr_2 = copy.deepcopy(carr)
-    carr_2.params['freq'].set_value(lo_freq_q2)
 
-    X90p_q1 = gates.Instruction(
+    X90p = gates.Instruction(
         name="X90p",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
     )
-    X90p_q2 = gates.Instruction(
-        name="X90p",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
-    )
-    QId_q1 = gates.Instruction(
+    QId = gates.Instruction(
         name="Id",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
     )
-    QId_q2 = gates.Instruction(
-        name="Id",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
-    )
 
-    X90p_q1.add_component(gauss_env_single, "d1")
-    X90p_q1.add_component(carr, "d1")
-    QId_q1.add_component(nodrive_env, "d1")
-    QId_q1.add_component(copy.deepcopy(carr), "d1")
-    QId_q1.comps['d1']['carrier'].params['framechange'].set_value(
+    X90p.add_component(gauss_env_single, "d1")
+    X90p.add_component(carr, "d1")
+    QId.add_component(nodrive_env, "d1")
+    QId.add_component(copy.deepcopy(carr), "d1")
+    QId.comps['d1']['carrier'].params['framechange'].set_value(
         (-sideband * t_final) % (2*np.pi)
     )
-    Y90p_q1 = copy.deepcopy(X90p_q1)
-    Y90p_q1.name = "Y90p"
-    X90m_q1 = copy.deepcopy(X90p_q1)
-    X90m_q1.name = "X90m"
-    Y90m_q1 = copy.deepcopy(X90p_q1)
-    Y90m_q1.name = "Y90m"
-    Y90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q1_gates = [QId_q1, X90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
+    Y90p = copy.deepcopy(X90p)
+    Y90p.name = "Y90p"
+    X90m = copy.deepcopy(X90p)
+    X90m.name = "X90m"
+    Y90m = copy.deepcopy(X90p)
+    Y90m.name = "Y90m"
+    Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+    Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 
-    X90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
-    X90p_q2.add_component(carr_2, "d2")
-    QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
-    QId_q2.add_component(copy.deepcopy(carr_2), "d2")
-    QId_q2.comps['d2']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final) % (2*np.pi)
-    )
-    Y90p_q2 = copy.deepcopy(X90p_q2)
-    Y90p_q2.name = "Y90p"
-    X90m_q2 = copy.deepcopy(X90p_q2)
-    X90m_q2.name = "X90m"
-    Y90m_q2 = copy.deepcopy(X90p_q2)
-    Y90m_q2.name = "Y90m"
-    Y90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q2_gates = [QId_q2, X90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
-
-    all_1q_gates_comb = []
-    for g1 in Q1_gates:
-        for g2 in Q2_gates:
-            g = gates.Instruction(
-                name="NONE",
-                t_start=0.0,
-                t_end=t_final,
-                channels=[]
-            )
-            g.name = g1.name + ":" + g2.name
-            channels = []
-            channels.extend(g1.comps.keys())
-            channels.extend(g2.comps.keys())
-            for chan in channels:
-                g.comps[chan] = {}
-                if chan in g1.comps:
-                    g.comps[chan].update(g1.comps[chan])
-                if chan in g2.comps:
-                    g.comps[chan].update(g2.comps[chan])
-            all_1q_gates_comb.append(g)
-
-    for gate in all_1q_gates_comb:
+    for gate in [QId, X90p, Y90p, X90m, Y90m]:
         gateset.add_instruction(gate)
 
     # ### MAKE EXPERIMENT
