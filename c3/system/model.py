@@ -107,7 +107,6 @@ class Model:
             cfg['tot_dim'] = float(self.tot_dim)
         for elem in list(cfg.keys()):
             if 'EagerTensor' in cfg[elem].__class__.__name__:
-                print(elem)
                 del cfg[elem]
         del cfg['ann_opers']
         del cfg['control_Hs']

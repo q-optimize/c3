@@ -12,11 +12,16 @@ from c3.utils.utils import eng_num
 from IPython.display import clear_output
 import warnings
 import glob
+from distutils.spawn import find_executable
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
 # rc('font',**{'family':'serif','serif':['Palatino']})
-rc('text', usetex=True)
+
+if find_executable('latex'):
+    rc('text', usetex=True)
+else:
+    print('Latex was not found and will not be used')
 
 plots = dict()
 
@@ -265,7 +270,7 @@ def plot_distribution(logfilename=""):
     return diffs
 
 
-def plot_C1(logfolder="", only_iterations=True):
+def plot_C1(logfolder="", only_iterations=True, interactive=True):
     clear_output(wait=True)
     logfilename = logfolder + "open_loop.log"
     with open(logfilename, "r") as filename:
@@ -361,17 +366,19 @@ def plot_C1(logfolder="", only_iterations=True):
         for p_type, legend in subplot_legends.items():
             subplots[p_type].legend(legend)
         plt.savefig(logfolder + "open_loop.png")
-        plt.show(block=False)
+        if interactive:
+            plt.show(block=False)
         fig = plt.figure(figsize=(6, 4))
         plt.title("Goal")
         plt.grid()
         plt.xlabel(xlabel)
         plt.semilogy(its, goal_function)
         plt.savefig(logfolder + "goal.png")
-        plt.show(block=False)
+        if interactive:
+            plt.show(block=False)
 
 
-def plot_C2(cfgfolder="", logfolder=""):
+def plot_C2(cfgfolder="", logfolder="", interactive=True):
     clear_output(wait=True)
     logfilename = logfolder + "calibration.log"
     if not os.path.isfile(logfilename):
@@ -413,7 +420,8 @@ def plot_C2(cfgfolder="", logfolder=""):
     plt.ylabel('Goal function')
     plt.xlabel('Evaluations')
     plt.legend()
-    plt.show(block=False)
+    if interactive:
+        plt.show(block=False)
     plt.savefig(logfolder + "closed_loop.png")
 
 

@@ -93,8 +93,8 @@ def trapezoid(t, params):
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
 
     envelope = tf.ones_like(t, dtype=tf.float64)
-    envelope = tf.where(tf.less_equal(t, risefall), t / risefall, envelope)
-    envelope = tf.where(tf.greater_equal(t, t_final - risefall), (t_final - t) / risefall, envelope)
+    envelope = tf.where(tf.less_equal(t, risefall * 2.5), t / (risefall * 2.5), envelope)
+    envelope = tf.where(tf.greater_equal(t, t_final - risefall * 2.5), (t_final - t) / (risefall * 2.5), envelope)
     return envelope
 
 

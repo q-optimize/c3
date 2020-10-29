@@ -220,7 +220,6 @@ def unitary_infid(
         Unitary fidelity.
     """
     U = U_dict[gate]
-    # print(U)
     projection = 'fulluni'
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
@@ -230,9 +229,7 @@ def unitary_infid(
         perfect_gate(gate, index, dims, projection),
         dtype=tf.complex128
     )
-    # print(U_ideal)
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
-    # print(gate, '  :  ', infid)
     return infid
 
 

@@ -54,7 +54,8 @@ class C1(Optimizer):
         plot_pulses=False,
         store_unitaries=False,
         options={},
-        run_name=None
+        run_name=None,
+        interactive=True
     ):
         super().__init__(
             algorithm=algorithm,
@@ -69,6 +70,7 @@ class C1(Optimizer):
         self.callback_fids = callback_fids
         self.options = options
         self.log_setup(dir_path, run_name)
+        self.interactive = interactive
 
     def log_setup(self, dir_path, run_name):
         """
@@ -182,7 +184,7 @@ class C1(Optimizer):
         U_dict = self.exp.get_gates()
         goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
         try:
-            display.plot_C1(self.logdir)
+            display.plot_C1(self.logdir, interactive=self.interactive)
         except TypeError:
             pass
 

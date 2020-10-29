@@ -550,10 +550,6 @@ class Experiment:
         awg = self.generator.devices["awg"]
         awg_ts = awg.ts
 
-#         print(instr.name)
-#         print(instr.t_end)
-#         print(awg_ts)
-
         if debug:
             pass
         else:
