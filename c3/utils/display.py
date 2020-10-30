@@ -346,8 +346,9 @@ def plot_C1(logfolder="", only_iterations=True, interactive=True):
         nrows = len(subplot_ids)
         ncols = 1
         fig, axs = plt.subplots(
-            figsize=(6, 3 * nrows), nrows=nrows, ncols=ncols, sharex=True
+            figsize=(6, 3 * nrows), nrows=nrows, ncols=ncols, sharex=True, squeeze=False
         )
+        axs = axs.ravel()
         fig.subplots_adjust(hspace=0)
         for key in parameters.keys():
             p_type = key.split("-")[-1]
@@ -553,7 +554,7 @@ def plot_C3(
         if len(subplot_ids) > 0:
             nrows, ncols = layout(len(subplot_ids))
             fig, axes = plt.subplots(
-                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols,
+                figsize=(6 * ncols, 8), nrows=nrows, ncols=ncols, squeeze=False,
                 sharex='col'
             )
             ii = 1
