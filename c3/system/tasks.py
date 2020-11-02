@@ -21,6 +21,7 @@ class Task(C3obj):
             desc=desc,
             comment=comment
         )
+        self.params = {}
 
 
 class InitialiseGround(Task):

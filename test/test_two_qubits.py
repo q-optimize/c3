@@ -48,6 +48,7 @@ def two_qubits() -> float:
     q1 = chip.Qubit(
         name="Q1",
         desc="Qubit 1",
+        hilbert_dim=qubit_lvls,
         freq=Qty(
             value=freq_q1,
             min=4.995e9 * 2 * np.pi,
@@ -60,7 +61,7 @@ def two_qubits() -> float:
             max=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
-        hilbert_dim=qubit_lvls,
+
         t1=Qty(
             value=t1_q1,
             min=1e-6,

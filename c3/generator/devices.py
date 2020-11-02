@@ -7,6 +7,16 @@ from c3.signal.pulse import Envelope, Carrier
 from c3.c3objs import Quantity, C3obj
 import matplotlib.pyplot as plt
 
+devices = dict()
+
+
+def dev_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    devices[str(func.__name__)] = func
+    return func
+
 
 class Device(C3obj):
     """A Device that is part of the stack generating the instruction signals.
@@ -103,6 +113,7 @@ class Device(C3obj):
         return ts
 
 
+@dev_reg_deco
 class Readout(Device):
     """Mimic the readout process by multiplying a state phase with a factor and offset.
 
@@ -150,7 +161,8 @@ class Readout(Device):
         return phase * factor + offset
 
 
-class Volts_to_Hertz(Device):
+@dev_reg_deco
+class VoltsToHertz(Device):
     """Convert the voltage signal to an amplitude to plug into the model Hamiltonian.
 
     Parameters
@@ -199,7 +211,8 @@ class Volts_to_Hertz(Device):
         return self.signal
 
 
-class Digital_to_Analog(Device):
+@dev_reg_deco
+class DigitalToAnalog(Device):
     """Take the values at the awg resolution to the simulation resolution."""
 
     def __init__(
@@ -257,6 +270,7 @@ class Digital_to_Analog(Device):
         return {"inphase": inphase, "quadrature": quadrature}
 
 
+@dev_reg_deco
 class Filter(Device):
     # TODO This can apply a general function to a signal.
     """Apply a filter function to the signal."""
@@ -284,6 +298,7 @@ class Filter(Device):
         return self.signal
 
 
+@dev_reg_deco
 class FluxTuning(Device):
     """
     Flux tunable qubit frequency.
@@ -345,6 +360,7 @@ class FluxTuning(Device):
         return self.freq
 
 
+@dev_reg_deco
 class Response(Device):
     """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
 
@@ -439,6 +455,7 @@ class Response(Device):
         return self.signal
 
 
+@dev_reg_deco
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
 
@@ -480,6 +497,7 @@ class Mixer(Device):
         return self.signal
 
 
+@dev_reg_deco
 class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""
 
@@ -532,6 +550,7 @@ class LO(Device):
 
 
 # TODO real AWG has 16bits plus noise
+@dev_reg_deco
 class AWG(Device):
     """AWG device, transforms digital input to analog signal.
 

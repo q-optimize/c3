@@ -7,7 +7,7 @@ import tensorflow as tf
 
 from c3.c3objs import C3obj, Quantity
 from c3.libraries.constants import kb, hbar
-from c3.libraries.hamiltonians import resonator, duffing
+from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
 
 
@@ -22,19 +22,15 @@ class PhysicalComponent(C3obj):
 
     """
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 0,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.hilbert_dim = hilbert_dim
+    def __init__(self, **props):
+        params = props.pop("params", {})
+        self.params = params
+        for name, par in params.items():
+            self.params[name] = Quantity(**par)
+        for name, prop in props.items():
+            if prop is Quantity:
+                self.params[name] = prop
+        super().__init__(**props)
         self.Hs = {}
         self.collapse_ops = {}
 
@@ -61,35 +57,6 @@ class Qubit(PhysicalComponent):
         of energy level populations
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 4,
-            freq: Quantity = None,
-            anhar: Quantity = None,
-            t1: Quantity = None,
-            t2star: Quantity = None,
-            temp: Quantity = None
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-        )
-        self.params['freq'] = freq
-        if hilbert_dim > 2:
-            self.params['anhar'] = anhar
-        if t1:
-            self.params['t1'] = t1
-        if t2star:
-            self.params['t2star'] = t2star
-        if temp:
-            self.params['temp'] = temp
-
     def init_Hs(self, ann_oper):
         """
         Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing oscillator is used.
@@ -100,10 +67,12 @@ class Qubit(PhysicalComponent):
             Annihilation operator in the full Hilbert space
 
         """
+        resonator = hamiltonians["resonator"]
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
         if self.hilbert_dim > 2:
+            duffing = hamiltonians["duffing"]
             self.Hs['anhar'] = tf.constant(
                 duffing(ann_oper), dtype=tf.complex128
             )
@@ -198,23 +167,6 @@ class Resonator(PhysicalComponent):
         frequency of the resonator
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 4,
-            freq: np.float64 = 0.0
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-        )
-        self.params['freq'] = freq
-
     def init_Hs(self, ann_oper):
         """
         Initialize the Hamiltonian as a number operator
@@ -226,7 +178,7 @@ class Resonator(PhysicalComponent):
 
         """
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
@@ -279,7 +231,7 @@ class SymmetricTransmon(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
@@ -333,7 +285,7 @@ class AsymmetricTransmon(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
@@ -360,20 +312,18 @@ class LineComponent(C3obj):
 
     """
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            hamiltonian_func: types.FunctionType = None,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.connected = connected
+    def __init__(self, **props):
+        h_func = props.pop("hamiltonian_func")
+        self.connected = props.pop("connected")
+        if callable(h_func):
+            self.hamiltonian_func = h_func
+        else:
+            self.hamiltonian_func = hamiltonians[h_func]
+        params = props.pop("params", {})
+        self.params = params
+        for name, par in params.items():
+            self.params[name] = Quantity(**par)
+        super().__init__(**props)
         self.Hs = {}
 
 
@@ -389,26 +339,6 @@ class Coupling(LineComponent):
         all physical components coupled via this specific coupling
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            strength: Quantity = None,
-            hamiltonian_func: types.FunctionType = None,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            connected=connected,
-            hamiltonian_func=hamiltonian_func
-        )
-        self.hamiltonian_func = hamiltonian_func
-        self.params['strength'] = strength
-
     def init_Hs(self, opers_list):
         self.Hs['strength'] = tf.constant(
             self.hamiltonian_func(opers_list), dtype=tf.complex128
@@ -429,24 +359,6 @@ class Drive(LineComponent):
         all physical components receiving driving signals via this line
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            hamiltonian_func: types.FunctionType = None,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            connected=connected,
-            hamiltonian_func=hamiltonian_func
-        )
-        self.hamiltonian_func = hamiltonian_func
-
     def init_Hs(self, ann_opers: list):
         hs = []
         for a in ann_opers:

@@ -20,6 +20,8 @@ from c3.optimizers.c3 import C3
 from c3.optimizers.sensitivity import SET
 from c3.system import chip
 from c3.system.model import Model
+from c3.generator.generator import Generator
+from c3.generator.devices import devices
 from c3.utils.display import plots
 
 
@@ -31,48 +33,6 @@ def create_experiment(exp_setup, datafile=''):
     else:
         exp = exp_namespace['create_experiment']()
     return exp
-
-
-# TODO complete and move this to utils
-PREFIXES = {
-    "K": 1e3,
-    "M": 1e6,
-    "G": 1e9,
-    "T": 1e12,
-    "m": 1e-3,
-    "µ": 1e-6,
-    "n": 1e-9,
-    "p": 1e-12
-}
-
-
-def create_Qty(cfg: dict) -> Quantity:
-    """
-    Creates a quantity object from a dictionary.
-
-    Parameters
-    ----------
-    cfg : dict
-        Dict read from a JSON
-
-    Returns
-    -------
-    Quantity
-
-    """
-    pref = PREFIXES[cfg["unit"][0]]
-    unit = cfg["unit"][1:]
-    if unit[-3:] == "2pi":
-        pref = pref * 2 * np.pi
-    value = cfg["value"] * pref
-    lower = cfg["min"] * pref
-    upper = cfg["max"] * pref
-    return Quantity(
-        value=value,
-        min=lower,
-        max=upper,
-        unit=unit
-    )
 
 
 def create_model(filepath: str) -> Model:
@@ -93,37 +53,35 @@ def create_model(filepath: str) -> Model:
         cfg = json.loads(cfg_file.read())
     phys_components = []
     for name, props in cfg["Qubits"].items():
-        freq = create_Qty(props["freq"])
+        props.update({"name": name})
         phys_components.append(
-            chip.Qubit(
-                name=name,
-                desc=props["desc"],
-                freq=freq,
-                hilbert_dim=props["hilbert_dim"]
-            )
+            chip.Qubit(**props)
         )
     line_components = []
     for name, props in cfg["Couplings"].items():
-        strength = create_Qty(props["strength"])
+        props.update({"name": name})
         line_components.append(
-            chip.Coupling(
-                name=name,
-                desc=props["desc"],
-                strength=strength,
-                connected=props["connected"],
-                hamiltonian_func=hamiltonians[props["hamiltonian_func"]]
-            )
+            chip.Coupling(**props)
         )
     for name, props in cfg["Drives"].items():
+        props.update({"name": name})
         line_components.append(
-            chip.Drive(
-                name=name,
-                desc=props["desc"],
-                connected=props["connected"],
-                hamiltonian_func=hamiltonians[props["hamiltonian_func"]]
-            )
+            chip.Drive(**props)
         )
     return Model(phys_components, line_components)
+
+
+def create_generator(filepath: str) -> Generator:
+    with open(filepath, "r") as cfg_file:
+        cfg = json.loads(cfg_file.read())
+    sources = []
+    for name, props in cfg["Sources"].items():
+        sources.append(devices[name](props))
+
+    procs = []
+    for name, props in cfg["Processors"]:
+        procs.append(devices[name], props)
+    return sources
 
 
 def create_c1_opt(optimizer_config, lindblad):

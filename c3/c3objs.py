@@ -2,6 +2,7 @@
 
 import numpy as np
 import tensorflow as tf
+from c3.libraries.constants import PREFIXES
 from c3.utils.utils import num3str
 
 
@@ -20,18 +21,9 @@ class C3obj:
     params: dict
         Parameters in this dict can be accessed and optimized
     """
-    params: dict
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " "
-            ):
-        self.name = name
-        self.desc = desc
-        self.comment = comment
-        self.params = {}
+    def __init__(self, **props):
+        self.__dict__.update(props)
 
     def list_parameters(self):
         """
@@ -61,7 +53,7 @@ class C3obj:
 class Quantity:
     """
     Represents any physical quantity used in the model or the pulse
-    speficiation. For arithmetic operations just the numeric value is used. The
+    specification. For arithmetic operations just the numeric value is used. The
     value itself is stored in an optimizer friendly way as a float between -1
     and 1. The conversion is given by
         scale (value + 1) / 2 + offset
@@ -81,27 +73,26 @@ class Quantity:
 
     """
 
-    def __init__(
-        self,
-        # TODO how to specify two options for type
-        value,
-        min,
-        max,
-        symbol: str = '\\alpha',
-        unit: str = 'unspecified'
-    ):
-        value = np.array(value)
-        self.offset = np.array(min)
-        self.scale = np.abs(np.array(max) - np.array(min))
-        # TODO this testing should happen outside
+    def __init__(self, **props):
+        unit = props["unit"]
+        if unit[-3:] == "2pi":
+            pref = 2 * np.pi
+        else:
+            pref = 1
+        value = np.array(props['value'] * pref)
+        self.offset = np.array(props['min'] * pref)
+        self.scale = np.abs(np.array(props['max'] * pref) - np.array(props['min'] * pref))
         try:
             self.set_value(value)
         except ValueError:
             raise ValueError(
-                f"Value has to be within {min:.3} .. {max:.3}"
-                f" but is {value:.3}."
+                f"Value has to be within {props['min']:.3} .. {props['max']:.3}"
+                f" but is {props['value']:.3}."
             )
-        self.symbol = symbol
+        if 'symbol' in props:
+            self.symbol = props['symbol']
+        else:
+            self.symbol = r"\alpha"
         self.unit = unit
         if hasattr(value, "shape"):
             self.shape = value.shape
