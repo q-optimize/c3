@@ -366,17 +366,25 @@ def plot_C1(logfolder="", only_iterations=True, interactive=True):
         ax.set_xlabel(xlabel)
         for p_type, legend in subplot_legends.items():
             subplots[p_type].legend(legend)
+        plt.tight_layout()
         plt.savefig(logfolder + "open_loop.png")
         if interactive:
             plt.show(block=False)
+        else:
+            plt.cla()
+            plt.close()
         fig = plt.figure(figsize=(6, 4))
         plt.title("Goal")
         plt.grid()
         plt.xlabel(xlabel)
         plt.semilogy(its, goal_function)
+        plt.tight_layout()
         plt.savefig(logfolder + "goal.png")
         if interactive:
             plt.show(block=False)
+        else:
+            plt.cla()
+            plt.close()
 
 
 def plot_C2(cfgfolder="", logfolder="", interactive=True):
@@ -423,6 +431,9 @@ def plot_C2(cfgfolder="", logfolder="", interactive=True):
     plt.legend()
     if interactive:
         plt.show(block=False)
+    else:
+        plt.cla()
+        plt.close()
     plt.savefig(logfolder + "closed_loop.png")
 
 
@@ -614,6 +625,9 @@ def plot_C3(
     plt.savefig(logfolder + "learn_model.png")
     if interactive:
         plt.show()
+    else:
+        plt.cla()
+        plt.close()
 
     plt.figure()
     plt.title("Goal")
@@ -642,6 +656,9 @@ def plot_C3(
     plt.savefig(logfolder + "learn_model_goals.png", dpi=300)
     if interactive:
         plt.show()
+    else:
+        plt.cla()
+        plt.close()
 
 
 def plot_envelope_history(logfilename):

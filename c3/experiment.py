@@ -531,6 +531,7 @@ class Experiment:
             f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0].replace(':','.')}_{goal}.png",
             dpi=300
             )
+        plt.cla()
         plt.close("all")
 
     def plot_pulses(self, instr, goal=-1, debug=False, title=False):
@@ -683,6 +684,7 @@ class Experiment:
                 f"signal_{list(instr.comps.keys())}.png",
                 dpi=300
             )
+        plt.cla()
         plt.close("all")
 
     def store_Udict(self, goal):
