@@ -1,18 +1,15 @@
 """Parsers to read in config files and construct the corresponding objects."""
 
-import json
+import hjson
 import random
 import time
 from runpy import run_path
 
-import numpy as np
 
 import c3.utils.qt_utils as qt_utils
-from c3.c3objs import Quantity
 from c3.libraries.algorithms import algorithms
 from c3.libraries.estimators import estimators
 from c3.libraries.fidelities import fidelities
-from c3.libraries.hamiltonians import hamiltonians
 from c3.libraries.sampling import sampling
 from c3.optimizers.c1 import C1
 from c3.optimizers.c2 import C2
@@ -50,7 +47,7 @@ def create_model(filepath: str) -> Model:
 
     """
     with open(filepath, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
     phys_components = []
     for name, props in cfg["Qubits"].items():
         props.update({"name": name})
@@ -73,15 +70,13 @@ def create_model(filepath: str) -> Model:
 
 def create_generator(filepath: str) -> Generator:
     with open(filepath, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
-    sources = []
-    for name, props in cfg["Sources"].items():
-        sources.append(devices[name](props))
+        cfg = hjson.loads(cfg_file.read())
+    devs = {}
+    for name, props in cfg["Devices"].items():
+        devs[name] = devices[name](**props)
 
-    procs = []
-    for name, props in cfg["Processors"]:
-        procs.append(devices[name], props)
-    return sources
+    chain = cfg["Chain"]
+    return Generator(devs, chain)
 
 
 def create_c1_opt(optimizer_config, lindblad):
@@ -91,7 +86,7 @@ def create_c1_opt(optimizer_config, lindblad):
     Parameters
     ----------
     optimizer_config : str
-        File path to a JSON file containing the C1 configuration.
+        File path to a hjson file containing the C1 configuration.
     lindblad : boolean
         Include lindbladian dynamics.
     Returns
@@ -101,7 +96,7 @@ def create_c1_opt(optimizer_config, lindblad):
 
     """
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     if lindblad:
         fid = 'lindbladian_' + cfg['fid_func']
@@ -196,8 +191,8 @@ def create_c1_opt_hk(
 ):
     with open(optimizer_config, "r") as cfg_file:
         try:
-            cfg = json.loads(cfg_file.read())
-        except json.decoder.JSONDecodeError:
+            cfg = hjson.loads(cfg_file.read())
+        except hjson.decoder.hjsonDecodeError:
             raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
@@ -305,7 +300,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
     Parameters
     ----------
     optimizer_config : str
-        File path to a JSON configuration file.
+        File path to a hjson configuration file.
     eval_func_path : str
         File path to a python script, containing the functions used perform an experiment.
 
@@ -317,9 +312,9 @@ def create_c2_opt(optimizer_config, eval_func_path):
     """
     with open(optimizer_config, "r") as cfg_file:
         try:
-            cfg = json.loads(cfg_file.read())
-        except json.decoder.JSONDecodeError:
-            raise Exception(f"Config {optimizer_config} is invalid.")
+            cfg = hjson.loads(cfg_file.read())
+        except hjson.decoder.hjsonDecodeError as hjerr:
+            raise Exception(f"Config {optimizer_config} is invalid.") from hjerr
 
     exp_eval_namespace = run_path(eval_func_path)
 
@@ -342,8 +337,8 @@ def create_c2_opt(optimizer_config, eval_func_path):
         run_name = cfg['run_name']
 
     gateset_opt_map = [
-        [tuple(par) for par in set]
-        for set in cfg['gateset_opt_map']
+        [tuple(par) for par in pset]
+        for pset in cfg['gateset_opt_map']
     ]
     state_labels = None
     if 'state_labels' in cfg:
@@ -384,11 +379,11 @@ def create_c3_opt(optimizer_config):
     Parameters
     ----------
     optimizer_config : str
-        Path to the JSON configuration file.
+        Path to the hjson configuration file.
 
     """
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     state_labels = {"all": None}
     if "state_labels" in cfg:
@@ -482,7 +477,7 @@ def create_sensitivity(task_config):
     Parameters
     ----------
     task_config : str
-        File path to the JSON configuration file.
+        File path to the hjson configuration file.
 
     Returns
     -------
@@ -490,7 +485,7 @@ def create_sensitivity(task_config):
 
     """
     with open(task_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     sweep_map = [tuple(a) for a in cfg['sweep_map']]
 

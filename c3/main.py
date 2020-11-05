@@ -4,7 +4,7 @@
 import logging
 import os
 import shutil
-import json
+import hjson
 import pickle
 import argparse
 import c3.utils.parsers as parsers
@@ -25,8 +25,8 @@ if __name__ == '__main__':
     opt_config = args.master_config
     with open(opt_config, "r") as cfg_file:
         try:
-            cfg = json.loads(cfg_file.read())
-        except json.decoder.JSONDecodeError:
+            cfg = hjson.loads(cfg_file.read())
+        except hjson.decoder.hjsonDecodeError:
             raise Exception(f"Config {opt_config} is invalid.")
     optim_type = cfg['optim_type']
     exp_setup = cfg['exp_setup']
@@ -110,9 +110,9 @@ if __name__ == '__main__':
                 for par in exp_right.get_parameters()]
             }
             with open(dir + "real_model_params.log", 'w') as real_file:
-                real_file.write(json.dumps(exp_right.id_list))
+                real_file.write(hjson.dumps(exp_right.id_list))
                 real_file.write("\n")
-                real_file.write(json.dumps(real))
+                real_file.write(hjson.dumps(real))
                 real_file.write("\n")
                 real_file.write(exp_right.print_parameters())
 

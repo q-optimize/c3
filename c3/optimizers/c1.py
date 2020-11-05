@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import tensorflow as tf
 import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
@@ -104,9 +104,9 @@ class C1(Optimizer):
             best = init_file.readlines()
             best_gateset_opt_map = [
                 [tuple(par) for par in set]
-                for set in json.loads(best[0])
+                for set in hjson.loads(best[0])
             ]
-            init_p = json.loads(best[1])['params']
+            init_p = hjson.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
     def adjust_exp(self, adjust_exp):
@@ -121,8 +121,8 @@ class C1(Optimizer):
         """
         with open(adjust_exp) as file:
             best = file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            p = json.loads(best[1])['params']
+            best_exp_opt_map = [tuple(a) for a in hjson.loads(best[0])]
+            p = hjson.loads(best[1])['params']
             self.exp.set_parameters(p, best_exp_opt_map)
 
     def optimize_controls(self):
@@ -152,7 +152,7 @@ class C1(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+            best_params = hjson.loads(file.readlines()[1])['params']
         self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
 

@@ -8,7 +8,7 @@ Given this information an experiment run is simulated, returning either processe
 """
 
 import os
-import json
+import hjson
 import pickle
 import numpy as np
 import tensorflow as tf
@@ -63,7 +63,7 @@ class Experiment:
 
     def write_config(self):
         """
-        Return the current experiment as a JSON compatible dict.
+        Return the current experiment as a hjson compatible dict.
 
         EXPERIMENTAL
         """
@@ -543,10 +543,10 @@ class Experiment:
                     'a+'
                 ) as logfile:
                     logfile.write(f"{channel}, inphase :\n")
-                    logfile.write(json.dumps(inphase.numpy().tolist()))
+                    logfile.write(hjson.dumps(inphase.numpy().tolist()))
                     logfile.write("\n")
                     logfile.write(f"{channel}, quadrature :\n")
-                    logfile.write(json.dumps(quadrature.numpy().tolist()))
+                    logfile.write(hjson.dumps(quadrature.numpy().tolist()))
                     logfile.write("\n")
         if debug:
             plt.show()

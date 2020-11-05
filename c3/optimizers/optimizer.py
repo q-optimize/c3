@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
@@ -75,10 +75,10 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.opt_map))
+            logfile.write(hjson.dumps(self.opt_map))
             logfile.write("\n\n")
             logfile.write("Algorithm options:\n")
-            logfile.write(json.dumps(self.options))
+            logfile.write(hjson.dumps(self.options))
             logfile.write("\n")
             logfile.flush()
 
@@ -125,9 +125,9 @@ class Optimizer:
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
-                best_point.write(json.dumps(self.opt_map))
+                best_point.write(hjson.dumps(self.opt_map))
                 best_point.write("\n")
-                best_point.write(json.dumps(self.optim_status))
+                best_point.write(hjson.dumps(self.optim_status))
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
         if self.plot_dynamics:
@@ -152,8 +152,8 @@ class Optimizer:
             self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n")
-            # logfile.write(json.dumps(self.optim_status, indent=2))
-            logfile.write(json.dumps(self.optim_status))
+            # logfile.write(hjson.dumps(self.optim_status, indent=2))
+            logfile.write(hjson.dumps(self.optim_status))
             logfile.write("\n")
             logfile.flush()
 
@@ -231,11 +231,11 @@ class Optimizer:
 
     def write_config(self, filename):
         with open(filename, "w") as cfg_file:
-            json.dump(self.__dict__, cfg_file)
+            hjson.dump(self.__dict__, cfg_file)
 
     def load_config(self, filename):
         with open(filename, "r") as cfg_file:
-            cfg = json.loads(cfg_file.read(1))
+            cfg = hjson.loads(cfg_file.read(1))
         for key in cfg:
             if key == 'gateset':
                 self.gateset.load_config(cfg[key])
@@ -246,4 +246,4 @@ class Optimizer:
             else:
                 self.__dict__[key] = cfg[key]
 
-    # TODO fix error when JSONing fucntion types
+    # TODO fix error when hjsoning fucntion types

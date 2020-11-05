@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import pickle
 import itertools
 import random
@@ -123,8 +123,8 @@ class C3(Optimizer):
         """
         with open(init_point) as init_file:
             best = init_file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
+            best_exp_opt_map = [tuple(a) for a in hjson.loads(best[0])]
+            init_p = hjson.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
@@ -179,7 +179,7 @@ class C3(Optimizer):
             pass
         # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+            best_params = hjson.loads(file.readlines()[1])['params']
         self.exp.set_parameters(best_params, self.opt_map)
         self.end_log()
         self.confirm()
@@ -294,7 +294,7 @@ class C3(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
+                            hjson.dumps(self.gateset_opt_map),
                             self.exp.gateset.get_parameters(
                                 self.gateset_opt_map, to_str=True
                             ),
@@ -445,7 +445,7 @@ class C3(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
+                            hjson.dumps(self.gateset_opt_map),
                             self.exp.gateset.get_parameters(
                                 self.gateset_opt_map, to_str=True
                             ),

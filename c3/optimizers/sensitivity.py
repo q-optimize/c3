@@ -1,7 +1,7 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import json
+import hjson
 import pickle
 import itertools
 import time
@@ -119,8 +119,8 @@ class SET(Optimizer):
         """
         with open(init_point) as init_file:
             best = init_file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
+            best_exp_opt_map = [tuple(a) for a in hjson.loads(best[0])]
+            init_p = hjson.loads(best[1])['params']
             self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
@@ -284,7 +284,7 @@ class SET(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
+                            hjson.dumps(self.gateset_opt_map),
                             self.exp.gateset.get_parameters(
                                 self.gateset_opt_map, to_str=True
                             ),

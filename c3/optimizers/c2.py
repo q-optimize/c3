@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import pickle
 import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
@@ -90,9 +90,9 @@ class C2(Optimizer):
             best = init_file.readlines()
             best_gateset_opt_map = [
                 [tuple(par) for par in set]
-                for set in json.loads(best[0])
+                for set in hjson.loads(best[0])
             ]
-            init_p = json.loads(best[1])['params']
+            init_p = hjson.loads(best[1])['params']
             self.exp.gateset.set_parameters(init_p, best_gateset_opt_map)
 
     def optimize_controls(self):
@@ -115,7 +115,7 @@ class C2(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+            best_params = hjson.loads(file.readlines()[1])['params']
         self.exp.gateset.set_parameters(best_params, self.opt_map)
         self.end_log()
         measurements = []
