@@ -82,7 +82,6 @@ def two_qubits() -> float:
         )
     )
 
-
     freq_q2 = 5.6e9 * 2 * np.pi
     anhar_q2 = -240e6 * 2 * np.pi
     t1_q2 = 23e-6
@@ -123,7 +122,6 @@ def two_qubits() -> float:
         )
     )
 
-
     coupling_strength = 20e6 * 2 * np.pi
     q1q2 = chip.Coupling(
         name="Q1-Q2",
@@ -138,7 +136,6 @@ def two_qubits() -> float:
         ),
         hamiltonian_func=hamiltonians.int_XX
     )
-
 
     drive = chip.Drive(
         name="d1",
@@ -155,11 +152,10 @@ def two_qubits() -> float:
         hamiltonian_func=hamiltonians.x_drive
     )
 
-
-    m00_q1 = 0.97 # Prop to read qubit 1 state 0 as 0
-    m01_q1 = 0.04 # Prop to read qubit 1 state 0 as 1
-    m00_q2 = 0.96 # Prop to read qubit 2 state 0 as 0
-    m01_q2 = 0.05 # Prop to read qubit 2 state 0 as 1
+    m00_q1 = 0.97  # Prop to read qubit 1 state 0 as 0
+    m01_q1 = 0.04  # Prop to read qubit 1 state 0 as 1
+    m00_q2 = 0.96  # Prop to read qubit 2 state 0 as 0
+    m01_q2 = 0.05  # Prop to read qubit 2 state 0 as 1
     one_zeros = np.array([0] * qubit_lvls)
     zero_ones = np.array([1] * qubit_lvls)
     one_zeros[0] = 1
@@ -410,14 +406,6 @@ def two_qubits() -> float:
 
     gates = exp.get_gates()
 
-    psi_init = [[0] * 9]
-    psi_init[0][0] = 1
-    init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
-
-    barely_a_seq = ['X90p:Id']
-
-    barely_a_seq * 10
-
     generator.devices['awg'].enable_drag_2()
 
     opt_gates = ["X90p:Id"]
@@ -435,7 +423,7 @@ def two_qubits() -> float:
         ("X90p:Id", "d1", "gauss", "delta"),
         ]
     ]
-    
+
     opt = C1(
         dir_path="/tmp/c3log/",
         fid_func=fidelities.average_infid_set,
