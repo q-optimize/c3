@@ -2,7 +2,6 @@
 
 import numpy as np
 import tensorflow as tf
-from c3.libraries.constants import PREFIXES
 from c3.utils.utils import num3str
 
 
@@ -22,32 +21,13 @@ class C3obj:
         Parameters in this dict can be accessed and optimized
     """
 
-    def __init__(self, **props):
-        self.__dict__.update(props)
-
-    def list_parameters(self):
-        """
-        Returns
-        -------
-        list
-            A list of parameters this object has.
-        """
-        par_list = []
-        for par_key in sorted(self.params.keys()):
-            par_id = (self.name, par_key)
-            par_list.append(par_id)
-        return par_list
-
-    def print_parameter(self, par_id):
-        """
-        Print a given parameter.
-
-        Parameters
-        ----------
-        par_id: str
-            Parameter identifier
-        """
-        print(self.params[par_id])
+    def __init__(self, name, desc="", comment="", params={}):
+        self.name = name
+        self.desc = desc
+        self.comment = comment
+        self.params = params
+        for name, par in params.items():
+            self.params[name] = Quantity(**par)
 
 
 class Quantity:
@@ -62,37 +42,32 @@ class Quantity:
     ----------
     value: np.array(np.float64) or np.float64
         value of the quantity
-    min: np.array(np.float64) or np.float64
+    min_val: np.array(np.float64) or np.float64
         minimum this quantity is allowed to take
-    max: np.array(np.float64) or np.float64
+    max_val: np.array(np.float64) or np.float64
         maximum this quantity is allowed to take
-    symbol: str
-        latex representation
     unit: str
         physical unit
+    symbol: str
+        latex representation
 
     """
 
-    def __init__(self, **props):
-        unit = props["unit"]
+    def __init__(self, value, min_val, max_val, unit="undefined", symbol=r"\alpha"):
         if unit[-3:] == "2pi":
             pref = 2 * np.pi
         else:
             pref = 1
-        value = np.array(props['value'] * pref)
-        self.offset = np.array(props['min'] * pref)
-        self.scale = np.abs(np.array(props['max'] * pref) - np.array(props['min'] * pref))
+        self.offset = np.array(min_val * pref)
+        self.scale = np.abs(np.array(max_val * pref) - np.array(min_val * pref))
         try:
-            self.set_value(value)
+            self.set_value(np.array(value * pref))
         except ValueError:
             raise ValueError(
-                f"Value has to be within {props['min']:.3} .. {props['max']:.3}"
-                f" but is {props['value']:.3}."
+                f"Value has to be within {min_val:.3} .. {max_val:.3}"
+                f" but is {value:.3}."
             )
-        if 'symbol' in props:
-            self.symbol = props['symbol']
-        else:
-            self.symbol = r"\alpha"
+        self.symbol = symbol
         self.unit = unit
         if hasattr(value, "shape"):
             self.shape = value.shape

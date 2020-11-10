@@ -30,18 +30,11 @@ class Device(C3obj):
     """
 
     def __init__(self, **props):
-        params = props.pop("params", {})
-        self.params = params
-        for name, par in params.items():
-            self.params[name] = Quantity(**par)
-        for name, prop in props.items():
-            if prop is Quantity:
-                self.params[name] = prop
-
-        self.inputs = 0
-        self.outputs = 0
+        self.inputs = props.pop("inputs", 0)
+        self.outputs = props.pop("outputs", 0)
+        self.resolution = props.pop("resolution", 0)
         super().__init__(**props)
-        self.signal = None
+        self.signal = {}
 
     def write_config(self):
         """
@@ -168,7 +161,7 @@ class VoltsToHertz(Device):
         if not "V_to_Hz" in self.params:
             raise Exception("C3:ERROR: VoltsToHertz device needs a 'V_to_Hz' parameter.")
 
-    def transform(self, mixed_signal, drive_frequency):
+    def process(self, instr, chan, mixed_signal):
         """Transform signal from value of V to Hz.
 
         Parameters
@@ -196,7 +189,7 @@ class DigitalToAnalog(Device):
         super().__init__(**props)
         self.ts = None
 
-    def process(self, instr, awg_signal):
+    def process(self, instr, chan, awg_signal):
         """Resample the awg values to higher resolution.
 
         Parameters
@@ -244,7 +237,7 @@ class Filter(Device):
         self.filter_function = props["filter_function"]
         super().__init__(**props)
 
-    def process(self, instr, Hz_signal):
+    def process(self, instr, chan, Hz_signal):
         """Apply a filter function to the signal."""
         self.signal = self.filter_function(Hz_signal)
         return self.signal
@@ -345,7 +338,7 @@ class Response(Device):
             )
         return convolution
 
-    def process(self, instr, iq_signal):
+    def process(self, instr, chan, iq_signal):
         """
         Apply a Gaussian shaped limiting function to an IQ signal.
 
@@ -385,7 +378,7 @@ class Response(Device):
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
 
-    def process(self, instr, lo_signal, awg_signal):
+    def process(self, instr: Instruction, chan: str, in1: dict, in2: dict):
         """Combine signal from AWG and LO.
 
         Parameters
@@ -400,11 +393,12 @@ class Mixer(Device):
         dict
             Mixed signal.
         """
-        cos, sin = lo_signal["values"]
-        inphase = awg_signal["inphase"]
-        quadrature = awg_signal["quadrature"]
-        self.signal = (inphase * cos + quadrature * sin)
-        #TODO: check if signs are right
+        i1 = in1["inphase"]
+        q1 = in1["quadrature"]
+        i2 = in2["inphase"]
+        q2 = in2["quadrature"]
+        self.signal = (i1 * i2 + q1 * q2)  # See Engineer's Guide Eq. 88
+        # TODO: Check consistency of the signs between Mixer, LO and AWG classes
         return self.signal
 
 
@@ -412,7 +406,7 @@ class Mixer(Device):
 class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""
 
-    def process(self, instr: Instruction) -> dict:
+    def process(self, instr: Instruction, chan: str) -> dict:
         """
         Generate a sinusodial signal.
 
@@ -434,14 +428,13 @@ class LO(Device):
         # TODO check somewhere that there is only 1 carrier per instruction
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         components = instr.comps
-        for comp in components.values():
+        for comp in components[chan].values():
             if isinstance(comp, Carrier):
                 omega_lo = comp.params['freq'].get_value()
-                self.signal["values"] = (
-                    tf.cos(omega_lo * ts), tf.sin(omega_lo * ts)
-                )
+                self.signal["inphase"] = tf.sin(omega_lo * ts)
+                self.signal["quadrature"] = tf.cos(omega_lo * ts)
                 self.signal["ts"] = ts
-                return self.signal, omega_lo
+        return self.signal
 
 
 # TODO real AWG has 16bits plus noise
@@ -462,15 +455,20 @@ class AWG(Device):
             os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
         self.logname = "awg.log"
+        drag_opt = props.pop("DRAG", 0)
         super().__init__(**props)
         # TODO move the options pwc & drag to the instruction object
         self.amp_tot_sq = None
         self.process = self.create_IQ
+        if drag_opt == 1:
+            self.enable_drag()
+        elif drag_opt == 2:
+            self.enable_drag_2()
 
 # TODO create DC function
 
     # TODO make AWG take offset from the previous point
-    def create_IQ(self, instr: Instruction) -> dict:
+    def create_IQ(self, instr: Instruction, chan: str) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
@@ -504,7 +502,7 @@ class AWG(Device):
         inphase_comps = []
         quadrature_comps = []
 
-        for comp in components.values():
+        for comp in components[chan].values():
             if isinstance(comp, Envelope):
 
                 amp = comp.params['amp'].get_value()
@@ -526,9 +524,10 @@ class AWG(Device):
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        return {"inphase": inphase, "quadrature": quadrature}
+        signal = {"inphase": inphase, "quadrature": quadrature}
+        return signal
 
-    def create_IQ_drag(self, instr: Instruction) -> dict:
+    def create_IQ_drag(self, instr: Instruction, chan: str) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
@@ -562,8 +561,7 @@ class AWG(Device):
         inphase_comps = []
         quadrature_comps = []
 
-        for key in components:
-            comp = components[key]
+        for comp in components[chan].values():
             if isinstance(comp, Envelope):
 
                 amp = comp.params['amp'].get_value()
@@ -602,7 +600,7 @@ class AWG(Device):
         self.amp_tot = norm
         return {"inphase": inphase, "quadrature": quadrature}
 
-    def create_IQ_pwc(self, instr: Instruction) -> dict:
+    def create_IQ_pwc(self, instr: Instruction, chan: str) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
@@ -637,8 +635,7 @@ class AWG(Device):
         quadrature_comps = []
 
         amp_tot_sq = 0
-        for key in components:
-            comp = components[key]
+        for comp in components[chan].values():
             if isinstance(comp, Envelope):
                 amp_tot_sq += 1
                 inphase = comp.params['inphase'].get_value()

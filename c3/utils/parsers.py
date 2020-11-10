@@ -3,6 +3,7 @@
 import hjson
 import random
 import time
+import copy
 from runpy import run_path
 
 
@@ -19,6 +20,8 @@ from c3.system import chip
 from c3.system.model import Model
 from c3.generator.generator import Generator
 from c3.generator.devices import devices
+from c3.signal.gates import GateSet, Instruction
+from c3.signal.pulse import components
 from c3.utils.display import plots
 
 
@@ -60,6 +63,7 @@ def create_model(filepath: str) -> Model:
         line_components.append(
             chip.Coupling(**props)
         )
+        print(f"Creating coupling with\n {props}")
     for name, props in cfg["Drives"].items():
         props.update({"name": name})
         line_components.append(
@@ -73,10 +77,40 @@ def create_generator(filepath: str) -> Generator:
         cfg = hjson.loads(cfg_file.read())
     devs = {}
     for name, props in cfg["Devices"].items():
+        props["name"] = name
         devs[name] = devices[name](**props)
 
     chain = cfg["Chain"]
     return Generator(devs, chain)
+
+
+def create_gateset(filepath: str) -> GateSet:
+    with open(filepath, "r") as cfg_file:
+        cfg = hjson.loads(cfg_file.read())
+    gateset = GateSet()
+    for key, gate in cfg.items():
+        if "mapto" in gate.keys():
+            instr = copy.deepcopy(gateset.instructions[gate["mapto"]])
+            for drive_chan, comps in gate["drive_channels"].items():
+                for comp, props in comps:
+                    for par, val in props["params"].items():
+                        instr.comps[drive_chan][comp].params[par].set_value(val)
+        else:
+            instr = Instruction(
+                name=key,
+                t_start=0.0,
+                t_end=gate["gate_length"],
+                channels=list(gate["drive_channels"].keys())
+            )
+            for drive_chan, comps in gate["drive_channels"].items():
+                for comp, props in comps.items():
+                    ctype = props.pop("type")
+                    instr.add_component(
+                        components[ctype](name=comp, **props),
+                        chan=drive_chan
+                    )
+        gateset.add_instruction(instr)
+    return gateset
 
 
 def create_c1_opt(optimizer_config, lindblad):

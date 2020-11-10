@@ -23,13 +23,7 @@ class PhysicalComponent(C3obj):
     """
 
     def __init__(self, **props):
-        params = props.pop("params", {})
-        self.params = params
-        for name, par in params.items():
-            self.params[name] = Quantity(**par)
-        for name, prop in props.items():
-            if prop is Quantity:
-                self.params[name] = prop
+        self.hilbert_dim = props.pop("hilbert_dim", None)
         super().__init__(**props)
         self.Hs = {}
         self.collapse_ops = {}
@@ -57,9 +51,11 @@ class Qubit(PhysicalComponent):
         of energy level populations
 
     """
+
     def init_Hs(self, ann_oper):
         """
-        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing oscillator is used.
+        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing
+        oscillator is used.
 
         Parameters
         ----------

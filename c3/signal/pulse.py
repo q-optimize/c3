@@ -3,35 +3,19 @@ from c3.c3objs import Quantity as Qty
 import tensorflow as tf
 import types
 
+components = dict()
 
-class InstructionComponent(C3obj):
+
+def comp_reg_deco(func):
     """
-    Represents the components making up a pulse.
-
-    Parameters
-    ----------
-    params: dict
-        dictionary of the parameters needed for the shape-function to
-        create the desired pulse
-
+    Decorator for making registry of functions
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            params: dict = {},
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-            )
-        self.params = params
+    components[str(func.__name__)] = func
+    return func
 
 
-class Envelope(InstructionComponent):
+@comp_reg_deco
+class Envelope(C3obj):
     """
     Represents the envelopes shaping a pulse.
 
@@ -60,36 +44,36 @@ class Envelope(InstructionComponent):
         if 'amp' not in params:
             params['amp'] = Qty(
                 value=0.0,
-                min=-1.0,
-                max=+1.0,
+                min_val=-1.0,
+                max_val=+1.0,
                 unit="V"
             )
         if 'delta' not in params:
             params['delta'] = Qty(
                 value=0.0,
-                min=-1.0,
-                max=+1.0,
+                min_val=-1.0,
+                max_val=+1.0,
                 unit="V"
             )
         if 'freq_offset' not in params:
             params['freq_offset'] = Qty(
                 value=0.0,
-                min=-1.0,
-                max=+1.0,
+                min_val=-1.0,
+                max_val=+1.0,
                 unit='Hz 2pi'
             )
         if 'xy_angle' not in params:
             params['xy_angle'] = Qty(
                 value=0.0,
-                min=-1.0,
-                max=+1.0,
+                min_val=-1.0,
+                max_val=+1.0,
                 unit='rad'
             )
         if 't_final' not in params:
             params['t_final'] = Qty(
                 value=0.0,
-                min=-1.0,
-                max=+1.0,
+                min_val=-1.0,
+                max_val=+1.0,
                 unit="s"
             )
 
@@ -115,7 +99,8 @@ class Envelope(InstructionComponent):
         return vals*mask
 
 
-class Carrier(InstructionComponent):
+@comp_reg_deco
+class Carrier(C3obj):
     """Represents the carrier of a pulse."""
 
     def __init__(

@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from c3.signal.pulse import InstructionComponent
+from c3.c3objs import C3obj
 
 
 class GateSet:
@@ -256,13 +256,13 @@ class Instruction():
                 cfg['comps'][chan][comp] = 0
         return cfg
 
-    def add_component(self, comp: InstructionComponent, chan: str):
+    def add_component(self, comp: C3obj, chan: str):
         """
         Add one component, e.g. an envelope, local oscillator, to a channel.
 
         Parameters
         ----------
-        comp : InstructionComponent
+        comp : C3obj
             Component to be added.
         chan : str
             Identifier for the target channel

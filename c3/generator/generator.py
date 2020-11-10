@@ -38,7 +38,7 @@ class Generator:
         for device_id in chain:
             signals -= devices[device_id].inputs
             signals += devices[device_id].outputs
-        if signals != 0:
+        if signals != 1:
             raise Exception(
                 "C3:ERROR: Signal chain contains unmatched number"
                 " of inputs and outputs."
@@ -82,9 +82,10 @@ class Generator:
             for dev_id in self.chain:
                 dev = self.devices[dev_id]
                 inputs = []
-                for input_num in dev.inputs:
+                for input_num in range(dev.inputs):
                     inputs.append(signal_stack.pop())
-                outputs = dev.process(instr, *inputs)
-                signal_stack.extend(outputs)
-                gen_signal[chan] = signal_stack.pop()
+                outputs = dev.process(instr, chan, *inputs)
+                signal_stack.append(outputs)
+
+            gen_signal[chan] = signal_stack.pop()
         return gen_signal
