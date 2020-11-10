@@ -82,7 +82,6 @@ def create_c1_opt(optimizer_config, exp):
     print(f"C3:STATUS:Found {fid} in libraries.")
 
     exp.set_opt_gates(cfg['opt_gates'])
-    
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']

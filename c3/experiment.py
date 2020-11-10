@@ -150,7 +150,7 @@ class Experiment:
     def get_gates(self):
         """
         Compute the unitary representation of operations. If no operations are
-        specified in self.__opt_gates the complete gateset is computed.
+        specified in self.opt_gates the complete gateset is computed.
 
         Returns
         -------
@@ -161,8 +161,8 @@ class Experiment:
         generator = self.pmap.generator
         instructions = self.pmap.instructions
         gates = {}
-        if "__opt_gates" in self.__dict__:
-            gate_keys = self.__opt_gates
+        if "opt_gates" in self.__dict__:
+            gate_keys = self.opt_gates
         else:
             gate_keys = instructions.keys()
         for gate in gate_keys:
@@ -279,8 +279,8 @@ class Experiment:
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U
-
-    def set_opt_gates(self, seqs):
+    
+    def set_opt_gates(self, gates):
         """
         Specify a selection of gates to be computed.
 
@@ -289,7 +289,18 @@ class Experiment:
         opt_gates: Identifiers of the gates of interest. Can contain duplicates.
 
         """
-        self.__opt_gates = list(set(itertools.chain.from_iterable(seqs)))
+        self.opt_gates = gates
+
+    def set_opt_gates_seq(self, seqs):
+        """
+        Specify a selection of gates to be computed.
+
+        Parameters
+        ----------
+        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+
+        """
+        self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
     def set_enable_dynamics_plots(self, flag, logdir):
         """

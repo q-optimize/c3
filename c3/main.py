@@ -77,7 +77,8 @@ if __name__ == '__main__':
                         f"{os.path.abspath(init_point)}"
                     )
                     init_dir = os.path.basename(os.path.normpath(os.path.dirname(init_point)))
-                    shutil.copy(init_point, dir + init_dir + "_initial_point.log")
+                    # TODO Sort out storing the initial point
+                    # shutil.copy(init_point, opt.logdir + init_dir + "_initial_point.log")
                 except FileNotFoundError:
                     raise Exception(
                         f"C3:ERROR:No initial point found at "
