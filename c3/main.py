@@ -36,7 +36,9 @@ if __name__ == '__main__':
         exp = parsers.create_experiment(exp_setup)
 
         if optim_type == "C1":
-            opt = parsers.create_c1_opt(opt_config, exp.model.lindbladian)
+            opt = parsers.create_c1_opt(opt_config, exp)
+            if cfg['include_model']:
+                opt.include_model()
         elif optim_type == "C2":
             eval_func = cfg['eval_func']
             opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
@@ -53,10 +55,9 @@ if __name__ == '__main__':
         else:
             raise Exception("C3:ERROR:Unknown optimization type specified.")
         opt.set_exp(exp)
-        dir = opt.logdir
+        opt.set_created_by(opt_config)
 
-        shutil.copy2(exp_setup, dir)
-        shutil.copy2(opt_config, dir)
+
         if optim_type == "C2":
             shutil.copy2(eval_func, dir)
 
@@ -76,7 +77,8 @@ if __name__ == '__main__':
                         f"{os.path.abspath(init_point)}"
                     )
                     init_dir = os.path.basename(os.path.normpath(os.path.dirname(init_point)))
-                    shutil.copy(init_point, dir + init_dir + "_initial_point.log")
+                    # TODO Sort out storing the initial point
+                    # shutil.copy(init_point, opt.logdir + init_dir + "_initial_point.log")
                 except FileNotFoundError:
                     raise Exception(
                         f"C3:ERROR:No initial point found at "
@@ -90,7 +92,8 @@ if __name__ == '__main__':
             if 'adjust_exp' in cfg:
                 try:
                     adjust_exp = cfg['adjust_exp']
-                    opt.adjust_exp(adjust_exp)
+                    opt.load_best(adjust_exp)
+                    opt.pmap.model.update_model()
                     print(
                         "C3:STATUS:Loading experimental values from : "
                         f"{os.path.abspath(adjust_exp)}"

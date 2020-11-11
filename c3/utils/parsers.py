@@ -5,7 +5,6 @@ import json
 import time
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 from c3.libraries.algorithms import algorithms
 from c3.libraries.estimators import estimators
 from c3.libraries.fidelities import fidelities
@@ -26,10 +25,12 @@ def create_experiment(exp_setup, datafile=''):
         exp = exp_namespace['create_experiment'](datafile)
     else:
         exp = exp_namespace['create_experiment']()
+    
+    exp.set_created_by(exp_setup)
     return exp
 
 
-def create_c1_opt(optimizer_config, lindblad):
+def create_c1_opt(optimizer_config, exp):
     """
     Create an object for C1 optimal control.
 
@@ -45,6 +46,9 @@ def create_c1_opt(optimizer_config, lindblad):
         Open loop optimizer object
 
     """
+    parameter_map = exp.pmap
+    lindblad = parameter_map.model.lindbladian
+    
     with open(optimizer_config, "r") as cfg_file:
         cfg = json.loads(cfg_file.read())
 
@@ -52,11 +56,22 @@ def create_c1_opt(optimizer_config, lindblad):
         fid = 'lindbladian_' + cfg['fid_func']
     else:
         fid = cfg['fid_func']
-
-    if lindblad:
-        cb_fids = ['lindbladian_' + f for f in cfg['callback_fids']]
-    else:
-        cb_fids = cfg['callback_fids']
+        
+    callback_fids = []
+    if "callback_fids" in cfg:
+        if lindblad:
+            cb_fids = ['lindbladian_' + f for f in cfg['callback_fids']]
+        else:
+            cb_fids = cfg['callback_fids']
+        for cb_fid in cb_fids:
+            try:
+                cb_fid_func = fidelities[cb_fid]
+            except KeyError:
+                raise Exception(
+                    f"C3:ERROR:Unkown goal function: {cb_fid}"
+                )
+            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+            callback_fids.append(cb_fid_func)
 
     try:
         fid_func = fidelities[fid]
@@ -65,21 +80,14 @@ def create_c1_opt(optimizer_config, lindblad):
             f"C3:ERROR:Unkown goal function: {fid} "
         )
     print(f"C3:STATUS:Found {fid} in libraries.")
-    callback_fids = []
-    for cb_fid in cb_fids:
-        try:
-            cb_fid_func = fidelities[cb_fid]
-        except KeyError:
-            raise Exception(
-                f"C3:ERROR:Unkown goal function: {cb_fid}"
-            )
-        print(f"C3:STATUS:Found {cb_fid} in libraries.")
-        callback_fids.append(cb_fid_func)
-    opt_gates = cfg['opt_gates']
+
+    exp.set_opt_gates(cfg['opt_gates'])
     gateset_opt_map = [
         [tuple(par) for par in set]
         for set in cfg['gateset_opt_map']
-    ]
+    ]    
+    parameter_map.set_opt_map(gateset_opt_map)
+    
     algorithm = algorithms[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
@@ -118,8 +126,7 @@ def create_c1_opt(optimizer_config, lindblad):
         dir_path=cfg['dir_path'],
         fid_func=fid_func,
         fid_subspace=cfg['fid_subspace'],
-        gateset_opt_map=gateset_opt_map,
-        opt_gates=opt_gates,
+        pmap=parameter_map,
         callback_fids=callback_fids,
         algorithm=algorithm,
         plot_dynamics=plot_dynamics,
@@ -367,27 +374,17 @@ def create_c3_opt(optimizer_config):
         for target, labels in cfg["state_labels"].items():
             state_labels[target] = [tuple(l) for l in labels]
 
-    try:
-        estimator = cfg['estimator']
-    except KeyError:
-        print(
-            "C3:WARNING: Non estimator given."
-            " Using default estimator RMS distance."
+    if "estimator" in cfg:
+        raise Exception(
+            f"C3:ERROR: Setting estimators is currently not supported."
+            "Only the standard logarithmic likelihood can be used at the moment."
+            "Please remove this setting."
         )
-        estimator = 'rms_dist'
-    try:
-        fom = estimators[estimator]
-    except KeyError:
-        print(
-            f"C3:WARNING: No estimator named \'{estimator}\' found."
-            " Using default estimator RMS distance."
-        )
-        fom = estimators['rms_dist']
 
     try:
         cb_foms = cfg['callback_est']
     except KeyError:
-        print("C3:WARNING: Non callback estimators given.")
+        print("C3:WARNING: Unknown callback estimators given.")
         cb_foms = []
 
     callback_foms = []
@@ -432,7 +429,6 @@ def create_c3_opt(optimizer_config):
         run_name = cfg['run_name']
     opt = C3(
         dir_path=cfg['dir_path'],
-        fom=fom,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
         seqs_per_point=seqs_per_point,
