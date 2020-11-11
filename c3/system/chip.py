@@ -289,17 +289,20 @@ class SymmetricTransmon(PhysicalComponent):
         if hilbert_dim > 2:
             self.params['anhar'] = anhar
 
-    def get_freq(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+    def get_factor(self):
         pi = tf.constant(np.pi, dtype=tf.complex128)
         phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
         factor = tf.cast(tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))), tf.complex128)
-        return freq * factor 
-            
+        return factor
+        
     def get_anhar(self):
         anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        return anhar
+        return anhar * self.get_factor()
+            
+    def get_freq(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        return freq * self.get_factor()
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
@@ -371,12 +374,7 @@ class AsymmetricTransmon(PhysicalComponent):
         if temp:
             self.params['temp'] = temp
 
-    def get_anhar(self):
-        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        return anhar
-            
-    def get_freq(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+    def get_factor(self):
         pi = tf.constant(np.pi, dtype=tf.complex128)
         phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
@@ -386,7 +384,15 @@ class AsymmetricTransmon(PhysicalComponent):
         factor = tf.sqrt(tf.sqrt(
             tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
         ))
-        return freq * factor 
+        return factor
+            
+    def get_anhar(self):
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        return anhar * self.get_factor()
+            
+    def get_freq(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        return freq * self.get_factor()
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
