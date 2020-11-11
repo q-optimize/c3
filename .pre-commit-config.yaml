@@ -1,0 +1,23 @@
+repos:
+-   repo: https://github.com/ambv/black
+    rev: stable
+    hooks:
+    - id: black
+      language_version: python3.8
+-   repo: https://gitlab.com/pycqa/flake8
+    rev: 3.8.3
+    hooks:
+    - id: flake8
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v0.790'
+    hooks:
+    - id: mypy
+      args: [--no-strict-optional, --ignore-missing-imports]
+      additional_dependencies: [cma==3.0.3,
+                                matplotlib==3.3.2,
+                                numpy==1.18.5, 
+                                scipy==1.5.2,
+                                tensorflow==2.3.1, 
+                                tensorflow-probability==0.11.1, 
+                                tensorflow-estimator==2.3.0
+                                ]
