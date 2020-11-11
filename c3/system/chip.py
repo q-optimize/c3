@@ -172,23 +172,24 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops['t1']
             Ls.append(L)
             if 'temp' in self.params:
-                if self.hilbert_dim > 2:
-                    freq_diff = np.array(
-                        [(self.params['freq'].get_value()
-                          + n*self.params['anhar'].get_value())
-                            for n in range(self.hilbert_dim)]
+                if self.params['temp'].get_value().numpy():
+                    if self.hilbert_dim > 2:
+                        freq_diff = np.array(
+                            [(self.params['freq'].get_value()
+                              + n*self.params['anhar'].get_value())
+                                for n in range(self.hilbert_dim)]
+                        )
+                    else:
+                        freq_diff = np.array(
+                            [self.params['freq'].get_value(), 0]
+                        )
+                    beta = 1 / (self.params['temp'].get_value() * kb)
+                    det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
+                    det_bal_mat = hskron(
+                        tf.linalg.tensor_diag(det_bal), self.index, dims
                     )
-                else:
-                    freq_diff = np.array(
-                        [self.params['freq'].get_value(), 0]
-                    )
-                beta = 1 / (self.params['temp'].get_value() * kb)
-                det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
-                det_bal_mat = hskron(
-                    tf.linalg.tensor_diag(det_bal), self.index, dims
-                )
-                L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
-                Ls.append(L)
+                    L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
+                    Ls.append(L)
         if 't2star' in self.params:
             gamma = (0.5/self.params['t2star'].get_value())**0.5
             L = gamma * self.collapse_ops['t2star']
@@ -266,15 +267,16 @@ class SymmetricTransmon(PhysicalComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 2,
-            freq: np.float64 = 0.0,
-            phi: np.float64 = 0.0,
-            phi_0: np.float64 = 0.0
-            ):
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 2,
+        freq: np.float64 = 0.0,
+        phi: np.float64 = 0.0,
+        phi_0: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+    ):
         super().__init__(
             name=name,
             desc=desc,
@@ -284,23 +286,38 @@ class SymmetricTransmon(PhysicalComponent):
         self.params['freq'] = freq
         self.params['phi'] = phi
         self.params['phi_0'] = phi_0
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+
+    def get_freq(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
+        factor = tf.cast(tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))), tf.complex128)
+        return freq * factor 
+            
+    def get_anhar(self):
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        return anhar
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
+        if self.hilbert_dim > 2:
+            self.Hs['anhar'] = tf.constant(
+                duffing(ann_oper), dtype=tf.complex128
+            )
 
     def init_Ls(self, ann_oper):
         pass
-
+    
     def get_Hamiltonian(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        return freq * tf.cast(tf.sqrt(tf.abs(tf.cos(
-            pi * phi / phi_0
-        ))), tf.complex128) * self.Hs['freq']
+        h = self.get_freq() * self.Hs['freq']
+        if self.hilbert_dim > 2:
+            h += self.get_anhar() * self.Hs['anhar']
+        return h
 
 
 
@@ -319,20 +336,21 @@ class AsymmetricTransmon(PhysicalComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 2,
-            freq: np.float64 = 0.0,
-            phi: np.float64 = 0.0,
-            phi_0: np.float64 = 0.0,
-#             gamma: np.float64 = 0.0,
-            d: np.float64 = 0.0,
-            t1: np.float64 = 0.0,
-            t2star: np.float64 = 0.0,
-            temp: np.float64 = 0.0
-            ):
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 2,
+        freq: np.float64 = 0.0,
+        phi: np.float64 = 0.0,
+        phi_0: np.float64 = 0.0,
+        # gamma: np.float64 = 0.0,
+        d: np.float64 = 0.0,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+    ):
         super().__init__(
             name=name,
             desc=desc,
@@ -344,6 +362,8 @@ class AsymmetricTransmon(PhysicalComponent):
         self.params['phi_0'] = phi_0
         self.params['d'] = d
 #         self.params['gamma'] = gamma
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
         if t1:
             self.params['t1'] = t1
         if t2star:
@@ -351,6 +371,10 @@ class AsymmetricTransmon(PhysicalComponent):
         if temp:
             self.params['temp'] = temp
 
+    def get_anhar(self):
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        return anhar
+            
     def get_freq(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
         pi = tf.constant(np.pi, dtype=tf.complex128)
@@ -368,6 +392,10 @@ class AsymmetricTransmon(PhysicalComponent):
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
+        if self.hilbert_dim > 2:
+            self.Hs['anhar'] = tf.constant(
+                duffing(ann_oper), dtype=tf.complex128
+            )
 
     def init_Ls(self, ann_oper):
         """
@@ -387,7 +415,10 @@ class AsymmetricTransmon(PhysicalComponent):
         )
 
     def get_Hamiltonian(self):
-        return self.get_freq() * self.Hs['freq']
+        h = self.get_freq() * self.Hs['freq']
+        if self.hilbert_dim > 2:
+            h += self.get_anhar() * self.Hs['anhar']
+        return h
     
     def get_Lindbladian(self, dims):
         """
@@ -407,9 +438,16 @@ class AsymmetricTransmon(PhysicalComponent):
             Ls.append(L)
             if 'temp' in self.params:
                 if self.params['temp'].get_value().numpy():
-                    freq_diff = np.array(
-                        [self.get_freq(), 0]
-                    )
+                    if self.hilbert_dim > 2:
+                        freq_diff = np.array(
+                            [(self.params['freq'].get_value()
+                              + n*self.params['anhar'].get_value())
+                                for n in range(self.hilbert_dim)]
+                        )
+                    else:
+                        freq_diff = np.array(
+                            [self.params['freq'].get_value(), 0]
+                        )
                     beta = 1 / (self.params['temp'].get_value() * kb)
                     det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
                     det_bal_mat = hskron(
