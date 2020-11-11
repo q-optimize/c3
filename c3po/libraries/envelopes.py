@@ -40,11 +40,15 @@ def fourier_sin(t, params):
                 tf.cast(params['freqs'].get_value(), dtype=tf.float64),
                 [params['freqs'].shape[0], 1]
            )
+    phases = tf.reshape(
+            tf.cast(params['phases'].get_value(), dtype=tf.float64),
+            [params['phases'].shape[0], 1]
+       )
     t = tf.reshape(
                 tf.cast(t, dtype=tf.float64),
                 [1, t.shape[0]]
            )
-    return tf.reduce_sum(amps * tf.sin(freqs * t), 0)
+    return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
 
 
 def fourier_cos(t, params):
