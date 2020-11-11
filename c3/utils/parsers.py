@@ -63,7 +63,6 @@ def create_model(filepath: str) -> Model:
         line_components.append(
             chip.Coupling(**props)
         )
-        print(f"Creating coupling with\n {props}")
     for name, props in cfg["Drives"].items():
         props.update({"name": name})
         line_components.append(
@@ -91,8 +90,9 @@ def create_gateset(filepath: str) -> GateSet:
     for key, gate in cfg.items():
         if "mapto" in gate.keys():
             instr = copy.deepcopy(gateset.instructions[gate["mapto"]])
+            instr.name = key
             for drive_chan, comps in gate["drive_channels"].items():
-                for comp, props in comps:
+                for comp, props in comps.items():
                     for par, val in props["params"].items():
                         instr.comps[drive_chan][comp].params[par].set_value(val)
         else:

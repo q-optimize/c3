@@ -25,9 +25,12 @@ class C3obj:
         self.name = name
         self.desc = desc
         self.comment = comment
-        self.params = params
+        self.params = {}
         for name, par in params.items():
-            self.params[name] = Quantity(**par)
+            if isinstance(par, Quantity):
+                self.params[name] = par
+            else:
+                self.params[name] = Quantity(**par)
 
 
 class Quantity:
@@ -56,8 +59,11 @@ class Quantity:
     def __init__(self, value, min_val, max_val, unit="undefined", symbol=r"\alpha"):
         if unit[-3:] == "2pi":
             pref = 2 * np.pi
+        elif unit[-2:] == "pi":
+            pref = np.pi
         else:
             pref = 1
+        self.pref = pref
         self.offset = np.array(min_val * pref)
         self.scale = np.abs(np.array(max_val * pref) - np.array(min_val * pref))
         try:
@@ -75,6 +81,16 @@ class Quantity:
         else:
             self.shape = ()
             self.length = 1
+
+    def asdict(self):
+        pref = self.pref
+        return {
+            "value": self.numpy(),
+            "min_val": self.offset / pref,
+            "max_val": (self.scale + self.offset) / pref,
+            "unit": self.unit,
+            "symbol": self.symbol
+        }
 
     def __add__(self, other):
         return self.numpy() + other
@@ -147,6 +163,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
+            print(f"Value {val} out of bounds for quantity.")
             raise ValueError
             # TODO if we want we can extend bounds when force flag is given
         else:

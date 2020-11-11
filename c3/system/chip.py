@@ -315,10 +315,6 @@ class LineComponent(C3obj):
             self.hamiltonian_func = h_func
         else:
             self.hamiltonian_func = hamiltonians[h_func]
-        params = props.pop("params", {})
-        self.params = params
-        for name, par in params.items():
-            self.params[name] = Quantity(**par)
         super().__init__(**props)
         self.Hs = {}
 
@@ -335,6 +331,7 @@ class Coupling(LineComponent):
         all physical components coupled via this specific coupling
 
     """
+
     def init_Hs(self, opers_list):
         self.Hs['strength'] = tf.constant(
             self.hamiltonian_func(opers_list), dtype=tf.complex128

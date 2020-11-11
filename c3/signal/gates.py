@@ -240,7 +240,7 @@ class Instruction():
             channels: list = [],
             t_start: np.float64 = 0.0,
             t_end: np.float64 = 0.0,
-            ):
+    ):
         self.name = name
         self.t_start = t_start
         self.t_end = t_end

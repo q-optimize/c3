@@ -33,49 +33,47 @@ class Envelope(C3obj):
             comment: str = " ",
             params: dict = {},
             shape: types.FunctionType = None,
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            params=params,
-            )
+    ):
         self.shape = shape
-        if 'amp' not in params:
-            params['amp'] = Qty(
+        params_default = {
+            'amp': Qty(
                 value=0.0,
                 min_val=-1.0,
                 max_val=+1.0,
                 unit="V"
-            )
-        if 'delta' not in params:
-            params['delta'] = Qty(
+            ),
+            'delta': Qty(
                 value=0.0,
                 min_val=-1.0,
                 max_val=+1.0,
                 unit="V"
-            )
-        if 'freq_offset' not in params:
-            params['freq_offset'] = Qty(
+            ),
+            'freq_offset': Qty(
                 value=0.0,
                 min_val=-1.0,
                 max_val=+1.0,
                 unit='Hz 2pi'
-            )
-        if 'xy_angle' not in params:
-            params['xy_angle'] = Qty(
+            ),
+            'xy_angle': Qty(
                 value=0.0,
                 min_val=-1.0,
                 max_val=+1.0,
                 unit='rad'
-            )
-        if 't_final' not in params:
-            params['t_final'] = Qty(
+            ),
+            't_final': Qty(
                 value=0.0,
                 min_val=-1.0,
                 max_val=+1.0,
                 unit="s"
             )
+        }
+        params_default.update(params)
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params_default,
+        )
 
     def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times.
@@ -96,7 +94,7 @@ class Envelope(C3obj):
             vals = self.shape(ts, self.params)
             mask = tf.cast(ts < t_final.numpy(), tf.float64)
         # With the offset, we make sure the signal starts with amplitude 0.
-        return vals*mask
+        return vals * mask
 
 
 @comp_reg_deco
@@ -109,10 +107,10 @@ class Carrier(C3obj):
             desc: str = " ",
             comment: str = " ",
             params: dict = {},
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             params=params,
-            )
+        )
