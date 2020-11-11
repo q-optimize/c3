@@ -213,15 +213,15 @@ class C1(Optimizer):
 
         import os
         import pickle
-        import numpy as np
-        if not os.path.exists(self.logdir + "unitaries/"):
-            os.mkdir(self.logdir + "unitaries/")
-        folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal) + "/"
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        with open(folder + 'Us.pickle', 'wb+') as file:
-            pickle.dump(U_dict, file)
-        for key, value in U_dict.items():
-            np.savetxt(folder + key + ".txt", value)
+        # import numpy as np
+        # if not os.path.exists(self.logdir + "unitaries/"):
+        #     os.mkdir(self.logdir + "unitaries/")
+        # folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal) + "/"
+        # if not os.path.exists(folder):
+        #     os.mkdir(folder)
+        # with open(folder + 'Us.pickle', 'wb+') as file:
+        #     pickle.dump(U_dict, file)
+        # for key, value in U_dict.items():
+        #     np.savetxt(folder + key + ".txt", value)
 
         return goal

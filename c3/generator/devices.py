@@ -42,7 +42,7 @@ class Device(C3obj):
         cfg.pop('amp_tot_sq', None)
         cfg.pop('freq', None)
         for p in cfg['params']:
-            cfg['params'][p] = float(cfg['params'][p])
+            cfg['params'][p] = cfg['params'][p].tolist()
         return cfg
 
     def prepare_plot(self):
@@ -888,6 +888,9 @@ class AWG(Device):
 
     def enable_drag_2(self):
         self.__options = 'drag_2'
+
+    def enable_pwc(self):
+        self.__options = 'pwc'
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

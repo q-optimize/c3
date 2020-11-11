@@ -277,11 +277,11 @@ class Model:
                 dtype=tf.complex128
             )
             # TODO test this
-            if self.dressed:
-                num_oper = tf.matmul(
-                    tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
-                    self.transform
-                )
+            # if self.dressed:
+            #     num_oper = tf.matmul(
+            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
+            #         self.transform
+            #     )
             exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)

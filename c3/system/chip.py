@@ -41,7 +41,7 @@ class PhysicalComponent(C3obj):
     def write_config(self):
         cfg = copy.deepcopy(self.__dict__)
         for param in self.params:
-            cfg['params'][param] = float(self.params[param])
+            cfg['params'][param] = self.params[param].tolist()
         del cfg['Hs']
         del cfg['collapse_ops']
         return cfg
@@ -456,7 +456,7 @@ class LineComponent(C3obj):
         if 'hamiltonian_func' in cfg:
             cfg['hamiltonian_func'] = self.hamiltonian_func.__name__
         for param in self.params:
-            cfg['params'][param] = float(self.params[param])
+            cfg['params'][param] = self.params[param].tolist()
         del cfg['Hs']
         if 'h' in cfg:
             del cfg['h']

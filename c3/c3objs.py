@@ -153,9 +153,8 @@ class Quantity:
             ret += q + self.unit + " "
         return ret
 
-    # TODO not consistent if array    
-    def __float__(self):
-        return self.numpy()
+    def tolist(self):
+        return self.numpy().tolist()
 
     def numpy(self):
         """

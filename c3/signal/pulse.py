@@ -35,9 +35,9 @@ class InstructionComponent(C3obj):
         cfg = copy.deepcopy(self.__dict__)
         for param in self.params:
             if isinstance(self.params[param], Qty):
-                cfg['params'][param] = self.params[param].numpy()
+                cfg['params'][param] = self.params[param].tolist()
         if 'shape' in cfg:
-            cfg['shape'] = self.shape.__name__
+            cfg['shape'] = self.shape.__name__ if self.shape else 'None'
         return cfg
 
 

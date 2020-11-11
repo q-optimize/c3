@@ -136,8 +136,44 @@ def flattop(t, params):
     t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
     t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
-           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
+    return (1 + tf.math.erf((t - t_up) / (risefall))) / 2 * \
+           (1 + tf.math.erf((-t + t_down) / (risefall))) / 2
+
+def flattop_cut(t, params):
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_up : float
+            Center of the ramp up.
+        t_down : float
+            Center of the ramp down.
+        risefall : float
+            Length of the ramps.
+
+    """
+    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
+    return tf.clip_by_value(shape,0,2)
+
+def slepian_fourier(t, params):
+    """
+    ----
+    """
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    fourier_coeffs = tf.cast(params['fourier_coeffs'].get_value(), dtype=tf.float64)
+    offset = tf.cast(params["offset"].get_value(), dtype=tf.float64)
+    amp = tf.cast(params["amp"].get_value(), dtype=tf.float64)
+    shape = tf.zeros_like(t)
+    for n, coeff in enumerate(fourier_coeffs):
+        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * t / t_final))
+    shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
+    shape = shape * (1 - offset/amp) + offset/amp 
+    return shape
+
 
 
 def gaussian_sigma(t, params):
