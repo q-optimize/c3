@@ -205,7 +205,8 @@ class Quantity:
 
 class ParameterMap:
     """
-    Collects information about control and model parameters and provides different representations depending on use.
+    Collects information about control and model parameters and provides different representations
+    depending on use.
     """
 
     def __init__(
@@ -265,15 +266,38 @@ class ParameterMap:
         Returns the full parameter vector, including model and control parameters.
         """
         return self.__pars
-    
+
     def get_opt_units(self):
         """
         Returns a list of the units of the optimized quantities.
         """
         units = []
         for equiv_ids in self.opt_map:
-            units.append(self.__pars[equiv_ids[0]].unit)    
+            units.append(self.__pars[equiv_ids[0]].unit)
         return units
+
+    def get_parameter(self, par_id):
+        """
+        Return one the current parameters.
+
+        Parameters
+        ----------
+        par_id: tuple
+            Hierarchical identifier for parameter.
+
+        Returns
+        -------
+        Quantity
+
+        """
+        try:
+            value = self.__pars[par_id]
+        except KeyError as ke:
+            for id in self.__pars:
+                if id[0] == par_id[0]:
+                    print(f"Found {id[0]}.")
+            raise Exception(f"C3:ERROR:Parameter {par_id} not defined.") from ke
+        return value
 
     def get_parameters(self):
         """
@@ -281,7 +305,7 @@ class ParameterMap:
 
         Parameters
         ----------
-        opt_map: tuple
+        opt_map: list
             Hierarchical identifier for parameters.
 
         Returns
@@ -331,7 +355,8 @@ class ParameterMap:
 
     def get_parameters_scaled(self):
         """
-        Return the current parameters. This fuction should only be called by an optimizer. Are you an optimizer?
+        Return the current parameters. This fuction should only be called by an optimizer. Are you
+        an optimizer?
 
         Parameters
         ----------
@@ -362,7 +387,7 @@ class ParameterMap:
 
         """
         val_indx = 0
-        for equiv_ids in self.opt_map:        
+        for equiv_ids in self.opt_map:
             par_len = self.__pars[equiv_ids[0]].length
             for id in equiv_ids:
                 par = self.__pars[id]
