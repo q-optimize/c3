@@ -1,5 +1,6 @@
 from c3.c3objs import C3obj
 from c3.c3objs import Quantity as Qty
+from c3.libraries.envelopes import envelopes
 import tensorflow as tf
 import types
 
@@ -34,7 +35,10 @@ class Envelope(C3obj):
             params: dict = {},
             shape: types.FunctionType = None,
     ):
-        self.shape = shape
+        if isinstance(shape, str):
+            self.shape = envelopes[shape]
+        else:
+            self.shape = shape
         params_default = {
             'amp': Qty(
                 value=0.0,
