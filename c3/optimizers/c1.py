@@ -71,7 +71,7 @@ class C1(Optimizer):
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
-        
+
         self.pmap.str_parameters = None
         self.update_model = False
 
@@ -95,8 +95,10 @@ class C1(Optimizer):
             )
         self.logdir = log_setup(dir_path, run_name)
         self.logname = 'open_loop.log'
-        shutil.copy2(self.exp.created_by, self.logdir)
-        shutil.copy2(self.created_by, self.logdir)
+        if isinstance(self.exp.created_by, str):
+            shutil.copy2(self.exp.created_by, self.logdir)
+        if isinstance(self.created_by, str):
+            shutil.copy2(self.created_by, self.logdir)
 
     def optimize_controls(self):
         """
@@ -146,10 +148,6 @@ class C1(Optimizer):
         dims = self.pmap.model.dims
         propagators = self.exp.get_gates()
         goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
-        try:
-            display.plot_C1(self.logdir)
-        except TypeError:
-            pass
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
