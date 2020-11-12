@@ -40,6 +40,7 @@ class Optimizer:
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
         self.store_unitaries = store_unitaries
+        self.created_by = None
         if algorithm:
             self.algorithm = algorithm
         else:
@@ -69,7 +70,7 @@ class Optimizer:
         Store the config file location used to created this optimizer.
         """
         self.created_by = config
-        
+
     def load_best(self, init_point):
         """
         Load a previous parameter point to start the optimization from.
@@ -82,13 +83,13 @@ class Optimizer:
         """
         with open(init_point) as init_file:
             best = json.load(init_file)
-            
+
         best_opt_map = [
             [tuple(par) for par in pset] for pset in best["opt_map"]
         ]
         init_p = best['optim_status']['params']
         self.pmap.set_parameters(init_p, best_opt_map)
-        
+
     def start_log(self):
         """
         Initialize the log with current time.
@@ -141,7 +142,7 @@ class Optimizer:
 
     def log_parameters(self):
         """
-        Log the current status. Write parameters to log. Update the current best parameters. 
+        Log the current status. Write parameters to log. Update the current best parameters.
         Call plotting functions as set up.
 
         """
