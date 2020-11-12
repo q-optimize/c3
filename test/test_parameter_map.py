@@ -166,6 +166,13 @@ def test_parameter_print() -> None:
     pmap.print_parameters()
 
 
+def test_parameter_str() -> None:
+    """
+    Check casting to string.
+    """
+    str(pmap)
+
+
 def test_parameter_get() -> None:
     """
     Check that four parameters are set.
@@ -221,3 +228,21 @@ def test_parameter_set_indepentent() -> None:
     amp1 = pmap.get_parameter(("X90p", "d1", "gauss", "amp"))
     amp2 = pmap.get_parameter(("X90m", "d1", "gauss", "amp"))
     assert amp1.get_value() != amp2.get_value()
+
+
+def test_parameter_set_opt() -> None:
+    """
+    Test the setting in optimizer format.
+    """
+    amp_ids = [
+        [
+            ("X90p", "d1", "gauss", "amp")
+        ],
+        [
+            ("X90m", "d1", "gauss", "amp")
+        ]
+    ]
+    pmap.set_opt_map(amp_ids)
+    pmap.set_parameters_scaled([-1.0, 1.0])  # -+1 correspond to min and max allowd
+    assert pmap.get_parameter(("X90p", "d1", "gauss", "amp")).get_value() == 0.4
+    assert pmap.get_parameter(("X90m", "d1", "gauss", "amp")).get_value() == 0.6
