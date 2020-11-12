@@ -1,15 +1,14 @@
 """
-integration testing module through two-qubits example
+integration testing module for C1 optimization through two-qubits example
 """
 
 import copy
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
+from c3.c3objs import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
 from c3.system.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
@@ -18,6 +17,7 @@ from c3.generator.generator import Generator as Gnr
 import c3.generator.devices as devices
 import c3.system.chip as chip
 import c3.signal.pulse as pulse
+import c3.signal.gates as gates
 import c3.system.tasks as tasks
 
 # Libs and helpers
@@ -81,7 +81,6 @@ def two_qubits() -> float:
         )
     )
 
-
     freq_q2 = 5.6e9 * 2 * np.pi
     anhar_q2 = -240e6 * 2 * np.pi
     t1_q2 = 23e-6
@@ -122,7 +121,6 @@ def two_qubits() -> float:
         )
     )
 
-
     coupling_strength = 20e6 * 2 * np.pi
     q1q2 = chip.Coupling(
         name="Q1-Q2",
@@ -154,11 +152,10 @@ def two_qubits() -> float:
         hamiltonian_func=hamiltonians.x_drive
     )
 
-
-    m00_q1 = 0.97 # Prop to read qubit 1 state 0 as 0
-    m01_q1 = 0.04 # Prop to read qubit 1 state 0 as 1
-    m00_q2 = 0.96 # Prop to read qubit 2 state 0 as 0
-    m01_q2 = 0.05 # Prop to read qubit 2 state 0 as 1
+    m00_q1 = 0.97  # Prop to read qubit 1 state 0 as 0
+    m01_q1 = 0.04  # Prop to read qubit 1 state 0 as 1
+    m00_q2 = 0.96  # Prop to read qubit 2 state 0 as 0
+    m01_q2 = 0.05  # Prop to read qubit 2 state 0 as 1
     one_zeros = np.array([0] * qubit_lvls)
     zero_ones = np.array([1] * qubit_lvls)
     one_zeros[0] = 1
@@ -225,8 +222,6 @@ def two_qubits() -> float:
 
     generator = Gnr([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
-    import c3.signal.gates as gates
-    gateset = gates.GateSet()
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
     gauss_params_single = {
@@ -400,49 +395,38 @@ def two_qubits() -> float:
                     g.comps[chan].update(g2.comps[chan])
             all_1q_gates_comb.append(g)
 
-    for gate in all_1q_gates_comb:
-        gateset.add_instruction(gate)
+    pmap = Pmap(all_1q_gates_comb, generator, model)
 
-    exp = Exp(model=model, generator=generator, gateset=gateset)
-
-    exp.opt_gates = ['X90p:Id', 'Id:Id']
-
-    gates = exp.get_gates()
-
-    psi_init = [[0] * 9]
-    psi_init[0][0] = 1
-    init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
-
-    barely_a_seq = ['X90p:Id']
-
-    barely_a_seq * 10
+    exp = Exp(pmap)
 
     generator.devices['awg'].enable_drag_2()
 
-    opt_gates = ["X90p:Id"]
-    gateset_opt_map=[
+    exp.set_opt_gates(["X90p:Id"])
+
+    gateset_opt_map = [
         [
-        ("X90p:Id", "d1", "gauss", "amp"),
+            ("X90p:Id", "d1", "gauss", "amp"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "freq_offset"),
+            ("X90p:Id", "d1", "gauss", "freq_offset"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "xy_angle"),
+            ("X90p:Id", "d1", "gauss", "xy_angle"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "delta"),
+            ("X90p:Id", "d1", "gauss", "delta"),
         ]
     ]
-    
+
+    pmap.set_opt_map(gateset_opt_map)
+
     opt = C1(
         dir_path="/tmp/c3log/",
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
-        gateset_opt_map=gateset_opt_map,
-        opt_gates=opt_gates,
+        pmap=pmap,
         algorithm=algorithms.lbfgs,
-        options={"maxfun" : 10},
+        options={"maxfun" : 2},
         run_name="better_X90"
     )
 
@@ -454,6 +438,6 @@ def two_qubits() -> float:
 
 
 def test_two_qubits() -> None:
-    """check if optimization result is below 5e-3
+    """check if optimization result is below 1e-2
     """
-    assert two_qubits() < 0.005
+    assert two_qubits() < 0.01
