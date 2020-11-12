@@ -4,6 +4,7 @@ from c3.libraries.envelopes import envelopes
 from c3.signal.gates import Instruction
 from c3.signal.pulse import Envelope, Carrier
 from c3.utils.parsers import create_model, create_generator, create_gateset
+from c3.experiment import Experiment as Exp
 
 
 model = create_model("test/test_model.cfg")
@@ -106,3 +107,11 @@ def test_signal_generation() -> None:
     X90p_q1.add_component(carr, "d1")
 
     gen.generate_signals(X90p_q1)
+
+
+def test_signal_generation_from_config() -> None:
+    gen.generate_signals(gates.instructions["X90p"])
+
+
+def test_parser_integration() -> None:
+    exp = Exp(model=model, generator=gen, gateset=gates)
