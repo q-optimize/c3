@@ -26,10 +26,11 @@ import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
 
+from c3.optimizers.optimizer import Optimizer
 from c3.optimizers.c1 import C1
 
 
-def two_qubits() -> float:
+def c1_integration_setup() -> Optimizer:
     """script for setting up two qubits and optimising a simple gate
 
     Returns
@@ -432,12 +433,19 @@ def two_qubits() -> float:
 
     opt.set_exp(exp)
 
-    opt.optimize_controls()
+    return opt, exp, pmap
 
+
+def run_optim() -> float:
+    """
+    Perform the optimization run
+    """
+    opt, _, _ = c1_integration_setup()
+    opt.optimize_controls()
     return (opt.current_best_goal)
 
 
 def test_two_qubits() -> None:
     """check if optimization result is below 1e-2
     """
-    assert two_qubits() < 0.01
+    assert run_optim() < 0.01
