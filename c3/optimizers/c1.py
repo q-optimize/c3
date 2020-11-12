@@ -3,9 +3,7 @@
 import os
 import shutil
 import time
-import json
 import tensorflow as tf
-import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 
