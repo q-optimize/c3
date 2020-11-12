@@ -1,5 +1,6 @@
 """Basic custom objects."""
 
+from typing import List, Dict, Tuple
 import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
@@ -27,7 +28,7 @@ class C3obj:
             name: str,
             desc: str = " ",
             comment: str = " "
-            ):
+    ):
         self.name = name
         self.desc = desc
         self.comment = comment
@@ -149,17 +150,17 @@ class Quantity:
             val = val / np.pi
             use_prefix = False
         ret = ""
-        for q in np.nditer(val):
-            ret += num3str(q, use_prefix) + self.unit + " "
+        for entry in np.nditer(val):
+            ret += num3str(entry, use_prefix) + self.unit + " "
         return ret
 
-    def numpy(self):
+    def numpy(self) -> np.ndarray:
         """
         Return the value of this quantity as numpy.
         """
         return self.scale * (self.value.numpy() + 1) / 2 + self.offset
 
-    def get_value(self, val=None):
+    def get_value(self, val=None) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 
@@ -173,7 +174,7 @@ class Quantity:
             val = self.value
         return self.scale * (val + 1) / 2 + self.offset
 
-    def set_value(self, val):
+    def set_value(self, val: float) -> None:
         """ Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
@@ -186,11 +187,11 @@ class Quantity:
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)
 
-    def get_opt_value(self):
+    def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""
         return self.value.numpy().flatten()
 
-    def set_opt_value(self, val):
+    def set_opt_value(self, val: float) -> None:
         """ Set value optimizer friendly.
 
         Parameters
@@ -255,19 +256,13 @@ class ParameterMap:
         self.model = model
         self.generator = generator
 
-    def write_config(self):
-        cfg = {}
-        for instr in self.instructions:
-            cfg[instr] = self.instructions[instr].write_config()
-        return cfg
-
-    def get_full_params(self):
+    def get_full_params(self) -> Dict[str, Quantity]:
         """
         Returns the full parameter vector, including model and control parameters.
         """
         return self.__pars
 
-    def get_opt_units(self):
+    def get_opt_units(self) -> List[str]:
         """
         Returns a list of the units of the optimized quantities.
         """
@@ -276,7 +271,7 @@ class ParameterMap:
             units.append(self.__pars[equiv_ids[0]].unit)
         return units
 
-    def get_parameter(self, par_id):
+    def get_parameter(self, par_id: Tuple[str]) -> Quantity:
         """
         Return one the current parameters.
 
@@ -299,7 +294,7 @@ class ParameterMap:
             raise Exception(f"C3:ERROR:Parameter {par_id} not defined.") from ke
         return value
 
-    def get_parameters(self):
+    def get_parameters(self) -> List[Quantity]:
         """
         Return the current parameters.
 
@@ -318,13 +313,13 @@ class ParameterMap:
             try:
                 values.append(self.__pars[equiv_ids[0]])
             except KeyError as ke:
-                for id in self.__pars:
-                    if id[0] == equiv_ids[0][0]:
-                        print(f"Found {id[0]}.")
+                for par_id in self.__pars:
+                    if par_id[0] == equiv_ids[0][0]:
+                        print(f"Found {par_id[0]}.")
                 raise Exception(f"C3:ERROR:Parameter {equiv_ids[0]} not defined.") from ke
         return values
 
-    def set_parameters(self, values: list, opt_map=None):
+    def set_parameters(self, values: list, opt_map=None) -> None:
         """Set the values in the original instruction class.
 
         Parameters
@@ -353,7 +348,7 @@ class ParameterMap:
                     ) from ve
             val_indx += 1
 
-    def get_parameters_scaled(self):
+    def get_parameters_scaled(self) -> np.ndarray:
         """
         Return the current parameters. This fuction should only be called by an optimizer. Are you
         an optimizer?
@@ -374,9 +369,10 @@ class ParameterMap:
             values.append(par.get_opt_value())
         return np.array(values).flatten()
 
-    def set_parameters_scaled(self, values: list):
-        """Set the values in the original instruction class. This fuction should only be called by an optimizer.
-        Are you an optimizer?
+    def set_parameters_scaled(self, values: list) -> None:
+        """
+        Set the values in the original instruction class. This fuction should only be called by
+        an optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -391,25 +387,23 @@ class ParameterMap:
             par_len = self.__pars[equiv_ids[0]].length
             for id in equiv_ids:
                 par = self.__pars[id]
-                par.set_opt_value(values[val_indx:val_indx+par_len])
+                par.set_opt_value(values[val_indx:val_indx + par_len])
             val_indx += par_len
 
-    def set_opt_map(self, opt_map):
+    def set_opt_map(self, opt_map) -> None:
+        """
+        Set the opt_map, i.e. which parameters will be optimized.
+        """
         for equiv_ids in opt_map:
             for pid in equiv_ids:
                 if not pid in self.__pars:
-                        raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
+                    raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
         self.opt_map = opt_map
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
-        Return a multi-line human-readable string of the parameter names and
+        Return a multi-line human-readable string of all defined parameter names and
         current values.
-
-        Parameters
-        ----------
-        opt_map: list
-            Optionally use only the specified parameters.
 
         Returns
         -------
@@ -424,7 +418,21 @@ class ParameterMap:
 
         return "".join(ret)
 
-    def str_parameters(self, opt_map):
+    def str_parameters(self, opt_map) -> str:
+        """
+        Return a multi-line human-readable string of the optmization parameter names and
+        current values.
+
+        Parameters
+        ----------
+        opt_map: list
+            Optionally use only the specified parameters.
+
+        Returns
+        -------
+        str
+            Parameters and their values
+        """
         ret = []
         for equiv_ids in opt_map:
             par_id = equiv_ids[0]
@@ -432,11 +440,14 @@ class ParameterMap:
             nice_id = "-".join(par_id)
             ret.append(f"{nice_id:38}: {par}\n")
             if len(equiv_ids) > 1:
-                for id in equiv_ids[1:]:
-                    ret.append("-".join(id))
+                for eid in equiv_ids[1:]:
+                    ret.append("-".join(eid))
                     ret.append("\n")
                 ret.append("\n")
         return "".join(ret)
 
     def print_parameters(self):
+        """
+        Print current parameters to stdout.
+        """
         print(self.str_parameters(self.opt_map))
