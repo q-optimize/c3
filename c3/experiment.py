@@ -1,10 +1,11 @@
 """
 Experiment class that models and simulates the whole experiment.
 
-It combines the information about the model of the quantum device, the control stack and the operations that can be
-done on the device.
+It combines the information about the model of the quantum device, the control stack and the
+operations that can be done on the device.
 
-Given this information an experiment run is simulated, returning either processes, states or populations.
+Given this information an experiment run is simulated, returning either processes, states or
+populations.
 """
 
 import os
@@ -17,7 +18,6 @@ import matplotlib.pyplot as plt
 from c3.utils import tf_utils
 
 
-# TODO add case where one only wants to pass a list of quantity objects?
 class Experiment:
     """
     It models all of the behaviour of the physical experiment, serving as a
@@ -38,28 +38,18 @@ class Experiment:
 
     def __init__(self, pmap=None):
         self.pmap = pmap
-
+        self.opt_gates = None
         self.unitaries = {}
         self.dUs = {}
-
-    def write_config(self):
-        """
-        Return the current experiment as a JSON compatible dict.
-
-        EXPERIMENTAL
-        """
-        cfg = {}
-        cfg['model'] = model.write_config()
-        cfg['generator'] = generator.write_config()
-        cfg['gateset'] = self.pmap.write_config()
-        return cfg
+        self.created_by = None
 
     def set_created_by(self, config):
         """
         Store the config file location used to created this experiment.
         """
+
         self.created_by = config
-    
+
     def evaluate(self, seqs):
         """
         Compute the population values for a given sequence of operations.
@@ -91,7 +81,7 @@ class Experiment:
             populations.append(pops)
         return populations
 
-    def process(self, populations,  labels=None):
+    def process(self, populations, labels=None):
         """
         Apply a readout procedure to a population vector. Very specialized
         at the moment.
@@ -161,9 +151,8 @@ class Experiment:
         generator = self.pmap.generator
         instructions = self.pmap.instructions
         gates = {}
-        if "opt_gates" in self.__dict__:
-            gate_keys = self.opt_gates
-        else:
+        gate_keys = self.opt_gates
+        if gate_keys is None:
             gate_keys = instructions.keys()
         for gate in gate_keys:
             try:
@@ -244,7 +233,8 @@ class Experiment:
         gate
     ):
         """
-        Solve the equation of motion (Lindblad or Schrödinger) for a given control signal and Hamiltonians.
+        Solve the equation of motion (Lindblad or Schrödinger) for a given control signal and
+        Hamiltonians.
 
         Parameters
         ----------
@@ -279,7 +269,7 @@ class Experiment:
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U
-    
+
     def set_opt_gates(self, gates):
         """
         Specify a selection of gates to be computed.
