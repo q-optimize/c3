@@ -2,7 +2,7 @@ import copy
 import numpy as np
 from c3.system.model import Model as Mdl
 from c3.c3objs import Quantity as Qty
-from c3.c3objs import ParameterMap as PMap
+from c3.parametermap import ParameterMap as PMap
 from c3.experiment import Experiment as Exp
 from c3.generator.generator import Generator as Gnr
 import c3.signal.gates as gates

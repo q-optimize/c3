@@ -7,7 +7,7 @@ import numpy as np
 
 import c3.libraries.envelopes as envelopes
 
-from c3.c3objs import ParameterMap, Quantity
+from c3.parametermap import ParameterMap, Quantity
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 
