@@ -1,15 +1,14 @@
 """
-integration testing module through two-qubits example
+integration testing module for C1 optimization through two-qubits example
 """
 
 import copy
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import tensorflow_probability as tfp
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
+from c3.c3objs import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
 from c3.system.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
@@ -18,6 +17,7 @@ from c3.generator.generator import Generator as Gnr
 import c3.generator.devices as devices
 import c3.system.chip as chip
 import c3.signal.pulse as pulse
+import c3.signal.gates as gates
 import c3.system.tasks as tasks
 
 # Libs and helpers
@@ -26,10 +26,11 @@ import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
 
+from c3.optimizers.optimizer import Optimizer
 from c3.optimizers.c1 import C1
 
 
-def two_qubits() -> float:
+def c1_integration_setup() -> Optimizer:
     """script for setting up two qubits and optimising a simple gate
 
     Returns
@@ -51,33 +52,33 @@ def two_qubits() -> float:
         hilbert_dim=qubit_lvls,
         freq=Qty(
             value=freq_q1,
-            min=4.995e9 * 2 * np.pi,
-            max=5.005e9 * 2 * np.pi,
+            min_val=4.995e9 * 2 * np.pi,
+            max_val=5.005e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q1,
-            min=-380e6 * 2 * np.pi,
-            max=-120e6 * 2 * np.pi,
+            min_val=-380e6 * 2 * np.pi,
+            max_val=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
 
         t1=Qty(
             value=t1_q1,
-            min=1e-6,
-            max=90e-6,
+            min_val=1e-6,
+            max_val=90e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star_q1,
-            min=10e-6,
-            max=90e-3,
+            min_val=10e-6,
+            max_val=90e-3,
             unit='s'
         ),
         temp=Qty(
             value=qubit_temp,
-            min=0.0,
-            max=0.12,
+            min_val=0.0,
+            max_val=0.12,
             unit='K'
         )
     )
@@ -91,33 +92,33 @@ def two_qubits() -> float:
         desc="Qubit 2",
         freq=Qty(
             value=freq_q2,
-            min=5.595e9 * 2 * np.pi,
-            max=5.605e9 * 2 * np.pi,
+            min_val=5.595e9 * 2 * np.pi,
+            max_val=5.605e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q2,
-            min=-380e6 * 2 * np.pi,
-            max=-120e6 * 2 * np.pi,
+            min_val=-380e6 * 2 * np.pi,
+            max_val=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
             value=t1_q2,
-            min=1e-6,
-            max=90e-6,
+            min_val=1e-6,
+            max_val=90e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star_q2,
-            min=10e-6,
-            max=90e-6,
+            min_val=10e-6,
+            max_val=90e-6,
             unit='s'
         ),
         temp=Qty(
             value=qubit_temp,
-            min=0.0,
-            max=0.12,
+            min_val=0.0,
+            max_val=0.12,
             unit='K'
         )
     )
@@ -130,8 +131,8 @@ def two_qubits() -> float:
         connected=["Q1", "Q2"],
         strength=Qty(
             value=coupling_strength,
-            min=-1 * 1e3 * 2 * np.pi,
-            max=200e6 * 2 * np.pi,
+            min_val=-1 * 1e3 * 2 * np.pi,
+            max_val=200e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hamiltonian_func=hamiltonians.int_XX
@@ -164,16 +165,16 @@ def two_qubits() -> float:
     val2 = one_zeros * m00_q2 + zero_ones * m01_q2
     min = one_zeros * 0.8 + zero_ones * 0.0
     max = one_zeros * 1.0 + zero_ones * 0.2
-    confusion_row1 = Qty(value=val1, min=min, max=max, unit="")
-    confusion_row2 = Qty(value=val2, min=min, max=max, unit="")
+    confusion_row1 = Qty(value=val1, min_val=min, max_val=max, unit="")
+    confusion_row2 = Qty(value=val2, min_val=min, max_val=max, unit="")
     conf_matrix = tasks.ConfusionMatrix(Q1=confusion_row1, Q2=confusion_row2)
 
     init_temp = 50e-3
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
             value=init_temp,
-            min=-0.001,
-            max=0.22,
+            min_val=-0.001,
+            max_val=0.22,
             unit='K'
         )
     )
@@ -197,8 +198,8 @@ def two_qubits() -> float:
         name='resp',
         rise_time=Qty(
             value=0.3e-9,
-            min=0.05e-9,
-            max=0.6e-9,
+            min_val=0.05e-9,
+            max_val=0.6e-9,
             unit='s'
         ),
         resolution=sim_res
@@ -214,53 +215,51 @@ def two_qubits() -> float:
         name='v_to_hz',
         V_to_Hz=Qty(
             value=v2hz,
-            min=0.9e9,
-            max=1.1e9,
+            min_val=0.9e9,
+            max_val=1.1e9,
             unit='Hz 2pi/V'
         )
     )
 
     generator = Gnr([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
-    import c3.signal.gates as gates
-    gateset = gates.GateSet()
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
     gauss_params_single = {
         'amp': Qty(
             value=0.5,
-            min=0.4,
-            max=0.6,
+            min_val=0.4,
+            max_val=0.6,
             unit="V"
         ),
         't_final': Qty(
             value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
+            min_val=0.5 * t_final,
+            max_val=1.5 * t_final,
             unit="s"
         ),
         'sigma': Qty(
             value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
+            min_val=t_final / 8,
+            max_val=t_final / 2,
             unit="s"
         ),
         'xy_angle': Qty(
             value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
             unit='rad'
         ),
         'freq_offset': Qty(
             value=-sideband - 3e6 * 2 * np.pi,
-            min=-56 * 1e6 * 2 * np.pi,
-            max=-52 * 1e6 * 2 * np.pi,
+            min_val=-56 * 1e6 * 2 * np.pi,
+            max_val=-52 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
             value=-1,
-            min=-5,
-            max=3,
+            min_val=-5,
+            max_val=3,
             unit=""
         )
     }
@@ -278,8 +277,8 @@ def two_qubits() -> float:
         params={
             't_final': Qty(
                 value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
+                min_val=0.5 * t_final,
+                max_val=1.5 * t_final,
                 unit="s"
             )
         },
@@ -290,14 +289,14 @@ def two_qubits() -> float:
     carrier_parameters = {
         'freq': Qty(
             value=lo_freq_q1,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
+            min_val=4.5e9 * 2 * np.pi,
+            max_val=6e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'framechange': Qty(
             value=0.0,
-            min= -np.pi,
-            max= 3 * np.pi,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
             unit='rad'
         )
     }
@@ -397,52 +396,56 @@ def two_qubits() -> float:
                     g.comps[chan].update(g2.comps[chan])
             all_1q_gates_comb.append(g)
 
-    for gate in all_1q_gates_comb:
-        gateset.add_instruction(gate)
+    pmap = Pmap(all_1q_gates_comb, generator, model)
 
-    exp = Exp(model=model, generator=generator, gateset=gateset)
-
-    exp.opt_gates = ['X90p:Id', 'Id:Id']
-
-    gates = exp.get_gates()
+    exp = Exp(pmap)
 
     generator.devices['awg'].enable_drag_2()
 
-    opt_gates = ["X90p:Id"]
-    gateset_opt_map=[
+    exp.set_opt_gates(["X90p:Id"])
+
+    gateset_opt_map = [
         [
-        ("X90p:Id", "d1", "gauss", "amp"),
+            ("X90p:Id", "d1", "gauss", "amp"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "freq_offset"),
+            ("X90p:Id", "d1", "gauss", "freq_offset"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "xy_angle"),
+            ("X90p:Id", "d1", "gauss", "xy_angle"),
         ],
         [
-        ("X90p:Id", "d1", "gauss", "delta"),
+            ("X90p:Id", "d1", "gauss", "delta"),
         ]
     ]
+
+    pmap.set_opt_map(gateset_opt_map)
 
     opt = C1(
         dir_path="/tmp/c3log/",
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
-        gateset_opt_map=gateset_opt_map,
-        opt_gates=opt_gates,
+        pmap=pmap,
         algorithm=algorithms.lbfgs,
-        options={"maxfun" : 10},
+        options={"maxfun" : 2},
         run_name="better_X90"
     )
 
     opt.set_exp(exp)
 
-    opt.optimize_controls()
+    return opt, exp, pmap
 
+
+def run_optim() -> float:
+    """
+    Perform the optimization run
+    """
+    opt, _, _ = c1_integration_setup()
+    opt.optimize_controls()
     return (opt.current_best_goal)
 
 
 def test_two_qubits() -> None:
-    """check if optimization result is below 5e-3
+    """check if optimization result is below 1e-2
     """
-    assert two_qubits() < 0.005
+    assert run_optim() < 0.01
