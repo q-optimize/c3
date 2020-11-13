@@ -9,9 +9,10 @@ Example: A local oscillator and arbitrary waveform generator signal
 are put through via a mixer device to produce an effective modulated signal.
 """
 
-import copy
+import hjson
 import numpy as np
 from c3.signal.gates import Instruction
+from c3.generator.devices import devices as dev_lib
 
 
 class Generator:
@@ -29,36 +30,47 @@ class Generator:
 
     def __init__(
             self,
-            devices: dict,
-            chain: list,
+            devices: dict = None,
+            chain: list = None,
             resolution: np.float64 = 0.0
     ):
-        self.devices = devices
+        self.devices = {}
+        if devices:
+            self.devices = devices
+        self.chain = []
+        if chain:
+            self.chain = chain
+            self.__check_signal_chain()
+        self.resolution = resolution
+
+    def __check_signal_chain(self) -> None:
         signals = 0
-        for device_id in chain:
-            signals -= devices[device_id].inputs
-            signals += devices[device_id].outputs
+        for device_id in self.chain:
+            signals -= self.devices[device_id].inputs
+            signals += self.devices[device_id].outputs
         if signals != 1:
             raise Exception(
                 "C3:ERROR: Signal chain contains unmatched number"
                 " of inputs and outputs."
             )
-        self.chain = chain
-        self.resolution = resolution
 
-    def write_config(self):
+    def read_config(self, filepath: str) -> None:
         """
-        WIP Write current status to file.
+        Load a file and parse it to create a Generator object.
+
+        Parameters
+        ----------
+        filepath : str
+            Location of the configuration file
+
         """
-        cfg = {}
-        cfg = copy.deepcopy(self.__dict__)
-        devcfg = {}
-        for key in self.devices:
-            dev = self.devices[key]
-            devcfg[dev.name] = dev.write_config()
-        cfg["devices"] = devcfg
-        cfg.pop('signal', None)
-        return cfg
+        with open(filepath, "r") as cfg_file:
+            cfg = hjson.loads(cfg_file.read())
+        for name, props in cfg["Devices"].items():
+            props["name"] = name
+            self.devices[name] = dev_lib[name](**props)
+        self.chain = cfg["Chain"]
+        self.__check_signal_chain()
 
     def generate_signals(self, instr: Instruction):
         """
