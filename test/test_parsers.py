@@ -3,13 +3,17 @@ from c3.c3objs import Quantity
 from c3.libraries.envelopes import envelopes
 from c3.signal.gates import Instruction
 from c3.signal.pulse import Envelope, Carrier
-from c3.utils.parsers import create_model, create_generator, create_gateset
+from c3.system.model import Model
+from c3.generator.generator import Generator
+from c3.parametermap import ParameterMap
 from c3.experiment import Experiment as Exp
 
-
-model = create_model("test/test_model.cfg")
-gen = create_generator("test/generator.cfg")
-gates = create_gateset("test/instructions.cfg")
+model = Model()
+model.read_config("test/test_model.cfg")
+gen = Generator()
+gen.read_config("test/generator.cfg")
+pmap = ParameterMap(model=model, generator=gen)
+pmap.read_config("test/instructions.cfg")
 
 
 def test_subsystems() -> None:
@@ -25,7 +29,7 @@ def test_q6_freq() -> None:
 
 
 def test_instructions() -> None:
-    assert list(gates.instructions.keys()) == ["X90p", "Y90p", "X90m", "Y90m"]
+    assert list(pmap.instructions.keys()) == ["X90p", "Y90p", "X90m", "Y90m"]
 
 
 def test_signal_generation() -> None:
@@ -110,8 +114,8 @@ def test_signal_generation() -> None:
 
 
 def test_signal_generation_from_config() -> None:
-    gen.generate_signals(gates.instructions["X90p"])
+    gen.generate_signals(pmap.instructions["X90p"])
 
 
 def test_parser_integration() -> None:
-    exp = Exp(model=model, generator=gen, gateset=gates)
+    exp = Exp(pmap=pmap)
