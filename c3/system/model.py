@@ -32,7 +32,7 @@ class Model:
 
     """
 
-    def __init__(self, subsystems, couplings, tasks):
+    def __init__(self, subsystems, couplings, tasks=[]):
         self.dressed = False
         self.lindbladian = False
         self.use_FR = True
@@ -53,6 +53,7 @@ class Model:
         for subs in subsystems:
             dims.append(subs.hilbert_dim)
             names.append(subs.name)
+            # TODO user defined labels
             state_labels.append(list(range(subs.hilbert_dim)))
             comp_state_labels.append([0, 1])
         self.tot_dim = np.prod(dims)
@@ -176,6 +177,7 @@ class Model:
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
         transformation matrix."""
+        # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:

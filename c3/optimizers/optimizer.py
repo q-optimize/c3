@@ -40,7 +40,8 @@ class Optimizer:
         self.plot_dynamics = plot_dynamics
         self.plot_pulses = plot_pulses
         self.store_unitaries = store_unitaries
-        if algorithm is not None:
+        self.created_by = None
+        if algorithm:
             self.algorithm = algorithm
         else:
             print("C3:WARNING:No algorithm passed. Using default LBFGS")
@@ -64,6 +65,31 @@ class Optimizer:
     def set_exp(self, exp):
         self.exp = exp
 
+    def set_created_by(self, config):
+        """
+        Store the config file location used to created this optimizer.
+        """
+        self.created_by = config
+
+    def load_best(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
+        with open(init_point) as init_file:
+            best = json.load(init_file)
+
+        best_opt_map = [
+            [tuple(par) for par in pset] for pset in best["opt_map"]
+        ]
+        init_p = best['optim_status']['params']
+        self.pmap.set_parameters(init_p, best_opt_map)
+
     def start_log(self):
         """
         Initialize the log with current time.
@@ -75,8 +101,11 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.opt_map))
-            logfile.write("\n\n")
+            logfile.write(json.dumps(self.pmap.opt_map))
+            logfile.write("\n")
+            logfile.write("Units:\n")
+            logfile.write(json.dumps(self.pmap.get_opt_units()))
+            logfile.write("\n")
             logfile.write("Algorithm options:\n")
             logfile.write(json.dumps(self.options))
             logfile.write("\n")
@@ -113,29 +142,29 @@ class Optimizer:
 
     def log_parameters(self):
         """
-        Log the current status. Write parameters to log. Update the current best parameters. Call plotting functions as
-        set up.
+        Log the current status. Write parameters to log. Update the current best parameters.
+        Call plotting functions as set up.
 
         """
         if self.optim_status['goal'] < self.current_best_goal:
             self.current_best_goal = self.optim_status['goal']
             self.current_best_params = self.optim_status['params']
-            if "U_dict" in self.exp.__dict__.keys():
-                self.log_best_unitary()
             with open(
                 self.logdir + 'best_point_' + self.logname, 'w'
             ) as best_point:
-                best_point.write(json.dumps(self.opt_map))
+                best_dict = {
+                    "opt_map": self.pmap.opt_map,
+                    "units": self.pmap.get_opt_units(),
+                    "optim_status": self.optim_status
+                }
+                best_point.write(json.dumps(best_dict))
                 best_point.write("\n")
-                best_point.write(json.dumps(self.optim_status))
-                best_point.write("\n")
-                best_point.write(self.nice_print(self.opt_map))
         if self.plot_dynamics:
-            psi_init = self.exp.model.tasks["init_ground"].initialise(
-                self.exp.model.drift_H,
-                self.exp.model.lindbladian
+            psi_init = self.pmap.model.tasks["init_ground"].initialise(
+                self.pmap.model.drift_H,
+                self.pmap.model.lindbladian
             )
-            #dim = np.prod(self.exp.model.dims)
+            #dim = np.prod(self.pmap.model.dims)
             #psi_init = [0] * dim
             #psi_init[1] = 1
             #psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
@@ -144,7 +173,7 @@ class Optimizer:
             self.exp.dynamics_plot_counter += 1
         if self.plot_pulses:
             for gate in self.opt_gates:
-                instr = self.exp.gateset.instructions[gate]
+                instr = self.pmap.instructions[gate]
                 self.exp.plot_pulses(instr, self.optim_status['goal'])
             self.exp.pulses_plot_counter += 1
         if self.store_unitaries:

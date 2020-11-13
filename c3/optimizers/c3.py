@@ -23,16 +23,14 @@ class C3(Optimizer):
     ----------
     dir_path : str
         Filepath to save results
-    fom : callable
-        Figure of merit from the estimator library
     sampling : str
         Sampling method from the sampling library
     batch_sizes : list
         Number of points to select from each dataset
     seqs_per_point : int
         Number of sequences that use the same parameter set
-    opt_map : list
-        Hierarchical identifiers for the model parameter vector
+    pmap : ParameterMap
+        Identifiers for the parameter vector
     state_labels : list
         Identifiers for the qubit subspaces
     callback_foms : list
@@ -50,11 +48,10 @@ class C3(Optimizer):
     def __init__(
         self,
         dir_path,
-        fom,
         sampling,
         batch_sizes,
-        seqs_per_point,
-        opt_map,
+        pmap,
+        seqs_per_point=None,
         state_labels=None,
         callback_foms=[],
         callback_figs=[],
@@ -65,17 +62,17 @@ class C3(Optimizer):
         """Initiliase.
         """
         super().__init__(algorithm=algorithm)
-        self.fom = fom
         self.sampling = sampling
         self.batch_sizes = batch_sizes
         self.seqs_per_point = seqs_per_point
-        self.opt_map = opt_map
+        self.pmap = pmap
         self.state_labels = state_labels
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
         self.inverse = False
         self.options = options
         self.learn_data = {}
+        self.fom = g_LL_prime_combined
         self.log_setup(dir_path, run_name)
 
     def log_setup(self, dir_path, run_name):
@@ -104,28 +101,12 @@ class C3(Optimizer):
 
         Parameters
         ----------
-        datafiles : list of str
+        datafiles : dict
             List of paths for files that contain learning data.
         """
         for target, datafile in datafiles.items():
             with open(datafile, 'rb+') as file:
                 self.learn_data[target] = pickle.load(file)
-
-    def load_best(self, init_point):
-        """
-        Load a previous parameter point to start the optimization from.
-
-        Parameters
-        ----------
-        init_point : str
-            File location of the initial point
-
-        """
-        with open(init_point) as init_file:
-            best = init_file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
-            self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
         """
@@ -144,7 +125,7 @@ class C3(Optimizer):
         # TODO fix when batch size is 1 (atm it does all)
         learn_from = self.learn_from
         sampling = self.sampling
-        indeces =  sampling(learn_from, batch_size)
+        indeces = sampling(learn_from, batch_size)
         total_size = len(learn_from)
         all = list(range(total_size))
         if self.inverse:
@@ -157,15 +138,15 @@ class C3(Optimizer):
         Peroms the model learning by minimizing the figure of merit.
         """
         self.start_log()
-        self.nice_print = self.exp.print_parameters
         for cb_fig in self.callback_figs:
             os.makedirs(self.logdir + cb_fig.__name__)
         # os.makedirs(self.logdir + 'dynamics_seq')
         # os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.exp.get_parameters(self.opt_map, scaled=True)
-        self.init_gateset_params = self.exp.gateset.get_parameters()
-        self.init_gateset_opt_map = self.exp.gateset.list_parameters()
+        x0 = self.pmap.get_parameters_scaled()
+        # TODO Nico: Store initial parameters to recover them later, do we need this?
+        # self.init_params = self.pmap.gateset.get_parameters()
+        # self.init_opt_map = self.pmap.gateset.list_parameters()
         try:
             # TODO deal with keras learning differently
             self.algorithm(
@@ -177,10 +158,12 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
+        # TODO call plotting code in a separate kernel
         # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = json.loads(file.readlines()[1])['params']
-        self.exp.set_parameters(best_params, self.opt_map)
+        self.pmap.set_parameters(best_params)
+        self.pmap.model.update_model()
         self.end_log()
         self.confirm()
 
@@ -193,7 +176,7 @@ class C3(Optimizer):
         self.inverse = True
         self.start_log()
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x_best = self.exp.get_parameters(self.opt_map, scaled=True)
+        x_best = self.pmap.get_parameters_scaled()
         self.evaluation = -1
         try:
             self.goal_run(x_best)
@@ -247,24 +230,20 @@ class C3(Optimizer):
                 if target == 'all':
                     num_seqs = len(sequences) * 3
 
-                self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-                if "init_gateset_params" in self.__dict__.keys():
-                    self.exp.gateset.set_parameters(
-                        self.init_gateset_params,
-                        self.init_gateset_opt_map,
-                        scaled=False
-                    )
-                self.exp.gateset.set_parameters(
-                    gateset_params, gateset_opt_map, scaled=False
-                )
+                self.pmap.set_parameters_scaled(current_params)
+                self.pmap.model.update_model()
+
+                # We make sure to reset the control parameters
+                # self.exp.gateset.set_parameters(self.init_gateset_params, self.init_gateset_opt_map)
+                self.pmap.set_parameters(gateset_params, gateset_opt_map)
                 # We find the unique gates used in the sequence and compute
                 # only them.
                 self.exp.opt_gates = list(
                     set(itertools.chain.from_iterable(sequences))
                 )
                 self.exp.get_gates()
-                self.exp.evaluate(sequences)
-                sim_vals = self.exp.process(labels=self.state_labels[target])
+                pops = self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(labels=self.state_labels[target], populations=pops)
 
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
@@ -328,15 +307,12 @@ class C3(Optimizer):
 
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal))
-            # print("{}: {}".format(self.fom.__name__, goal))
+            logfile.write("{}: {}\n".format("g_LL_prime_combined", goal))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                # print("{}: {}".format(cb_fom.__name__, val))
-            # print("")
             logfile.flush()
 
         for cb_fig in self.callback_figs:
@@ -352,7 +328,7 @@ class C3(Optimizer):
 
         self.optim_status['params'] = [
             par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+            for par in self.pmap.get_parameters()
         ]
         self.optim_status['goal'] = goal
         self.optim_status['time'] = time.asctime()
@@ -396,23 +372,18 @@ class C3(Optimizer):
 
                 with tf.GradientTape() as t:
                     t.watch(current_params)
-                    self.exp.set_parameters(current_params, self.opt_map, scaled=True)
-                    self.exp.gateset.set_parameters(
-                        self.init_gateset_params,
-                        self.init_gateset_opt_map,
-                        scaled=False
-                    )
-                    self.exp.gateset.set_parameters(
-                        gateset_params, gateset_opt_map, scaled=False
-                    )
+                    self.pmap.set_parameters_scaled(current_params)
+                    self.pmap.model.update_model()
+                    # self.exp.gateset.set_parameters(self.init_gateset_params,self.init_gateset_opt_map)
+                    self.pmap.set_parameters(gateset_params, gateset_opt_map)
                     # We find the unique gates used in the sequence and compute
-                    # only them.
+                    # only those.
                     self.exp.opt_gates = list(
                         set(itertools.chain.from_iterable(sequences))
                     )
                     self.exp.get_gates()
-                    self.exp.evaluate(sequences)
-                    sim_vals = self.exp.process(labels=self.state_labels[target])
+                    pops = self.exp.evaluate(sequences)
+                    sim_vals = self.exp.process(labels=self.state_labels[target], populations=pops)
 
                     exp_stds.extend(m_stds)
                     exp_shots.extend(m_shots)
@@ -445,11 +416,8 @@ class C3(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
-                            self.exp.gateset.get_parameters(
-                                self.gateset_opt_map, to_str=True
-                            ),
-                        )
+                            json.dumps(self.gateset_opt_map), str(self.pmap)
+                        ),
                     )
                     logfile.write(
                         "Sequence    Simulation  Experiment  Std         Shots"
@@ -486,14 +454,11 @@ class C3(Optimizer):
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal))
-            # print("{}: {}".format(self.fom.__name__, goal))
             for cb_fom in self.callback_foms:
                 val = float(
                     cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy()
                 )
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-                # print("{}: {}".format(cb_fom.__name__, val))
-            # print("")
             logfile.flush()
 
         for cb_fig in self.callback_figs:
@@ -509,7 +474,7 @@ class C3(Optimizer):
 
         self.optim_status['params'] = [
             par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+            for par in self.pmap.get_parameters()
         ]
         self.optim_status['goal'] = goal
         self.optim_status['gradient'] = list(grad.flatten())
