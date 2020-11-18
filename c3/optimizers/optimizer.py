@@ -83,7 +83,7 @@ class Optimizer:
 
         """
         with open(init_point) as init_file:
-            best = json.load(init_file)
+            best = hjson.load(init_file)
 
         best_opt_map = [
             [tuple(par) for par in pset] for pset in best["opt_map"]
@@ -182,8 +182,8 @@ class Optimizer:
             self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n")
-            # logfile.write(hhjson.dumps(self.optim_status, indent=2))
-            logfile.write(hhjson.dumps(self.optim_status))
+            # logfile.write(hjson.dumps(self.optim_status, indent=2))
+            logfile.write(hjson.dumps(self.optim_status))
             logfile.write("\n")
             logfile.flush()
 
