@@ -8,7 +8,7 @@ import tensorflow as tf
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
-from c3.c3objs import ParameterMap as Pmap
+from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
 from c3.system.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
@@ -40,8 +40,8 @@ def c1_integration_setup() -> Optimizer:
     """
 
     qubit_lvls = 3
-    freq_q1 = 5e9 * 2 * np.pi
-    anhar_q1 = -210e6 * 2 * np.pi
+    freq_q1 = 5e9
+    anhar_q1 = -210e6
     t1_q1 = 27e-6
     t2star_q1 = 39e-6
     qubit_temp = 50e-3
@@ -52,14 +52,14 @@ def c1_integration_setup() -> Optimizer:
         hilbert_dim=qubit_lvls,
         freq=Qty(
             value=freq_q1,
-            min_val=4.995e9 * 2 * np.pi,
-            max_val=5.005e9 * 2 * np.pi,
+            min_val=4.995e9,
+            max_val=5.005e9,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q1,
-            min_val=-380e6 * 2 * np.pi,
-            max_val=-120e6 * 2 * np.pi,
+            min_val=-380e6,
+            max_val=-120e6,
             unit='Hz 2pi'
         ),
 
@@ -83,8 +83,8 @@ def c1_integration_setup() -> Optimizer:
         )
     )
 
-    freq_q2 = 5.6e9 * 2 * np.pi
-    anhar_q2 = -240e6 * 2 * np.pi
+    freq_q2 = 5.6e9
+    anhar_q2 = -240e6
     t1_q2 = 23e-6
     t2star_q2 = 31e-6
     q2 = chip.Qubit(
@@ -92,14 +92,14 @@ def c1_integration_setup() -> Optimizer:
         desc="Qubit 2",
         freq=Qty(
             value=freq_q2,
-            min_val=5.595e9 * 2 * np.pi,
-            max_val=5.605e9 * 2 * np.pi,
+            min_val=5.595e9,
+            max_val=5.605e9,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q2,
-            min_val=-380e6 * 2 * np.pi,
-            max_val=-120e6 * 2 * np.pi,
+            min_val=-380e6,
+            max_val=-120e6,
             unit='Hz 2pi'
         ),
         hilbert_dim=qubit_lvls,
@@ -123,7 +123,7 @@ def c1_integration_setup() -> Optimizer:
         )
     )
 
-    coupling_strength = 20e6 * 2 * np.pi
+    coupling_strength = 20e6
     q1q2 = chip.Coupling(
         name="Q1-Q2",
         desc="coupling",
@@ -131,8 +131,8 @@ def c1_integration_setup() -> Optimizer:
         connected=["Q1", "Q2"],
         strength=Qty(
             value=coupling_strength,
-            min_val=-1 * 1e3 * 2 * np.pi,
-            max_val=200e6 * 2 * np.pi,
+            min_val=-1 * 1e3,
+            max_val=200e6,
             unit='Hz 2pi'
         ),
         hamiltonian_func=hamiltonians.int_XX
@@ -190,41 +190,49 @@ def c1_integration_setup() -> Optimizer:
 
     sim_res = 100e9 # Resolution for numerical simulation
     awg_res = 2e9 # Realistic, limited resolution of an AWG
-    lo = devices.LO(name='lo', resolution=sim_res)
-    awg = devices.AWG(name='awg', resolution=awg_res)
-    mixer = devices.Mixer(name='mixer')
 
-    resp = devices.Response(
-        name='resp',
-        rise_time=Qty(
-            value=0.3e-9,
-            min_val=0.05e-9,
-            max_val=0.6e-9,
-            unit='s'
-        ),
-        resolution=sim_res
+    generator = Gnr(
+        devices={
+            "LO": devices.LO(name='lo', resolution=sim_res, outputs=1),
+            "AWG": devices.AWG(name='awg', resolution=awg_res, outputs=1),
+            "DigitalToAnalog": devices.DigitalToAnalog(
+                name="dac",
+                resolution=sim_res,
+                inputs=1,
+                outputs=1
+            ),
+            "Response": devices.Response(
+                name='resp',
+                rise_time=Qty(
+                    value=0.3e-9,
+                    min_val=0.05e-9,
+                    max_val=0.6e-9,
+                    unit='s'
+                ),
+                resolution=sim_res,
+                inputs=1,
+                outputs=1
+            ),
+            "Mixer": devices.Mixer(name='mixer', inputs=2, outputs=1),
+            "VoltsToHertz": devices.VoltsToHertz(
+                name='v_to_hz',
+                V_to_Hz=Qty(
+                    value=1e9,
+                    min_val=0.9e9,
+                    max_val=1.1e9,
+                    unit='Hz/V'
+                ),
+                inputs=1,
+                outputs=1
+            )
+        },
+        chain=[
+            "LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"
+        ]
     )
-
-    dig_to_an = devices.Digital_to_Analog(
-        name="dac",
-        resolution=sim_res
-    )
-
-    v2hz = 1e9
-    v_to_hz = devices.Volts_to_Hertz(
-        name='v_to_hz',
-        V_to_Hz=Qty(
-            value=v2hz,
-            min_val=0.9e9,
-            max_val=1.1e9,
-            unit='Hz 2pi/V'
-        )
-    )
-
-    generator = Gnr([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
     t_final = 7e-9   # Time for single qubit gates
-    sideband = 50e6 * 2 * np.pi
+    sideband = 50e6
     gauss_params_single = {
         'amp': Qty(
             value=0.5,
@@ -251,9 +259,9 @@ def c1_integration_setup() -> Optimizer:
             unit='rad'
         ),
         'freq_offset': Qty(
-            value=-sideband - 3e6 * 2 * np.pi,
-            min_val=-56 * 1e6 * 2 * np.pi,
-            max_val=-52 * 1e6 * 2 * np.pi,
+            value=-sideband - 3e6,
+            min_val=-56 * 1e6,
+            max_val=-52 * 1e6,
             unit='Hz 2pi'
         ),
         'delta': Qty(
@@ -285,12 +293,12 @@ def c1_integration_setup() -> Optimizer:
         shape=envelopes.no_drive
     )
 
-    lo_freq_q1 = 5e9 * 2 * np.pi + sideband
+    lo_freq_q1 = 5e9 + sideband
     carrier_parameters = {
         'freq': Qty(
             value=lo_freq_q1,
-            min_val=4.5e9 * 2 * np.pi,
-            max_val=6e9 * 2 * np.pi,
+            min_val=4.5e9,
+            max_val=6e9,
             unit='Hz 2pi'
         ),
         'framechange': Qty(
@@ -306,7 +314,7 @@ def c1_integration_setup() -> Optimizer:
         params=carrier_parameters
     )
 
-    lo_freq_q2 = 5.6e9 * 2 * np.pi + sideband
+    lo_freq_q2 = 5.6e9 + sideband
     carr_2 = copy.deepcopy(carr)
     carr_2.params['freq'].set_value(lo_freq_q2)
 
@@ -400,7 +408,7 @@ def c1_integration_setup() -> Optimizer:
 
     exp = Exp(pmap)
 
-    generator.devices['awg'].enable_drag_2()
+    generator.devices['AWG'].enable_drag_2()
 
     exp.set_opt_gates(["X90p:Id"])
 

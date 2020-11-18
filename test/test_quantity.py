@@ -1,6 +1,7 @@
 """Unit tests for Quantity class"""
 
 import hjson
+import numpy as np
 from c3.c3objs import Quantity
 
 amp = Quantity(value=0.0, min_val=-1.0, max_val=+1.0, unit="V")
@@ -10,6 +11,21 @@ amp_dict = {
     'max_val': 1.0,
     'unit': 'V',
     'symbol': '\\alpha'
+}
+
+freq = Quantity(
+    value=5.6e9,
+    min_val=5.595e9,
+    max_val=5.605e9,
+    unit='Hz 2pi',
+    symbol="\\omega"
+)
+freq_dict = {
+    'value': 5.6e9,
+    'min_val': 5.595e9,
+    'max_val': 5.605e9,
+    'unit': 'Hz 2pi',
+    'symbol': '\\omega'
 }
 
 gate_time = Quantity(
@@ -27,6 +43,16 @@ matrix = Quantity(
     unit="",
     symbol=r"M"
 )
+
+
+def test_qty_2pi() -> None:
+    assert freq.asdict() == freq_dict
+
+
+def test_qty_set_2pi() -> None:
+    freq.set_value(5.602e9)
+    assert freq.get_value() == 5.602e9 * 2 * np.pi
+
 
 def test_qty_asdict() -> None:
     assert amp.asdict() == amp_dict

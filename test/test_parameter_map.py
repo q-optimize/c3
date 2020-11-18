@@ -14,8 +14,8 @@ from c3.signal.gates import Instruction
 
 def setup_pmap() -> ParameterMap:
     t_final = 7e-9   # Time for single qubit gates
-    sideband = 50e6 * 2 * np.pi
-    lo_freq = 5e9 * 2 * np.pi + sideband
+    sideband = 50e6
+    lo_freq = 5e9 + sideband
 
     # ### MAKE GATESET
     gauss_params_single = {
@@ -44,9 +44,9 @@ def setup_pmap() -> ParameterMap:
             unit='rad'
         ),
         'freq_offset': Quantity(
-            value=-sideband - 0.5e6 * 2 * np.pi,
-            min_val=-53 * 1e6 * 2 * np.pi,
-            max_val=-47 * 1e6 * 2 * np.pi,
+            value=-sideband - 0.5e6,
+            min_val=-53 * 1e6,
+            max_val=-47 * 1e6,
             unit='Hz 2pi'
         ),
         'delta': Quantity(
@@ -78,8 +78,8 @@ def setup_pmap() -> ParameterMap:
     carrier_parameters = {
         'freq': Quantity(
             value=lo_freq,
-            min_val=4.5e9 * 2 * np.pi,
-            max_val=6e9 * 2 * np.pi,
+            min_val=4.5e9,
+            max_val=6e9,
             unit='Hz 2pi'
         ),
         'framechange': Quantity(
