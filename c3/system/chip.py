@@ -23,6 +23,7 @@ class PhysicalComponent(C3obj):
     """
 
     def __init__(self, **props):
+        self.params = {}
         self.hilbert_dim = props.pop("hilbert_dim", None)
         super().__init__(**props)
         self.Hs = {}
@@ -51,6 +52,29 @@ class Qubit(PhysicalComponent):
         of energy level populations
 
     """
+
+    def __init__(
+        self, name, desc, hilbert_dim, comment=None, freq=None, anhar=None, t1=None, t2star=None,
+        temp=None, params=None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim,
+            params=params
+        )
+        # TODO Cleanup params passing and check for conflicting information
+        if freq:
+            self.params['freq'] = freq
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
 
     def init_Hs(self, ann_oper):
         """
@@ -332,6 +356,21 @@ class Coupling(LineComponent):
 
     """
 
+    def __init__(
+        self, name, desc, comment=None, strength=None, connected=None, params=None,
+        hamiltonian_func=None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            connected=connected,
+            hamiltonian_func=hamiltonian_func
+        )
+        if strength:
+            self.params['strength'] = strength
+
     def init_Hs(self, opers_list):
         self.Hs['strength'] = tf.constant(
             self.hamiltonian_func(opers_list), dtype=tf.complex128
@@ -352,6 +391,7 @@ class Drive(LineComponent):
         all physical components receiving driving signals via this line
 
     """
+
     def init_Hs(self, ann_opers: list):
         hs = []
         for a in ann_opers:

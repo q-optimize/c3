@@ -33,7 +33,11 @@ class Device(C3obj):
         self.inputs = props.pop("inputs", 0)
         self.outputs = props.pop("outputs", 0)
         self.resolution = props.pop("resolution", 0)
-        super().__init__(**props)
+        name = props.pop("name")
+        desc = props.pop("desc", "")
+        comment = props.pop("comment", "")
+        params = props.pop("params", None)
+        super().__init__(name, desc, comment, params)
         self.signal = {}
 
     def write_config(self):
@@ -156,10 +160,10 @@ class VoltsToHertz(Device):
         Drive frequency offset.
     """
 
-    def __init__(self, **props):
+    def __init__(self, V_to_Hz = None, **props):
         super().__init__(**props)
-        if not "V_to_Hz" in self.params:
-            raise Exception("C3:ERROR: VoltsToHertz device needs a 'V_to_Hz' parameter.")
+        if V_to_Hz:
+            self.params["V_to_Hz"] = V_to_Hz
 
     def process(self, instr, chan, mixed_signal):
         """Transform signal from value of V to Hz.
@@ -177,7 +181,8 @@ class VoltsToHertz(Device):
             Waveform as control amplitudes
         """
         v2hz = self.params['V_to_Hz'].get_value()
-        self.signal = mixed_signal * v2hz
+        self.signal["values"] = mixed_signal["values"] * v2hz
+        self.signal["ts"] = mixed_signal["ts"]
         return self.signal
 
 
@@ -221,10 +226,10 @@ class DigitalToAnalog(Device):
             ),
             shape=[new_dim]
         )
-        self.ts = ts
+        self.signal['ts'] = ts
         self.signal['inphase'] = inphase
         self.signal['quadrature'] = quadrature
-        return {"inphase": inphase, "quadrature": quadrature}
+        return self.signal
 
 
 @dev_reg_deco
@@ -300,11 +305,10 @@ class Response(Device):
         Time constant for the gaussian convolution.
     """
 
-    def __init__(self, **props):
+    def __init__(self, rise_time=None, **props):
         super().__init__(**props)
-        for par in ["rise_time"]:
-            if not par in self.params:
-                raise Exception(f"C3:ERROR: {self.__class__}  needs a '{par}' parameter.")
+        if rise_time:
+            self.params["rise_time"] = rise_time
 
     def convolve(self, signal: list, resp_shape: list):
         """
@@ -370,7 +374,7 @@ class Response(Device):
         risefun = gauss - offset
         inphase = self.convolve(iq_signal['inphase'], risefun / tf.reduce_sum(risefun))
         quadrature = self.convolve(iq_signal['quadrature'], risefun / tf.reduce_sum(risefun))
-        self.signal = {'inphase': inphase, 'quadrature': quadrature}
+        self.signal = {'inphase': inphase, 'quadrature': quadrature, 'ts': iq_signal["ts"]}
         return self.signal
 
 
@@ -397,7 +401,8 @@ class Mixer(Device):
         q1 = in1["quadrature"]
         i2 = in2["inphase"]
         q2 = in2["quadrature"]
-        self.signal = (i1 * i2 + q1 * q2)  # See Engineer's Guide Eq. 88
+        self.signal = {"values" : i1 * i2 + q1 * q2, "ts": in1["ts"]}
+        # See Engineer's Guide Eq. 88
         # TODO: Check consistency of the signs between Mixer, LO and AWG classes
         return self.signal
 
@@ -524,8 +529,8 @@ class AWG(Device):
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        signal = {"inphase": inphase, "quadrature": quadrature}
-        return signal
+        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
+        return self.signal
 
     def create_IQ_drag(self, instr: Instruction, chan: str) -> dict:
         """

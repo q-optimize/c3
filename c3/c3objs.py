@@ -21,16 +21,18 @@ class C3obj:
         Parameters in this dict can be accessed and optimized
     """
 
-    def __init__(self, name, desc="", comment="", params={}):
+    def __init__(self, name, desc="", comment="", params=None):
         self.name = name
         self.desc = desc
         self.comment = comment
         self.params = {}
-        for pname, par in params.items():
-            if isinstance(par, Quantity):
-                self.params[pname] = par
-            else:
-                self.params[pname] = Quantity(**par)
+        if params:
+            for pname, par in params.items():
+                # TODO params here should be the dict representation only
+                if isinstance(par, Quantity):
+                    self.params[pname] = par
+                else:
+                    self.params[pname] = Quantity(**par)
 
 
 class Quantity:
@@ -57,30 +59,25 @@ class Quantity:
     """
 
     def __init__(self, value, min_val, max_val, unit="undefined", symbol=r"\alpha"):
-        if unit[-3:] == "2pi":
-            pref = 2 * np.pi
-        elif unit[-2:] == "pi":
+        if "pi" in unit:
             pref = np.pi
+        if "2pi" in unit:
+            pref = 2 * np.pi
         else:
-            pref = 1
+            pref = 1.0
         self.pref = pref
-        self.offset = np.array(min_val * pref)
-        self.scale = np.abs(np.array(max_val * pref) - np.array(min_val * pref))
-        try:
-            self.set_value(np.array(value * pref))
-        except ValueError:
-            raise ValueError(
-                f"Value has to be within {min_val:.3} .. {max_val:.3}"
-                f" but is {value:.3}."
-            )
-        self.symbol = symbol
+        self.offset = np.array(min_val) * pref
+        self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit
+        self.symbol = symbol
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
         else:
             self.shape = ()
             self.length = 1
+
+        self.set_value(np.array(value))
 
     def asdict(self):
         """
@@ -90,7 +87,7 @@ class Quantity:
         return {
             "value": self.numpy(),
             "min_val": self.offset / pref,
-            "max_val": (self.scale + self.offset) / pref,
+            "max_val": (self.scale / pref + self.offset / pref),
             "unit": self.unit,
             "symbol": self.symbol
         }
@@ -127,22 +124,16 @@ class Quantity:
 
     def __str__(self):
         val = self.numpy()
-        use_prefix = True
-        if self.unit == "Hz 2pi":
-            val = val / 2 / np.pi
-        elif self.unit == "pi":
-            val = val / np.pi
-            use_prefix = False
         ret = ""
         for entry in np.nditer(val):
-            ret += num3str(entry, use_prefix) + self.unit + " "
+            ret += num3str(entry) + self.unit + " "
         return ret
 
     def numpy(self) -> np.ndarray:
         """
         Return the value of this quantity as numpy.
         """
-        return self.scale * (self.value.numpy() + 1) / 2 + self.offset
+        return self.get_value().numpy() / self.pref
 
     def get_value(self, val=None) -> tf.Tensor:
         """
@@ -151,8 +142,6 @@ class Quantity:
         Parameters
         ----------
         val : tf.float64
-            Optionaly give an optimizer friendly value between -1 and 1 to
-            convert to physical scale.
         """
         if val is None:
             val = self.value
@@ -162,12 +151,13 @@ class Quantity:
         """ Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
-        tmp = 2 * (np.array(val) - self.offset) / self.scale - 1
+        tmp = 2 * (np.array(val) * self.pref - self.offset) / self.scale - 1
         if np.any(tmp < -1) or np.any(tmp > 1):
-            # TODO choose which error to raise
-            # raise Exception(f"Value {val} out of bounds for quantity.")
-            print(f"Value {val} out of bounds for quantity.")
-            raise ValueError
+            raise Exception(
+                f"Value {np.array(val)}{self.unit} out of bounds for quantity with "
+                f"min_val: {num3str(self.offset / self.pref)}{self.unit} and "
+                f"max_val: {num3str((self.scale + self.offset) / self.pref)}{self.unit}"
+            )
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)
