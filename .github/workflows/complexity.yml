@@ -2,9 +2,10 @@ name: Code Complexity
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, dev, 'release/*' ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, dev, 'release/*' ]
+  workflow_dispatch:
 
 jobs:
   build:
