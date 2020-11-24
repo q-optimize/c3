@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="c3",
-    version="1.0rc",
+    version="1.0rc-dev",
     packages=[
         "c3",
         "c3/generator",
