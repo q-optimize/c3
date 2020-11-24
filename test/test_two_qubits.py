@@ -29,8 +29,8 @@ from c3.optimizers.c1 import C1
 
 
 qubit_lvls = 3
-freq_q1 = 5e9 * 2 * np.pi
-anhar_q1 = -210e6 * 2 * np.pi
+freq_q1 = 5e9
+anhar_q1 = -210e6
 t1_q1 = 27e-6
 t2star_q1 = 39e-6
 qubit_temp = 50e-3
@@ -40,14 +40,14 @@ q1 = chip.Qubit(
     desc="Qubit 1",
     freq=Qty(
         value=freq_q1,
-        min_val=4.995e9 * 2 * np.pi,
-        max_val=5.005e9 * 2 * np.pi,
+        min_val=4.995e9 ,
+        max_val=5.005e9 ,
         unit='Hz 2pi'
     ),
     anhar=Qty(
         value=anhar_q1,
-        min_val=-380e6 * 2 * np.pi,
-        max_val=-120e6 * 2 * np.pi,
+        min_val=-380e6 ,
+        max_val=-120e6 ,
         unit='Hz 2pi'
     ),
     hilbert_dim=qubit_lvls,
@@ -71,8 +71,8 @@ q1 = chip.Qubit(
     )
 )
 
-freq_q2 = 5.6e9 * 2 * np.pi
-anhar_q2 = -240e6 * 2 * np.pi
+freq_q2 = 5.6e9
+anhar_q2 = -240e6
 t1_q2 = 23e-6
 t2star_q2 = 31e-6
 q2 = chip.Qubit(
@@ -80,14 +80,14 @@ q2 = chip.Qubit(
     desc="Qubit 2",
     freq=Qty(
         value=freq_q2,
-        min_val=5.595e9 * 2 * np.pi,
-        max_val=5.605e9 * 2 * np.pi,
+        min_val=5.595e9 ,
+        max_val=5.605e9 ,
         unit='Hz 2pi'
     ),
     anhar=Qty(
         value=anhar_q2,
-        min_val=-380e6 * 2 * np.pi,
-        max_val=-120e6 * 2 * np.pi,
+        min_val=-380e6 ,
+        max_val=-120e6 ,
         unit='Hz 2pi'
     ),
     hilbert_dim=qubit_lvls,
@@ -111,7 +111,7 @@ q2 = chip.Qubit(
     )
 )
 
-coupling_strength = 20e6 * 2 * np.pi
+coupling_strength = 20e6
 q1q2 = chip.Coupling(
     name="Q1-Q2",
     desc="coupling",
@@ -119,8 +119,8 @@ q1q2 = chip.Coupling(
     connected=["Q1", "Q2"],
     strength=Qty(
         value=coupling_strength,
-        min_val=-1 * 1e3 * 2 * np.pi,
-        max_val=200e6 * 2 * np.pi,
+        min_val=-1 * 1e3 ,
+        max_val=200e6 ,
         unit='Hz 2pi'
     ),
     hamiltonian_func=hamiltonians.int_XX
@@ -152,10 +152,10 @@ one_zeros[0] = 1
 zero_ones[0] = 0
 val1 = one_zeros * m00_q1 + zero_ones * m01_q1
 val2 = one_zeros * m00_q2 + zero_ones * m01_q2
-min = one_zeros * 0.8 + zero_ones * 0.0
-max = one_zeros * 1.0 + zero_ones * 0.2
-confusion_row1 = Qty(value=val1, min_val=min, max_val=max, unit="")
-confusion_row2 = Qty(value=val2, min_val=min, max_val=max, unit="")
+min_val = one_zeros * 0.8 + zero_ones * 0.0
+max_val = one_zeros * 1.0 + zero_ones * 0.2
+confusion_row1 = Qty(value=val1, min_val=min_val, max_val=max_val, unit="")
+confusion_row2 = Qty(value=val2, min_val=min_val, max_val=max_val, unit="")
 conf_matrix = tasks.ConfusionMatrix(Q1=confusion_row1, Q2=confusion_row2)
 
 init_temp = 50e-3
@@ -261,18 +261,25 @@ gauss_params_single = {
     )
 }
 
-lo_freq_q1 = 5e9 * 2 * np.pi + sideband
+gauss_env_single = pulse.Envelope(
+    name="gauss",
+    desc="Gaussian comp for single-qubit gates",
+    params=gauss_params_single,
+    shape=envelopes.gaussian_nonorm
+)
+
+lo_freq_q1 = 5e9 + sideband
 carrier_parameters = {
     'freq': Qty(
         value=lo_freq_q1,
-        min_val=4.5e9 * 2 * np.pi,
-        max_val=6e9 * 2 * np.pi,
+        min_val=4.5e9 ,
+        max_val=6e9 ,
         unit='Hz 2pi'
     ),
     'framechange': Qty(
         value=0.0,
-        min_val= -np.pi,
-        max_val= 3 * np.pi,
+        min_val=-np.pi,
+        max_val=3*np.pi,
         unit='rad'
     )
 }
@@ -301,7 +308,7 @@ carrier_parameters = {
     'framechange': Qty(
         value=0.0,
         min_val= -np.pi,
-        max_val= 3 * np.pi,
+        max_val= 3*np.pi,
         unit='rad'
     )
 }
@@ -447,29 +454,61 @@ def run_optim() -> float:
     return (opt.current_best_goal)
 
 
-def test_two_qubits() -> None:
-    """
-    check if optimization result is below 1e-2
-    """
-    assert run_optim() < 0.01
+gen_signal = generator.generate_signals(X90p_q1)
+ts = gen_signal["d1"]["ts"]
 
 
-def test_signals() -> None:
+def test_signals_max() -> None:
     """
     Test if the generated signals are correct at the first and last sample and at sample #12.
     """
-    gen_signal, ts = generator.generate_signals(X90p_q1)
     assert np.max(gen_signal["d1"]["values"]) == 442864262.3882865
+
+
+def test_signals_at_0() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert gen_signal["d1"]["values"][0] == 0
+
+
+def test_signals_at_12() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert gen_signal["d1"]["values"][12] == -18838613.771749068
+
+
+def test_signals_at_end() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert gen_signal["d1"]["values"][-1] == 47702706.02427947
+
+
+def test_ts_at_0() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert ts[0] == 5e-12
+
+
+def test_test_ts_at_12() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert ts[12] == 1.25e-10
+
+
+def test_ts_at_end() -> None:
+    """
+    Test if the generated signals are correct at the first and last sample and at sample #12.
+    """
     assert ts[-1] == 6.995e-09
 
 
 def test_hamiltonian_of_t() -> None:
-    signal, ts = generator.generate_signals(X90p_q1)
+    signal = generator.generate_signals(X90p_q1)
     cflds_t = signal["d1"]["values"][16]
     hdrift, hks = model.get_Hamiltonians()
     hamiltonian = hdrift.numpy() + cflds_t.numpy() * hks["d1"].numpy()
@@ -507,7 +546,7 @@ def test_hamiltonian_of_t() -> None:
 
 
 def test_propagation() -> None:
-    signal, ts = generator.generate_signals(X90p_q1)
+    signal = generator.generate_signals(X90p_q1)
     propagator = exp.propagation(signal, "X90p:Id")
     precomputed = np.array(
         [
@@ -520,3 +559,10 @@ def test_propagation() -> None:
      )
 
     assert ((propagator.numpy()[3] - precomputed) < 1e-8).all()
+
+
+def test_two_qubits() -> None:
+    """
+    check if optimization result is below 1e-2
+    """
+    assert run_optim() < 0.01
