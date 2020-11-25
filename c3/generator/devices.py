@@ -374,7 +374,11 @@ class Response(Device):
         risefun = gauss - offset
         inphase = self.convolve(iq_signal['inphase'], risefun / tf.reduce_sum(risefun))
         quadrature = self.convolve(iq_signal['quadrature'], risefun / tf.reduce_sum(risefun))
-        self.signal = {'inphase': inphase, 'quadrature': quadrature, 'ts': iq_signal["ts"]}
+        self.signal = {
+            'inphase': inphase,
+            'quadrature': quadrature,
+            'ts': self.create_ts(instr.t_start, instr.t_end, centered=True)
+        }
         return self.signal
 
 
@@ -436,8 +440,8 @@ class LO(Device):
         for comp in components[chan].values():
             if isinstance(comp, Carrier):
                 omega_lo = comp.params['freq'].get_value()
-                self.signal["inphase"] = tf.sin(omega_lo * ts)
-                self.signal["quadrature"] = tf.cos(omega_lo * ts)
+                self.signal["inphase"] = tf.cos(omega_lo * ts)
+                self.signal["quadrature"] = tf.sin(omega_lo * ts)
                 self.signal["ts"] = ts
         return self.signal
 
