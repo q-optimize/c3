@@ -9,6 +9,7 @@ Example: A local oscillator and arbitrary waveform generator signal
 are put through via a mixer device to produce an effective modulated signal.
 """
 
+import copy
 import hjson
 import numpy as np
 from c3.signal.gates import Instruction
@@ -98,6 +99,6 @@ class Generator:
                     inputs.append(signal_stack.pop())
                 outputs = dev.process(instr, chan, *inputs)
                 signal_stack.append(outputs)
-
-            gen_signal[chan] = signal_stack.pop()
+             # The stack is reused here, thus we need to deepcopy.
+            gen_signal[chan] = copy.deepcopy(signal_stack.pop())
         return gen_signal

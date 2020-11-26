@@ -178,8 +178,8 @@ model = Mdl(
 model.set_lindbladian(False)
 model.set_dressed(True)
 
-sim_res = 100e9 # Resolution for numerical simulation
-awg_res = 2e9 # Realistic, limited resolution of an AWG
+sim_res = 100e9  # Resolution for numerical simulation
+awg_res = 2e9  # Realistic, limited resolution of an AWG
 
 generator = Gnr(
     devices={
@@ -359,10 +359,10 @@ QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
 QId_q2.add_component(copy.deepcopy(carr_2), "d2")
 
 QId_q1.comps['d1']['carrier'].params['framechange'].set_value(
-    (-sideband * t_final) % (2*np.pi)
+    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
 )
 QId_q2.comps['d2']['carrier'].params['framechange'].set_value(
-    (-sideband * t_final) % (2*np.pi)
+    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
 )
 
 Y90p_q1 = copy.deepcopy(X90p_q1)
@@ -449,15 +449,16 @@ opt.set_exp(exp)
 with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
 
-gen_signal = generator.generate_signals(X90p_q1)
+gen_signal = generator.generate_signals(pmap.instructions["X90p:Id"])
 ts = gen_signal["d1"]["ts"]
 hdrift, hks = model.get_Hamiltonians()
 propagator = exp.propagation(gen_signal, "X90p:Id")
 
 
 def test_signals() -> None:
-    for key in gen_signal:
-        assert (gen_signal[key]["values"].numpy() - test_data["signal"][key]["values"].numpy() < 1).all()
+    assert (
+        gen_signal["d1"]["values"].numpy() - test_data["signal"]["d1"]["values"].numpy() < 1
+    ).all()
     assert (ts.numpy() == test_data["ts"].numpy()).all()
 
 
@@ -471,7 +472,7 @@ def test_propagation() -> None:
     assert (propagator.numpy() - test_data["propagator"].numpy() < 1e-12).all()
 
 
-def test_two_qubits() -> None:
+def test_optim() -> None:
     """
     check if optimization result is below 1e-2
     """
