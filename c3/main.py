@@ -10,6 +10,10 @@ import argparse
 import c3.utils.parsers as parsers
 import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
+from c3.parametermap import ParameterMap
+from c3.experiment import Experiment
+from c3.system import Model
+from c3.generator.generator import Generator
 
 logging.getLogger('tensorflow').disabled = True
 if __name__ == '__main__':
@@ -26,14 +30,24 @@ if __name__ == '__main__':
     with open(opt_config, "r") as cfg_file:
         try:
             cfg = hjson.loads(cfg_file.read())
-        except hjson.decoder.hjsonDecodeError:
+        except hjson.decoder.HjsonDecodeError:
             raise Exception(f"Config {opt_config} is invalid.")
     optim_type = cfg['optim_type']
     exp_setup = cfg['exp_setup']
 
     tf_utils.tf_setup()
     with tf.device('/CPU:0'):
-        exp = parsers.create_experiment(exp_setup)
+        model = None
+        gen = None
+        if "model" in cfg:
+            model = Model()
+            model.read_config(cfg["model"])
+        if "generator" in cfg:
+            gen = Generator()
+            gen.read_config(cfg["generator"])
+        pmap = ParameterMap(model=model, generator=gen)
+        pmap.read_config(cfg["instructions"])
+        exp = Experiment(pmap)
 
         if optim_type == "C1":
             opt = parsers.create_c1_opt(opt_config, exp)

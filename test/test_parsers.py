@@ -124,7 +124,7 @@ def test_parser_integration() -> None:
     """
     Check that an Experiment can be initialized.
     """
-    exp = Exp(pmap=pmap)
+    Exp(pmap=pmap)
 
 
 def test_model_writer() -> None:
