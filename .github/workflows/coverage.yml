@@ -25,9 +25,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install packages
       run: |
-        sudo apt=get clean
-        sudo apt-get update      
-        sudo apt-get install texlive texlive-latex-extra texlive-fonts-recommended dvipng cm-super gcc g++ python3-dev build-essential libboost-all-dev libopenblas-dev
+        sudo apt-get update
+        sudo apt-get install --ignore-missing texlive texlive-latex-extra texlive-fonts-recommended dvipng cm-super gcc g++ python3-dev build-essential libboost-all-dev libopenblas-dev
     - name: Cache pip
       uses: actions/cache@v2
       with:
