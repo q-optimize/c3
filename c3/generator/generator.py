@@ -69,9 +69,29 @@ class Generator:
             cfg = hjson.loads(cfg_file.read())
         for name, props in cfg["Devices"].items():
             props["name"] = name
-            self.devices[name] = dev_lib[name](**props)
+            dev_type = props.pop("c3type")
+            self.devices[name] = dev_lib[dev_type](**props)
         self.chain = cfg["Chain"]
         self.__check_signal_chain()
+
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        """
+        Return a dictionary compatible with config files.
+        """
+        devices = {}
+        for name, dev in self.devices.items():
+            devices[name] = dev.asdict()
+        return {"Devices": devices, "Chain": self.chain}
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def generate_signals(self, instr: Instruction):
         """

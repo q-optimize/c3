@@ -90,13 +90,32 @@ class ParameterMap:
                 )
                 for drive_chan, comps in gate["drive_channels"].items():
                     for comp, props in comps.items():
-                        ctype = props.pop("type")
+                        ctype = props.pop("c3type")
                         instr.add_component(
                             comp_lib[ctype](name=comp, **props),
                             chan=drive_chan
                         )
             self.instructions[key] = instr
             self.__initialize_parameters()
+
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        """
+        Return a dictionary compatible with config files.
+        """
+        instructions = {}
+        for name, instr in self.instructions.items():
+            instructions[name] = instr.asdict()
+        return instructions
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def get_full_params(self) -> Dict[str, Quantity]:
         """

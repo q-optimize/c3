@@ -3,6 +3,7 @@ from c3.c3objs import Quantity as Qty
 from c3.libraries.envelopes import envelopes
 import tensorflow as tf
 import types
+import hjson
 
 components = dict()
 
@@ -79,6 +80,26 @@ class Envelope(C3obj):
             params=params_default,
         )
 
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "shape": self.shape.__name__,
+            "params": params
+        }
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
+
     def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times.
 
@@ -118,3 +139,19 @@ class Carrier(C3obj):
             comment=comment,
             params=params,
         )
+
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params
+        }

@@ -1,5 +1,6 @@
 """Basic custom objects."""
 
+import hjson
 import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
@@ -33,6 +34,18 @@ class C3obj:
                     self.params[pname] = par
                 else:
                     self.params[pname] = Quantity(**par)
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
+
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params
+        }
 
 
 class Quantity:

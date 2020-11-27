@@ -40,18 +40,27 @@ class Device(C3obj):
         super().__init__(name, desc, comment, params)
         self.signal = {}
 
-    def write_config(self):
+    def write_config(self, filepath: str) -> None:
         """
-        WIP Return the current device as a hjson compatible dict.
+        Write dictionary to a HJSON file.
         """
-        cfg = copy.deepcopy(self.__dict__)
-        cfg.pop('signal', None)
-        cfg.pop('ts', None)
-        cfg.pop('amp_tot', None)
-        cfg.pop('amp_tot_sq', None)
-        for p in cfg['params']:
-            cfg['params'][p] = float(cfg['params'][p])
-        return cfg
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "inputs": self.inputs,
+            "outputs": self.outputs,
+            "params": params,
+            "resolution": self.resolution
+        }
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def prepare_plot(self):
         plt.rcParams['figure.dpi'] = 100
@@ -473,6 +482,11 @@ class AWG(Device):
             self.enable_drag()
         elif drag_opt == 2:
             self.enable_drag_2()
+
+    def asdict(self) -> dict:
+        awg_dict = super().asdict()
+        awg_dict["options"] = self.__options
+        return awg_dict
 
 # TODO create DC function
 

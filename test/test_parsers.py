@@ -114,8 +114,26 @@ def test_signal_generation() -> None:
 
 
 def test_signal_generation_from_config() -> None:
+    """
+    Check that signal generation works.
+    """
     gen.generate_signals(pmap.instructions["X90p"])
 
 
 def test_parser_integration() -> None:
+    """
+    Check that an Experiment can be initialized.
+    """
     exp = Exp(pmap=pmap)
+
+
+def test_model_writer() -> None:
+    model.asdict()
+
+
+def test_generator_writer() -> None:
+    gen.asdict()
+
+
+def test_pmap_writer() -> None:
+    pmap.asdict()

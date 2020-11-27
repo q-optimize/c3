@@ -11,6 +11,17 @@ from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
 
 
+device_lib = dict()
+
+
+def dev_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    device_lib[str(func.__name__)] = func
+    return func
+
+
 class PhysicalComponent(C3obj):
     """
     Represents the components making up a chip.
@@ -32,7 +43,18 @@ class PhysicalComponent(C3obj):
     def set_subspace_index(self, index):
         self.index = index
 
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params,
+            "hilbert_dim": self.hilbert_dim
+        }
 
+
+@dev_reg_deco
 class Qubit(PhysicalComponent):
     """
     Represents the element in a chip functioning as qubit.
@@ -177,6 +199,7 @@ class Qubit(PhysicalComponent):
         return tf.cast(sum(Ls), tf.complex128)
 
 
+@dev_reg_deco
 class Resonator(PhysicalComponent):
     """
     Represents the element in a chip functioning as resonator.
@@ -215,6 +238,7 @@ class Resonator(PhysicalComponent):
         pass
 
 
+@dev_reg_deco
 class SymmetricTransmon(PhysicalComponent):
     """
     Represents the element in a chip functioning as tunanble coupler.
@@ -267,6 +291,7 @@ class SymmetricTransmon(PhysicalComponent):
         ))), tf.complex128) * self.Hs['freq']
 
 
+@dev_reg_deco
 class AsymmetricTransmon(PhysicalComponent):
     """
     Represents the element in a chip functioning as tunanble coupler.
@@ -321,6 +346,7 @@ class AsymmetricTransmon(PhysicalComponent):
         return freq * factor * self.Hs['freq']
 
 
+@dev_reg_deco
 class LineComponent(C3obj):
     """
     Represents the components connecting chip elements and drives.
@@ -342,7 +368,19 @@ class LineComponent(C3obj):
         super().__init__(**props)
         self.Hs = {}
 
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params,
+            "hamiltonian_func": self.hamiltonian_func.__name__,
+            "connected": self.connected
+        }
 
+
+@dev_reg_deco
 class Coupling(LineComponent):
     """
     Represents a coupling behaviour between elements.
@@ -381,6 +419,7 @@ class Coupling(LineComponent):
         return strength * self.Hs['strength']
 
 
+@dev_reg_deco
 class Drive(LineComponent):
     """
     Represents a drive line.

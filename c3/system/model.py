@@ -6,7 +6,7 @@ import itertools
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
-from c3.system.chip import Coupling, Drive, Qubit
+from c3.system.chip import device_lib, Coupling, Drive
 
 
 class Model:
@@ -130,16 +130,37 @@ class Model:
             cfg = hjson.loads(cfg_file.read())
         for name, props in cfg["Qubits"].items():
             props.update({"name": name})
-            self.subsystems[name] = Qubit(**props)
+            dev_type = props.pop("c3type")
+            self.subsystems[name] = device_lib[dev_type](**props)
         for name, props in cfg["Couplings"].items():
             props.update({"name": name})
-            self.couplings[name] = Coupling(**props)
-        for name, props in cfg["Drives"].items():
-            props.update({"name": name})
-            self.couplings[name] = Drive(**props)
+            dev_type = props.pop("c3type")
+            self.couplings[name] = device_lib[dev_type](**props)
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
+
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        """
+        Return a dictionary compatible with config files.
+        """
+        qubits = {}
+        for name, qubit in self.subsystems.items():
+            qubits[name] = qubit.asdict()
+        couplings = {}
+        for name, coup in self.couplings.items():
+            couplings[name] = coup.asdict()
+        return {"Qubits": qubits, "Couplings": couplings}
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def set_dressed(self, dressed):
         """

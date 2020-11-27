@@ -1,4 +1,5 @@
 import copy
+import hjson
 import numpy as np
 from c3.c3objs import C3obj
 
@@ -48,12 +49,19 @@ class Instruction():
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
 
-    def write_config(self):
-        cfg = copy.deepcopy(self.__dict__)
-        for chan in self.comps:
-            for comp in self.comps[chan]:
-                cfg['comps'][chan][comp] = 0
-        return cfg
+    def asdict(self) -> dict:
+        components = {}
+        for chan, item in self.comps.items():
+            components[chan] = {}
+            for key, comp in item.items():
+                components[chan][key] = comp.asdict()
+        return {
+            "gate_length": self.t_end - self.t_start,
+            "drive_channels": components
+        }
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def add_component(self, comp: C3obj, chan: str):
         """
