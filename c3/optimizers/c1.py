@@ -54,14 +54,14 @@ class C1(Optimizer):
         plot_pulses=False,
         store_unitaries=False,
         options={},
-        run_name=None
+        run_name=None,
     ):
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
             plot_dynamics=plot_dynamics,
             plot_pulses=plot_pulses,
-            store_unitaries=store_unitaries
+            store_unitaries=store_unitaries,
         )
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
@@ -86,11 +86,9 @@ class C1(Optimizer):
         dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
-            run_name = (
-                'c1_' + self.fid_func.__name__ + '_' + self.algorithm.__name__
-            )
+            run_name = "c1_" + self.fid_func.__name__ + "_" + self.algorithm.__name__
         self.logdir = log_setup(dir_path, run_name)
-        self.logname = 'open_loop.log'
+        self.logname = "open_loop.log"
         if isinstance(self.exp.created_by, str):
             shutil.copy2(self.exp.created_by, self.logdir)
         if isinstance(self.created_by, str):
@@ -117,14 +115,14 @@ class C1(Optimizer):
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
-                options=self.options
+                options=self.options,
             )
         except KeyboardInterrupt:
             pass
-        self.load_best(self.logdir + 'best_point_' + self.logname)
+        self.load_best(self.logdir + "best_point_" + self.logname)
         self.end_log()
 
-    def goal_run(self, current_params):
+    def goal_run(self, current_params: tf.Tensor):
         """
         Evaluate the goal function for current parameters.
 
@@ -145,11 +143,9 @@ class C1(Optimizer):
         propagators = self.exp.get_gates()
         goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
-            logfile.write(
-                "goal: {}: {}\n".format(self.fid_func.__name__, float(goal))
-            )
+            logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
                 val = cal(
                     propagators, self.index, dims, self.logdir, self.evaluation + 1
@@ -160,12 +156,11 @@ class C1(Optimizer):
                 self.optim_status[cal.__name__] = val
             logfile.flush()
 
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.pmap.get_parameters()
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.pmap.get_parameters()
         ]
-        self.optim_status['goal'] = float(goal)
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["goal"] = float(goal)
+        self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal
 
