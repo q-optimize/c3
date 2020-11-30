@@ -147,9 +147,9 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         h += cflds_t[ii] * hks[ii]
         ii += 1
     terms = int(1e12 * dt) + 2
-    dU = tf_expm(-1j * h * dt, terms)
-    # TODO Make an option for the exponentation method
-    # dU = tf.linalg.expm(-1j * h * dt)
+#     dU = tf_expm(-1j * h * dt, terms)
+#     TODO Make an option for the exponentation method
+    dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
 

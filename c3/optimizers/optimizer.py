@@ -6,7 +6,8 @@ import json
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
-
+import c3.utils.qt_utils as qt_utils
+import c3.utils.tf_utils as tf_utils
 
 class Optimizer:
     """
@@ -140,17 +141,17 @@ class Optimizer:
                 best_point.write("\n")
                 best_point.write(self.nice_print(self.opt_map))
         if self.plot_dynamics:
-#             psi_init = self.exp.model.tasks["init_ground"].initialise(
-#                 self.exp.model.drift_H,
-#                 self.exp.model.lindbladian
-#             )
-            dim = np.prod(self.exp.model.dims)
-            psi_init = [0] * dim
-            psi_init[4] = 1
-            psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
-#             psi_init = [0] * dim**2
-#             psi_init[dim*4 + 4] = 1
-#             psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim**2 ,1])
+            dims=self.exp.model.dims
+            XX = qt_utils.perfect_gate("Id:Xp:Xp", index=[0,1,2], dims=dims)
+            if self.exp.model.lindbladian:
+                XX = tf_utils.tf_super(XX)
+            psi_init = tf.matmul(
+                XX,
+                self.exp.model.tasks["init_ground"].initialise(
+                    self.exp.model.drift_H,
+                    self.exp.model.lindbladian
+                )
+            )
             for gate in self.exp.dUs.keys():
                 self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
             self.exp.dynamics_plot_counter += 1

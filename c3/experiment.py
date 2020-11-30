@@ -511,7 +511,8 @@ class Experiment:
             axs.set_title(self.name)
         axs.set_xlabel('Time [ns]')
         axs.set_ylabel('Population')
-        plt.legend(self.model.state_labels)
+        labels=self.model.state_labels
+        plt.legend(labels)
         if debug:
             plt.show()
         else:
