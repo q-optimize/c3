@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
@@ -26,12 +26,13 @@ class Optimizer:
 
     def __init__(
         self,
+        pmap,
         algorithm=None,
         plot_dynamics=False,
         plot_pulses=False,
         store_unitaries=False
     ):
-
+        self.pmap = pmap
         self.optim_status = {}
         self.gradients = {}
         self.current_best_goal = 9876543210.123456789
@@ -82,7 +83,7 @@ class Optimizer:
 
         """
         with open(init_point) as init_file:
-            best = json.load(init_file)
+            best = hjson.load(init_file)
 
         best_opt_map = [
             [tuple(par) for par in pset] for pset in best["opt_map"]
@@ -101,13 +102,13 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.pmap.opt_map))
+            logfile.write(hjson.dumps(self.pmap.opt_map))
             logfile.write("\n")
             logfile.write("Units:\n")
-            logfile.write(json.dumps(self.pmap.get_opt_units()))
+            logfile.write(hjson.dumps(self.pmap.get_opt_units()))
             logfile.write("\n")
             logfile.write("Algorithm options:\n")
-            logfile.write(json.dumps(self.options))
+            logfile.write(hjson.dumps(self.options))
             logfile.write("\n")
             logfile.flush()
 
@@ -157,7 +158,7 @@ class Optimizer:
                     "units": self.pmap.get_opt_units(),
                     "optim_status": self.optim_status
                 }
-                best_point.write(json.dumps(best_dict))
+                best_point.write(hjson.dumps(best_dict))
                 best_point.write("\n")
         if self.plot_dynamics:
             psi_init = self.pmap.model.tasks["init_ground"].initialise(
@@ -181,8 +182,8 @@ class Optimizer:
             self.exp.store_unitaries_counter += 1
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write(f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n")
-            # logfile.write(json.dumps(self.optim_status, indent=2))
-            logfile.write(json.dumps(self.optim_status))
+            # logfile.write(hjson.dumps(self.optim_status, indent=2))
+            logfile.write(hjson.dumps(self.optim_status))
             logfile.write("\n")
             logfile.flush()
 
@@ -257,22 +258,3 @@ class Optimizer:
         """
         key = str(x)
         return self.gradients.pop(key)
-
-    def write_config(self, filename):
-        with open(filename, "w") as cfg_file:
-            json.dump(self.__dict__, cfg_file)
-
-    def load_config(self, filename):
-        with open(filename, "r") as cfg_file:
-            cfg = json.loads(cfg_file.read(1))
-        for key in cfg:
-            if key == 'gateset':
-                self.gateset.load_config(cfg[key])
-            elif key == 'sim':
-                self.sim.load_config(cfg[key])
-            elif key == 'exp':
-                self.exp.load_config(cfg[key])
-            else:
-                self.__dict__[key] = cfg[key]
-
-    # TODO fix error when JSONing fucntion types

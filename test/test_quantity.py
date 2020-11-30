@@ -1,24 +1,69 @@
-"""
-testing module for Quantity class
-"""
+"""Unit tests for Quantity class"""
 
+import hjson
+import numpy as np
 from c3.c3objs import Quantity
+
+amp = Quantity(value=0.0, min_val=-1.0, max_val=+1.0, unit="V")
+amp_dict = {
+    'value': 0.0,
+    'min_val': -1.0,
+    'max_val': 1.0,
+    'unit': 'V',
+    'symbol': '\\alpha'
+}
+
+freq = Quantity(
+    value=5.6e9,
+    min_val=5.595e9,
+    max_val=5.605e9,
+    unit='Hz 2pi',
+    symbol="\\omega"
+)
+freq_dict = {
+    'value': 5.6e9,
+    'min_val': 5.595e9,
+    'max_val': 5.605e9,
+    'unit': 'Hz 2pi',
+    'symbol': '\\omega'
+}
 
 gate_time = Quantity(
     value=5.3246e-9,
-    min=2e-9,
-    max=10e-9,
+    min_val=2e-9,
+    max_val=10e-9,
     unit="s",
     symbol=r"t_g"
 )
 
 matrix = Quantity(
     value=[[0, 1], [1, 0]],
-    min=[[0, 0], [0, 0]],
-    max=[[1, 1], [1, 1]],
+    min_val=[[0, 0], [0, 0]],
+    max_val=[[1, 1], [1, 1]],
     unit="",
     symbol=r"M"
 )
+
+
+def test_qty_2pi() -> None:
+    assert freq.asdict() == freq_dict
+
+
+def test_qty_set_2pi() -> None:
+    freq.set_value(5.602e9)
+    assert freq.get_value() == 5.602e9 * 2 * np.pi
+
+
+def test_qty_asdict() -> None:
+    assert amp.asdict() == amp_dict
+
+
+def test_qty_write_cfg() -> None:
+    print(hjson.dumps(amp.asdict()))
+
+
+def test_qty_read_cfg() -> None:
+    assert Quantity(**amp_dict).asdict() == amp.asdict()
 
 
 def test_qty_str() -> None:

@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import pickle
 import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
@@ -39,11 +39,10 @@ class C2(Optimizer):
         run_name=None,
     ):
         super().__init__(
+            pmap=pmap,
             algorithm=algorithm
-            )
+        )
         self.eval_func = eval_func
-        # TODO the pmap can go to the optimizer super class
-        self.pmap = pmap
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
@@ -99,7 +98,7 @@ class C2(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+            best_params = hjson.loads(file.readlines()[1])['params']
         self.pmap.set_parameters(best_params)
         self.end_log()
         measurements = []
@@ -164,6 +163,12 @@ class C2(Optimizer):
             Number of repetitions used in averaging noisy data
 
         """
-        m = {'params': params, 'seqs': seqs, 'results': results, 'results_std': results_std, 'shots': shots}
+        data_entry = {
+            'params': params,
+            'seqs': seqs,
+            'results': results,
+            'results_std': results_std,
+            'shots': shots
+        }
         with open(self.picklefilename, "ab") as file:
-            pickle.dump(m, file)
+            pickle.dump(data_entry, file)

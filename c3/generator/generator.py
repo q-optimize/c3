@@ -10,10 +10,10 @@ are put through via a mixer device to produce an effective modulated signal.
 """
 
 import copy
+import hjson
 import numpy as np
-import tensorflow as tf
-import matplotlib.pyplot as plt
 from c3.signal.gates import Instruction
+from c3.generator.devices import devices as dev_lib
 
 
 class Generator:
@@ -31,32 +31,72 @@ class Generator:
 
     def __init__(
             self,
-            devices: list,
+            devices: dict = None,
+            chain: list = None,
             resolution: np.float64 = 0.0
     ):
-        # TODO consider making the dict into a list of devices
-        # TODO check that you get at least 1 set of LO, AWG and mixer.
         self.devices = {}
-        for dev in devices:
-            self.devices[dev.name] = dev
-
+        if devices:
+            self.devices = devices
+        self.chain = []
+        if chain:
+            self.chain = chain
+            self.__check_signal_chain()
         self.resolution = resolution
-        # TODO add line knowledge (mapping of which devices are connected)
 
-    def write_config(self):
-        cfg = {}
-        cfg = copy.deepcopy(self.__dict__)
-        devcfg = {}
-        for key in self.devices:
-            dev = self.devices[key]
-            devcfg[dev.name] = dev.write_config()
-        cfg["devices"] = devcfg
-        cfg.pop('signal', None)
-        return cfg
+    def __check_signal_chain(self) -> None:
+        signals = 0
+        for device_id in self.chain:
+            signals -= self.devices[device_id].inputs
+            signals += self.devices[device_id].outputs
+        if signals != 1:
+            raise Exception(
+                "C3:ERROR: Signal chain contains unmatched number"
+                " of inputs and outputs."
+            )
+
+    def read_config(self, filepath: str) -> None:
+        """
+        Load a file and parse it to create a Generator object.
+
+        Parameters
+        ----------
+        filepath : str
+            Location of the configuration file
+
+        """
+        with open(filepath, "r") as cfg_file:
+            cfg = hjson.loads(cfg_file.read())
+        for name, props in cfg["Devices"].items():
+            props["name"] = name
+            dev_type = props.pop("c3type")
+            self.devices[name] = dev_lib[dev_type](**props)
+        self.chain = cfg["Chain"]
+        self.__check_signal_chain()
+
+    def write_config(self, filepath: str) -> None:
+        """
+        Write dictionary to a HJSON file.
+        """
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
+
+    def asdict(self) -> dict:
+        """
+        Return a dictionary compatible with config files.
+        """
+        devices = {}
+        for name, dev in self.devices.items():
+            devices[name] = dev.asdict()
+        return {"Devices": devices, "Chain": self.chain}
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def generate_signals(self, instr: Instruction):
         """
-        Perform the signal chain for a specified instruction, including local oscillator, AWG generation and IQ mixing.
+        Perform the signal chain for a specified instruction, including local oscillator, AWG
+        generation and IQ mixing.
 
         Parameters
         ----------
@@ -69,38 +109,16 @@ class Generator:
             Signal to be applied to the physical device.
 
         """
-        # TODO deal with multiple instructions within GateSet
-        with tf.name_scope('Signal_generation'):
-            gen_signal = {}
-            lo = self.devices["lo"]
-            awg = self.devices["awg"]
-            # TODO make mixer optional and have a signal chain (eg Flux tuning)
-            mixer = self.devices["mixer"]
-            v_to_hz = self.devices["v_to_hz"]
-            dig_to_an = self.devices["dac"]
-            if "resp" in self.devices:
-                resp = self.devices["resp"]
-            if "fluxbias" in self.devices:
-                fluxbias = self.devices["fluxbias"]
-            t_start = instr.t_start
-            t_end = instr.t_end
-            for chan in instr.comps:
-                gen_signal[chan] = {}
-                components = instr.comps[chan]
-                lo_signal, omega_lo = lo.create_signal(components, t_start, t_end)
-                awg_signal = awg.create_IQ(chan, components, t_start, t_end)
-                flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
-                if "resp" in self.devices:
-                    conv_signal = resp.process(flat_signal)
-                else:
-                    conv_signal = flat_signal
-                signal = mixer.combine(lo_signal, conv_signal)
-                if "fluxbias" in self.devices and chan == "TC":
-                    signal = fluxbias.frequency(signal)
-                else:
-                    signal = v_to_hz.transform(signal, omega_lo)
-                gen_signal[chan]["values"] = signal
-                gen_signal[chan]["ts"] = lo_signal['ts']
-        self.signal = gen_signal
-        # TODO clean up output here: ts is redundant
-        return gen_signal, lo_signal['ts']
+        gen_signal = {}
+        for chan in instr.comps:
+            signal_stack = []
+            for dev_id in self.chain:
+                dev = self.devices[dev_id]
+                inputs = []
+                for input_num in range(dev.inputs):
+                    inputs.append(signal_stack.pop())
+                outputs = dev.process(instr, chan, *inputs)
+                signal_stack.append(outputs)
+             # The stack is reused here, thus we need to deepcopy.
+            gen_signal[chan] = copy.deepcopy(signal_stack.pop())
+        return gen_signal

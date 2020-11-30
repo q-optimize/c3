@@ -1,6 +1,7 @@
 import copy
+import hjson
 import numpy as np
-from c3.signal.pulse import InstructionComponent
+from c3.c3objs import C3obj
 
 
 class Instruction():
@@ -39,7 +40,7 @@ class Instruction():
             channels: list = [],
             t_start: np.float64 = 0.0,
             t_end: np.float64 = 0.0,
-            ):
+    ):
         self.name = name
         self.t_start = t_start
         self.t_end = t_end
@@ -48,20 +49,27 @@ class Instruction():
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
 
-    def write_config(self):
-        cfg = copy.deepcopy(self.__dict__)
-        for chan in self.comps:
-            for comp in self.comps[chan]:
-                cfg['comps'][chan][comp] = 0
-        return cfg
+    def asdict(self) -> dict:
+        components = {}
+        for chan, item in self.comps.items():
+            components[chan] = {}
+            for key, comp in item.items():
+                components[chan][key] = comp.asdict()
+        return {
+            "gate_length": self.t_end - self.t_start,
+            "drive_channels": components
+        }
 
-    def add_component(self, comp: InstructionComponent, chan: str):
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
+
+    def add_component(self, comp: C3obj, chan: str):
         """
         Add one component, e.g. an envelope, local oscillator, to a channel.
 
         Parameters
         ----------
-        comp : InstructionComponent
+        comp : C3obj
             Component to be added.
         chan : str
             Identifier for the target channel

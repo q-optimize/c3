@@ -1,7 +1,7 @@
 """ Abandon all hope, ye who enter here. """
 
 import os
-import json
+import hjson
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -279,14 +279,14 @@ def plot_C1(logfolder="", only_iterations=True):
     goal_function = []
     best_goal=987654321
     parameters = {}
-    opt_map = json.loads(log[3])
+    opt_map = hjson.loads(log[3])
 
     subplot_ids = {}
     subplot_legends = {}
     subplot_id = 1
     for line in log[4:]:
         if line[0] == "{":
-            point = json.loads(line)
+            point = hjson.loads(line)
             if 'goal' in point.keys():
                 if only_iterations and point['goal']<best_goal:
                     goal_function.append(point['goal'])
@@ -380,7 +380,7 @@ def plot_C2(cfgfolder="", logfolder=""):
         log = filename.readlines()
     goal_function = []
     batch = 0
-    options = json.loads(log[6])
+    options = hjson.loads(log[6])
     batch_size = options['popsize']
 
     eval = 0
@@ -390,7 +390,7 @@ def plot_C2(cfgfolder="", logfolder=""):
                 batch = int(eval / batch_size)
                 goal_function.append([])
             eval += 1
-            point = json.loads(line)
+            point = hjson.loads(line)
             if 'goal' in point.keys():
                 goal_function[batch].append(point['goal'])
 
@@ -438,21 +438,21 @@ def plot_C3(
         if use_synthetic:
             with open(synthetic_model, "r") as filename:
                 synth_model = filename.readlines()
-            real_params = json.loads(synth_model[1])['params']
+            real_params = hjson.loads(synth_model[1])['params']
             real_parameters = {}
-            synth_opt_map = json.loads(synth_model[0])
+            synth_opt_map = hjson.loads(synth_model[0])
 
         best_goal = 987654321
         goal_function = []
         parameters = {}
         scaling = {}
-        opt_map = json.loads(log[3])
+        opt_map = hjson.loads(log[3])
 
         subplot_names = []
         subplot_legends = {}
         for line in log[4:]:
             if line[0] == "{":
-                point = json.loads(line)
+                point = hjson.loads(line)
                 if 'goal' in point.keys():
                     if only_iterations and point['goal']>best_goal:
                         pass
@@ -638,7 +638,7 @@ def plot_C3(
 def plot_envelope_history(logfilename):
     with open(logfilename, "r") as filename:
         log = filename.readlines()
-    point = json.loads(log[-1])
+    point = hjson.loads(log[-1])
     fig, ax = plt.subplots()
     plt.subplots_adjust(left=0.25, bottom=0.25)
     l1, = plt.plot(point['inphase'], lw=2)
@@ -650,7 +650,7 @@ def plot_envelope_history(logfilename):
 
     def update(val):
         it = int(s.val)
-        point = json.loads(log[it])
+        point = hjson.loads(log[it])
         l1.set_ydata(point['inphase'])
         l2.set_ydata(point['quadrature'])
         ax.autoscale()
@@ -667,7 +667,7 @@ def plot_awg(logfolder="", num_plots=1):
         log = filename.readlines()
     plt.figure(figsize=(8, 2*num_plots))
     for ii in range(num_plots):
-        point = json.loads(log[-ii-1])
+        point = hjson.loads(log[-ii-1])
         plt.subplot(num_plots, 1, ii+1)
         plt.plot(point['inphase'], lw=2)
         plt.plot(point['quadrature'], lw=2)

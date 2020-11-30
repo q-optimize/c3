@@ -57,20 +57,18 @@ class C1(Optimizer):
         run_name=None
     ):
         super().__init__(
+            pmap=pmap,
             algorithm=algorithm,
             plot_dynamics=plot_dynamics,
             plot_pulses=plot_pulses,
             store_unitaries=store_unitaries
-            )
+        )
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
-        self.pmap = pmap
         self.callback_fids = callback_fids
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
-
-        self.pmap.str_parameters = None
         self.update_model = False
 
     def log_setup(self):

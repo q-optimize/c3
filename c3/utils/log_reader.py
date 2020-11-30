@@ -1,7 +1,7 @@
 #!/usr/bin/python -u
 
 import argparse
-import json
+import hjson
 import numpy as np
 from c3.utils.utils import num3str
 
@@ -10,7 +10,7 @@ parser.add_argument("log_file")
 args = parser.parse_args()
 
 with open(args.log_file) as file:
-    log = json.load(file)
+    log = hjson.load(file)
 
 opt_map = log["opt_map"]
 optim_status = log["optim_status"]
@@ -28,7 +28,7 @@ for ii in range(len(opt_map)):
     if units[ii] == "Hz 2pi":
         par = par / 2 / np.pi
         grad = grad / 2 / np.pi
-        
+
     par = num3str(par)
     grad = num3str(grad)
     par_id = equiv_ids[0]
@@ -39,5 +39,5 @@ for ii in range(len(opt_map)):
             ret.append("-".join(par_id))
             ret.append("\n")
         ret.append("\n")
-                
+
 print("".join(ret))

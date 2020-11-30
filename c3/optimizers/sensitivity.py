@@ -1,7 +1,7 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import json
+import hjson
 import pickle
 import itertools
 import time
@@ -268,7 +268,7 @@ class SET(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
+                            hjson.dumps(self.gateset_opt_map),
                             self.exp.gateset.get_parameters(
                                 self.gateset_opt_map, to_str=True
                             ),

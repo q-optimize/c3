@@ -1,13 +1,25 @@
 """Component class and subclasses for the components making up the quantum device."""
 
 import types
+
 import numpy as np
 import tensorflow as tf
-from c3.libraries.hamiltonians import resonator, duffing
+
+from c3.c3objs import C3obj, Quantity
 from c3.libraries.constants import kb, hbar
-from c3.utils.tf_utils import tf_diff
+from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
-from c3.c3objs import C3obj
+
+
+device_lib = dict()
+
+
+def dev_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    device_lib[str(func.__name__)] = func
+    return func
 
 
 class PhysicalComponent(C3obj):
@@ -21,26 +33,28 @@ class PhysicalComponent(C3obj):
 
     """
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 0,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.hilbert_dim = hilbert_dim
+    def __init__(self, **props):
+        self.params = {}
+        self.hilbert_dim = props.pop("hilbert_dim", None)
+        super().__init__(**props)
         self.Hs = {}
         self.collapse_ops = {}
 
     def set_subspace_index(self, index):
         self.index = index
 
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params,
+            "hilbert_dim": self.hilbert_dim
+        }
 
+
+@dev_reg_deco
 class Qubit(PhysicalComponent):
     """
     Represents the element in a chip functioning as qubit.
@@ -62,24 +76,19 @@ class Qubit(PhysicalComponent):
     """
 
     def __init__(
-        self,
-        name: str,
-        desc: str = " ",
-        comment: str = " ",
-        hilbert_dim: int = 4,
-        freq: np.float64 = 0.0,
-        anhar: np.float64 = 0.0,
-        t1: np.float64 = 0.0,
-        t2star: np.float64 = 0.0,
-        temp: np.float64 = 0.0
+        self, name, desc, hilbert_dim, comment=None, freq=None, anhar=None, t1=None, t2star=None,
+        temp=None, params=None
     ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            hilbert_dim=hilbert_dim
+            hilbert_dim=hilbert_dim,
+            params=params
         )
-        self.params['freq'] = freq
+        # TODO Cleanup params passing and check for conflicting information
+        if freq:
+            self.params['freq'] = freq
         if hilbert_dim > 2:
             self.params['anhar'] = anhar
         if t1:
@@ -91,7 +100,8 @@ class Qubit(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         """
-        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing oscillator is used.
+        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing
+        oscillator is used.
 
         Parameters
         ----------
@@ -99,10 +109,12 @@ class Qubit(PhysicalComponent):
             Annihilation operator in the full Hilbert space
 
         """
+        resonator = hamiltonians["resonator"]
         self.Hs['freq'] = tf.constant(
             resonator(ann_oper), dtype=tf.complex128
         )
         if self.hilbert_dim > 2:
+            duffing = hamiltonians["duffing"]
             self.Hs['anhar'] = tf.constant(
                 duffing(ann_oper), dtype=tf.complex128
             )
@@ -119,8 +131,8 @@ class Qubit(PhysicalComponent):
 
         """
         h = tf.cast(
-                self.params['freq'].get_value(),
-                tf.complex128
+            self.params['freq'].get_value(),
+            tf.complex128
         ) * self.Hs['freq']
         if self.hilbert_dim > 2:
             h += tf.cast(
@@ -166,27 +178,28 @@ class Qubit(PhysicalComponent):
                 if self.hilbert_dim > 2:
                     freq_diff = np.array(
                         [(self.params['freq'].get_value()
-                          + n*self.params['anhar'].get_value())
-                            for n in range(self.hilbert_dim)]
+                          + n * self.params['anhar'].get_value())
+                         for n in range(self.hilbert_dim)]
                     )
                 else:
                     freq_diff = np.array(
                         [self.params['freq'].get_value(), 0]
                     )
                 beta = 1 / (self.params['temp'].get_value() * kb)
-                det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
+                det_bal = tf.exp(-hbar * tf.cast(freq_diff, tf.float64) * beta)
                 det_bal_mat = hskron(
                     tf.linalg.tensor_diag(det_bal), self.index, dims
                 )
                 L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
                 Ls.append(L)
         if 't2star' in self.params:
-            gamma = (0.5/self.params['t2star'].get_value())**0.5
+            gamma = (0.5 / self.params['t2star'].get_value()) ** 0.5
             L = gamma * self.collapse_ops['t2star']
             Ls.append(L)
         return tf.cast(sum(Ls), tf.complex128)
 
 
+@dev_reg_deco
 class Resonator(PhysicalComponent):
     """
     Represents the element in a chip functioning as resonator.
@@ -197,23 +210,6 @@ class Resonator(PhysicalComponent):
         frequency of the resonator
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 4,
-            freq: np.float64 = 0.0
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-            )
-        self.params['freq'] = freq
-
     def init_Hs(self, ann_oper):
         """
         Initialize the Hamiltonian as a number operator
@@ -225,7 +221,7 @@ class Resonator(PhysicalComponent):
 
         """
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
@@ -242,6 +238,7 @@ class Resonator(PhysicalComponent):
         pass
 
 
+@dev_reg_deco
 class SymmetricTransmon(PhysicalComponent):
     """
     Represents the element in a chip functioning as tunanble coupler.
@@ -265,20 +262,20 @@ class SymmetricTransmon(PhysicalComponent):
             freq: np.float64 = 0.0,
             phi: np.float64 = 0.0,
             phi_0: np.float64 = 0.0
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim
-            )
+        )
         self.params['freq'] = freq
         self.params['phi'] = phi
         self.params['phi_0'] = phi_0
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
@@ -294,7 +291,7 @@ class SymmetricTransmon(PhysicalComponent):
         ))), tf.complex128) * self.Hs['freq']
 
 
-
+@dev_reg_deco
 class AsymmetricTransmon(PhysicalComponent):
     """
     Represents the element in a chip functioning as tunanble coupler.
@@ -319,13 +316,13 @@ class AsymmetricTransmon(PhysicalComponent):
             phi: np.float64 = 0.0,
             phi_0: np.float64 = 0.0,
             gamma: np.float64 = 0.0
-            ):
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim
-            )
+        )
         self.params['freq'] = freq
         self.parama['phi'] = phi
         self.parama['phi_0'] = phi_0
@@ -333,7 +330,7 @@ class AsymmetricTransmon(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
+            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
@@ -344,10 +341,12 @@ class AsymmetricTransmon(PhysicalComponent):
         gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
         d = (gamma - 1) / (gamma + 1)
         factor = tf.sqrt(tf.sqrt(
-            tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
+            tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
         ))
         return freq * factor * self.Hs['freq']
 
+
+@dev_reg_deco
 class LineComponent(C3obj):
     """
     Represents the components connecting chip elements and drives.
@@ -359,23 +358,29 @@ class LineComponent(C3obj):
 
     """
 
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            hamiltonian_func: types.FunctionType = None,
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-            )
-        self.connected = connected
+    def __init__(self, **props):
+        h_func = props.pop("hamiltonian_func")
+        self.connected = props.pop("connected")
+        if callable(h_func):
+            self.hamiltonian_func = h_func
+        else:
+            self.hamiltonian_func = hamiltonians[h_func]
+        super().__init__(**props)
         self.Hs = {}
 
+    def asdict(self) -> dict:
+        params = {}
+        for key, item in self.params.items():
+            params[key] = item.asdict()
+        return {
+            "c3type": self.__class__.__name__,
+            "params": params,
+            "hamiltonian_func": self.hamiltonian_func.__name__,
+            "connected": self.connected
+        }
 
+
+@dev_reg_deco
 class Coupling(LineComponent):
     """
     Represents a coupling behaviour between elements.
@@ -390,23 +395,19 @@ class Coupling(LineComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            strength: np.float64 = 0.0,
-            hamiltonian_func: types.FunctionType = None,
-            ):
+        self, name, desc, comment=None, strength=None, connected=None, params=None,
+        hamiltonian_func=None
+    ):
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
+            params=params,
             connected=connected,
             hamiltonian_func=hamiltonian_func
-            )
-        self.hamiltonian_func = hamiltonian_func
-        self.params['strength'] = strength
+        )
+        if strength:
+            self.params['strength'] = strength
 
     def init_Hs(self, opers_list):
         self.Hs['strength'] = tf.constant(
@@ -418,6 +419,7 @@ class Coupling(LineComponent):
         return strength * self.Hs['strength']
 
 
+@dev_reg_deco
 class Drive(LineComponent):
     """
     Represents a drive line.
@@ -428,23 +430,6 @@ class Drive(LineComponent):
         all physical components receiving driving signals via this line
 
     """
-
-    def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            connected: list = [],
-            hamiltonian_func: types.FunctionType = None,
-            ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            connected=connected,
-            hamiltonian_func=hamiltonian_func
-            )
-        self.hamiltonian_func = hamiltonian_func
 
     def init_Hs(self, ann_opers: list):
         hs = []

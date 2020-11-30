@@ -2,7 +2,7 @@
 
 import os
 import time
-import json
+import hjson
 import pickle
 import itertools
 import random
@@ -61,11 +61,13 @@ class C3(Optimizer):
     ):
         """Initiliase.
         """
-        super().__init__(algorithm=algorithm)
+        super().__init__(
+            pmap=pmap,
+            algorithm=algorithm
+        )
         self.sampling = sampling
         self.batch_sizes = batch_sizes
         self.seqs_per_point = seqs_per_point
-        self.pmap = pmap
         self.state_labels = state_labels
         self.callback_foms = callback_foms
         self.callback_figs = callback_figs
@@ -161,7 +163,7 @@ class C3(Optimizer):
         # TODO call plotting code in a separate kernel
         # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = json.loads(file.readlines()[1])['params']
+            best_params = hjson.loads(file.readlines()[1])['params']
         self.pmap.set_parameters(best_params)
         self.pmap.model.update_model()
         self.end_log()
@@ -273,7 +275,7 @@ class C3(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map),
+                            hjson.dumps(self.gateset_opt_map),
                             self.exp.gateset.get_parameters(
                                 self.gateset_opt_map, to_str=True
                             ),
@@ -416,7 +418,8 @@ class C3(Optimizer):
                             ipar + 1,
                             count,
                             len(indeces),
-                            json.dumps(self.gateset_opt_map), str(self.pmap)
+                            hjson.dumps(self.gateset_opt_map),
+                            str(self.pmap)
                         ),
                     )
                     logfile.write(

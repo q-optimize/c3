@@ -1,33 +1,16 @@
 """Parsers to read in config files and construct the corresponding objects."""
 
-import os
-import json
-import time
+import hjson
 import random
-import numpy as np
 from c3.libraries.algorithms import algorithms
 from c3.libraries.estimators import estimators
 from c3.libraries.fidelities import fidelities
 from c3.libraries.sampling import sampling
-from c3.utils.display import plots
-import c3.utils.qt_utils as qt_utils
-from runpy import run_path
 from c3.optimizers.c1 import C1
 from c3.optimizers.c2 import C2
 from c3.optimizers.c3 import C3
 from c3.optimizers.sensitivity import SET
-
-
-def create_experiment(exp_setup, datafile=''):
-    """Create an experiment by running a script. Note: This is horrible. Don't do this. Write a proper parser."""
-    exp_namespace = run_path(exp_setup)
-    if datafile:
-        exp = exp_namespace['create_experiment'](datafile)
-    else:
-        exp = exp_namespace['create_experiment']()
-    
-    exp.set_created_by(exp_setup)
-    return exp
+from c3.utils.display import plots
 
 
 def create_c1_opt(optimizer_config, exp):
@@ -37,7 +20,7 @@ def create_c1_opt(optimizer_config, exp):
     Parameters
     ----------
     optimizer_config : str
-        File path to a JSON file containing the C1 configuration.
+        File path to a hjson file containing the C1 configuration.
     lindblad : boolean
         Include lindbladian dynamics.
     Returns
@@ -48,15 +31,15 @@ def create_c1_opt(optimizer_config, exp):
     """
     parameter_map = exp.pmap
     lindblad = parameter_map.model.lindbladian
-    
+
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     if lindblad:
         fid = 'lindbladian_' + cfg['fid_func']
     else:
         fid = cfg['fid_func']
-        
+
     callback_fids = []
     if "callback_fids" in cfg:
         if lindblad:
@@ -83,11 +66,11 @@ def create_c1_opt(optimizer_config, exp):
 
     exp.set_opt_gates(cfg['opt_gates'])
     gateset_opt_map = [
-        [tuple(par) for par in set]
-        for set in cfg['gateset_opt_map']
-    ]    
+        [tuple(par) for par in pset]
+        for pset in cfg['gateset_opt_map']
+    ]
     parameter_map.set_opt_map(gateset_opt_map)
-    
+
     algorithm = algorithms[cfg['algorithm']]
     options = {}
     if 'options' in cfg:
@@ -98,7 +81,7 @@ def create_c1_opt(optimizer_config, exp):
         elif cfg['plot_dynamics'] == "True":
             plot_dynamics = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+            raise (Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         plot_dynamics = False
     if 'plot_pulses' in cfg:
@@ -107,7 +90,7 @@ def create_c1_opt(optimizer_config, exp):
         elif cfg['plot_pulses'] == "True":
             plot_pulses = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_pulses'"))
+            raise (Exception("Couldn't resolve setting of 'plot_pulses'"))
     else:
         plot_pulses = False
     if 'store_unitaries' in cfg:
@@ -116,7 +99,7 @@ def create_c1_opt(optimizer_config, exp):
         elif cfg['store_unitaries'] == "True":
             store_unitaries = True
         else:
-            raise(Exception("Couldn't resolve setting of 'plot_dynamics'"))
+            raise (Exception("Couldn't resolve setting of 'plot_dynamics'"))
     else:
         store_unitaries = False
     run_name = None
@@ -139,29 +122,32 @@ def create_c1_opt(optimizer_config, exp):
 
 
 def create_c1_opt_hk(
-    optimizer_config,
-    lindblad,
-    RB_number,
-    RB_length,
-    shots,
-    noise
+        optimizer_config,
+        lindblad,
+        RB_number,
+        RB_length,
+        shots,
+        noise
 ):
     with open(optimizer_config, "r") as cfg_file:
         try:
-            cfg = json.loads(cfg_file.read())
-        except json.decoder.JSONDecodeError:
+            cfg = hjson.loads(cfg_file.read())
+        except hjson.decoder.hjsonDecodeError:
             raise Exception(f"Config {optimizer_config} is invalid.")
 
     if lindblad:
         def unit_X90p(U_dict):
             return fidelities.lindbladian_unitary_infid(U_dict, 'X90p', proj=True)
+
         def avfid_X90p(U_dict):
             return fidelities.lindbladian_average_infid(U_dict, 'X90p', proj=True)
+
         def epc_ana(U_dict):
             return fidelities.lindbladian_epc_analytical(U_dict, proj=True)
     else:
         def unit_X90p(U_dict):
             return fidelities.unitary_infid(U_dict, 'X90p', proj=True)
+
         # def unit_Y90p(U_dict):
         #     return fidelities.unitary_infid(U_dict, 'Y90p', proj=True)
         # def unit_X90m(U_dict):
@@ -170,32 +156,41 @@ def create_c1_opt_hk(
         #     return fidelities.unitary_infid(U_dict, 'Y90m', proj=True)
         def avfid_X90p(U_dict):
             return fidelities.average_infid(U_dict, 'X90p', proj=True)
+
         def epc_ana(U_dict):
             return fidelities.epc_analytical(U_dict, proj=True)
     seqs = qt_utils.single_length_RB(RB_number=RB_number, RB_length=RB_length)
+
     def orbit_no_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=seqs)
+                                      seqs=seqs)
+
     def orbit_seq_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            RB_number=RB_number, RB_length=RB_length)
+                                      RB_number=RB_number, RB_length=RB_length)
+
     def orbit_shot_noise(U_dict):
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=seqs, shots=shots, noise=noise)
+                                      seqs=seqs, shots=shots, noise=noise)
+
     def orbit_seq_shot_noise(U_dict):
-        return fidelities.orbit_infid(U_dict,lindbladian=lindblad,
-            shots=shots, noise=noise,
-            RB_number=RB_number, RB_length=RB_length)
+        return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
+                                      shots=shots, noise=noise,
+                                      RB_number=RB_number, RB_length=RB_length)
+
     def epc_RB(U_dict):
         return fidelities.RB(U_dict, logspace=True, lindbladian=lindblad)[0]
+
     def epc_leakage_RB(U_dict):
         return fidelities.leakage_RB(U_dict,
-            logspace=True, lindbladian=lindblad)[0]
+                                     logspace=True, lindbladian=lindblad)[0]
+
     seqs100 = qt_utils.single_length_RB(RB_number=100, RB_length=RB_length)
+
     def maw_orbit(U_dict):
         sampled_seqs = random.sample(seqs100, k=RB_number)
         return fidelities.orbit_infid(U_dict, lindbladian=lindblad,
-            seqs=sampled_seqs, shots=shots, noise=noise)
+                                      seqs=sampled_seqs, shots=shots, noise=noise)
 
     fids = {
         'unitary_infid': unit_X90p,
@@ -245,7 +240,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
     Parameters
     ----------
     optimizer_config : str
-        File path to a JSON configuration file.
+        File path to a hjson configuration file.
     eval_func_path : str
         File path to a python script, containing the functions used perform an experiment.
 
@@ -257,9 +252,9 @@ def create_c2_opt(optimizer_config, eval_func_path):
     """
     with open(optimizer_config, "r") as cfg_file:
         try:
-            cfg = json.loads(cfg_file.read())
-        except json.decoder.JSONDecodeError:
-            raise Exception(f"Config {optimizer_config} is invalid.")
+            cfg = hjson.loads(cfg_file.read())
+        except hjson.decoder.HjsonDecodeError as hjerr:
+            raise Exception(f"Config {optimizer_config} is invalid.") from hjerr
 
     exp_eval_namespace = run_path(eval_func_path)
 
@@ -282,8 +277,8 @@ def create_c2_opt(optimizer_config, eval_func_path):
         run_name = cfg['run_name']
 
     gateset_opt_map = [
-        [tuple(par) for par in set]
-        for set in cfg['gateset_opt_map']
+        [tuple(par) for par in pset]
+        for pset in cfg['gateset_opt_map']
     ]
     state_labels = None
     if 'state_labels' in cfg:
@@ -295,6 +290,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
     #     os.makedirs(logdir)
     if 'exp' in exp_eval_namespace:
         exp = exp_eval_namespace['exp']
+
         def eval(p):
             return eval_func(
                 p, exp, gateset_opt_map, state_labels, logdir
@@ -323,11 +319,11 @@ def create_c3_opt(optimizer_config):
     Parameters
     ----------
     optimizer_config : str
-        Path to the JSON configuration file.
+        Path to the hjson configuration file.
 
     """
     with open(optimizer_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     state_labels = {"all": None}
     if "state_labels" in cfg:
@@ -410,7 +406,7 @@ def create_sensitivity(task_config):
     Parameters
     ----------
     task_config : str
-        File path to the JSON configuration file.
+        File path to the hjson configuration file.
 
     Returns
     -------
@@ -418,7 +414,7 @@ def create_sensitivity(task_config):
 
     """
     with open(task_config, "r") as cfg_file:
-        cfg = json.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read())
 
     sweep_map = [tuple(a) for a in cfg['sweep_map']]
 
@@ -488,7 +484,7 @@ def create_sensitivity(task_config):
     set = SET(
         dir_path=cfg['dir_path'],
         fom=fom,
-        estimator_list = estimator_list,
+        estimator_list=estimator_list,
         sampling=sampling_func,
         batch_sizes=batch_sizes,
         state_labels=state_labels,

@@ -9,7 +9,7 @@ populations.
 """
 
 import os
-import json
+import hjson
 import pickle
 import itertools
 import numpy as np
@@ -160,8 +160,8 @@ class Experiment:
             except KeyError:
                 raise Exception(f"C3:Error: Gate \'{gate}\' is not defined."
                                 f" Available gates are:\n {list(instructions.keys())}.")
-            signal, ts = generator.generate_signals(instr)
-            U = self.propagation(signal, ts, gate)
+            signal = generator.generate_signals(instr)
+            U = self.propagation(signal, gate)
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
@@ -229,7 +229,6 @@ class Experiment:
     def propagation(
         self,
         signal: dict,
-        ts,
         gate
     ):
         """
@@ -256,6 +255,7 @@ class Experiment:
         hks = []
         for key in signal:
             signals.append(signal[key]["values"])
+            ts = signal[key]["ts"]
             hks.append(hctrls[key])
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
@@ -466,10 +466,10 @@ class Experiment:
                     'a+'
                 ) as logfile:
                     logfile.write(f"{channel}, inphase :\n")
-                    logfile.write(json.dumps(inphase.numpy().tolist()))
+                    logfile.write(hjson.dumps(inphase.numpy().tolist()))
                     logfile.write("\n")
                     logfile.write(f"{channel}, quadrature :\n")
-                    logfile.write(json.dumps(quadrature.numpy().tolist()))
+                    logfile.write(hjson.dumps(quadrature.numpy().tolist()))
                     logfile.write("\n")
         if debug:
             plt.show()

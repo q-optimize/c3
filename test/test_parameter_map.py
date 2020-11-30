@@ -7,52 +7,52 @@ import numpy as np
 
 import c3.libraries.envelopes as envelopes
 
-from c3.c3objs import ParameterMap, Quantity
+from c3.parametermap import ParameterMap, Quantity
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 
 
 def setup_pmap() -> ParameterMap:
     t_final = 7e-9   # Time for single qubit gates
-    sideband = 50e6 * 2 * np.pi
-    lo_freq = 5e9 * 2 * np.pi + sideband
+    sideband = 50e6
+    lo_freq = 5e9 + sideband
 
     # ### MAKE GATESET
     gauss_params_single = {
         'amp': Quantity(
             value=0.45,
-            min=0.4,
-            max=0.6,
+            min_val=0.4,
+            max_val=0.6,
             unit="V"
         ),
         't_final': Quantity(
             value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
+            min_val=0.5 * t_final,
+            max_val=1.5 * t_final,
             unit="s"
         ),
         'sigma': Quantity(
             value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
+            min_val=t_final / 8,
+            max_val=t_final / 2,
             unit="s"
         ),
         'xy_angle': Quantity(
             value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
             unit='rad'
         ),
         'freq_offset': Quantity(
-            value=-sideband - 0.5e6 * 2 * np.pi,
-            min=-53 * 1e6 * 2 * np.pi,
-            max=-47 * 1e6 * 2 * np.pi,
+            value=-sideband - 0.5e6,
+            min_val=-53 * 1e6,
+            max_val=-47 * 1e6,
             unit='Hz 2pi'
         ),
         'delta': Quantity(
             value=-1,
-            min=-5,
-            max=3,
+            min_val=-5,
+            max_val=3,
             unit=""
         )
     }
@@ -68,8 +68,8 @@ def setup_pmap() -> ParameterMap:
         params={
             't_final': Quantity(
                 value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
+                min_val=0.5 * t_final,
+                max_val=1.5 * t_final,
                 unit="s"
             )
         },
@@ -78,14 +78,14 @@ def setup_pmap() -> ParameterMap:
     carrier_parameters = {
         'freq': Quantity(
             value=lo_freq,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
+            min_val=4.5e9,
+            max_val=6e9,
             unit='Hz 2pi'
         ),
         'framechange': Quantity(
             value=0.0,
-            min=-np.pi,
-            max=3 * np.pi,
+            min_val=-np.pi,
+            max_val=3 * np.pi,
             unit='rad'
         )
     }
