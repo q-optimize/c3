@@ -7,7 +7,6 @@ import numpy as np
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj
-import matplotlib.pyplot as plt
 
 devices = dict()
 
@@ -61,13 +60,6 @@ class Device(C3obj):
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
-
-    def prepare_plot(self):
-        plt.rcParams['figure.dpi'] = 100
-        fig, axs = plt.subplots(1, 1)
-        self.fig = fig
-        self.axs = axs
-        # return self.fig, self.axs
 
     def calc_slice_num(
             self,

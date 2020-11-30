@@ -7,9 +7,7 @@ import itertools
 import time
 import numpy as np
 import tensorflow as tf
-import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
-import matplotlib.pyplot as plt
 from c3.utils.utils import log_setup
 from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
 

@@ -3,7 +3,7 @@
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from c3.utils.tf_utils import tf_ave, tf_super, tf_abs, tf_ketket_fid, \
     tf_superoper_unitary_overlap, tf_unitary_overlap, tf_dm_to_vec, \
@@ -628,30 +628,30 @@ def RB(
     print("epg:", epg)
     # print('example seq: ', seqs[0])
 
-    fig, ax = plt.subplots()
-    ax.plot(lengths,
-            surv_prob,
-            marker='o',
-            color='red',
-            linestyle='None')
-    ax.errorbar(lengths,
-                means,
-                yerr=stds,
-                color='blue',
-                marker='x',
-                linestyle='None')
-    plt.title('RB results')
-    plt.ylabel('Population in 0')
-    plt.xlabel('\# Cliffords')
-    plt.ylim(0, 1)
-    plt.xlim(0, lengths[-1])
-    fitted = RB_fit(lengths, r, A, B)
-    ax.plot(lengths, fitted)
-    plt.text(0.1, 0.1,
-             'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
-             size=16,
-             transform=ax.transAxes)
-    plt.show()
+    # fig, ax = plt.subplots()
+    # ax.plot(lengths,
+    #         surv_prob,
+    #         marker='o',
+    #         color='red',
+    #         linestyle='None')
+    # ax.errorbar(lengths,
+    #             means,
+    #             yerr=stds,
+    #             color='blue',
+    #             marker='x',
+    #             linestyle='None')
+    # plt.title('RB results')
+    # plt.ylabel('Population in 0')
+    # plt.xlabel('\# Cliffords')
+    # plt.ylim(0, 1)
+    # plt.xlim(0, lengths[-1])
+    # fitted = RB_fit(lengths, r, A, B)
+    # ax.plot(lengths, fitted)
+    # plt.text(0.1, 0.1,
+    #          'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
+    #          size=16,
+    #          transform=ax.transAxes)
+    # plt.show()
     # return epc, r, A, B, fig, ax
     return epg
 

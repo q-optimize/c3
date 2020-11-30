@@ -9,9 +9,7 @@ import random
 import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
-import matplotlib.pyplot as plt
 from c3.utils.utils import log_setup
-import c3.utils.display as display
 from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
 
 
@@ -160,8 +158,6 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        # TODO call plotting code in a separate kernel
-        # display.plot_C3([self.logdir])
         with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
             best_params = hjson.loads(file.readlines()[1])['params']
         self.pmap.set_parameters(best_params)
@@ -200,7 +196,6 @@ class C3(Optimizer):
             Figure of merit
 
         """
-        # display.plot_C3([self.logdir], only_iterations=False)
         exp_values = []
         sim_values = []
         exp_stds = []
@@ -341,7 +336,6 @@ class C3(Optimizer):
         """
         Same as goal_run but with gradient. Very resource intensive. Unoptimized at the moment.
         """
-        # display.plot_C3([self.logdir])
         exp_values = []
         sim_values = []
         exp_stds = []
