@@ -355,6 +355,7 @@ class FluxTuning(Device):
         else:
             base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
             self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0))) - base_freq
+        self.signal = self.freq
         return self.freq
 
 
@@ -452,6 +453,122 @@ class Response(Device):
         return self.signal
 
 
+class HighpassFilter(Response):
+    """Introduce a highpass filter
+
+    Parameters
+    ----------
+    cutoff : Quantity
+        cutoff frequency of highpass filter
+    keep_mean : bool
+        should the mean of the signal be restored
+    """
+
+    def __init__(
+            self,
+            name: str = "highpass",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            cutoff: Quantity = None,
+            rise_time: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.params['cutoff'] = cutoff
+        self.params['rise_time'] = rise_time
+        self.signal = None
+
+    def convolve(self, signal: list, resp_shape: list):
+        """
+        Compute the convolution with a function.
+
+        Parameters
+        ----------
+        signal : list
+            Potentially unlimited signal samples.
+        resp_shape : list
+            Samples of the function to model limited bandwidth.
+
+        Returns
+        -------
+        tf.Tensor
+            Processed signal.
+
+        """
+        convolution = tf.zeros(0, dtype=tf.float64)
+        signal = tf.concat(
+            [tf.zeros(len(resp_shape)  // 2, dtype=tf.float64), signal, tf.zeros(int(len(resp_shape) * 1.5) + 1, dtype=tf.float64)], 0
+        )
+        for p in range(len(signal) - 2 * len(resp_shape)):
+            convolution = tf.concat(
+                [
+                    convolution,
+                    tf.reshape(
+                        tf.math.reduce_sum(tf.math.multiply(signal[p:p + len(resp_shape)], resp_shape)), shape=[1]
+                    )
+                ], 0
+            )
+        return convolution
+
+    def process(self, iq_signal: dict):
+        """
+        Apply a highpass cutoff to an IQ signal.
+
+        Parameters
+        ----------
+        iq_signal : dict
+            I and Q components of an AWG signal.
+
+        Returns
+        -------
+        dict
+            Filtered IQ signal.
+
+        """
+        fc = self.params['cutoff'].get_value() / self.resolution
+
+        if self.params['rise_time']:
+            tb = self.params['rise_time'].get_value() / self.resolution
+        else:
+            tb = fc / 2
+
+        # fc = 1e7 / self.resolution
+        # tb = fc / 2
+
+        N_ts = tf.cast(tf.math.ceil(4 / tb), dtype=tf.int32)
+        N_ts += 1 - tf.math.mod(N_ts, 2)  # make n_ts odd
+        if N_ts > len(iq_signal['inphase'] * 100):
+            self.signal = iq_signal
+            return self.signal
+
+        pi = tf.cast(np.pi, dtype=tf.double)
+
+        n = tf.cast(tf.range(N_ts), dtype=tf.double)
+
+        x = 2 * fc * (n - (N_ts - 1) / 2)
+        h = tf.sin(pi * x) / (pi * x)
+        h = tf.where(tf.math.is_nan(h), tf.ones_like(h), h)
+        w = tf.signal.hamming_window(N_ts)
+        w = tf.cast(w, dtype=tf.double)
+        h *= w
+        h /= - np.sum(h)
+        # h[(N_ts - 1) // 2].assign(1)
+        h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
+
+        plt.plot(h)
+        # plt.xlim(N_ts//2, N_ts//2 )
+        plt.ylim(-.000005, .000005)
+        plt.show()
+        inphase = self.convolve(iq_signal['inphase'], h)
+        quadrature = self.convolve(iq_signal['quadrature'], h)
+        self.signal = {'inphase': inphase, 'quadrature': quadrature}
+        return self.signal
+
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
 
@@ -522,6 +639,119 @@ class LONoise(Device):
         lo_signal["values"] = (cos, sin)
         self.signal = lo_signal
         return self.signal
+
+
+class Additive_Noise(Device):
+    """Noise applied to a signal"""
+
+    def __init__(
+            self,
+            name: str = "signal_noise",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            noise_amp: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['noise_amp'] = noise_amp
+
+    def distort(self, signal):
+        """Distort signal by adding noise."""
+        noise_amp = self.params['noise_amp'].get_value()
+        if noise_amp < 1e-17:
+            self.signal = signal
+            return signal
+        out_signal = {}
+        # print(signal)
+        if type(signal) is dict:
+            for k, sig in signal.items():
+                out_signal[k] = sig + tf.constant(noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0))
+        else:
+            out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
+        self.signal = out_signal
+        return self.signal
+
+
+class DC_Noise(Device):
+    """Noise applied to a signal"""
+
+    def __init__(
+            self,
+            name: str = "signal_noise",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            noise_amp: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['noise_amp'] = noise_amp
+
+    def distort(self, signal):
+        """Distort signal by adding noise."""
+        noise_amp = self.params['noise_amp'].get_value()
+        if noise_amp < 1e-17:
+            self.signal = signal
+            return signal
+        out_signal = {}
+        # print(signal)
+        if type(signal) is dict:
+            for k, sig in signal.items():
+                out_signal[k] = sig + tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+        else:
+            out_signal = signal + tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+        self.signal = out_signal
+        return self.signal
+
+# TODO: We should write out own function to calculate the Pink noise in a continuous fft fashion.
+import colorednoise
+class Pink_Noise_Cont(Device):
+    """Noise applied to a signal"""
+
+    def __init__(
+            self,
+            name: str = "pink_noise",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            noise_amp: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['noise_amp'] = noise_amp
+
+    def distort(self, signal):
+        """Distort signal by adding noise."""
+        noise_amp = self.params['noise_amp'].get_value()
+        if noise_amp < 1e-17:
+            self.signal = signal
+            return signal
+        out_signal = {}
+        # print(signal)
+        if type(signal) is dict:
+            for k, sig in signal.items():
+                out_signal[k] = sig + tf.constant(noise_amp * colorednoise.powerlaw_psd_gaussian(1,))
+        else:
+            out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
+        self.signal = out_signal
+        return self.signal
+
 
 class Pink_Noise(Device):
     """Device creating pink noise, i.e. 1/f noise."""

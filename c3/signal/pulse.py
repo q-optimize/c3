@@ -125,6 +125,51 @@ class Envelope(InstructionComponent):
         return vals*mask
 
 
+class EnvelopeNetZero(Envelope):
+    """
+    Represents the envelopes shaping a pulse.
+
+    Parameters
+    ----------
+    shape: function
+        function evaluating the shape in time
+    params: dict
+        Parameters of the envelope
+        Note: t_final 
+    """
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            shape: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            shape=shape,
+            )
+        
+    def get_shape_values(self, ts, t_before=None):
+        """Return the value of the shape function at the specified times.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        t_before : tf.float64
+            Offset the beginning of the shape by this time.
+        """
+        N_red = len(ts) // 2
+        ts_red = tf.split(ts, [N_red, len(ts) - N_red], 0)[0]
+        shape_values = super().get_shape_values(ts=ts_red, t_before=t_before)
+        netzero_shape_values = tf.concat([shape_values, -shape_values, [0] * (len(ts) % 2)], axis=0)
+        return netzero_shape_values
+        
+
 class Carrier(InstructionComponent):
     """Represents the carrier of a pulse."""
 

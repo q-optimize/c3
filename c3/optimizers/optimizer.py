@@ -221,7 +221,7 @@ class Optimizer:
         with tf.GradientTape() as t:
             t.watch(current_params)
             goal = self.goal_run(current_params)
-            grad = t.gradient(goal, current_params)
+        grad = t.gradient(goal, current_params)
         return goal, grad
 
     def lookup_gradient(self, x):

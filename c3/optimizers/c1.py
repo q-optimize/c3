@@ -182,7 +182,10 @@ class C1(Optimizer):
         )
         dims = self.exp.model.dims
         U_dict = self.exp.get_gates()
-        goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
+        try:
+            goal = self.fid_func(U_dict, self.index, dims, self.evaluation + 1)
+        except TypeError:
+            goal = self.fid_func(self.exp, U_dict, self.index, dims, self.evaluation + 1)
         try:
             display.plot_C1(self.logdir, interactive=self.interactive)
         except TypeError:

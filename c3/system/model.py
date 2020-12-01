@@ -111,6 +111,9 @@ class Model:
         del cfg['ann_opers']
         del cfg['control_Hs']
         del cfg['dressed_control_Hs']
+        if 'col_ops' in cfg:
+            del cfg['col_ops']
+            del cfg['dressed_col_ops']
         
         return cfg
 

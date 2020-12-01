@@ -97,10 +97,16 @@ class Quantity:
         try:
             self.set_value(value)
         except ValueError:
-            raise ValueError(
-                f"Value has to be within {min:.3} .. {max:.3}"
-                f" but is {value:.3}."
-            )
+            try:
+                raise ValueError(
+                    f"Value has to be within {min:.3} .. {max:.3}"
+                    f" but is {value:.3}."
+                )
+            except TypeError:
+                raise ValueError(
+                    f"Value has to be within {min} .. {max}"
+                    f" but is {value}."
+                )
         self.symbol = symbol
         self.unit = unit
         if hasattr(value, "shape"):
@@ -201,6 +207,5 @@ class Quantity:
         val : tf.float64
             Tensorflow number that will be mapped to a value between -1 and 1.
         """
-        self.value = tf.acos(tf.cos(
-            (tf.reshape(val, self.shape) + 1) * np.pi / 2
-        )) / np.pi * 2 - 1
+        self.value = tf.clip_by_value(tf.math.mod(val+1,2)-1, -1,1) 
+

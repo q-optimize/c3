@@ -687,6 +687,105 @@ class Experiment:
         plt.cla()
         plt.close("all")
 
+
+    def plot_all_pulses(self, instr, goal=-1, debug=False, title=False):
+        """
+        Plotting of pulse shapes.
+
+        Parameters
+        ----------
+        instr : str
+            Identifier of the current instruction.
+        goal: tf.float64
+            Value of the goal function, if used.
+        debug: boolean
+            If true, return a matplotlib figure instead of saving.
+        """
+        signal, ts = self.generator.generate_signals(instr)
+
+        if debug:
+            pass
+        else:
+            # TODO Use os module to build paths
+            foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
+            if not os.path.exists(foldername):
+                os.mkdir(foldername)
+            os.mkdir(foldername + str(instr.name).replace(':', '.') + "/")
+
+        for key, device in self.generator.devices.items():
+
+            try:
+                device_ts = device.ts
+                no_time = False
+            except AttributeError:
+                device_ts = None
+                no_time = True
+
+            fig, axs = plt.subplots(1, 1)
+
+            if type(device.signal) is not dict:
+                signal = {'signal': device.signal}
+            else:
+                signal = device.signal
+            for channel in signal:
+                if type(signal[channel]) is dict:
+                    inphase = signal[channel]["inphase"]
+                    quadrature = signal[channel]["quadrature"]
+                    if device_ts is None:
+                        device_ts = np.arange(len(inphase)) * 1e-9
+                    axs.plot(device_ts / 1e-9, inphase/1e-3, label="I " + channel)
+                    axs.plot(device_ts / 1e-9, quadrature/1e-3, label="Q " + channel)
+
+                elif type(signal[channel]) is tuple:
+                    for i, sig in enumerate(signal[channel]):
+                        if len(sig.shape) > 0:
+                            if device_ts is None:
+                                axs.plot(range(len(sig)), sig / 1e-3, label=channel + " " + str(i))
+                            else:
+                                axs.plot(device_ts / 1e-9, sig / 1e-3, label=channel + " " + str(i))
+                else:
+                    if len(signal[channel].shape) > 0:
+                        if device_ts is None:
+                            axs.plot(range(len(signal[channel])), signal[channel] / 1e-3, label=channel + " " + str(i))
+                        else:
+                            axs.plot(device_ts / 1e-9, signal[channel] / 1e-3, label=channel + " " + str(i))
+
+
+                if debug or key is not 'awg':
+                    pass
+                else:
+                    # TODO better way of changing name of instruction on Windows.
+                    with open(
+                        self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/{key}.log",
+                        'a+'
+                    ) as logfile:
+                        logfile.write(f"{channel}, inphase :\n")
+                        logfile.write(json.dumps(inphase.numpy().tolist()))
+                        logfile.write("\n")
+                        logfile.write(f"{channel}, quadrature :\n")
+                        logfile.write(json.dumps(quadrature.numpy().tolist()))
+                        logfile.write("\n")
+            axs.grid()
+            if title:
+                axs.set_title(key + ": " + self.name)
+            else:
+                axs.set_title(key)
+            if not no_time:
+                axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.legend()
+            if debug:
+                plt.show()
+            else:
+                plt.savefig(
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
+                    f"{key}_{list(instr.comps.keys())}.png",
+                    dpi=300
+                )
+
+                plt.cla()
+                plt.close("all")
+
     def store_Udict(self, goal):
         """
         Save unitary as text and pickle.

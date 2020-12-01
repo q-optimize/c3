@@ -7,7 +7,7 @@ All functions assume the input of a time vector.
 import numpy as np
 import tensorflow as tf
 from c3.c3objs import Quantity as Qty
-
+import matplotlib.pyplot as plt
 
 def no_drive(t, params):
     """Do nothing."""
@@ -163,19 +163,46 @@ def flattop_cut(t, params):
     shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
     return tf.clip_by_value(shape,0,2)
 
+def flattop_cut_center(t, params):
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_up : float
+            Center of the ramp up.
+        t_down : float
+            Center of the ramp down.
+        risefall : float
+            Length of the ramps.
+
+    """
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_up = t_final / 2 - width / 2
+    t_down = t_final / 2 + width / 2
+    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
+    shape = tf.clip_by_value(shape,0,2)
+    return shape
+
 def slepian_fourier(t, params):
     """
     ----
     """
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
     fourier_coeffs = tf.cast(params['fourier_coeffs'].get_value(), dtype=tf.float64)
     offset = tf.cast(params["offset"].get_value(), dtype=tf.float64)
     amp = tf.cast(params["amp"].get_value(), dtype=tf.float64)
     shape = tf.zeros_like(t)
     for n, coeff in enumerate(fourier_coeffs):
-        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * t / t_final))
+        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
+    shape = tf.where(tf.abs(t_final/2 - t) > width / 2, tf.zeros_like(t), shape)
     shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
     shape = shape * (1 - offset/amp) + offset/amp 
+    # plt.plot(t, shape)
+    # plt.show()
     return shape
 
 
