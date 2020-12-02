@@ -60,6 +60,25 @@ class ParameterMap:
 
         self.__par_lens = par_lens
         self.__pars = pars
+            
+    def load_values(self, init_point):
+        """
+        Load a previous parameter point to start the optimization from.
+
+        Parameters
+        ----------
+        init_point : str
+            File location of the initial point
+
+        """
+        with open(init_point) as init_file:
+            best = hjson.load(init_file)
+
+        best_opt_map = [
+            [tuple(par) for par in pset] for pset in best["opt_map"]
+        ]
+        init_p = best['optim_status']['params']
+        self.set_parameters(init_p, best_opt_map)
 
     def read_config(self, filepath: str) -> None:
         """
