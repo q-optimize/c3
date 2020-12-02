@@ -79,6 +79,7 @@ class Qubit(PhysicalComponent):
         self, name, hilbert_dim, desc=None, comment=None, freq=None, anhar=None, t1=None,
         t2star=None, temp=None, params=None
     ):
+        # TODO Cleanup params passing and check for conflicting information
         super().__init__(
             name=name,
             desc=desc,
@@ -86,10 +87,9 @@ class Qubit(PhysicalComponent):
             hilbert_dim=hilbert_dim,
             params=params
         )
-        # TODO Cleanup params passing and check for conflicting information
         if freq:
             self.params['freq'] = freq
-        if hilbert_dim > 2:
+        if anhar:
             self.params['anhar'] = anhar
         if t1:
             self.params['t1'] = t1
