@@ -25,12 +25,12 @@ for ii in range(len(opt_map)):
     equiv_ids = opt_map[ii]
     par = params[ii]
     grad = grads[ii]
-    if units[ii] == "Hz 2pi":
-        par = par / 2 / np.pi
-        grad = grad / 2 / np.pi
 
     par = num3str(par)
-    grad = num3str(grad)
+    if grad is None:
+        grad = "Undefined "
+    else:
+        grad = num3str(grad)
     par_id = equiv_ids[0]
     nice_id = "-".join(par_id)
     ret.append(f"{nice_id:38}: {par+units[ii]:>16} {grad+units[ii]:>16}\n")
