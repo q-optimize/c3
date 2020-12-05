@@ -6,6 +6,7 @@ import hjson
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
+from typing import Union
 
 
 class Optimizer:
@@ -180,27 +181,35 @@ class Optimizer:
             logfile.write("\n")
             logfile.flush()
 
-    def fct_to_min(self, x: np.array) -> np.array:
+    def fct_to_min(
+        self, x: Union[np.ndarray, tf.Variable]
+    ) -> Union[np.ndarray, tf.Variable]:
         """
         Wrapper for the goal function.
 
         Parameters
         ----------
-        x : np.array
+        x : [np.array, tf.Variable]
             Vector of parameters in the optimizer friendly way.
 
         Returns
         -------
-        float
-            Value of the goal function.
+        [float, tf.Variable]
+            Value of the goal function. Float if input is np.array else tf.Variable
         """
-        current_params = tf.Variable(x)
-        # TODO Why does mypy through an AttributeNotFound error?
-        goal = self.goal_run(current_params)  # type: ignore
-        self.log_parameters()
-        if isinstance(goal, tf.Tensor):
+
+        if isinstance(x, np.ndarray):
+            current_params = tf.Variable(x)
+            goal = self.goal_run(current_params)  # type: ignore
+            self.log_parameters()
             goal = float(goal.numpy())
-        return goal
+            return goal
+        else:
+            current_params = x
+            # TODO Why does mypy through an AttributeNotFound error?
+            goal = self.goal_run(current_params)  # type: ignore
+            self.log_parameters()
+            return goal
 
     def fct_to_min_autograd(self, x):
         """
