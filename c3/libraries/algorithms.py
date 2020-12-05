@@ -258,6 +258,7 @@ def tf_sgd(
     options: dict = {},
 ) -> OptimizeResult:
     """Optimize using TensorFlow Stochastic Gradient Descent with Momentum
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/SGD
 
     Parameters
     ----------
@@ -288,6 +289,147 @@ def tf_sgd(
 
     for step in range(iters):
         step_count = opt_sgd.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+@algo_reg_deco
+def tf_adam(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow ADAM
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_adam = tf.keras.optimizers.Adam(learning_rate=1, epsilon=0.1)
+
+    for step in range(iters):
+        step_count = opt_adam.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+def tf_rmsprop(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow RMSProp
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/RMSprop
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_rmsprop = tf.keras.optimizers.RMSprop(
+        learning_rate=0.1, epsilon=1e-2, centered=True
+    )
+
+    for step in range(iters):
+        step_count = opt_rmsprop.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+@algo_reg_deco
+def tf_adadelta(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow Adadelta
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adadelta
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_adadelta = tf.keras.optimizers.Adadelta(
+        learning_rate=0.1, rho=0.95, epsilon=1e-2
+    )
+
+    for step in range(iters):
+        step_count = opt_adadelta.minimize(tf_fun, [var])
         print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
 
     result = OptimizeResult(x=var.numpy(), success=True)
