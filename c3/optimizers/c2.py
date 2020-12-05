@@ -4,7 +4,6 @@ import os
 import time
 import hjson
 import pickle
-import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 
@@ -142,7 +141,6 @@ class C2(Optimizer):
         self.optim_status['time'] = time.asctime()
         self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std, shots)
-        display.plot_C2(self.__dir_path, self.logdir)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std, shots):

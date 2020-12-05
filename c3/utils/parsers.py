@@ -10,7 +10,6 @@ from c3.optimizers.c1 import C1
 from c3.optimizers.c2 import C2
 from c3.optimizers.c3 import C3
 from c3.optimizers.sensitivity import SET
-from c3.utils.display import plots
 
 
 def create_c1_opt(optimizer_config, exp):
@@ -352,10 +351,6 @@ def create_c3_opt(optimizer_config):
                 f"C3:WARNING: No estimator named \'{cb_fom}\' found."
                 " Skipping this callback estimator."
             )
-
-    callback_figs = []
-    for key in cfg['callback_figs']:
-        callback_figs.append(plots[key])
 
     exp_opt_map = [tuple(a) for a in cfg['exp_opt_map']]
 

@@ -14,7 +14,6 @@ import pickle
 import itertools
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 from c3.utils import tf_utils
 
 

@@ -76,17 +76,8 @@ class Qubit(PhysicalComponent):
     """
 
     def __init__(
-        self,
-        name,
-        desc,
-        hilbert_dim,
-        comment=None,
-        freq=None,
-        anhar=None,
-        t1=None,
-        t2star=None,
-        temp=None,
-        params=None,
+        self, name, hilbert_dim, desc=None, comment=None, freq=None, anhar=None, t1=None,
+        t2star=None, temp=None, params=None
     ):
         super().__init__(
             name=name,
@@ -389,14 +380,8 @@ class Coupling(LineComponent):
     """
 
     def __init__(
-        self,
-        name,
-        desc,
-        comment=None,
-        strength=None,
-        connected=None,
-        params=None,
-        hamiltonian_func=None,
+        self, name, desc=None, comment=None, strength=None, connected=None, params=None,
+        hamiltonian_func=None
     ):
         super().__init__(
             name=name,
