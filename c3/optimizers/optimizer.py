@@ -159,7 +159,7 @@ class Optimizer:
             # dim = np.prod(self.pmap.model.dims)
             # psi_init = [0] * dim
             # psi_init[1] = 1
-            # psi_init = tf.constant(psi_init, dtype=tf.complex128, shape=[dim ,1])
+            # psi_init = tf.Variable(psi_init, dtype=tf.complex128, shape=[dim ,1])
             for gate in self.exp.dUs.keys():
                 self.exp.plot_dynamics(psi_init, [gate], self.optim_status["goal"])
             self.exp.dynamics_plot_counter += 1
@@ -194,7 +194,7 @@ class Optimizer:
         float
             Value of the goal function.
         """
-        current_params = tf.constant(x)
+        current_params = tf.Variable(x)
         # TODO Why does mypy through an AttributeNotFound error?
         goal = self.goal_run(current_params)  # type: ignore
         self.log_parameters()
@@ -216,7 +216,7 @@ class Optimizer:
          float
              Value of the goal function.
         """
-        current_params = tf.constant(x)
+        current_params = tf.Variable(x)
         goal, grad = self.goal_run_with_grad(current_params)
         if isinstance(grad, tf.Tensor):
             grad = grad.numpy()

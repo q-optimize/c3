@@ -4,7 +4,7 @@ import numpy as np
 from c3.c3objs import C3obj
 
 
-class Instruction():
+class Instruction:
     """
     Collection of components making up the control signal for a line.
 
@@ -35,30 +35,27 @@ class Instruction():
     """
 
     def __init__(
-            self,
-            name: str = " ",
-            channels: list = [],
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
+        self,
+        name: str = " ",
+        channels: list = [],
+        t_start: np.float64 = 0.0,
+        t_end: np.float64 = 0.0,
     ):
         self.name = name
         self.t_start = t_start
         self.t_end = t_end
-        self.comps = {}
+        self.comps = {}  # type: ignore
         for chan in channels:
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
 
     def asdict(self) -> dict:
-        components = {}
+        components = {}  # type:ignore
         for chan, item in self.comps.items():
             components[chan] = {}
             for key, comp in item.items():
                 components[chan][key] = comp.asdict()
-        return {
-            "gate_length": self.t_end - self.t_start,
-            "drive_channels": components
-        }
+        return {"gate_length": self.t_end - self.t_start, "drive_channels": components}
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
