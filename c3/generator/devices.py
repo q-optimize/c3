@@ -55,7 +55,7 @@ class Device(C3obj):
             "inputs": self.inputs,
             "outputs": self.outputs,
             "params": params,
-            "resolution": self.resolution
+            "resolution": self.resolution,
         }
 
     def __str__(self) -> str:
@@ -80,12 +80,7 @@ class Device(C3obj):
         self.slice_num = int(np.abs(t_start - t_end) * res)
         # return self.slice_num
 
-    def create_ts(
-        self,
-        t_start: np.float64,
-        t_end: np.float64,
-        centered: bool = True
-    ):
+    def create_ts(self, t_start: np.float64, t_end: np.float64, centered: bool = True):
         """
         Compute time samples.
 
@@ -98,7 +93,7 @@ class Device(C3obj):
         centered: boolean
             Sample in the middle of an interval, otherwise at the beginning.
         """
-        if not hasattr(self, 'slice_num'):
+        if not hasattr(self, "slice_num"):
             self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
         if centered:
@@ -107,8 +102,8 @@ class Device(C3obj):
         else:
             offset = 0
             num = self.slice_num + 1
-        t_start = tf.constant(t_start + offset, dtype=tf.float64)
-        t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        t_start = tf.Variable(t_start + offset, dtype=tf.float64)
+        t_end = tf.Variable(t_end - offset, dtype=tf.float64)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -144,8 +139,8 @@ class Readout(Device):
         tf.float64
             Rescaled readout value
         """
-        offset = self.params['offset'].get_value()
-        factor = self.params['factor'].get_value()
+        offset = self.params["offset"].get_value()
+        factor = self.params["factor"].get_value()
         return phase * factor + offset
 
 
@@ -161,7 +156,7 @@ class VoltsToHertz(Device):
         Drive frequency offset.
     """
 
-    def __init__(self, V_to_Hz = None, **props):
+    def __init__(self, V_to_Hz=None, **props):
         super().__init__(**props)
         if V_to_Hz:
             self.params["V_to_Hz"] = V_to_Hz
@@ -181,7 +176,7 @@ class VoltsToHertz(Device):
         tf.Tensor
             Waveform as control amplitudes
         """
-        v2hz = self.params['V_to_Hz'].get_value()
+        v2hz = self.params["V_to_Hz"].get_value()
         self.signal["values"] = mixed_signal["values"] * v2hz
         self.signal["ts"] = mixed_signal["ts"]
         return self.signal
@@ -217,19 +212,23 @@ class DigitalToAnalog(Device):
         new_dim = ts.shape[0]
         inphase = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]),
+                size=[1, new_dim],
+                method="nearest",
             ),
-            shape=[new_dim]
+            shape=[new_dim],
         )
         quadrature = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]),
+                size=[1, new_dim],
+                method="nearest",
             ),
-            shape=[new_dim]
+            shape=[new_dim],
         )
-        self.signal['ts'] = ts
-        self.signal['inphase'] = inphase
-        self.signal['quadrature'] = quadrature
+        self.signal["ts"] = ts
+        self.signal["inphase"] = inphase
+        self.signal["quadrature"] = quadrature
         return self.signal
 
 
@@ -269,7 +268,9 @@ class FluxTuning(Device):
         super().__init__(**props)
         for par in ["phi_0", "Phi", "omega_0"]:
             if not par in self.params:
-                raise Exception(f"C3:ERROR: {self.__class__}  needs a '{par}' parameter.")
+                raise Exception(
+                    f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
+                )
         self.freq = None
 
     def frequency(self, signal):
@@ -286,13 +287,15 @@ class FluxTuning(Device):
         tf.float64
             Qubit frequency.
         """
-        pi = tf.constant(np.pi, dtype=tf.float64)
-        Phi = self.params['Phi'].get_value()
-        omega_0 = self.params['omega_0'].get_value()
-        phi_0 = self.params['phi_0'].get_value()
+        pi = tf.Variable(np.pi, dtype=tf.float64)
+        Phi = self.params["Phi"].get_value()
+        omega_0 = self.params["omega_0"].get_value()
+        phi_0 = self.params["phi_0"].get_value()
 
         base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * Phi / phi_0)))
-        self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (Phi + signal) / phi_0))) - base_freq
+        self.freq = (
+            omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (Phi + signal) / phi_0))) - base_freq
+        )
         return self.freq
 
 
@@ -330,16 +333,27 @@ class Response(Device):
         """
         convolution = tf.zeros(0, dtype=tf.float64)
         signal = tf.concat(
-            [tf.zeros(len(resp_shape), dtype=tf.float64), signal, tf.zeros(len(resp_shape), dtype=tf.float64)], 0
+            [
+                tf.zeros(len(resp_shape), dtype=tf.float64),
+                signal,
+                tf.zeros(len(resp_shape), dtype=tf.float64),
+            ],
+            0,
         )
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
                 [
                     convolution,
                     tf.reshape(
-                        tf.math.reduce_sum(tf.math.multiply(signal[p:p + len(resp_shape)], resp_shape)), shape=[1]
-                    )
-                ], 0
+                        tf.math.reduce_sum(
+                            tf.math.multiply(
+                                signal[p : p + len(resp_shape)], resp_shape
+                            )
+                        ),
+                        shape=[1],
+                    ),
+                ],
+                0,
             )
         return convolution
 
@@ -358,27 +372,28 @@ class Response(Device):
             Bandwidth limited IQ signal.
 
         """
-        n_ts = tf.floor(self.params['rise_time'].get_value() * self.resolution)
+        n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
-            tf.constant(0.0, dtype=tf.float64),
-            self.params['rise_time'].get_value(),
-            tf.cast(n_ts, tf.int32)
+            tf.Variable(0.0, dtype=tf.float64),
+            self.params["rise_time"].get_value(),
+            tf.cast(n_ts, tf.int32),
         )
         cen = tf.cast(
-            (self.params['rise_time'].get_value() - 1 / self.resolution) / 2,
-            tf.float64
+            (self.params["rise_time"].get_value() - 1 / self.resolution) / 2, tf.float64
         )
-        sigma = self.params['rise_time'].get_value() / 4
-        gauss = tf.exp(-(ts - cen) ** 2 / (2 * sigma * sigma))
-        offset = tf.exp(-(-1 - cen) ** 2 / (2 * sigma * sigma))
+        sigma = self.params["rise_time"].get_value() / 4
+        gauss = tf.exp(-((ts - cen) ** 2) / (2 * sigma * sigma))
+        offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
         risefun = gauss - offset
-        inphase = self.convolve(iq_signal['inphase'], risefun / tf.reduce_sum(risefun))
-        quadrature = self.convolve(iq_signal['quadrature'], risefun / tf.reduce_sum(risefun))
+        inphase = self.convolve(iq_signal["inphase"], risefun / tf.reduce_sum(risefun))
+        quadrature = self.convolve(
+            iq_signal["quadrature"], risefun / tf.reduce_sum(risefun)
+        )
         self.signal = {
-            'inphase': inphase,
-            'quadrature': quadrature,
-            'ts': self.create_ts(instr.t_start, instr.t_end, centered=True)
+            "inphase": inphase,
+            "quadrature": quadrature,
+            "ts": self.create_ts(instr.t_start, instr.t_end, centered=True),
         }
         return self.signal
 
@@ -406,7 +421,7 @@ class Mixer(Device):
         q1 = in1["quadrature"]
         i2 = in2["inphase"]
         q2 = in2["quadrature"]
-        self.signal = {"values" : i1 * i2 + q1 * q2, "ts": in1["ts"]}
+        self.signal = {"values": i1 * i2 + q1 * q2, "ts": in1["ts"]}
         # See Engineer's Guide Eq. 88
         # TODO: Check consistency of the signs between Mixer, LO and AWG classes
         return self.signal
@@ -440,7 +455,7 @@ class LO(Device):
         components = instr.comps
         for comp in components[chan].values():
             if isinstance(comp, Carrier):
-                omega_lo = comp.params['freq'].get_value()
+                omega_lo = comp.params["freq"].get_value()
                 self.signal["inphase"] = tf.cos(omega_lo * ts)
                 self.signal["quadrature"] = tf.sin(omega_lo * ts)
                 self.signal["ts"] = ts
@@ -461,8 +476,7 @@ class AWG(Device):
     def __init__(self, **props):
         self.__options = ""
         self.logdir = props.pop(
-            "logdir",
-            os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
+            "logdir", os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
         self.logname = "awg.log"
         drag_opt = props.pop("DRAG", 0)
@@ -480,7 +494,7 @@ class AWG(Device):
         awg_dict["options"] = self.__options
         return awg_dict
 
-# TODO create DC function
+    # TODO create DC function
 
     # TODO make AWG take offset from the previous point
     def create_IQ(self, instr: Instruction, chan: str) -> dict:
@@ -520,18 +534,16 @@ class AWG(Device):
         for comp in components[chan].values():
             if isinstance(comp, Envelope):
 
-                amp = comp.params['amp'].get_value()
+                amp = comp.params["amp"].get_value()
 
-                amp_tot_sq += amp**2
+                amp_tot_sq += amp ** 2
 
-                xy_angle = comp.params['xy_angle'].get_value()
-                freq_offset = comp.params['freq_offset'].get_value()
-                phase = - xy_angle + freq_offset * ts
-                inphase_comps.append(
-                    amp * comp.get_shape_values(ts) * tf.cos(phase)
-                )
+                xy_angle = comp.params["xy_angle"].get_value()
+                freq_offset = comp.params["freq_offset"].get_value()
+                phase = -xy_angle + freq_offset * ts
+                inphase_comps.append(amp * comp.get_shape_values(ts) * tf.cos(phase))
                 quadrature_comps.append(
-                    - amp * comp.get_shape_values(ts) * tf.sin(phase)
+                    -amp * comp.get_shape_values(ts) * tf.sin(phase)
                 )
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -579,13 +591,13 @@ class AWG(Device):
         for comp in components[chan].values():
             if isinstance(comp, Envelope):
 
-                amp = comp.params['amp'].get_value()
-                amp_tot_sq += amp**2
+                amp = comp.params["amp"].get_value()
+                amp_tot_sq += amp ** 2
 
-                xy_angle = comp.params['xy_angle'].get_value()
-                freq_offset = comp.params['freq_offset'].get_value()
-                delta = - comp.params['delta'].get_value()
-                if (self.__options == 'drag_2'):
+                xy_angle = comp.params["xy_angle"].get_value()
+                freq_offset = comp.params["freq_offset"].get_value()
+                delta = -comp.params["delta"].get_value()
+                if self.__options == "drag_2":
                     delta = delta * dt
 
                 with tf.GradientTape() as t:
@@ -595,18 +607,12 @@ class AWG(Device):
                 denv = t.gradient(env, ts)
                 if denv is None:
                     denv = tf.zeros_like(ts, dtype=tf.float64)
-                phase = - xy_angle + freq_offset * ts
+                phase = -xy_angle + freq_offset * ts
                 inphase_comps.append(
-                    amp * (
-                        env * tf.cos(phase)
-                        + denv * delta * tf.sin(phase)
-                    )
+                    amp * (env * tf.cos(phase) + denv * delta * tf.sin(phase))
                 )
                 quadrature_comps.append(
-                    amp * (
-                        denv * delta * tf.cos(phase)
-                        - env * tf.sin(phase)
-                    )
+                    amp * (denv * delta * tf.cos(phase) - env * tf.sin(phase))
                 )
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
         inphase = tf.add_n(inphase_comps, name="inphase")
@@ -653,17 +659,15 @@ class AWG(Device):
         for comp in components[chan].values():
             if isinstance(comp, Envelope):
                 amp_tot_sq += 1
-                inphase = comp.params['inphase'].get_value()
-                quadrature = comp.params['quadrature'].get_value()
-                xy_angle = comp.params['xy_angle'].get_value()
-                phase = - xy_angle
+                inphase = comp.params["inphase"].get_value()
+                quadrature = comp.params["quadrature"].get_value()
+                xy_angle = comp.params["xy_angle"].get_value()
+                phase = -xy_angle
                 inphase_comps.append(
-                    inphase * tf.cos(phase)
-                    + quadrature * tf.sin(phase)
+                    inphase * tf.cos(phase) + quadrature * tf.sin(phase)
                 )
                 quadrature_comps.append(
-                    quadrature * tf.cos(phase)
-                    - inphase * tf.sin(phase)
+                    quadrature * tf.cos(phase) - inphase * tf.sin(phase)
                 )
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
@@ -685,30 +689,30 @@ class AWG(Device):
         """
         In = self.get_I()
         Qu = self.get_Q()
-        amp_per_bin = tf.sqrt(tf.abs(In)**2 + tf.abs(Qu)**2)
+        amp_per_bin = tf.sqrt(tf.abs(In) ** 2 + tf.abs(Qu) ** 2)
         av = tf.reduce_mean(amp_per_bin)
         sum = tf.reduce_sum(amp_per_bin)
         return av, sum
 
     def get_I(self):
-        return self.amp_tot * self.signal['inphase']
+        return self.amp_tot * self.signal["inphase"]
 
     def get_Q(self):
-        return self.amp_tot * self.signal['quadrature']
+        return self.amp_tot * self.signal["quadrature"]
 
     def enable_drag(self):
         self.process = self.create_IQ_drag
 
     def enable_drag_2(self):
         self.process = self.create_IQ_drag
-        self.__options = 'drag_2'
+        self.__options = "drag_2"
 
     def enable_pwc(self):
         self.process = self.create_IQ_pwc
 
     def log_shapes(self):
         # TODO log shapes in the generator instead
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             signal = {}
             for key in self.signal:
                 signal[key] = self.signal[key].numpy().tolist()

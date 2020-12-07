@@ -5,9 +5,12 @@ Collection of (optimization) algorithms. All entries share a common signature wi
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
-# from nevergrad.optimization import registry as algo_registry
+
+from typing import Callable
 import adaptive
 import copy
+from scipy.optimize import OptimizeResult
+import tensorflow as tf
 
 algorithms = dict()
 
@@ -63,10 +66,10 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         bounds : list
             Range of the scan for both dimensions
     """
-    #TODO generalize grid to take any  number of dimensions
+    # TODO generalize grid to take any  number of dimensions
 
-    if 'points' in options:
-        points = options['points']
+    if "points" in options:
+        points = options["points"]
     else:
         points = 100
 
@@ -80,7 +83,7 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     #     if init_point:
     #         probe_list.append(x0)
 
-    bounds = options['bounds'][0]
+    bounds = options["bounds"][0]
     bound_min = bounds[0]
     bound_max = bounds[1]
     # probe_list_min = np.min(np.array(probe_list)[:,0])
@@ -89,7 +92,7 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     # bound_max = max(bound_max, probe_list_max)
     xs = np.linspace(bound_min, bound_max, points)
 
-    bounds = options['bounds'][1]
+    bounds = options["bounds"][1]
     bound_min = bounds[0]
     bound_max = bounds[1]
     # probe_list_min = np.min(np.array(probe_list)[:,1])
@@ -103,10 +106,10 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     for x in xs:
         for y in ys:
-            if 'wrapper' in options:
-                val = copy.deepcopy(options['wrapper'])
-                val[val.index('x')] = x
-                val[val.index('y')] = y
+            if "wrapper" in options:
+                val = copy.deepcopy(options["wrapper"])
+                val[val.index("x")] = x
+                val[val.index("y")] = y
                 fun([val])
             else:
                 fun([x, y])
@@ -134,23 +137,23 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         bounds : list
             Range of the scan
     """
-    if 'points' in options:
-        points = options['points']
+    if "points" in options:
+        points = options["points"]
     else:
         points = 100
 
-    if 'init_point' in options:
-        init_point = bool(options['init_point'])
+    if "init_point" in options:
+        init_point = bool(options["init_point"])
         if init_point:
             fun([x0[0].numpy()])
 
-    bounds = options['bounds'][0]
+    bounds = options["bounds"][0]
     bound_min = bounds[0]
     bound_max = bounds[1]
 
     probe_list = []
-    if 'probe_list' in options:
-        for x in options['probe_list']:
+    if "probe_list" in options:
+        for x in options["probe_list"]:
             probe_list.append(x)
         probe_list_min = min(probe_list)
         probe_list_max = max(probe_list)
@@ -158,18 +161,18 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         bound_max = max(bound_max, probe_list_max)
 
         for p in probe_list:
-            if 'wrapper' in options:
-                val = copy.deepcopy(options['wrapper'])
-                val[val.index('x')] = p
+            if "wrapper" in options:
+                val = copy.deepcopy(options["wrapper"])
+                val[val.index("x")] = p
                 fun([val])
             else:
                 fun([p])
 
     xs = np.linspace(bound_min, bound_max, points)
     for x in xs:
-        if 'wrapper' in options:
-            val = copy.deepcopy(options['wrapper'])
-            val[val.index('x')] = x
+        if "wrapper" in options:
+            val = copy.deepcopy(options["wrapper"])
+            val[val.index("x")] = x
             fun([val])
         else:
             fun([x])
@@ -200,24 +203,24 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         init_point : boolean
             Include the initial point in the sampling
     """
-    if 'accuracy_goal' in options:
-        accuracy_goal = options['accuracy_goal']
+    if "accuracy_goal" in options:
+        accuracy_goal = options["accuracy_goal"]
     else:
         accuracy_goal = 0.5
     print("accuracy_goal: " + str(accuracy_goal))
 
     probe_list = []
-    if 'probe_list' in options:
-        for x in options['probe_list']:
+    if "probe_list" in options:
+        for x in options["probe_list"]:
             probe_list.append(eval(x))
 
-    if 'init_point' in options:
-        init_point = bool(options.pop('init_point'))
+    if "init_point" in options:
+        init_point = bool(options.pop("init_point"))
         if init_point:
             probe_list.append(x0)
 
     # TODO make adaptive scan be able to do multidimensional scan
-    bounds = options['bounds'][0]
+    bounds = options["bounds"][0]
     bound_min = bounds[0]
     bound_max = bounds[1]
     probe_list_min = min(probe_list)
@@ -225,10 +228,12 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     bound_min = min(bound_min, probe_list_min)
     bound_max = max(bound_max, probe_list_max)
     print(" ")
-    print("bound_min: " + str((bound_min)/(2e9 * np.pi)))
-    print("bound_max: " + str((bound_max)/(2e9 * np.pi)))
+    print("bound_min: " + str((bound_min) / (2e9 * np.pi)))
+    print("bound_max: " + str((bound_max) / (2e9 * np.pi)))
     print(" ")
-    def fun1d(x): return fun([x])
+
+    def fun1d(x):
+        return fun([x])
 
     learner = adaptive.Learner1D(fun1d, bounds=(bound_min, bound_max))
 
@@ -240,9 +245,195 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
             learner.tell(x, tmp)
 
     runner = adaptive.runner.simple(
-        learner,
-        goal=lambda learner_: learner_.loss() < accuracy_goal
+        learner, goal=lambda learner_: learner_.loss() < accuracy_goal
     )
+
+
+@algo_reg_deco
+def tf_sgd(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow Stochastic Gradient Descent with Momentum
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/SGD
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_sgd = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
+
+    for step in range(iters):
+        step_count = opt_sgd.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+@algo_reg_deco
+def tf_adam(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow ADAM
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adam
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_adam = tf.keras.optimizers.Adam(learning_rate=1, epsilon=0.1)
+
+    for step in range(iters):
+        step_count = opt_adam.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+def tf_rmsprop(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow RMSProp
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/RMSprop
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_rmsprop = tf.keras.optimizers.RMSprop(
+        learning_rate=0.1, epsilon=1e-2, centered=True
+    )
+
+    for step in range(iters):
+        step_count = opt_rmsprop.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
+
+
+@algo_reg_deco
+def tf_adadelta(
+    x0: np.array,
+    fun: Callable = None,
+    fun_grad: Callable = None,
+    grad_lookup: Callable = None,
+    options: dict = {},
+) -> OptimizeResult:
+    """Optimize using TensorFlow Adadelta
+    https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adadelta
+
+    Parameters
+    ----------
+    x0 : np.array
+        starting value of parameter(s)
+    fun : Callable, optional
+        function to minimize, by default None
+    fun_grad : Callable, optional
+        gradient of function to minimize, by default None
+    grad_lookup : Callable, optional
+        lookup stored gradients, by default None
+    options : dict, optional
+        optional parameters for optimizer, by default {}
+
+    Returns
+    -------
+    OptimizeResult
+        SciPy OptimizeResult type object with final parameters
+    """
+    iters = options["maxfun"]
+
+    var = tf.Variable(x0)
+
+    def tf_fun():
+        return fun(var)
+
+    opt_adadelta = tf.keras.optimizers.Adadelta(
+        learning_rate=0.1, rho=0.95, epsilon=1e-2
+    )
+
+    for step in range(iters):
+        step_count = opt_adadelta.minimize(tf_fun, [var])
+        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
+
+    result = OptimizeResult(x=var.numpy(), success=True)
+    return result
 
 
 @algo_reg_deco
@@ -271,14 +462,8 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         Scipy result object.
     """
     # TODO print from the log not from here
-    options.update({'disp': True})
-    return minimize(
-        fun_grad,
-        x0,
-        jac=grad_lookup,
-        method='L-BFGS-B',
-        options=options
-    )
+    options.update({"disp": True})
+    return minimize(fun_grad, x0, jac=grad_lookup, method="L-BFGS-B", options=options)
 
 
 @algo_reg_deco
@@ -318,30 +503,30 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         Parameters of the best point.
     """
     custom_stop = False
-    if 'noise' in options:
-        noise = float(options.pop('noise'))
+    if "noise" in options:
+        noise = float(options.pop("noise"))
     else:
         noise = 0
 
-    if 'init_point' in options:
-        init_point = bool(options.pop('init_point'))
+    if "init_point" in options:
+        init_point = bool(options.pop("init_point"))
     else:
         init_point = False
 
-    if 'spread' in options:
-        spread = float(options.pop('spread'))
+    if "spread" in options:
+        spread = float(options.pop("spread"))
     else:
         spread = 0.1
 
     shrunk_check = False
-    if 'stop_at_convergence' in options:
-        sigma_conv = int(options.pop('stop_at_convergence'))
+    if "stop_at_convergence" in options:
+        sigma_conv = int(options.pop("stop_at_convergence"))
         sigmas = []
         shrunk_check = True
 
     sigma_check = False
-    if 'stop_at_sigma' in options:
-        stop_sigma = int(options.pop('stop_at_sigma'))
+    if "stop_at_sigma" in options:
+        stop_sigma = int(options.pop("stop_at_sigma"))
         sigma_check = True
 
     settings = options
@@ -353,29 +538,24 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         if shrunk_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
-                if(
-                    all(
-                        sigmas[-(i+1)]<sigmas[-(i+2)]
-                        for i in range(sigma_conv-1)
-                    )
+                if all(
+                    sigmas[-(i + 1)] < sigmas[-(i + 2)] for i in range(sigma_conv - 1)
                 ):
                     print(
-                        f'C3:STATUS:Shrunk cloud for {sigma_conv} steps. '
-                        'Switching to gradients.'
+                        f"C3:STATUS:Shrunk cloud for {sigma_conv} steps. "
+                        "Switching to gradients."
                     )
                     break
 
         if sigma_check:
             if es.sigma < stop_sigma:
-                print(
-                    f'C3:STATUS:Goal sigma reached. Stopping CMA.'
-                )
+                print("C3:STATUS:Goal sigma reached. Stopping CMA.")
                 break
 
         samples = es.ask()
         if init_point and iter == 0:
-            samples.insert(0,x0)
-            print('C3:STATUS:Adding initial point to CMA sample.')
+            samples.insert(0, x0)
+            print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
         for sample in samples:
             goal = fun(sample)
@@ -396,10 +576,8 @@ def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     Performs a CMA-Es optimization and feeds the result into LBFG-S for further refinement.
 
     """
-    x1 = cmaes(x0, fun, options=options['cmaes'])
-    lbfgs(
-        x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
-    )
+    x1 = cmaes(x0, fun, options=options["cmaes"])
+    lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
 
 @algo_reg_deco
@@ -409,31 +587,31 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     used for the CMA update.
     """
     custom_stop = False
-    options_cma = options['cmaes']
-    if 'noise' in options_cma:
-        noise = float(options_cma.pop('noise'))
+    options_cma = options["cmaes"]
+    if "noise" in options_cma:
+        noise = float(options_cma.pop("noise"))
     else:
         noise = 0
 
-    if 'init_point' in options_cma:
-        init_point = bool(options_cma.pop('init_point'))
+    if "init_point" in options_cma:
+        init_point = bool(options_cma.pop("init_point"))
     else:
         init_point = False
 
-    if 'spread' in options_cma:
-        spread = float(options_cma.pop('spread'))
+    if "spread" in options_cma:
+        spread = float(options_cma.pop("spread"))
     else:
         spread = 0.1
 
     shrinked_check = False
-    if 'stop_at_convergence' in options_cma:
-        sigma_conv = int(options_cma.pop('stop_at_convergence'))
+    if "stop_at_convergence" in options_cma:
+        sigma_conv = int(options_cma.pop("stop_at_convergence"))
         sigmas = []
         shrinked_check = True
 
     sigma_check = False
-    if 'stop_at_sigma' in options_cma:
-        stop_sigma = int(options_cma.pop('stop_at_sigma'))
+    if "stop_at_sigma" in options_cma:
+        stop_sigma = int(options_cma.pop("stop_at_sigma"))
         sigma_check = True
 
     settings = options_cma
@@ -445,34 +623,32 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         if shrinked_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
-                if(
-                    all(
-                        sigmas[-(i+1)]<sigmas[-(i+2)]
-                        for i in range(sigma_conv-1)
-                    )
+                if all(
+                    sigmas[-(i + 1)] < sigmas[-(i + 2)] for i in range(sigma_conv - 1)
                 ):
                     print(
-                        f'C3:STATUS:Shrinked cloud for {sigma_conv} steps. '
-                        'Switching to gradients.'
+                        f"C3:STATUS:Shrinked cloud for {sigma_conv} steps. "
+                        "Switching to gradients."
                     )
                     break
 
         if sigma_check:
             if es.sigma < stop_sigma:
-                print(
-                    f'C3:STATUS:Goal sigma reached. Stopping CMA.'
-                )
+                print("C3:STATUS:Goal sigma reached. Stopping CMA.")
                 break
 
         samples = es.ask()
         if init_point and iter == 0:
-            samples.insert(0,x0)
-            print('C3:STATUS:Adding initial point to CMA sample.')
+            samples.insert(0, x0)
+            print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
         points = []
         for sample in samples:
             r = lbfgs(
-                sample, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options['lbfgs']
+                sample,
+                fun_grad=fun_grad,
+                grad_lookup=grad_lookup,
+                options=options["lbfgs"],
             )
             solutions.append(r.fun)
             points.append(r.x)
@@ -481,6 +657,7 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
         iter += 1
     return es.result.xbest
+
 
 # def oneplusone(x0, goal_fun):
 #     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])

@@ -42,10 +42,7 @@ class C3obj:
         params = {}
         for key, item in self.params.items():
             params[key] = item.asdict()
-        return {
-            "c3type": self.__class__.__name__,
-            "params": params
-        }
+        return {"c3type": self.__class__.__name__, "params": params}
 
 
 class Quantity:
@@ -102,7 +99,7 @@ class Quantity:
             "min_val": self.offset / pref,
             "max_val": (self.scale / pref + self.offset / pref),
             "unit": self.unit,
-            "symbol": self.symbol
+            "symbol": self.symbol,
         }
 
     def __add__(self, other):
@@ -161,7 +158,7 @@ class Quantity:
         return self.scale * (val + 1) / 2 + self.offset
 
     def set_value(self, val: float) -> None:
-        """ Set the value of this quantity as tensorflow. Value needs to be
+        """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
         tmp = 2 * (np.array(val) * self.pref - self.offset) / self.scale - 1
@@ -173,20 +170,21 @@ class Quantity:
             )
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tf.constant(tmp, dtype=tf.float64)
+            self.value = tf.Variable(tmp, dtype=tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""
         return self.value.numpy().flatten()
 
     def set_opt_value(self, val: float) -> None:
-        """ Set value optimizer friendly.
+        """Set value optimizer friendly.
 
         Parameters
         ----------
         val : tf.float64
             Tensorflow number that will be mapped to a value between -1 and 1.
         """
-        self.value = tf.acos(tf.cos(
-            (tf.reshape(val, self.shape) + 1) * np.pi / 2
-        )) / np.pi * 2 - 1
+        self.value = (
+            tf.acos(tf.cos((tf.reshape(val, self.shape) + 1) * np.pi / 2)) / np.pi * 2
+            - 1
+        )
