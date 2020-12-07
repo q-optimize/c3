@@ -343,7 +343,8 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     U_dict : dict
         Dictionary of unitary representation of gates.
     sequences : list
-        List of keys from U_dict specifying a gate sequence. The sequence is multiplied from the left, i.e.
+        List of keys from U_dict specifying a gate sequence.
+        The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
             ... U2 * U1 * U0
@@ -608,13 +609,42 @@ def tf_ketket_fid(psi1, psi2):
     return tf_abs(tf.matmul(tf.linalg.adjoint(psi1), psi2))
 
 
-def tf_unitary_overlap(A, B, lvls=None):
+def tf_unitary_overlap(A: tf.Tensor, B: tf.Tensor, lvls: tf.Tensor = None) -> tf.Tensor:
+    """Unitary overlap between two matrices.
+
+    Parameters
+    ----------
+    A : tf.Tensor
+        Unitary A
+    B : tf.Tensor
+        Unitary B
+    lvls : tf.Tensor, optional
+        Levels, by default None
+
+    Returns
+    -------
+    tf.Tensor
+        Overlap between the two unitaries
+
+    Raises
+    ------
+    TypeError
+        For errors during cast
+    ValueError
+        For errors during matrix multiplicaton
     """
-    Unitary overlap between two matrices.
-    """
-    if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    overlap = tf_abs(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls) ** 2
+    try:
+        if lvls is None:
+            lvls = tf.cast(B.shape[0], B.dtype)
+        overlap = (
+            tf_abs(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls) ** 2
+        )
+    except TypeError:
+        raise TypeError("Possible Inconsistent Dimensions while casting tensors")
+    except ValueError:
+        raise ValueError(
+            "Possible Inconsistent Dimensions during Matrix Multiplication"
+        )
     return overlap
 
 
