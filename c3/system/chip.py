@@ -50,7 +50,7 @@ class PhysicalComponent(C3obj):
         return {
             "c3type": self.__class__.__name__,
             "params": params,
-            "hilbert_dim": self.hilbert_dim
+            "hilbert_dim": self.hilbert_dim,
         }
 
 
@@ -85,18 +85,18 @@ class Qubit(PhysicalComponent):
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim,
-            params=params
+            params=params,
         )
         if freq:
             self.params['freq'] = freq
         if anhar:
             self.params['anhar'] = anhar
         if t1:
-            self.params['t1'] = t1
+            self.params["t1"] = t1
         if t2star:
-            self.params['t2star'] = t2star
+            self.params["t2star"] = t2star
         if temp:
-            self.params['temp'] = temp
+            self.params["temp"] = temp
 
     def init_Hs(self, ann_oper):
         """
@@ -110,14 +110,10 @@ class Qubit(PhysicalComponent):
 
         """
         resonator = hamiltonians["resonator"]
-        self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
-        )
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
             duffing = hamiltonians["duffing"]
-            self.Hs['anhar'] = tf.constant(
-                duffing(ann_oper), dtype=tf.complex128
-            )
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
 
     def get_Hamiltonian(self):
         """
@@ -130,15 +126,12 @@ class Qubit(PhysicalComponent):
             Hamiltonian
 
         """
-        h = tf.cast(
-            self.params['freq'].get_value(),
-            tf.complex128
-        ) * self.Hs['freq']
+        h = tf.cast(self.params["freq"].get_value(), tf.complex128) * self.Hs["freq"]
         if self.hilbert_dim > 2:
-            h += tf.cast(
-                self.params['anhar'].get_value(),
-                tf.complex128
-            ) * self.Hs['anhar']
+            h += (
+                tf.cast(self.params["anhar"].get_value(), tf.complex128)
+                * self.Hs["anhar"]
+            )
         return h
 
     def init_Ls(self, ann_oper):
@@ -151,12 +144,9 @@ class Qubit(PhysicalComponent):
             Annihilation operator in the full Hilbert space
 
         """
-        self.collapse_ops['t1'] = ann_oper
-        self.collapse_ops['temp'] = ann_oper.T.conj()
-        self.collapse_ops['t2star'] = 2 * tf.matmul(
-            ann_oper.T.conj(),
-            ann_oper
-        )
+        self.collapse_ops["t1"] = ann_oper
+        self.collapse_ops["temp"] = ann_oper.T.conj()
+        self.collapse_ops["t2star"] = 2 * tf.matmul(ann_oper.T.conj(), ann_oper)
 
     def get_Lindbladian(self, dims):
         """
@@ -169,32 +159,32 @@ class Qubit(PhysicalComponent):
 
         """
         Ls = []
-        if 't1' in self.params:
-            t1 = self.params['t1'].get_value()
+        if "t1" in self.params:
+            t1 = self.params["t1"].get_value()
             gamma = (0.5 / t1) ** 0.5
-            L = gamma * self.collapse_ops['t1']
+            L = gamma * self.collapse_ops["t1"]
             Ls.append(L)
-            if 'temp' in self.params:
+            if "temp" in self.params:
                 if self.hilbert_dim > 2:
                     freq_diff = np.array(
-                        [(self.params['freq'].get_value()
-                          + n * self.params['anhar'].get_value())
-                         for n in range(self.hilbert_dim)]
+                        [
+                            (
+                                self.params["freq"].get_value()
+                                + n * self.params["anhar"].get_value()
+                            )
+                            for n in range(self.hilbert_dim)
+                        ]
                     )
                 else:
-                    freq_diff = np.array(
-                        [self.params['freq'].get_value(), 0]
-                    )
-                beta = 1 / (self.params['temp'].get_value() * kb)
+                    freq_diff = np.array([self.params["freq"].get_value(), 0])
+                beta = 1 / (self.params["temp"].get_value() * kb)
                 det_bal = tf.exp(-hbar * tf.cast(freq_diff, tf.float64) * beta)
-                det_bal_mat = hskron(
-                    tf.linalg.tensor_diag(det_bal), self.index, dims
-                )
-                L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
+                det_bal_mat = hskron(tf.linalg.tensor_diag(det_bal), self.index, dims)
+                L = gamma * tf.matmul(self.collapse_ops["temp"], det_bal_mat)
                 Ls.append(L)
-        if 't2star' in self.params:
-            gamma = (0.5 / self.params['t2star'].get_value()) ** 0.5
-            L = gamma * self.collapse_ops['t2star']
+        if "t2star" in self.params:
+            gamma = (0.5 / self.params["t2star"].get_value()) ** 0.5
+            L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
         return tf.cast(sum(Ls), tf.complex128)
 
@@ -210,6 +200,7 @@ class Resonator(PhysicalComponent):
         frequency of the resonator
 
     """
+
     def init_Hs(self, ann_oper):
         """
         Initialize the Hamiltonian as a number operator
@@ -220,8 +211,8 @@ class Resonator(PhysicalComponent):
             Annihilation operator in the full Hilbert space.
 
         """
-        self.Hs['freq'] = tf.constant(
-            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
+        self.Hs["freq"] = tf.Variable(
+            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
@@ -230,8 +221,8 @@ class Resonator(PhysicalComponent):
 
     def get_Hamiltonian(self):
         """Compute the Hamiltonian."""
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        return freq * self.Hs['freq']
+        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
+        return freq * self.Hs["freq"]
 
     def get_Lindbladian(self, dims):
         """NOT IMPLEMENTED"""
@@ -254,41 +245,38 @@ class SymmetricTransmon(PhysicalComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 2,
-            freq: np.float64 = 0.0,
-            phi: np.float64 = 0.0,
-            phi_0: np.float64 = 0.0
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 2,
+        freq: np.float64 = 0.0,
+        phi: np.float64 = 0.0,
+        phi_0: np.float64 = 0.0,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-        )
-        self.params['freq'] = freq
-        self.params['phi'] = phi
-        self.params['phi_0'] = phi_0
+        super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
+        self.params["freq"] = freq
+        self.params["phi"] = phi
+        self.params["phi_0"] = phi_0
 
     def init_Hs(self, ann_oper):
-        self.Hs['freq'] = tf.constant(
-            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
+        self.Hs["freq"] = tf.Variable(
+            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
         )
 
     def init_Ls(self, ann_oper):
         pass
 
     def get_Hamiltonian(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        return freq * tf.cast(tf.sqrt(tf.abs(tf.cos(
-            pi * phi / phi_0
-        ))), tf.complex128) * self.Hs['freq']
+        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
+        pi = tf.Variable(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params["phi"].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.complex128)
+        return (
+            freq
+            * tf.cast(tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))), tf.complex128)
+            * self.Hs["freq"]
+        )
 
 
 @dev_reg_deco
@@ -307,43 +295,40 @@ class AsymmetricTransmon(PhysicalComponent):
     """
 
     def __init__(
-            self,
-            name: str,
-            desc: str = " ",
-            comment: str = " ",
-            hilbert_dim: int = 2,
-            freq: np.float64 = 0.0,
-            phi: np.float64 = 0.0,
-            phi_0: np.float64 = 0.0,
-            gamma: np.float64 = 0.0
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 2,
+        freq: np.float64 = 0.0,
+        phi: np.float64 = 0.0,
+        phi_0: np.float64 = 0.0,
+        gamma: np.float64 = 0.0,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-        )
-        self.params['freq'] = freq
-        self.parama['phi'] = phi
-        self.parama['phi_0'] = phi_0
-        self.parama['gamma'] = gamma
+        super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
+        self.params["freq"] = freq
+        self.parama["phi"] = phi  # type: ignore
+        self.parama["phi_0"] = phi_0  # type: ignore
+        self.parama["gamma"] = gamma  # type: ignore
 
     def init_Hs(self, ann_oper):
-        self.Hs['freq'] = tf.constant(
-            hamiltonians['resonator'](ann_oper), dtype=tf.complex128
+        self.Hs["freq"] = tf.Variable(
+            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
+        pi = tf.Variable(np.pi, dtype=tf.complex128)
+        phi = tf.cast(self.params["phi"].get_value(), tf.complex128)
+        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.complex128)
+        gamma = tf.cast(self.params["gamma"].get_value(), tf.complex128)
         d = (gamma - 1) / (gamma + 1)
-        factor = tf.sqrt(tf.sqrt(
-            tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
-        ))
-        return freq * factor * self.Hs['freq']
+        factor = tf.sqrt(
+            tf.sqrt(
+                tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+            )
+        )
+        return freq * factor * self.Hs["freq"]
 
 
 @dev_reg_deco
@@ -376,7 +361,7 @@ class LineComponent(C3obj):
             "c3type": self.__class__.__name__,
             "params": params,
             "hamiltonian_func": self.hamiltonian_func.__name__,
-            "connected": self.connected
+            "connected": self.connected,
         }
 
 
@@ -404,19 +389,19 @@ class Coupling(LineComponent):
             comment=comment,
             params=params,
             connected=connected,
-            hamiltonian_func=hamiltonian_func
+            hamiltonian_func=hamiltonian_func,
         )
         if strength:
-            self.params['strength'] = strength
+            self.params["strength"] = strength
 
     def init_Hs(self, opers_list):
-        self.Hs['strength'] = tf.constant(
+        self.Hs["strength"] = tf.Variable(
             self.hamiltonian_func(opers_list), dtype=tf.complex128
         )
 
     def get_Hamiltonian(self):
-        strength = tf.cast(self.params['strength'].get_value(), tf.complex128)
-        return strength * self.Hs['strength']
+        strength = tf.cast(self.params["strength"].get_value(), tf.complex128)
+        return strength * self.Hs["strength"]
 
 
 @dev_reg_deco
@@ -434,11 +419,7 @@ class Drive(LineComponent):
     def init_Hs(self, ann_opers: list):
         hs = []
         for a in ann_opers:
-            hs.append(
-                tf.constant(
-                    self.hamiltonian_func(a), dtype=tf.complex128
-                )
-            )
+            hs.append(tf.Variable(self.hamiltonian_func(a), dtype=tf.complex128))
         self.h = sum(hs)
 
     def get_Hamiltonian(self):

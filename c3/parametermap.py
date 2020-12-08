@@ -1,6 +1,6 @@
 """ParameterMap class"""
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 import hjson
 import copy
 import numpy as np
@@ -15,14 +15,9 @@ class ParameterMap:
     depending on use.
     """
 
-    def __init__(
-        self,
-        instructions: list = [],
-        generator=None,
-        model=None
-    ):
+    def __init__(self, instructions: list = [], generator=None, model=None):
         self.instructions = {}
-        self.opt_map = []
+        self.opt_map: List = []
         self.model = model
         self.generator = generator
         for instr in instructions:
@@ -105,14 +100,13 @@ class ParameterMap:
                     name=key,
                     t_start=0.0,
                     t_end=gate["gate_length"],
-                    channels=list(gate["drive_channels"].keys())
+                    channels=list(gate["drive_channels"].keys()),
                 )
                 for drive_chan, comps in gate["drive_channels"].items():
                     for comp, props in comps.items():
                         ctype = props.pop("c3type")
                         instr.add_component(
-                            comp_lib[ctype](name=comp, **props),
-                            chan=drive_chan
+                            comp_lib[ctype](name=comp, **props), chan=drive_chan
                         )
             self.instructions[key] = instr
             self.__initialize_parameters()
@@ -196,7 +190,9 @@ class ParameterMap:
                 for par_id in self.__pars:
                     if par_id[0] == equiv_ids[0][0]:
                         print(f"Found {par_id[0]}.")
-                raise Exception(f"C3:ERROR:Parameter {equiv_ids[0]} not defined.") from ke
+                raise Exception(
+                    f"C3:ERROR:Parameter {equiv_ids[0]} not defined."
+                ) from ke
         return values
 
     def set_parameters(self, values: list, opt_map=None) -> None:
@@ -267,7 +263,7 @@ class ParameterMap:
             par_len = self.__pars[equiv_ids[0]].length
             for id in equiv_ids:
                 par = self.__pars[id]
-                par.set_opt_value(values[val_indx:val_indx + par_len])
+                par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
 
     def set_opt_map(self, opt_map) -> None:
@@ -280,7 +276,8 @@ class ParameterMap:
                     raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
         self.opt_map = opt_map
 
-    def __str__(self) -> str:
+    # TODO: F811 redefinition of unused '__str__' from line 111
+    def __str__(self) -> str:  # type: ignore
         """
         Return a multi-line human-readable string of all defined parameter names and
         current values.

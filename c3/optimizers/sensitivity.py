@@ -9,7 +9,12 @@ import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
-from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
+from c3.libraries.estimators import (
+    dv_g_LL_prime,
+    g_LL_prime_combined,
+    g_LL_prime,
+    neg_loglkh_multinom_norm,
+)
 
 
 class SET(Optimizer):
@@ -52,7 +57,7 @@ class SET(Optimizer):
         algorithm=None,
         run_name=None,
         same_dyn=False,
-        options={}
+        options={},
     ):
         """Initiliase."""
         super().__init__(algorithm=algorithm)
@@ -84,10 +89,14 @@ class SET(Optimizer):
         """
         self.dir_path = os.path.abspath(dir_path)
         if run_name is None:
-            run_name = "sensitivity" \
-                + self.algorithm.__name__ + '-' \
-                + self.sampling.__name__ + '-' \
+            run_name = (
+                "sensitivity"
+                + self.algorithm.__name__
+                + "-"
+                + self.sampling.__name__
+                + "-"
                 + self.fom.__name__
+            )
         self.logdir = log_setup(self.dir_path, run_name)
         self.logname = "sensitivity.log"
 
@@ -102,7 +111,7 @@ class SET(Optimizer):
             List of paths for files that contain learning data.
         """
         for target, datafile in datafiles.items():
-            with open(datafile, 'rb+') as file:
+            with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)
 
     def select_from_data(self, batch_size):
@@ -139,7 +148,7 @@ class SET(Optimizer):
         for ii in range(len(self.sweep_map)):
             self.dfname = "data.dat"
             self.opt_map = [self.sweep_map[ii]]
-            self.options['bounds'] = [self.sweep_bounds[ii]]
+            self.options["bounds"] = [self.sweep_bounds[ii]]
             print(f"C3:STATUS:Sweeping {self.opt_map}: {self.sweep_bounds[ii]}")
             self.log_setup(self.dir_path, "_".join(self.opt_map[0]))
             self.start_log()
@@ -153,7 +162,7 @@ class SET(Optimizer):
                     fun=self.fct_to_min,
                     fun_grad=self.fct_to_min_autograd,
                     grad_lookup=self.lookup_gradient,
-                    options=self.options
+                    options=self.options,
                 )
             except KeyboardInterrupt:
                 pass
@@ -189,7 +198,7 @@ class SET(Optimizer):
         goals = []
         seq_weigths = []
         count = 0
-        #TODO: seq per point is not constant. Remove.
+        # TODO: seq per point is not constant. Remove.
 
         # print("tup: " + str(tup))
         # print("val: " + str(val))
@@ -201,8 +210,8 @@ class SET(Optimizer):
         # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         for target, data in self.learn_data.items():
 
-            self.learn_from = data['seqs_grouped_by_param_set']
-            self.gateset_opt_map = data['opt_map']
+            self.learn_from = data["seqs_grouped_by_param_set"]
+            self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
@@ -211,29 +220,25 @@ class SET(Optimizer):
 
                 count += 1
                 m = self.learn_from[ipar]
-                gateset_params = m['params']
+                gateset_params = m["params"]
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results']
-                m_stds = np.array(m['results_std'])
-                m_shots = m['shots']
-                sequences = m['seqs']
+                m_vals = m["results"]
+                m_stds = np.array(m["results_std"])
+                m_shots = m["shots"]
+                sequences = m["seqs"]
                 num_seqs = len(sequences)
-                if target == 'all':
+                if target == "all":
                     num_seqs = len(sequences) * 3
 
                 self.exp.gateset.set_parameters(
-                    self.init_gateset_params,
-                    self.init_gateset_opt_map,
-                    scaled=False
+                    self.init_gateset_params, self.init_gateset_opt_map, scaled=False
                 )
                 self.exp.gateset.set_parameters(
                     gateset_params, gateset_opt_map, scaled=False
                 )
                 # We find the unique gates used in the sequence and compute
                 # only them.
-                self.exp.opt_gates = list(
-                    set(itertools.chain.from_iterable(sequences))
-                )
+                self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
                 self.exp.get_gates()
                 self.exp.evaluate(sequences)
                 sim_vals = self.exp.process(labels=self.state_labels[target])
@@ -241,26 +246,26 @@ class SET(Optimizer):
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
 
-                if target == 'all':
+                if target == "all":
                     goal = neg_loglkh_multinom_norm(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.Variable(m_stds, dtype=tf.float64),
+                        tf.Variable(m_shots, dtype=tf.float64),
                     )
                 else:
                     goal = g_LL_prime(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.Variable(m_stds, dtype=tf.float64),
+                        tf.Variable(m_shots, dtype=tf.float64),
                     )
                 goals.append(goal.numpy())
                 seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
 
-                with open(self.logdir + self.logname, 'a') as logfile:
+                with open(self.logdir + self.logname, "a") as logfile:
                     logfile.write(
                         "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
                             ipar + 1,
@@ -283,7 +288,7 @@ class SET(Optimizer):
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
                     int_len = len(str(num_seqs))
-                    with open(self.logdir + self.logname, 'a') as logfile:
+                    with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
                                 f"{iseq + 1:8}    "
@@ -298,23 +303,20 @@ class SET(Optimizer):
         goal = g_LL_prime_combined(goals, seq_weigths)
         # TODO make gradient free function use any fom
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal))
             print("{}: {}".format(self.fom.__name__, goal))
             for est in self.estimator_list:
-                val = float(
-                    est(exp_values, sim_values, exp_stds, exp_shots).numpy()
-                )
+                val = float(est(exp_values, sim_values, exp_stds, exp_shots).numpy())
                 logfile.write("{}: {}\n".format(est.__name__, val))
-                #print("{}: {}".format(est.__name__, val))
+                # print("{}: {}".format(est.__name__, val))
             print("")
             logfile.flush()
 
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal
+        self.optim_status["goal"] = goal
         self.evaluation += 1
         return goal
