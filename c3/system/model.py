@@ -34,7 +34,7 @@ class Model:
     """
 
     def __init__(self, subsystems=None, couplings=None, tasks=None):
-        self.dressed = False
+        self.dressed = True
         self.lindbladian = False
         self.use_FR = True
         self.dephasing_strength = 0.0
@@ -136,6 +136,7 @@ class Model:
             props.update({"name": name})
             dev_type = props.pop("c3type")
             self.couplings[name] = device_lib[dev_type](**props)
+        self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
