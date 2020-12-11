@@ -379,6 +379,33 @@ def average_infid_set(U_dict: dict, index, dims, eval, proj=True):
 
 
 @fid_reg_deco
+def average_infid_seq(U_dict: dict, index, dims, eval, proj=True):
+    """
+    Average sequence fidelity over all gates in U_dict.
+
+    Parameters
+    ----------
+    U_dict : dict
+        Contains unitary representations of the gates, identified by a key.
+    index : int
+        Index of the qubit(s) in the Hilbert space to be evaluated
+    dims : list
+        List of dimensions of qubits
+    proj : boolean
+        Project to computational subspace
+
+    Returns
+    -------
+    tf.float64
+        Mean average fidelity
+    """
+    fid = 1
+    for gate in U_dict.keys():
+        fid *= 1 - average_infid(U_dict, gate, index, dims, proj)
+    return 1 - fid
+
+
+@fid_reg_deco
 def lindbladian_average_infid(U_dict: dict, gate: str, index, dims, proj=True):
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are

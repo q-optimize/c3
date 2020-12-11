@@ -165,7 +165,7 @@ class ParameterMap:
             for id in self.__pars:
                 if id[0] == par_id[0]:
                     print(f"Found {id[0]}.")
-            raise Exception(f"C3:ERROR:Parameter {par_id} not defined.") from ke
+            raise Exception(f"C3:ERROR:Parameter {'-'.join(par_id)} not defined.") from ke
         return value
 
     def get_parameters(self) -> List[Quantity]:
@@ -273,7 +273,7 @@ class ParameterMap:
         for equiv_ids in opt_map:
             for pid in equiv_ids:
                 if not pid in self.__pars:
-                    raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
+                    raise Exception(f"C3:ERROR:Parameter {'-'.join(pid)} not defined.")
         self.opt_map = opt_map
 
     # TODO: F811 redefinition of unused '__str__' from line 111
