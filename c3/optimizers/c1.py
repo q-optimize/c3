@@ -50,8 +50,6 @@ class C1(Optimizer):
         pmap,
         callback_fids=[],
         algorithm=None,
-        plot_dynamics=False,
-        plot_pulses=False,
         store_unitaries=False,
         options={},
         run_name=None,
@@ -59,8 +57,6 @@ class C1(Optimizer):
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
-            plot_dynamics=plot_dynamics,
-            plot_pulses=plot_pulses,
             store_unitaries=store_unitaries,
         )
         self.fid_func = fid_func

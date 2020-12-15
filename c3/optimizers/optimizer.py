@@ -29,8 +29,6 @@ class Optimizer:
         self,
         pmap,
         algorithm=None,
-        plot_dynamics=False,
-        plot_pulses=False,
         store_unitaries=False,
     ):
         self.pmap = pmap
@@ -39,8 +37,6 @@ class Optimizer:
         self.current_best_goal = 9876543210.123456789
         self.current_best_params = None
         self.evaluation = 0
-        self.plot_dynamics = plot_dynamics
-        self.plot_pulses = plot_pulses
         self.store_unitaries = store_unitaries
         self.created_by = None
         if algorithm:
@@ -138,8 +134,8 @@ class Optimizer:
 
     def log_parameters(self):
         """
-        Log the current status. Write parameters to log. Update the current best parameters.
-        Call plotting functions as set up.
+        Log the current status. Write parameters to log. Update the current best
+        parameters. Call plotting functions as set up.
 
         """
         if self.optim_status["goal"] < self.current_best_goal:
@@ -153,22 +149,6 @@ class Optimizer:
                 }
                 best_point.write(hjson.dumps(best_dict))
                 best_point.write("\n")
-        if self.plot_dynamics:
-            psi_init = self.pmap.model.tasks["init_ground"].initialise(
-                self.pmap.model.drift_H, self.pmap.model.lindbladian
-            )
-            # dim = np.prod(self.pmap.model.dims)
-            # psi_init = [0] * dim
-            # psi_init[1] = 1
-            # psi_init = tf.Variable(psi_init, dtype=tf.complex128, shape=[dim ,1])
-            for gate in self.exp.dUs.keys():
-                self.exp.plot_dynamics(psi_init, [gate], self.optim_status["goal"])
-            self.exp.dynamics_plot_counter += 1
-        if self.plot_pulses:
-            for gate in self.opt_gates:
-                instr = self.pmap.instructions[gate]
-                self.exp.plot_pulses(instr, self.optim_status["goal"])
-            self.exp.pulses_plot_counter += 1
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1
@@ -213,7 +193,8 @@ class Optimizer:
 
     def fct_to_min_autograd(self, x):
         """
-         Wrapper for the goal function, including evaluation and storage of the gradient.
+         Wrapper for the goal function, including evaluation and storage of the
+         gradient.
 
         Parameters
          ----------

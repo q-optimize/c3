@@ -5,12 +5,16 @@ import time
 import hjson
 import pickle
 import itertools
-import random
 import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
-from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
+from c3.libraries.estimators import (
+    dv_g_LL_prime,
+    g_LL_prime_combined,
+    g_LL_prime,
+    neg_loglkh_multinom_norm,
+)
 
 
 class C3(Optimizer):
@@ -33,8 +37,6 @@ class C3(Optimizer):
         Identifiers for the qubit subspaces
     callback_foms : list
         Figures of merit to additionally compute and store
-    callback_figs : list
-        List of plotting functions to run at every evaluation
     algorithm : callable
         From the algorithm library
     run_name : str
@@ -52,7 +54,6 @@ class C3(Optimizer):
         seqs_per_point=None,
         state_labels=None,
         callback_foms=[],
-        callback_figs=[],
         algorithm=None,
         run_name=None,
         options={},
@@ -64,7 +65,6 @@ class C3(Optimizer):
         self.seqs_per_point = seqs_per_point
         self.state_labels = state_labels
         self.callback_foms = callback_foms
-        self.callback_figs = callback_figs
         self.inverse = False
         self.options = options
         self.learn_data = {}
@@ -138,17 +138,9 @@ class C3(Optimizer):
         Peroms the model learning by minimizing the figure of merit.
         """
         self.start_log()
-        for cb_fig in self.callback_figs:
-            os.makedirs(self.logdir + cb_fig.__name__)
-        # os.makedirs(self.logdir + 'dynamics_seq')
-        # os.makedirs(self.logdir + 'dynamics_xyxy')
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         x0 = self.pmap.get_parameters_scaled()
-        # TODO Nico: Store initial parameters to recover them later, do we need this?
-        # self.init_params = self.pmap.gateset.get_parameters()
-        # self.init_opt_map = self.pmap.gateset.list_parameters()
         try:
-            # TODO deal with keras learning differently
             self.algorithm(
                 x0,
                 fun=self.fct_to_min,
@@ -158,8 +150,8 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + 'best_point_' + self.logname, 'r') as file:
-            best_params = hjson.loads(file.readlines()[1])['params']
+        with open(self.logdir + "best_point_" + self.logname, "r") as file:
+            best_params = hjson.loads(file.readlines()[1])["params"]
         self.pmap.set_parameters(best_params)
         self.pmap.model.update_model()
         self.end_log()
@@ -167,8 +159,8 @@ class C3(Optimizer):
 
     def confirm(self):
         """
-        Compute the validation set, i.e. the value of the goal function on all points of the dataset that were not used
-        for learning.
+        Compute the validation set, i.e. the value of the goal function on all points
+        of the dataset that were not used for learning.
         """
         self.logname = "confirm.log"
         self.inverse = True
@@ -201,7 +193,6 @@ class C3(Optimizer):
         exp_stds = []
         exp_shots = []
         goals = []
-        grads = []
         seq_weigths = []
         count = 0
         seqs_pp = self.seqs_per_point
@@ -230,8 +221,6 @@ class C3(Optimizer):
                 self.pmap.set_parameters_scaled(current_params)
                 self.pmap.model.update_model()
 
-                # We make sure to reset the control parameters
-                # self.exp.gateset.set_parameters(self.init_gateset_params, self.init_gateset_opt_map)
                 self.pmap.set_parameters(gateset_params, gateset_opt_map)
                 # We find the unique gates used in the sequence and compute
                 # only them.
@@ -286,7 +275,6 @@ class C3(Optimizer):
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
-                    int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
@@ -310,21 +298,6 @@ class C3(Optimizer):
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
             logfile.flush()
 
-        for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
-            fig.savefig(
-                self.logdir
-                + cb_fig.__name__
-                + "/"
-                + "eval:"
-                + str(self.evaluation)
-                + "__"
-                + self.fom.__name__
-                + str(round(goal, 3))
-                + ".png"
-            )
-            plt.close(fig)
-
         self.optim_status["params"] = [
             par.numpy().tolist() for par in self.pmap.get_parameters()
         ]
@@ -335,7 +308,8 @@ class C3(Optimizer):
 
     def goal_run_with_grad(self, current_params):
         """
-        Same as goal_run but with gradient. Very resource intensive. Unoptimized at the moment.
+        Same as goal_run but with gradient. Very resource intensive. Unoptimized at the
+        moment.
         """
         exp_values = []
         sim_values = []
@@ -371,7 +345,6 @@ class C3(Optimizer):
                     t.watch(current_params)
                     self.pmap.set_parameters_scaled(current_params)
                     self.pmap.model.update_model()
-                    # self.exp.gateset.set_parameters(self.init_gateset_params,self.init_gateset_opt_map)
                     self.pmap.set_parameters(gateset_params, gateset_opt_map)
                     # We find the unique gates used in the sequence and compute
                     # only those.
@@ -429,7 +402,6 @@ class C3(Optimizer):
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
-                    int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
@@ -442,11 +414,6 @@ class C3(Optimizer):
                             )
                         logfile.flush()
 
-        # exp_values = tf.Variable(exp_values, dtype=tf.float64)
-        # sim_values =  tf.stack(sim_values)
-        # exp_stds = tf.Variable(exp_stds, dtype=tf.float64)
-        # exp_shots = tf.Variable(exp_shots, dtype=tf.float64)
-
         goal = g_LL_prime_combined(goals, seq_weigths)
         grad = dv_g_LL_prime(goals, grads, seq_weigths)
 
@@ -457,21 +424,6 @@ class C3(Optimizer):
                 val = float(cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy())
                 logfile.write("{}: {}\n".format(cb_fom.__name__, val))
             logfile.flush()
-
-        for cb_fig in self.callback_figs:
-            fig = cb_fig(exp_values, sim_values.numpy(), exp_stds)
-            fig.savefig(
-                self.logdir
-                + cb_fig.__name__
-                + "/"
-                + "eval:"
-                + str(self.evaluation)
-                + "__"
-                + self.fom.__name__
-                + str(round(goal, 3))
-                + ".png"
-            )
-            plt.close(fig)
 
         self.optim_status["params"] = [
             par.numpy().tolist() for par in self.pmap.get_parameters()
