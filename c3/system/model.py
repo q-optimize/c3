@@ -19,11 +19,13 @@ class Model:
     Parameters
     ----------
     subsystems : list
-        List of individual, non-interacting physical components like qubits or resonators
+        List of individual, non-interacting physical components like qubits or
+        resonators
     couplings : list
         List of interaction operators between subsystems, like couplings or drives.
     tasks : list
-        Badly named list of processing steps like line distortions and read out modelling
+        Badly named list of processing steps like line distortions and read out
+        modeling
 
 
     Attributes
@@ -111,7 +113,7 @@ class Model:
                 except ValueError as ve:
                     raise Exception(
                         f"C3:ERROR: Trying to couple to unkown subcomponent: {sub}"
-                    )
+                    ) from ve
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
         self.update_model()
@@ -136,6 +138,15 @@ class Model:
             props.update({"name": name})
             dev_type = props.pop("c3type")
             self.couplings[name] = device_lib[dev_type](**props)
+            if dev_type == "Drive":
+                for connection in self.couplings[name].connected:
+                    try:
+                        self.subsystems[connection].drive_line = name
+                    except KeyError as ke:
+                        raise Exception(
+                            f"C3:ERROR: Trying to connect drive {name} to unkown "
+                            f"target {connection}."
+                        ) from ke
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -189,8 +200,8 @@ class Model:
 
     def set_FR(self, use_FR):
         """
-        Setter for the frame rotation option for adjusting the individual rotating frames of
-        qubits when using gate sequences
+        Setter for the frame rotation option for adjusting the individual rotating
+        frames of qubits when using gate sequences
         """
         self.use_FR = use_FR
 
@@ -260,8 +271,9 @@ class Model:
         self.transform = transform
 
     def update_dressed(self):
-        """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying
-        the resulting transformation to the control Hamiltonians."""
+        """
+        Compute the Hamiltonians in the dressed basis by diagonalizing the drift and
+        applying the resulting transformation to the control Hamiltonians."""
         self.update_drift_eigen()
         dressed_control_Hs = {}
         dressed_col_ops = []
@@ -287,7 +299,8 @@ class Model:
 
     def get_Frame_Rotation(self, t_final: np.float64, freqs: dict, framechanges: dict):
         """
-        Compute the frame rotation needed to align Lab frame and rotating Eigenframes of the qubits.
+        Compute the frame rotation needed to align Lab frame and rotating Eigenframes
+        of the qubits.
 
         Parameters
         ----------
@@ -296,8 +309,8 @@ class Model:
         freqs : list
             Frequencies of the local oscillators.
         framechanges : list
-            List of framechanges. A phase shift applied to the control signal to compensate
-            relative phases of drive oscillator and qubit.
+            List of framechanges. A phase shift applied to the control signal to
+            compensate relative phases of drive oscillator and qubit.
 
         Returns
         -------

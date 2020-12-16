@@ -1,11 +1,9 @@
 """Component class and subclasses for the components making up the quantum device."""
 
-import types
-
 import numpy as np
 import tensorflow as tf
 
-from c3.c3objs import C3obj, Quantity
+from c3.c3objs import C3obj
 from c3.libraries.constants import kb, hbar
 from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
@@ -39,6 +37,7 @@ class PhysicalComponent(C3obj):
         super().__init__(**props)
         self.Hs = {}
         self.collapse_ops = {}
+        self.drive_line = None
 
     def set_subspace_index(self, index):
         self.index = index
@@ -76,8 +75,17 @@ class Qubit(PhysicalComponent):
     """
 
     def __init__(
-        self, name, hilbert_dim, desc=None, comment=None, freq=None, anhar=None, t1=None,
-        t2star=None, temp=None, params=None
+        self,
+        name,
+        hilbert_dim,
+        desc=None,
+        comment=None,
+        freq=None,
+        anhar=None,
+        t1=None,
+        t2star=None,
+        temp=None,
+        params=None,
     ):
         super().__init__(
             name=name,
@@ -100,8 +108,8 @@ class Qubit(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         """
-        Initialize the qubit Hamiltonians. If the dimension is higher than two, a Duffing
-        oscillator is used.
+        Initialize the qubit Hamiltonians. If the dimension is higher than two, a
+        Duffing oscillator is used.
 
         Parameters
         ----------
@@ -117,8 +125,8 @@ class Qubit(PhysicalComponent):
 
     def get_Hamiltonian(self):
         """
-        Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
-        the Duffing part and returns their sum.
+        Compute the Hamiltonian. Multiplies the number operator with the frequency and
+        anharmonicity with the Duffing part and returns their sum.
 
         Returns
         -------
@@ -128,10 +136,8 @@ class Qubit(PhysicalComponent):
         """
         h = tf.cast(self.params["freq"].get_value(), tf.complex128) * self.Hs["freq"]
         if self.hilbert_dim > 2:
-            h += (
-                tf.cast(self.params["anhar"].get_value(), tf.complex128)
-                * self.Hs["anhar"]
-            )
+            anhar = tf.cast(self.params["anhar"].get_value(), tf.complex128)
+            h += anhar * self.Hs["anhar"]
         return h
 
     def init_Ls(self, ann_oper):
@@ -150,7 +156,8 @@ class Qubit(PhysicalComponent):
 
     def get_Lindbladian(self, dims):
         """
-        Compute the Lindbladian, based on relaxation, dephasing constants and finite temperature.
+        Compute the Lindbladian, based on relaxation, dephasing constants and finite
+        temperature.
 
         Returns
         -------
@@ -166,14 +173,10 @@ class Qubit(PhysicalComponent):
             Ls.append(L)
             if "temp" in self.params:
                 if self.hilbert_dim > 2:
+                    freq = self.params["freq"].get_value()
+                    anhar = self.params["anhar"].get_value()
                     freq_diff = np.array(
-                        [
-                            (
-                                self.params["freq"].get_value()
-                                + n * self.params["anhar"].get_value()
-                            )
-                            for n in range(self.hilbert_dim)
-                        ]
+                        [freq + n * anhar for n in range(self.hilbert_dim)]
                     )
                 else:
                     freq_diff = np.array([self.params["freq"].get_value(), 0])
@@ -380,8 +383,14 @@ class Coupling(LineComponent):
     """
 
     def __init__(
-        self, name, desc=None, comment=None, strength=None, connected=None, params=None,
-        hamiltonian_func=None
+        self,
+        name,
+        desc=None,
+        comment=None,
+        strength=None,
+        connected=None,
+        params=None,
+        hamiltonian_func=None,
     ):
         super().__init__(
             name=name,

@@ -1,6 +1,6 @@
 """ParameterMap class"""
 
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple
 import hjson
 import copy
 import numpy as np
@@ -11,13 +11,13 @@ from c3.signal.pulse import components as comp_lib
 
 class ParameterMap:
     """
-    Collects information about control and model parameters and provides different representations
-    depending on use.
+    Collects information about control and model parameters and provides different
+    representations depending on use.
     """
 
     def __init__(self, instructions: list = [], generator=None, model=None):
         self.instructions = {}
-        self.opt_map: List = []
+        self.opt_map: List[Tuple[str]] = []
         self.model = model
         self.generator = generator
         for instr in instructions:
@@ -39,7 +39,7 @@ class ParameterMap:
         pars = {}
         for comp in self.__components.values():
             for par_name, par_value in comp.params.items():
-                par_id = (comp.name, par_name)
+                par_id = "-".join([comp.name, par_name])
                 par_lens[par_id] = par_value.length
                 pars[par_id] = par_value
 
@@ -49,7 +49,7 @@ class ParameterMap:
             for chan in instr.comps.keys():
                 for comp in instr.comps[chan]:
                     for par_name, par_value in instr.comps[chan][comp].params.items():
-                        par_id = (gate, chan, comp, par_name)
+                        par_id = "-".join([gate, chan, comp, par_name])
                         par_lens[par_id] = par_value.length
                         pars[par_id] = par_value
 
@@ -123,7 +123,8 @@ class ParameterMap:
         """
         units = []
         for equiv_ids in self.opt_map:
-            units.append(self.__pars[equiv_ids[0]].unit)
+            key = "-".join(equiv_ids[0])
+            units.append(self.__pars[key].unit)
         return units
 
     def get_parameter(self, par_id: Tuple[str]) -> Quantity:
@@ -140,13 +141,11 @@ class ParameterMap:
         Quantity
 
         """
+        key = "-".join(par_id)
         try:
-            value = self.__pars[par_id]
+            value = self.__pars[key]
         except KeyError as ke:
-            for id in self.__pars:
-                if id[0] == par_id[0]:
-                    print(f"Found {id[0]}.")
-            raise Exception(f"C3:ERROR:Parameter {par_id} not defined.") from ke
+            raise Exception(f"C3:ERROR:Parameter {key} not defined.") from ke
         return value
 
     def get_parameters(self) -> List[Quantity]:
@@ -165,15 +164,8 @@ class ParameterMap:
         """
         values = []
         for equiv_ids in self.opt_map:
-            try:
-                values.append(self.__pars[equiv_ids[0]])
-            except KeyError as ke:
-                for par_id in self.__pars:
-                    if par_id[0] == equiv_ids[0][0]:
-                        print(f"Found {par_id[0]}.")
-                raise Exception(
-                    f"C3:ERROR:Parameter {equiv_ids[0]} not defined."
-                ) from ke
+            key = "-".join(equiv_ids[0])
+            values.append(self.__pars[key])
         return values
 
     def set_parameters(self, values: list, opt_map=None) -> None:
@@ -191,24 +183,27 @@ class ParameterMap:
         if opt_map is None:
             opt_map = self.opt_map
         for equiv_ids in opt_map:
-            for id in equiv_ids:
+            for par_id in equiv_ids:
+                key = "-".join(par_id)
                 try:
-                    par = self.__pars[id]
+                    par = self.__pars[key]
                 except ValueError as ve:
-                    raise Exception(f"C3:ERROR:{id} not defined.") from ve
+                    raise Exception(f"C3:ERROR:{key} not defined.") from ve
                 try:
                     par.set_value(values[val_indx])
                 except ValueError as ve:
                     raise Exception(
-                        f"C3:ERROR:Trying to set {'-'.join(id)} to value {values[val_indx]} "
-                        f"but has to be within {par.offset:.3} .. {(par.offset + par.scale):.3}."
+                        f"C3:ERROR:Trying to set {'-'.join(par_id)}"
+                        f" to value {values[val_indx]} "
+                        f"but has to be within {par.offset:.3} .. "
+                        f"{(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
 
     def get_parameters_scaled(self) -> np.ndarray:
         """
-        Return the current parameters. This fuction should only be called by an optimizer. Are you
-        an optimizer?
+        Return the current parameters. This fuction should only be called by an
+        optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -228,8 +223,8 @@ class ParameterMap:
 
     def set_parameters_scaled(self, values: list) -> None:
         """
-        Set the values in the original instruction class. This fuction should only be called by
-        an optimizer. Are you an optimizer?
+        Set the values in the original instruction class. This fuction should only be
+        called by an optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -241,9 +236,11 @@ class ParameterMap:
         """
         val_indx = 0
         for equiv_ids in self.opt_map:
-            par_len = self.__pars[equiv_ids[0]].length
-            for id in equiv_ids:
-                par = self.__pars[id]
+            key = "-".join(equiv_ids[0])
+            par_len = self.__pars[key].length
+            for par_id in equiv_ids:
+                key = "-".join(par_id)
+                par = self.__pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
 
@@ -253,28 +250,10 @@ class ParameterMap:
         """
         for equiv_ids in opt_map:
             for pid in equiv_ids:
-                if not pid in self.__pars:
+                key = "-".join(pid)
+                if key not in self.__pars:
                     raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
         self.opt_map = opt_map
-
-    # TODO: F811 redefinition of unused '__str__' from line 111
-    def __str__(self) -> str:  # type: ignore
-        """
-        Return a multi-line human-readable string of all defined parameter names and
-        current values.
-
-        Returns
-        -------
-        str
-            Parameters and their values
-        """
-        ret = []
-
-        for par_id, par in self.__pars.items():
-            nice_id = "-".join(par_id)
-            ret.append(f"{nice_id:38}: {par}\n")
-
-        return "".join(ret)
 
     def str_parameters(self, opt_map) -> str:
         """
@@ -294,9 +273,9 @@ class ParameterMap:
         ret = []
         for equiv_ids in opt_map:
             par_id = equiv_ids[0]
-            par = self.__pars[equiv_ids[0]]
-            nice_id = "-".join(par_id)
-            ret.append(f"{nice_id:38}: {par}\n")
+            key = "-".join(par_id)
+            par = self.__pars[key]
+            ret.append(f"{key:38}: {par}\n")
             if len(equiv_ids) > 1:
                 for eid in equiv_ids[1:]:
                     ret.append("-".join(eid))
