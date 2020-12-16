@@ -479,14 +479,14 @@ class AWG(Device):
             "logdir", os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
         self.logname = "awg.log"
-        drag_opt = props.pop("DRAG", 0)
+        options = props.pop("options", "")
         super().__init__(**props)
         # TODO move the options pwc & drag to the instruction object
         self.amp_tot_sq = None
         self.process = self.create_IQ
-        if drag_opt == 1:
+        if options == "drag":
             self.enable_drag()
-        elif drag_opt == 2:
+        elif options == "drag_2":
             self.enable_drag_2()
 
     def asdict(self) -> dict:

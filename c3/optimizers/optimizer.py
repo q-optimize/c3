@@ -75,7 +75,7 @@ class Optimizer:
 
     def load_best(self, init_point):
         """
-        Load a previous parameter point to start the optimization from.
+        Load a previous parameter point to start the optimization from. Legacy wrapper. Method moved to Parametermap.
 
         Parameters
         ----------
@@ -83,12 +83,7 @@ class Optimizer:
             File location of the initial point
 
         """
-        with open(init_point) as init_file:
-            best = hjson.load(init_file)
-
-        best_opt_map = [[tuple(par) for par in pset] for pset in best["opt_map"]]
-        init_p = best["optim_status"]["params"]
-        self.pmap.set_parameters(init_p, best_opt_map)
+        self.pmap.load_values(init_point)
 
     def start_log(self):
         """

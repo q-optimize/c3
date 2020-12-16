@@ -401,10 +401,10 @@ def average_infid_seq(U_dict: dict, index, dims, eval, proj=True):
     tf.float64
         Mean average fidelity
     """
-    infid = 1
+    fid = 1
     for gate in U_dict.keys():
-        infid *= average_infid(U_dict, gate, index, dims, proj)
-    return infid
+        fid *= 1 - average_infid(U_dict, gate, index, dims, proj)
+    return 1 - fid
 
 
 @fid_reg_deco
