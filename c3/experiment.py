@@ -9,9 +9,9 @@ states or populations.
 """
 
 import os
-import hjson
 import pickle
 import itertools
+import hjson
 import numpy as np
 import tensorflow as tf
 

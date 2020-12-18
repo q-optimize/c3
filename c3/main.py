@@ -3,7 +3,6 @@
 
 import logging
 import os
-import shutil
 import hjson
 import argparse
 import c3.utils.parsers as parsers
@@ -15,6 +14,8 @@ from c3.system.model import Model
 from c3.generator.generator import Generator
 
 logging.getLogger("tensorflow").disabled = True
+
+# flake8: noqa: C901
 if __name__ == "__main__":
 
     os.nice(5)  # keep responsiveness when we overcommit memory
@@ -59,7 +60,7 @@ if __name__ == "__main__":
                 opt.include_model()
         elif optim_type == "C2":
             eval_func = cfg["eval_func"]
-            opt, exp_right = parsers.create_c2_opt(opt_config, eval_func)
+            opt = parsers.create_c2_opt(opt_config, eval_func)
         elif optim_type == "C3" or optim_type == "C3_confirm":
             print("C3:STATUS: creating c3 opt ...")
             opt = parsers.create_c3_opt(opt_config)
@@ -74,9 +75,6 @@ if __name__ == "__main__":
             raise Exception("C3:ERROR:Unknown optimization type specified.")
         opt.set_exp(exp)
         opt.set_created_by(opt_config)
-
-        if optim_type == "C2":
-            shutil.copy2(eval_func, logdir)
 
         if "initial_point" in cfg:
             initial_points = cfg["initial_point"]
@@ -96,12 +94,11 @@ if __name__ == "__main__":
                     init_dir = os.path.basename(
                         os.path.normpath(os.path.dirname(init_point))
                     )
-                    # TODO Sort out storing the initial point
-                except FileNotFoundError:
+                except FileNotFoundError as fnfe:
                     raise Exception(
                         f"C3:ERROR:No initial point found at "
                         f"{os.path.abspath(init_point)}. "
-                    )
+                    ) from fnfe
 
         if "real_params" in cfg:
             real_params = cfg["real_params"]
@@ -110,61 +107,34 @@ if __name__ == "__main__":
             if "adjust_exp" in cfg:
                 try:
                     adjust_exp = cfg["adjust_exp"]
-                    opt.load_best(adjust_exp)
-                    opt.pmap.model.update_model()
+                    opt.load_model_parameters(adjust_exp)
                     print(
                         "C3:STATUS:Loading experimental values from : "
                         f"{os.path.abspath(adjust_exp)}"
                     )
-                    shutil.copy(adjust_exp, logdir + "adjust_exp.log")
-                except FileNotFoundError:
+                except FileNotFoundError as fnfe:
                     raise Exception(
                         f"C3:ERROR:No experimental values found at "
                         f"{os.path.abspath(adjust_exp)} "
                         "Continuing with default."
-                    )
+                    ) from fnfe
             opt.optimize_controls()
 
         elif optim_type == "C2":
-            real = {
-                "params": [par.numpy().tolist() for par in exp_right.get_parameters()]
-            }
-            with open(logdir + "real_model_params.log", "w") as real_file:
-                real_file.write(hjson.dumps(exp_right.id_list))
-                real_file.write("\n")
-                real_file.write(hjson.dumps(real))
-                real_file.write("\n")
-                real_file.write(exp_right.print_parameters())
-
             opt.optimize_controls()
 
         elif optim_type == "C3" or optim_type == "confirm":
             opt.read_data(cfg["datafile"])
-            key = list(cfg["datafile"].keys())[0]
-            shutil.copy2(
-                "/".join(cfg["datafile"][key].split("/")[0:-1])
-                + "/real_model_params.log",
-                logdir,
-            )
             opt.learn_model()
 
         elif optim_type == "C3_confirm":
             opt.read_data(cfg["datafile"])
-            key = list(cfg["datafile"].keys())[0]
-            shutil.copy2(
-                "/".join(cfg["datafile"][key].split("/")[0:-1])
-                + "/real_model_params.log",
-                logdir,
-            )
+            opt.log_setup()
             opt.confirm()
 
         elif optim_type == "SET":
             opt.read_data(cfg["datafile"])
-            shutil.copy2(
-                "/".join(list(cfg["datafile"].values())[0].split("/")[0:-1])
-                + "/real_model_params.log",
-                logdir,
-            )
+            opt.log_setup()
 
             print("sensitivity test ...")
             opt.sensitivity()

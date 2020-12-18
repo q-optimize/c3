@@ -1,14 +1,6 @@
 Utilities package
 ==================
 
-Display module
---------------
-
-.. automodule:: c3.utils.display
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Parsers module
 --------------
 

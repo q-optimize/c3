@@ -29,8 +29,6 @@ class Optimizer:
         self,
         pmap,
         algorithm=None,
-        plot_dynamics=False,
-        plot_pulses=False,
         store_unitaries=False,
     ):
         self.pmap = pmap
@@ -39,10 +37,10 @@ class Optimizer:
         self.current_best_goal = 9876543210.123456789
         self.current_best_params = None
         self.evaluation = 0
-        self.plot_dynamics = plot_dynamics
-        self.plot_pulses = plot_pulses
         self.store_unitaries = store_unitaries
         self.created_by = None
+        self.logname = None
+        self.options = None
         if algorithm:
             self.algorithm = algorithm
         else:
@@ -64,16 +62,16 @@ class Optimizer:
         # os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
-    def set_exp(self, exp):
+    def set_exp(self, exp) -> None:
         self.exp = exp
 
-    def set_created_by(self, config):
+    def set_created_by(self, config) -> None:
         """
         Store the config file location used to created this optimizer.
         """
         self.created_by = config
 
-    def load_best(self, init_point):
+    def load_best(self, init_point) -> None:
         """
         Load a previous parameter point to start the optimization from. Legacy wrapper. Method moved to Parametermap.
 
@@ -85,7 +83,7 @@ class Optimizer:
         """
         self.pmap.load_values(init_point)
 
-    def start_log(self):
+    def start_log(self) -> None:
         """
         Initialize the log with current time.
 
@@ -106,7 +104,7 @@ class Optimizer:
             logfile.write("\n")
             logfile.flush()
 
-    def end_log(self):
+    def end_log(self) -> None:
         """
         Finish the log by recording current time and total runtime.
 
@@ -117,7 +115,7 @@ class Optimizer:
             logfile.write(f"Total runtime: {self.end_time-self.start_time}\n\n")
             logfile.flush()
 
-    def log_best_unitary(self):
+    def log_best_unitary(self) -> None:
         """
         Save the best unitary in the log.
         """
@@ -131,10 +129,10 @@ class Optimizer:
                 best_point.write(f"Im {gate}: \n")
                 best_point.write(f"{np.round(np.imag(U), 3)}\n")
 
-    def log_parameters(self):
+    def log_parameters(self) -> None:
         """
-        Log the current status. Write parameters to log. Update the current best parameters.
-        Call plotting functions as set up.
+        Log the current status. Write parameters to log. Update the current best
+        parameters. Call plotting functions as set up.
 
         """
         if self.optim_status["goal"] < self.current_best_goal:
@@ -148,22 +146,6 @@ class Optimizer:
                 }
                 best_point.write(hjson.dumps(best_dict))
                 best_point.write("\n")
-        if self.plot_dynamics:
-            psi_init = self.pmap.model.tasks["init_ground"].initialise(
-                self.pmap.model.drift_H, self.pmap.model.lindbladian
-            )
-            # dim = np.prod(self.pmap.model.dims)
-            # psi_init = [0] * dim
-            # psi_init[1] = 1
-            # psi_init = tf.Variable(psi_init, dtype=tf.complex128, shape=[dim ,1])
-            for gate in self.exp.dUs.keys():
-                self.exp.plot_dynamics(psi_init, [gate], self.optim_status["goal"])
-            self.exp.dynamics_plot_counter += 1
-        if self.plot_pulses:
-            for gate in self.opt_gates:
-                instr = self.pmap.instructions[gate]
-                self.exp.plot_pulses(instr, self.optim_status["goal"])
-            self.exp.pulses_plot_counter += 1
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1
@@ -208,7 +190,8 @@ class Optimizer:
 
     def fct_to_min_autograd(self, x):
         """
-         Wrapper for the goal function, including evaluation and storage of the gradient.
+         Wrapper for the goal function, including evaluation and storage of the
+         gradient.
 
         Parameters
          ----------

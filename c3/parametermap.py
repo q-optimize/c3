@@ -4,6 +4,7 @@ from typing import List, Dict, Tuple
 import hjson
 import copy
 import numpy as np
+import tensorflow as tf
 from c3.c3objs import Quantity
 from c3.signal.gates import Instruction
 from c3.signal.pulse import components as comp_lib
@@ -17,7 +18,7 @@ class ParameterMap:
 
     def __init__(self, instructions: list = [], generator=None, model=None):
         self.instructions = {}
-        self.opt_map: List[Tuple[str]] = []
+        self.opt_map: List[List[Tuple[str]]] = []
         self.model = model
         self.generator = generator
         for instr in instructions:
@@ -55,7 +56,7 @@ class ParameterMap:
 
         self.__par_lens = par_lens
         self.__pars = pars
-            
+
     def load_values(self, init_point):
         """
         Load a previous parameter point to start the optimization from.
@@ -69,10 +70,8 @@ class ParameterMap:
         with open(init_point) as init_file:
             best = hjson.load(init_file)
 
-        best_opt_map = [
-            [tuple(par) for par in pset] for pset in best["opt_map"]
-        ]
-        init_p = best['optim_status']['params']
+        best_opt_map = [[tuple(par) for par in pset] for pset in best["opt_map"]]
+        init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
     def read_config(self, filepath: str) -> None:
@@ -212,10 +211,10 @@ class ParameterMap:
                     par.set_value(values[val_indx])
                 except ValueError as ve:
                     raise Exception(
-                        f"C3:ERROR:Trying to set {'-'.join(par_id)}"
-                        f" to value {values[val_indx]} "
-                        f"but has to be within {par.offset:.3} .. "
-                        f"{(par.offset + par.scale):.3}."
+                        f"C3:ERROR:Trying to set {'-'.join(par_id)} "
+                        f"to value {values[val_indx]} "
+                        f"but has to be within {par.offset:.3} .."
+                        f" {(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
 
@@ -241,7 +240,7 @@ class ParameterMap:
             values.append(par.get_opt_value())
         return np.array(values).flatten()
 
-    def set_parameters_scaled(self, values: list) -> None:
+    def set_parameters_scaled(self, values: tf.Variable) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
         called by an optimizer. Are you an optimizer?
@@ -264,7 +263,7 @@ class ParameterMap:
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
 
-    def set_opt_map(self, opt_map) -> None:
+    def set_opt_map(self, opt_map: List[List[Tuple[str]]]) -> None:
         """
         Set the opt_map, i.e. which parameters will be optimized.
         """
@@ -278,7 +277,7 @@ class ParameterMap:
                     )
         self.opt_map = opt_map
 
-    def str_parameters(self, opt_map) -> str:
+    def str_parameters(self, opt_map: List[List[Tuple[str]]]) -> str:
         """
         Return a multi-line human-readable string of the optmization parameter names and
         current values.
@@ -306,7 +305,7 @@ class ParameterMap:
                 ret.append("\n")
         return "".join(ret)
 
-    def print_parameters(self):
+    def print_parameters(self) -> None:
         """
         Print current parameters to stdout.
         """

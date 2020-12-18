@@ -1,16 +1,14 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import hjson
+import shutil
 import pickle
 import itertools
-import time
 import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 from c3.libraries.estimators import (
-    dv_g_LL_prime,
     g_LL_prime_combined,
     g_LL_prime,
     neg_loglkh_multinom_norm,
@@ -51,6 +49,7 @@ class SET(Optimizer):
         estimator_list,
         sampling,
         batch_sizes,
+        pmap,
         state_labels=None,
         sweep_map=None,
         sweep_bounds=None,
@@ -60,7 +59,7 @@ class SET(Optimizer):
         options={},
     ):
         """Initiliase."""
-        super().__init__(algorithm=algorithm)
+        super().__init__(pmap=pmap, algorithm=algorithm)
         self.fom = fom
         self.estimator_list = estimator_list
         self.sampling = sampling
@@ -73,9 +72,10 @@ class SET(Optimizer):
         self.inverse = False
         self.learn_data = {}
         self.same_dyn = same_dyn
-        self.log_setup(dir_path, run_name)
+        self.__dir_path = dir_path
+        self.__run_name = run_name
 
-    def log_setup(self, dir_path, run_name):
+    def log_setup(self, dir_path, run_name) -> None:
         """
         Create the folders to store data.
 
@@ -87,18 +87,20 @@ class SET(Optimizer):
             User specified name for the run
 
         """
-        self.dir_path = os.path.abspath(dir_path)
+        dir_path = os.path.abspath(self.__dir_path)
+        run_name = self.__run_name
         if run_name is None:
-            run_name = (
-                "sensitivity"
-                + self.algorithm.__name__
-                + "-"
-                + self.sampling.__name__
-                + "-"
-                + self.fom.__name__
+            run_name = "-".join(
+                [
+                    "sensitivity",
+                    self.algorithm.__name__,
+                    self.sampling.__name__,
+                    self.fom.__name__,
+                ]
             )
-        self.logdir = log_setup(self.dir_path, run_name)
+        self.logdir = log_setup(dir_path, run_name)
         self.logname = "sensitivity.log"
+        shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles):
         # TODO move common methods of sensitivity and c3 to super class
@@ -110,6 +112,7 @@ class SET(Optimizer):
         datafiles : list of str
             List of paths for files that contain learning data.
         """
+        self.__real_model_folder = os.path.dirname(datafiles.values()[0])
         for target, datafile in datafiles.items():
             with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)
@@ -153,12 +156,12 @@ class SET(Optimizer):
             self.log_setup(self.dir_path, "_".join(self.opt_map[0]))
             self.start_log()
             print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-            x0 = self.exp.get_parameters(self.opt_map, scaled=False)
+            x_init = self.exp.get_parameters(self.opt_map, scaled=False)
             self.init_gateset_params = self.exp.gateset.get_parameters()
             self.init_gateset_opt_map = self.exp.gateset.list_parameters()
             try:
                 self.algorithm(
-                    x0,
+                    x_init,
                     fun=self.fct_to_min,
                     fun_grad=self.fct_to_min_autograd,
                     grad_lookup=self.lookup_gradient,
@@ -166,7 +169,7 @@ class SET(Optimizer):
                 )
             except KeyboardInterrupt:
                 pass
-            self.exp.set_parameters(x0, self.opt_map, scaled=False)
+            self.exp.set_parameters(x_init, self.opt_map, scaled=False)
 
         # #=== Get the resulting data ======================================
 
@@ -176,7 +179,7 @@ class SET(Optimizer):
         # Xs=Xs[Ks]
         # Ys=Ys[Ks]
 
-    def goal_run(self, val):
+    def goal_run(self, current_params):
         """
         Evaluate the figure of merit for the current model parameters.
 
@@ -200,14 +203,6 @@ class SET(Optimizer):
         count = 0
         # TODO: seq per point is not constant. Remove.
 
-        # print("tup: " + str(tup))
-        # print("val: " + str(val))
-        # print(self.opt_map)
-        self.exp.set_parameters(val, self.opt_map, scaled=False)
-        # print("params>>> ")
-        # print(self.exp.print_parameters(self.opt_map))
-
-        # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         for target, data in self.learn_data.items():
 
             self.learn_from = data["seqs_grouped_by_param_set"]
@@ -230,18 +225,18 @@ class SET(Optimizer):
                 if target == "all":
                     num_seqs = len(sequences) * 3
 
-                self.exp.gateset.set_parameters(
-                    self.init_gateset_params, self.init_gateset_opt_map, scaled=False
-                )
-                self.exp.gateset.set_parameters(
-                    gateset_params, gateset_opt_map, scaled=False
-                )
+                self.pmap.set_parameters_scaled(current_params)
+                self.pmap.model.update_model()
+
+                self.pmap.set_parameters(gateset_params, gateset_opt_map)
                 # We find the unique gates used in the sequence and compute
                 # only them.
                 self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
                 self.exp.get_gates()
-                self.exp.evaluate(sequences)
-                sim_vals = self.exp.process(labels=self.state_labels[target])
+                pops = self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(
+                    labels=self.state_labels[target], populations=pops
+                )
 
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
@@ -267,19 +262,12 @@ class SET(Optimizer):
 
                 with open(self.logdir + self.logname, "a") as logfile:
                     logfile.write(
-                        "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
-                            ipar + 1,
-                            count,
-                            len(indeces),
-                            hjson.dumps(self.gateset_opt_map),
-                            self.exp.gateset.get_parameters(
-                                self.gateset_opt_map, to_str=True
-                            ),
-                        )
+                        f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n"
+                        f"{str(self.exp.pmap)}\n"
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         Shots"
-                        "       Diff\n"
+                        "Sequence    Simulation  Experiment  Std           Shots"
+                        "    Diff\n"
                     )
 
                 for iseq in range(len(sequences)):
@@ -287,7 +275,6 @@ class SET(Optimizer):
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
-                    int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
@@ -301,7 +288,6 @@ class SET(Optimizer):
                         logfile.flush()
 
         goal = g_LL_prime_combined(goals, seq_weigths)
-        # TODO make gradient free function use any fom
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
