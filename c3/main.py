@@ -51,7 +51,7 @@ if __name__ == "__main__":
         else:
             print("C3:STATUS: No instructions specified. Performing quick setup.")
             exp = Experiment()
-            exp.quick_setup(cfg)
+            exp.quick_setup(opt_config)
 
         if optim_type == "C1":
             opt = parsers.create_c1_opt(opt_config, exp)
@@ -74,7 +74,6 @@ if __name__ == "__main__":
             raise Exception("C3:ERROR:Unknown optimization type specified.")
         opt.set_exp(exp)
         opt.set_created_by(opt_config)
-        logdir = opt.logdir
 
         if optim_type == "C2":
             shutil.copy2(eval_func, logdir)

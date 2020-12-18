@@ -233,7 +233,6 @@ class Optimizer:
         return goal
 
     def goal_run_with_grad(self, current_params):
-        """OBSOLETE?"""
         with tf.GradientTape() as t:
             t.watch(current_params)
             goal = self.goal_run(current_params)

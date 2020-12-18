@@ -75,6 +75,7 @@ class Experiment:
         gen.read_config(cfg["generator"])
 
         single_gate_time = cfg["single_qubit_gate_time"]
+        v2hz = cfg["v2hz"]
         instructions = []
         sideband = cfg.pop("sideband", None)
         for gate_name, props in cfg["single_qubit_gates"].items():
@@ -89,6 +90,7 @@ class Experiment:
                 target_qubit.drive_line,
                 target_qubit.params["freq"].get_value() / 2 / np.pi,
                 single_gate_time,
+                v2hz,
                 sideband,
             )
             instructions.append(instr)
@@ -106,12 +108,14 @@ class Experiment:
                 qubit_1.drive_line,
                 qubit_1.params["freq"].get_value() / 2 / np.pi,
                 props["gate_time"],
+                v2hz,
                 sideband,
             )
             instr.quick_setup(
                 qubit_2.drive_line,
                 qubit_2.params["freq"].get_value() / 2 / np.pi,
                 props["gate_time"],
+                v2hz,
                 sideband,
             )
             instructions.append(instr)

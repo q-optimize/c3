@@ -100,8 +100,6 @@ class C1(Optimizer):
         """
         self.log_setup()
         self.start_log()
-        self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
-        self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []

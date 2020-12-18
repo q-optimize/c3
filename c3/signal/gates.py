@@ -75,11 +75,19 @@ class Instruction:
         """
         self.comps[chan][comp.name] = comp
 
-    def quick_setup(self, chan, qubit_freq, gate_time, sideband=None) -> None:
+    def quick_setup(self, chan, qubit_freq, gate_time, v2hz=1, sideband=None) -> None:
         """
         Initialize this instruction with a default envelope and carrier.
         """
-        env_params = {"t_final": Quantity(value=gate_time, unit="s")}
+        pi_half_amp = np.pi / 2 / gate_time / v2hz * 2 * np.pi
+        env_params = {
+            "t_final": Quantity(value=gate_time, unit="s"),
+            "amp": Quantity(
+                value=pi_half_amp,
+                min_val=0.0,
+                max_val=3*pi_half_amp,
+                unit="V"),
+        }
         carrier_freq = qubit_freq
         if sideband:
             env_params["freq_offset"] = Quantity(value=sideband, unit="Hz 2pi")

@@ -236,7 +236,8 @@ class ParameterMap:
         """
         values = []
         for equiv_ids in self.opt_map:
-            par = self.__pars[equiv_ids[0]]
+            key = "-".join(equiv_ids[0])
+            par = self.__pars[key]
             values.append(par.get_opt_value())
         return np.array(values).flatten()
 
@@ -271,7 +272,10 @@ class ParameterMap:
             for pid in equiv_ids:
                 key = "-".join(pid)
                 if key not in self.__pars:
-                    raise Exception(f"C3:ERROR:Parameter {key} not defined.")
+                    par_strings = "\n".join(self.__pars.keys())
+                    raise Exception(
+                        f"C3:ERROR:Parameter {key} not defined in {par_strings}"
+                    )
         self.opt_map = opt_map
 
     def str_parameters(self, opt_map) -> str:
