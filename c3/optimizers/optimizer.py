@@ -39,6 +39,7 @@ class Optimizer:
         self.evaluation = 0
         self.store_unitaries = store_unitaries
         self.created_by = None
+        self.logname = None
         if algorithm:
             self.algorithm = algorithm
         else:
@@ -60,16 +61,16 @@ class Optimizer:
         # os.remove(self.dir_path + self.string)
         os.rmdir(old_logdir)
 
-    def set_exp(self, exp):
+    def set_exp(self, exp) -> None:
         self.exp = exp
 
-    def set_created_by(self, config):
+    def set_created_by(self, config) -> None:
         """
         Store the config file location used to created this optimizer.
         """
         self.created_by = config
 
-    def load_best(self, init_point):
+    def load_best(self, init_point) -> None:
         """
         Load a previous parameter point to start the optimization from.
 
@@ -86,7 +87,7 @@ class Optimizer:
         init_p = best["optim_status"]["params"]
         self.pmap.set_parameters(init_p, best_opt_map)
 
-    def start_log(self):
+    def start_log(self) -> None:
         """
         Initialize the log with current time.
 
@@ -107,7 +108,7 @@ class Optimizer:
             logfile.write("\n")
             logfile.flush()
 
-    def end_log(self):
+    def end_log(self) -> None:
         """
         Finish the log by recording current time and total runtime.
 
@@ -118,7 +119,7 @@ class Optimizer:
             logfile.write(f"Total runtime: {self.end_time-self.start_time}\n\n")
             logfile.flush()
 
-    def log_best_unitary(self):
+    def log_best_unitary(self) -> None:
         """
         Save the best unitary in the log.
         """
@@ -132,7 +133,7 @@ class Optimizer:
                 best_point.write(f"Im {gate}: \n")
                 best_point.write(f"{np.round(np.imag(U), 3)}\n")
 
-    def log_parameters(self):
+    def log_parameters(self) -> None:
         """
         Log the current status. Write parameters to log. Update the current best
         parameters. Call plotting functions as set up.
@@ -219,7 +220,6 @@ class Optimizer:
         return goal
 
     def goal_run_with_grad(self, current_params):
-        """OBSOLETE?"""
         with tf.GradientTape() as t:
             t.watch(current_params)
             goal = self.goal_run(current_params)

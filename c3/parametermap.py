@@ -1,6 +1,6 @@
 """ParameterMap class"""
 
-from typing import List, Dict, Tuple, Any
+from typing import List, Dict, Tuple
 import hjson
 import copy
 import numpy as np
@@ -11,8 +11,8 @@ from c3.signal.pulse import components as comp_lib
 
 class ParameterMap:
     """
-    Collects information about control and model parameters and provides different representations
-    depending on use.
+    Collects information about control and model parameters and provides different
+    representations depending on use.
     """
 
     def __init__(self, instructions: list = [], generator=None, model=None):
@@ -200,15 +200,17 @@ class ParameterMap:
                     par.set_value(values[val_indx])
                 except ValueError as ve:
                     raise Exception(
-                        f"C3:ERROR:Trying to set {'-'.join(id)} to value {values[val_indx]} "
-                        f"but has to be within {par.offset:.3} .. {(par.offset + par.scale):.3}."
+                        f"C3:ERROR:Trying to set {'-'.join(id)} "
+                        f"to value {values[val_indx]} "
+                        f"but has to be within {par.offset:.3} .."
+                        f" {(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
 
     def get_parameters_scaled(self) -> np.ndarray:
         """
-        Return the current parameters. This fuction should only be called by an optimizer. Are you
-        an optimizer?
+        Return the current parameters. This fuction should only be called by an
+        optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -228,8 +230,8 @@ class ParameterMap:
 
     def set_parameters_scaled(self, values: list) -> None:
         """
-        Set the values in the original instruction class. This fuction should only be called by
-        an optimizer. Are you an optimizer?
+        Set the values in the original instruction class. This fuction should only be
+        called by an optimizer. Are you an optimizer?
 
         Parameters
         ----------
@@ -253,28 +255,9 @@ class ParameterMap:
         """
         for equiv_ids in opt_map:
             for pid in equiv_ids:
-                if not pid in self.__pars:
+                if pid not in self.__pars:
                     raise Exception(f"C3:ERROR:Parameter {pid} not defined.")
         self.opt_map = opt_map
-
-    # TODO: F811 redefinition of unused '__str__' from line 111
-    def __str__(self) -> str:  # type: ignore
-        """
-        Return a multi-line human-readable string of all defined parameter names and
-        current values.
-
-        Returns
-        -------
-        str
-            Parameters and their values
-        """
-        ret = []
-
-        for par_id, par in self.__pars.items():
-            nice_id = "-".join(par_id)
-            ret.append(f"{nice_id:38}: {par}\n")
-
-        return "".join(ret)
 
     def str_parameters(self, opt_map) -> str:
         """

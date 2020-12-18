@@ -1,5 +1,6 @@
 """
-Collection of (optimization) algorithms. All entries share a common signature with optional arguments.
+Collection of (optimization) algorithms. All entries share a common signature with
+optional arguments.
 """
 
 from scipy.optimize import minimize as minimize
@@ -24,13 +25,13 @@ def algo_reg_deco(func):
 
 
 @algo_reg_deco
-def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def single_eval(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Return the function value at given point.
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point
     fun : callable
         Goal function
@@ -41,17 +42,17 @@ def single_eval(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     options : dict
         Algorithm specific options
     """
-    fun(x0)
+    fun(x_init)
 
 
 @algo_reg_deco
-def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Two dimensional scan of the function values around the initial point.
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point
     fun : callable
         Goal function
@@ -81,7 +82,7 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     # if 'init_point' in options:
     #     init_point = bool(options.pop('init_point'))
     #     if init_point:
-    #         probe_list.append(x0)
+    #         probe_list.append(x_init)
 
     bounds = options["bounds"][0]
     bound_min = bounds[0]
@@ -116,13 +117,13 @@ def grid2D(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 
 @algo_reg_deco
-def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     One dimensional scan of the function values around the initial point.
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point
     fun : callable
         Goal function
@@ -145,7 +146,7 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if "init_point" in options:
         init_point = bool(options["init_point"])
         if init_point:
-            fun([x0[0].numpy()])
+            fun([x_init[0].numpy()])
 
     bounds = options["bounds"][0]
     bound_min = bounds[0]
@@ -179,13 +180,14 @@ def sweep(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 
 @algo_reg_deco
-def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
-    One dimensional scan of the function values around the initial point, using adaptive sampling
+    One dimensional scan of the function values around the initial point, using
+    adaptive sampling
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point
     fun : callable
         Goal function
@@ -217,7 +219,7 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if "init_point" in options:
         init_point = bool(options.pop("init_point"))
         if init_point:
-            probe_list.append(x0)
+            probe_list.append(x_init)
 
     # TODO make adaptive scan be able to do multidimensional scan
     bounds = options["bounds"][0]
@@ -244,14 +246,14 @@ def adaptive_scan(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
             print("done\n")
             learner.tell(x, tmp)
 
-    runner = adaptive.runner.simple(
+    adaptive.runner.simple(
         learner, goal=lambda learner_: learner_.loss() < accuracy_goal
     )
 
 
 @algo_reg_deco
 def tf_sgd(
-    x0: np.array,
+    x_init: np.array,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -262,7 +264,7 @@ def tf_sgd(
 
     Parameters
     ----------
-    x0 : np.array
+    x_init : np.array
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -280,7 +282,7 @@ def tf_sgd(
     """
     iters = options["maxfun"]
 
-    var = tf.Variable(x0)
+    var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
@@ -297,7 +299,7 @@ def tf_sgd(
 
 @algo_reg_deco
 def tf_adam(
-    x0: np.array,
+    x_init: np.array,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -308,7 +310,7 @@ def tf_adam(
 
     Parameters
     ----------
-    x0 : np.array
+    x_init : np.array
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -326,7 +328,7 @@ def tf_adam(
     """
     iters = options["maxfun"]
 
-    var = tf.Variable(x0)
+    var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
@@ -342,7 +344,7 @@ def tf_adam(
 
 
 def tf_rmsprop(
-    x0: np.array,
+    x_init: np.array,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -353,7 +355,7 @@ def tf_rmsprop(
 
     Parameters
     ----------
-    x0 : np.array
+    x_init : np.array
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -371,7 +373,7 @@ def tf_rmsprop(
     """
     iters = options["maxfun"]
 
-    var = tf.Variable(x0)
+    var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
@@ -390,7 +392,7 @@ def tf_rmsprop(
 
 @algo_reg_deco
 def tf_adadelta(
-    x0: np.array,
+    x_init: np.array,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -401,7 +403,7 @@ def tf_adadelta(
 
     Parameters
     ----------
-    x0 : np.array
+    x_init : np.array
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -419,7 +421,7 @@ def tf_adadelta(
     """
     iters = options["maxfun"]
 
-    var = tf.Variable(x0)
+    var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
@@ -437,7 +439,7 @@ def tf_adadelta(
 
 
 @algo_reg_deco
-def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the scipy.optimize.minimize implementation of LBFG-S. See also:
 
@@ -445,7 +447,7 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point
     fun : callable
         Goal function
@@ -463,11 +465,13 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     # TODO print from the log not from here
     options.update({"disp": True})
-    return minimize(fun_grad, x0, jac=grad_lookup, method="L-BFGS-B", options=options)
+    return minimize(
+        fun_grad, x_init, jac=grad_lookup, method="L-BFGS-B", options=options
+    )
 
 
 @algo_reg_deco
-def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the pycma implementation of CMA-Es. See also:
 
@@ -475,7 +479,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     Parameters
     ----------
-    x0 : float
+    x_init : float
         Initial point.
     fun : callable
         Goal function.
@@ -493,16 +497,17 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         spread : float
             Adjust the parameter spread of the first generation cloud.
         stop_at_convergence : int
-            Custom stopping condition. Stop if the cloud shrunk for this number of generations.
+            Custom stopping condition. Stop if the cloud shrunk for this number of
+            generations.
         stop_at_sigma : float
-            Custom stopping condition. Stop if the cloud shrunk to this standard deviation.
+            Custom stopping condition. Stop if the cloud shrunk to this standard
+            deviation.
 
     Returns
     -------
     np.array
         Parameters of the best point.
     """
-    custom_stop = False
     if "noise" in options:
         noise = float(options.pop("noise"))
     else:
@@ -531,7 +536,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     settings = options
 
-    es = cma.CMAEvolutionStrategy(x0, spread, settings)
+    es = cma.CMAEvolutionStrategy(x_init, spread, settings)
     iter = 0
     while not es.stop():
 
@@ -554,7 +559,7 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
         samples = es.ask()
         if init_point and iter == 0:
-            samples.insert(0, x0)
+            samples.insert(0, x_init)
             print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
         for sample in samples:
@@ -571,27 +576,23 @@ def cmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 
 @algo_reg_deco
-def cma_pre_lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
-    Performs a CMA-Es optimization and feeds the result into LBFG-S for further refinement.
+    Performs a CMA-Es optimization and feeds the result into LBFG-S for further
+    refinement.
 
     """
-    x1 = cmaes(x0, fun, options=options["cmaes"])
+    x1 = cmaes(x_init, fun, options=options["cmaes"])
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
 
 @algo_reg_deco
-def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
+def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
-    EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the resulting cloud and results are
-    used for the CMA update.
+    EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the
+    resulting cloud and results are used for the CMA update.
     """
-    custom_stop = False
     options_cma = options["cmaes"]
-    if "noise" in options_cma:
-        noise = float(options_cma.pop("noise"))
-    else:
-        noise = 0
 
     if "init_point" in options_cma:
         init_point = bool(options_cma.pop("init_point"))
@@ -616,7 +617,7 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     settings = options_cma
 
-    es = cma.CMAEvolutionStrategy(x0, spread, settings)
+    es = cma.CMAEvolutionStrategy(x_init, spread, settings)
     iter = 0
     while not es.stop():
 
@@ -639,7 +640,7 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
         samples = es.ask()
         if init_point and iter == 0:
-            samples.insert(0, x0)
+            samples.insert(0, x_init)
             print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
         points = []
@@ -659,8 +660,8 @@ def gcmaes(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
-# def oneplusone(x0, goal_fun):
-#     optimizer = algo_registry['OnePlusOne'](instrumentation=x0.shape[0])
+# def oneplusone(x_init, goal_fun):
+#     optimizer = algo_registry['OnePlusOne'](instrumentation=x_init.shape[0])
 #     while True:
 #         # TODO make this logging happen elsewhere
 #         # self.logfile.write(f"Batch {self.evaluation}\n")

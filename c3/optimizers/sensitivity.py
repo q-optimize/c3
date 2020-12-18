@@ -4,13 +4,11 @@ import os
 import hjson
 import pickle
 import itertools
-import time
 import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 from c3.libraries.estimators import (
-    dv_g_LL_prime,
     g_LL_prime_combined,
     g_LL_prime,
     neg_loglkh_multinom_norm,
@@ -153,12 +151,12 @@ class SET(Optimizer):
             self.log_setup(self.dir_path, "_".join(self.opt_map[0]))
             self.start_log()
             print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-            x0 = self.exp.get_parameters(self.opt_map, scaled=False)
+            x_init = self.exp.get_parameters(self.opt_map, scaled=False)
             self.init_gateset_params = self.exp.gateset.get_parameters()
             self.init_gateset_opt_map = self.exp.gateset.list_parameters()
             try:
                 self.algorithm(
-                    x0,
+                    x_init,
                     fun=self.fct_to_min,
                     fun_grad=self.fct_to_min_autograd,
                     grad_lookup=self.lookup_gradient,
@@ -166,7 +164,7 @@ class SET(Optimizer):
                 )
             except KeyboardInterrupt:
                 pass
-            self.exp.set_parameters(x0, self.opt_map, scaled=False)
+            self.exp.set_parameters(x_init, self.opt_map, scaled=False)
 
         # #=== Get the resulting data ======================================
 
@@ -287,7 +285,6 @@ class SET(Optimizer):
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
-                    int_len = len(str(num_seqs))
                     with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(

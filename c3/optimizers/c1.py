@@ -104,10 +104,10 @@ class C1(Optimizer):
         for name in self.fid_subspace:
             index.append(self.pmap.model.names.index(name))
         self.index = index
-        x0 = self.pmap.get_parameters_scaled()
+        x_init = self.pmap.get_parameters_scaled()
         try:
             self.algorithm(
-                x0,
+                x_init,
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,

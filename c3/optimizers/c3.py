@@ -139,10 +139,10 @@ class C3(Optimizer):
         """
         self.start_log()
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-        x0 = self.pmap.get_parameters_scaled()
+        x_init = self.pmap.get_parameters_scaled()
         try:
             self.algorithm(
-                x0,
+                x_init,
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
