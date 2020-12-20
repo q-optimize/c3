@@ -298,11 +298,13 @@ class SymmetricTransmon(PhysicalComponent):
         
     def get_anhar(self):
         anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        return anhar * self.get_factor()
+        return anhar
             
     def get_freq(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        return freq * self.get_factor()
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        biased_freq = (freq - anhar) * self.get_factor() + anhar
+        return biased_freq
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(
@@ -375,24 +377,27 @@ class AsymmetricTransmon(PhysicalComponent):
             self.params['temp'] = temp
 
     def get_factor(self):
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        d = tf.cast(self.params['d'].get_value(), tf.complex128)
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        phi = tf.cast(self.params['phi'].get_value(), tf.float64)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.float64)
+        d = tf.cast(self.params['d'].get_value(), tf.float64)
 #         gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
 #         d = (gamma - 1) / (gamma + 1)
         factor = tf.sqrt(tf.sqrt(
             tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
         ))
+        factor = tf.cast(factor, tf.complex128)
         return factor
             
     def get_anhar(self):
         anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        return anhar * self.get_factor()
+        return anhar
             
     def get_freq(self):
         freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        return freq * self.get_factor()
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        biased_freq = (freq - anhar) * self.get_factor() + anhar
+        return biased_freq
 
     def init_Hs(self, ann_oper):
         self.Hs['freq'] = tf.constant(

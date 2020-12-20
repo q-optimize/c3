@@ -8,6 +8,7 @@ Given this information an experiment run is simulated, returning either processe
 """
 
 import os
+import shutil
 import json
 import pickle
 import numpy as np
@@ -384,7 +385,7 @@ class Experiment:
         """
         self.opt_gates = opt_gates
 
-    def set_enable_dynamics_plots(self, flag, logdir):
+    def set_enable_dynamics_plots(self, flag, logdir, exist_ok=False):
         """
         Plotting of time-resolved populations.
 
@@ -398,10 +399,10 @@ class Experiment:
         self.enable_dynamics_plots = flag
         self.logdir = logdir
         if self.enable_dynamics_plots:
-            os.mkdir(self.logdir + "dynamics/")
+            os.makedirs(self.logdir + "dynamics/", exist_ok=exist_ok)
             self.dynamics_plot_counter = 0
 
-    def set_enable_pules_plots(self, flag, logdir):
+    def set_enable_pules_plots(self, flag, logdir, exist_ok=False):
         """
         Plotting of pulse shapes.
 
@@ -415,10 +416,10 @@ class Experiment:
         self.enable_pulses_plots = flag
         self.logdir = logdir
         if self.enable_pulses_plots:
-            os.mkdir(self.logdir + "pulses/")
+            os.makedirs(self.logdir + "pulses/", exist_ok=exist_ok)
             self.pulses_plot_counter = 0
 
-    def set_enable_store_unitaries(self, flag, logdir):
+    def set_enable_store_unitaries(self, flag, logdir, exist_ok=False):
         """
         Saving of unitary propagators.
 
@@ -432,7 +433,7 @@ class Experiment:
         self.enable_store_unitaries = flag
         self.logdir = logdir
         if self.enable_store_unitaries:
-            os.mkdir(self.logdir + "unitaries/")
+            os.makedirs(self.logdir + "unitaries/", exist_ok=exist_ok)
             self.store_unitaries_counter = 0
 
     def plot_dynamics(self, psi_init, seq, goal=None, debug=False, oper=None, title=False):
@@ -541,12 +542,14 @@ class Experiment:
 
         Parameters
         ----------
-        instr : str
+        instr : Instruction
             Identifier of the current instruction.
         goal: tf.float64
             Value of the goal function, if used.
         debug: boolean
             If true, return a matplotlib figure instead of saving.
+        title: boolean
+            If true, include a title in the saved figure, according to the experiment name
         """
         signal, ts = self.generator.generate_signals(instr)
         awg = self.generator.devices["awg"]
@@ -559,7 +562,11 @@ class Experiment:
             foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
             if not os.path.exists(foldername):
                 os.mkdir(foldername)
-            os.mkdir(foldername + str(instr.name).replace(':','.') + "/")
+            pulsefolder = foldername + str(instr.name).replace(':', '.') + "/"
+            if os.path.exists(pulsefolder):
+                Warning(f"Pulsefolder was replaced: {pulsefolder}")
+                shutil.rmtree(pulsefolder)
+            os.mkdir(pulsefolder)
 
         fig, axs = plt.subplots(1, 1)
 
@@ -588,6 +595,14 @@ class Experiment:
                     logfile.write(f"{channel}, quadrature :\n")
                     logfile.write(json.dumps(quadrature.numpy().tolist()))
                     logfile.write("\n")
+        if not debug:
+            with open(
+                    self.logdir + f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':', '.')}/awg.log",
+                    'a+'
+            ) as logfile:
+                logfile.write(f"ts :\n")
+                logfile.write(json.dumps(awg.ts.numpy().tolist()))
+                logfile.write("\n")
         if debug:
             plt.show()
         else:
@@ -596,6 +611,7 @@ class Experiment:
                 f"awg_{list(instr.comps.keys())}.png",
                 dpi=300
             )
+
 
         dac = self.generator.devices["dac"]
         dac_ts = dac.ts

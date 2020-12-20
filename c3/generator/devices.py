@@ -92,6 +92,7 @@ class Device(C3obj):
         if not hasattr(self, 'slice_num'):
             self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
+        # TODO This type of centering does not guarantee zeros at the ends
         if centered:
             offset = dt/2
             num = self.slice_num
@@ -208,6 +209,7 @@ class Digital_to_Analog(Device):
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
+            sampling_method: str = 'nearest'
     ):
         super().__init__(
             name=name,
@@ -218,6 +220,7 @@ class Digital_to_Analog(Device):
 
         self.signal = {}
         self.ts = None
+        self.sampling_method = sampling_method
 
     def resample(self, awg_signal, t_start, t_end):
         """Resample the awg values to higher resolution.
@@ -239,18 +242,21 @@ class Digital_to_Analog(Device):
         ts = self.create_ts(t_start, t_end, centered=True)
         old_dim = awg_signal["inphase"].shape[0]
         new_dim = ts.shape[0]
+        #TODO add following zeros
         inphase = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]), size=[1, new_dim], method=self.sampling_method
             ),
             shape=[new_dim]
         )
+        inphase = tf.cast(inphase, dtype=tf.float64)
         quadrature = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]), size=[1, new_dim], method='nearest'
+                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]), size=[1, new_dim], method=self.sampling_method
             ),
             shape=[new_dim]
         )
+        quadrature = tf.cast(quadrature, dtype=tf.float64)
         self.ts = ts
         self.signal['inphase'] = inphase
         self.signal['quadrature'] = quadrature
@@ -572,7 +578,7 @@ class HighpassFilter(Response):
         """
         convolution = tf.zeros(0, dtype=tf.float64)
         signal = tf.concat(
-            [tf.zeros(len(resp_shape)  // 2, dtype=tf.float64), signal, tf.zeros(int(len(resp_shape) * 1.5) + 1, dtype=tf.float64)], 0
+            [tf.zeros(int(len(resp_shape) // 2), dtype=tf.float64), signal, tf.zeros(int(len(resp_shape) * 3 / 2) + 1, dtype=tf.float64)], 0
         )
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
@@ -626,18 +632,13 @@ class HighpassFilter(Response):
         w = tf.signal.hamming_window(N_ts)
         w = tf.cast(w, dtype=tf.double)
         h *= w
-        h /= - np.sum(h)
-        # h[(N_ts - 1) // 2].assign(1)
+        h /= - tf.reduce_sum(h)
         h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
-
-        plt.plot(h)
-        # plt.xlim(N_ts//2, N_ts//2 )
-        plt.ylim(-.000005, .000005)
-        plt.show()
         inphase = self.convolve(iq_signal['inphase'], h)
         quadrature = self.convolve(iq_signal['quadrature'], h)
         self.signal = {'inphase': inphase, 'quadrature': quadrature}
         return self.signal
+
 
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
@@ -753,7 +754,7 @@ class DC_Noise(Device):
 
     def __init__(
             self,
-            name: str = "signal_noise",
+            name: str = "dc_noise",
             desc: str = " ",
             comment: str = " ",
             resolution: np.float64 = 0.0,
@@ -783,6 +784,43 @@ class DC_Noise(Device):
             out_signal = signal + tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
         self.signal = out_signal
         return self.signal
+
+class DC_Offset(Device):
+    """Noise applied to a signal"""
+
+    def __init__(
+            self,
+            name: str = "dc_offset",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            offset_amp: Quantity = None
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.signal = None
+        self.params['offset_amp'] = offset_amp
+
+    def distort(self, signal):
+        """Distort signal by adding noise."""
+        offset_amp = self.params['offset_amp'].get_value()
+        if np.abs(offset_amp) < 1e-17:
+            self.signal = signal
+            return signal
+        out_signal = {}
+        # print(signal)
+        if type(signal) is dict:
+            for k, sig in signal.items():
+                out_signal[k] = sig + offset_amp
+        else:
+            out_signal = signal + offset_amp
+        self.signal = out_signal
+        return self.signal
+
 
 # TODO: We should write out own function to calculate the Pink noise in a continuous fft fashion.
 import colorednoise
@@ -946,7 +984,7 @@ class LO(Device):
                         A = np.random.normal(loc=1.0, scale=amp_noise)
                         cos.append(A * np.cos(phi))
                         sin.append(A * np.sin(phi))
-                        omega = omega_lo + np.random.normal(loc=0.0,scale=freq_noise)
+                        omega = omega_lo + np.random.normal(loc=0.0, scale=freq_noise)
                         phi = phi + omega * dt
                 elif amp_noise and phase_noise:
                     print('amp and phase noise')
@@ -1013,6 +1051,7 @@ class AWG(Device):
         # TODO move the options pwc & drag to the instruction object
         self.signal = {}
         self.amp_tot_sq = None
+        self.centered_ts = True
 
 # TODO create DC function
 
@@ -1044,7 +1083,7 @@ class AWG(Device):
         """
         with tf.name_scope("I_Q_generation"):
             self.signal[channel] = {}
-            ts = self.create_ts(t_start, t_end, centered=True)
+            ts = self.create_ts(t_start, t_end, centered=self.centered_ts)
             self.ts = ts
             dt = ts[1] - ts[0]
             t_before = ts[0] - dt
@@ -1059,8 +1098,13 @@ class AWG(Device):
                     comp = components[key]
                     if isinstance(comp, Envelope):
                         amp_tot_sq += 1
-                        inphase = comp.params['inphase'].get_value()
-                        quadrature = comp.params['quadrature'].get_value()
+                        if comp.shape is None:
+                            inphase = comp.params['inphase'].get_value()
+                            quadrature = comp.params['quadrature'].get_value()
+                        else:
+                            #TODO include quadrature shape
+                            inphase = comp.get_shape_values(ts)
+                            quadrature = tf.zeros_like(inphase)
                         xy_angle = comp.params['xy_angle'].get_value()
                         phase = xy_angle
 
@@ -1189,9 +1233,6 @@ class AWG(Device):
     def enable_drag_2(self):
         self.__options = 'drag_2'
         
-    def enable_pwc(self):
-        self.__options = 'pwc'
-
     def enable_pwc(self):
         self.__options = 'pwc'
 

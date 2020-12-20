@@ -165,8 +165,8 @@ class GateSet:
                             fct = id[4]
                             val = fct(val)
                         par.set_value(val)
-                    except ValueError:
-                        raise ValueError(f"Trying to set {id} to value {val}")
+                    except ValueError as e:
+                        raise ValueError(f"Trying to set {id} to value {val}, but resulted in {e}")
             if scaled:
                 val_indx += par_len
             else:

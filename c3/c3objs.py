@@ -190,7 +190,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
-            raise ValueError(f"Value {val} out of bounds ({self.offset},{self.offset+self.scale})for quantity.")
+            raise ValueError(f"Value {val} out of bounds ({self.offset}, {self.offset + self.scale})for quantity.")
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)
@@ -207,5 +207,9 @@ class Quantity:
         val : tf.float64
             Tensorflow number that will be mapped to a value between -1 and 1.
         """
-        self.value = tf.clip_by_value(tf.math.mod(val+1,2)-1, -1,1) 
+        self.value = 0.810535 * tf.sin(0.5 * np.pi * val) - \
+                     0.09002924 * tf.sin(0.5 * np.pi * val * 3) + \
+                     0.03238869 * tf.sin(0.5 * np.pi * val * 3)
 
+    def get_range(self):
+        return self.offset, self.offset + self.scale

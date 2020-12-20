@@ -6,6 +6,7 @@ All functions assume the input of a time vector.
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
 import matplotlib.pyplot as plt
 
@@ -18,6 +19,23 @@ def pwc(t, params):
     """Piecewise constant pulse."""
     # TODO make pwc return actual values like other envelopes
     return params
+
+
+def pwc_symmetric(t, params):
+    """symmetic PWC pulse
+    This works only for inphase component"""
+    t_bin_start = tf.cast(params['t_bin_end'].get_value(), dtype=tf.float64)
+    t_bin_end = tf.cast(params['t_bin_start'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    inphase = tf.cast(params['inphase'].get_value(), dtype=tf.float64)
+
+    t_interp = tf.where(tf.greater(t, t_final / 2),  - t + t_final , t)
+    plt.show()
+    shape = tf.reshape(
+        tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0, fill_value_above=0), [len(t)])
+
+    return shape
+
 
 
 def fourier_sin(t, params):
@@ -182,9 +200,10 @@ def flattop_cut_center(t, params):
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
     t_up = t_final / 2 - width / 2
     t_down = t_final / 2 + width / 2
-    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
+    shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
     shape = tf.clip_by_value(shape,0,2)
     return shape
+
 
 def slepian_fourier(t, params):
     """

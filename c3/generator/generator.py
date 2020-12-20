@@ -124,6 +124,8 @@ class Generator:
                 if "fluxbias" in self.devices and (chan == "TC" or chan == "FluxDrive"):
                     if "dc_noise" in self.devices:
                         signal = dc_noise.distort(signal)
+                    if "dc_offset" in self.devices:
+                        signal = self.devices["dc_offset"].distort(signal)
                     if "flux_noise" in self.devices:
                         signal = flux_noise.distort(signal)
                     signal = fluxbias.frequency(signal)
