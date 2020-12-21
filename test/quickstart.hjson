@@ -4,6 +4,7 @@
   "include_model" : true,
   "model" : "test/test_model.cfg",
   "generator": "test/generator.cfg",
+  "v2hz": 1e9
   "sideband": 50e6
   "single_qubit_gate_time" : 20e-9
   "single_qubit_gates":
