@@ -19,37 +19,12 @@ qubit_temp = 50e-3
 q1 = Qubit(
     name="Q1",
     desc="Qubit 1",
-    freq=Quantity(
-        value=freq_q1,
-        min_val=4.995e9,
-        max_val=5.005e9,
-        unit='Hz 2pi'
-    ),
-    anhar=Quantity(
-        value=anhar_q1,
-        min_val=-380e6,
-        max_val=-120e6,
-        unit='Hz 2pi'
-    ),
+    freq=Quantity(value=freq_q1, min_val=4.995e9, max_val=5.005e9, unit="Hz 2pi"),
+    anhar=Quantity(value=anhar_q1, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
     hilbert_dim=qubit_lvls,
-    t1=Quantity(
-        value=t1_q1,
-        min_val=1e-6,
-        max_val=90e-6,
-        unit='s'
-    ),
-    t2star=Quantity(
-        value=t2star_q1,
-        min_val=10e-6,
-        max_val=90e-3,
-        unit='s'
-    ),
-    temp=Quantity(
-        value=qubit_temp,
-        min_val=0.0,
-        max_val=0.12,
-        unit='K'
-    )
+    t1=Quantity(value=t1_q1, min_val=1e-6, max_val=90e-6, unit="s"),
+    t2star=Quantity(value=t2star_q1, min_val=10e-6, max_val=90e-3, unit="s"),
+    temp=Quantity(value=qubit_temp, min_val=0.0, max_val=0.12, unit="K"),
 )
 
 freq_q2 = 5.6e9
@@ -59,37 +34,12 @@ t2star_q2 = 31e-6
 q2 = Qubit(
     name="Q2",
     desc="Qubit 2",
-    freq=Quantity(
-        value=freq_q2,
-        min_val=5.595e9,
-        max_val=5.605e9,
-        unit='Hz 2pi'
-    ),
-    anhar=Quantity(
-        value=anhar_q2,
-        min_val=-380e6,
-        max_val=-120e6,
-        unit='Hz 2pi'
-    ),
+    freq=Quantity(value=freq_q2, min_val=5.595e9, max_val=5.605e9, unit="Hz 2pi"),
+    anhar=Quantity(value=anhar_q2, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
     hilbert_dim=qubit_lvls,
-    t1=Quantity(
-        value=t1_q2,
-        min_val=1e-6,
-        max_val=90e-6,
-        unit='s'
-    ),
-    t2star=Quantity(
-        value=t2star_q2,
-        min_val=10e-6,
-        max_val=90e-6,
-        unit='s'
-    ),
-    temp=Quantity(
-        value=qubit_temp,
-        min_val=0.0,
-        max_val=0.12,
-        unit='K'
-    )
+    t1=Quantity(value=t1_q2, min_val=1e-6, max_val=90e-6, unit="s"),
+    t2star=Quantity(value=t2star_q2, min_val=10e-6, max_val=90e-6, unit="s"),
+    temp=Quantity(value=qubit_temp, min_val=0.0, max_val=0.12, unit="K"),
 )
 
 coupling_strength = 20e6
@@ -99,12 +49,9 @@ q1q2 = Coupling(
     comment="Coupling qubit 1 to qubit 2",
     connected=["Q1", "Q2"],
     strength=Quantity(
-        value=coupling_strength,
-        min_val=-1 * 1e3,
-        max_val=200e6,
-        unit='Hz 2pi'
+        value=coupling_strength, min_val=-1 * 1e3, max_val=200e6, unit="Hz 2pi"
     ),
-    hamiltonian_func=hamiltonians.int_XX
+    hamiltonian_func=hamiltonians.int_XX,
 )
 
 
@@ -113,14 +60,14 @@ drive = Drive(
     desc="Drive 1",
     comment="Drive line 1 on qubit 1",
     connected=["Q1"],
-    hamiltonian_func=hamiltonians.x_drive
+    hamiltonian_func=hamiltonians.x_drive,
 )
 drive2 = Drive(
     name="d2",
     desc="Drive 2",
     comment="Drive line 2 on qubit 2",
     connected=["Q2"],
-    hamiltonian_func=hamiltonians.x_drive
+    hamiltonian_func=hamiltonians.x_drive,
 )
 
 m00_q1 = 0.97  # Prop to read qubit 1 state 0 as 0
@@ -141,19 +88,16 @@ conf_matrix = ConfusionMatrix(Q1=confusion_row1, Q2=confusion_row2)
 
 init_temp = 50e-3
 init_ground = InitialiseGround(
-    init_temp=Quantity(
-        value=init_temp,
-        min_val=-0.001,
-        max_val=0.22,
-        unit='K'
-    )
+    init_temp=Quantity(value=init_temp, min_val=-0.001, max_val=0.22, unit="K")
 )
 
 model = Model(
     [q1, q2],  # Individual, self-contained components
     [drive, drive2, q1q2],  # Interactions between components
-    [conf_matrix, init_ground]  # SPAM processing
+    [conf_matrix, init_ground],  # SPAM processing
 )
+
+model.set_dressed(False)
 
 hdrift, hks = model.get_Hamiltonians()
 

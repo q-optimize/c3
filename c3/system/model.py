@@ -147,7 +147,8 @@ class Model:
                             f"C3:ERROR: Trying to connect drive {name} to unkown "
                             f"target {connection}."
                         ) from ke
-        self.dressed = cfg["use_dressed_basis"]
+        if "use_dressed_basis" in cfg:
+            self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
