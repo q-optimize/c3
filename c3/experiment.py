@@ -1,22 +1,29 @@
 """
 Experiment class that models and simulates the whole experiment.
 
-It combines the information about the model of the quantum device, the control stack and the operations that can be
-done on the device.
+It combines the information about the model of the quantum device, the control stack
+and the operations that can be done on the device.
 
-Given this information an experiment run is simulated, returning either processes, states or populations.
+Given this information an experiment run is simulated, returning either processes,
+states or populations.
 """
 
 import os
-import json
 import pickle
+import itertools
+import hjson
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+
+from typing import Dict
+
+from c3.generator.generator import Generator
+from c3.parametermap import ParameterMap
+from c3.signal.gates import Instruction
+from c3.system.model import Model
 from c3.utils import tf_utils
 
 
-# TODO add case where one only wants to pass a list of quantity objects?
 class Experiment:
     """
     It models all of the behaviour of the physical experiment, serving as a
@@ -35,119 +42,107 @@ class Experiment:
 
     """
 
-    def __init__(self, model=None, generator=None, gateset=None):
-        self.generator = generator
-        self.gateset = gateset
-
+    def __init__(self, pmap=None):
+        self.pmap = pmap
+        self.opt_gates = None
         self.unitaries = {}
         self.dUs = {}
+        self.created_by = None
 
-        components = {}
-        if model:
-            self.model = model
-            components.update(self.model.couplings)
-            components.update(self.model.subsystems)
-            components.update(self.model.tasks)
-        if generator:
-            components.update(self.generator.devices)
-        self.components = components
-
-        id_list = []
-        par_lens = []
-        for comp in self.components.values():
-            id_list.extend(comp.list_parameters())
-            for par in comp.params.values():
-                par_lens.append(par.length)
-        self.id_list = id_list
-        self.par_lens = par_lens
-
-    def write_config(self):
+    def set_created_by(self, config):
         """
-        Return the current experiment as a JSON compatible dict.
-
-        EXPERIMENTAL
+        Store the config file location used to created this experiment.
         """
-        cfg = {}
-        cfg['model'] = self.model.write_config()
-        cfg['generator'] = self.generator.write_config()
-        cfg['gateset'] = self.gateset.write_config()
-        return cfg
 
-    def get_parameters(self, opt_map=None, scaled=False):
+        self.created_by = config
+
+    def quick_setup(self, filepath: str) -> None:
         """
-        Return the current parameters.
+        Load a quick setup file and create all necessary components.
 
         Parameters
         ----------
-        opt_map: tuple
-            Hierarchical identifier for parameters.
-        scaled: boolean
-            If true, return the optimizer friendly version. See Quantity.
+        filepath : str
+            Location of the configuration file
 
         """
-        if opt_map is None:
-            opt_map = self.id_list
-        values = []
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            par = self.components[comp_id].params[par_id]
-            if scaled:
-                values.extend(par.get_opt_value())
-            else:
-                values.append(par.get_value())
-        return values
+        with open(filepath, "r") as cfg_file:
+            cfg = hjson.loads(cfg_file.read())
 
-    def set_parameters(self, values: list, opt_map: list, scaled=False):
-        """Set the values in the original instruction class.
+        model = Model()
+        model.read_config(cfg["model"])
+        gen = Generator()
+        gen.read_config(cfg["generator"])
 
-        Parameters
-        ----------
-        values: list
-            List of parameter values.
-        opt_map: list
-            Corresponding identifiers for the parameter values.
+        single_gate_time = cfg["single_qubit_gate_time"]
+        v2hz = cfg["v2hz"]
+        instructions = []
+        sideband = cfg.pop("sideband", None)
+        for gate_name, props in cfg["single_qubit_gates"].items():
+            target_qubit = model.subsystems[props["target_qubit"]]
+            instr = Instruction(
+                name=gate_name,
+                t_start=0.0,
+                t_end=single_gate_time,
+                channels=[target_qubit.drive_line],
+            )
+            instr.quick_setup(
+                target_qubit.drive_line,
+                target_qubit.params["freq"].get_value() / 2 / np.pi,
+                single_gate_time,
+                v2hz,
+                sideband,
+            )
+            instructions.append(instr)
 
+        for gate_name, props in cfg["two_qubit_gates"].items():
+            qubit_1 = model.subsystems[props["qubit_1"]]
+            qubit_2 = model.subsystems[props["qubit_2"]]
+            instr = Instruction(
+                name=gate_name,
+                t_start=0.0,
+                t_end=props["gate_time"],
+                channels=[qubit_1.drive_line, qubit_2.drive_line],
+            )
+            instr.quick_setup(
+                qubit_1.drive_line,
+                qubit_1.params["freq"].get_value() / 2 / np.pi,
+                props["gate_time"],
+                v2hz,
+                sideband,
+            )
+            instr.quick_setup(
+                qubit_2.drive_line,
+                qubit_2.params["freq"].get_value() / 2 / np.pi,
+                props["gate_time"],
+                v2hz,
+                sideband,
+            )
+            instructions.append(instr)
+
+        self.pmap = ParameterMap(instructions, generator=gen, model=model)
+
+    def write_config(self, filepath: str) -> None:
         """
-        val_indx = 0
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            id_indx = self.id_list.index(id)
-            par_len = self.par_lens[id_indx]
-            par = self.components[comp_id].params[par_id]
-            if scaled:
-                par.set_opt_value(values[val_indx:val_indx+par_len])
-                val_indx += par_len
-            else:
-                try:
-                    par.set_value(values[val_indx])
-                    val_indx += 1
-                except ValueError:
-                    raise ValueError(f"Trying to set {id} to value {values[val_indx]}")
-        self.model.update_model()
-
-    def print_parameters(self, opt_map=None):
+        Write dictionary to a HJSON file.
         """
-        Return a multi-line human-readable string of the parameter names and
-        current values.
+        with open(filepath, "w") as cfg_file:
+            hjson.dump(self.asdict(), cfg_file)
 
-        Parameters
-        ----------
-        opt_map: list
-            Optionally use only the specified parameters.
-
+    def asdict(self) -> dict:
         """
-        ret = []
-        if opt_map is None:
-            opt_map = self.id_list
-        for id in opt_map:
-            comp_id = id[0]
-            par_id = id[1]
-            par = self.components[comp_id].params[par_id]
-            nice_id = f"{comp_id}-{par_id}"
-            ret.append(f"{nice_id:32}: {par}\n")
-        return "".join(ret)
+        Return a dictionary compatible with config files.
+        """
+        exp_dict: Dict[str, dict] = {}
+        exp_dict["instructions"] = {}
+        for name, instr in self.pmap.instructions.items():
+            exp_dict["instructions"][name] = instr.asdict()
+        exp_dict["model"] = self.pmap.model.asdict()
+        exp_dict["generator"] = self.pmap.generator.asdict()
+        return exp_dict
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
 
     def evaluate(self, seqs):
         """
@@ -157,29 +152,27 @@ class Experiment:
         ----------
         seqs: str list
             A list of control pulses/gates to perform on the device.
-            
+
         Returns
         -------
         list
             A list of populations
 
         """
+        model = self.pmap.model
         Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
-        psi_init = self.model.tasks["init_ground"].initialise(
-            self.model.drift_H,
-            self.model.lindbladian
+        psi_init = model.tasks["init_ground"].initialise(
+            model.drift_H, model.lindbladian
         )
         self.psi_init = psi_init
         populations = []
         for U in Us:
             psi_final = tf.matmul(U, self.psi_init)
-            pops = self.populations(
-                psi_final, self.model.lindbladian
-            )
+            pops = self.populations(psi_final, model.lindbladian)
             populations.append(pops)
         return populations
 
-    def process(self, populations,  labels=None):
+    def process(self, populations, labels=None):
         """
         Apply a readout procedure to a population vector. Very specialized
         at the moment.
@@ -188,7 +181,7 @@ class Experiment:
         ----------
         populations: list
             List of populations from evaluating.
-        
+
         labels: list
             List of state labels specifying a subspace.
 
@@ -198,18 +191,17 @@ class Experiment:
             A list of processed populations.
 
         """
+        model = self.pmap.model
         populations_final = []
         for pops in populations:
             # TODO: Loop over all tasks in a general fashion
-            # TODO: Selecting states by label in the case of computational space 
-            if "conf_matrix" in self.model.tasks:
-                pops = self.model.tasks["conf_matrix"].confuse(pops)
+            # TODO: Selecting states by label in the case of computational space
+            if "conf_matrix" in model.tasks:
+                pops = model.tasks["conf_matrix"].confuse(pops)
                 if labels is not None:
                     pops_select = 0
                     for label in labels:
-                        pops_select += pops[
-                            self.model.comp_state_labels.index(label)
-                        ]
+                        pops_select += pops[model.comp_state_labels.index(label)]
                     pops = pops_select
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
@@ -218,16 +210,17 @@ class Experiment:
                     pops_select = 0
                     for label in labels:
                         try:
-                            pops_select += pops[
-                                self.model.state_labels.index(label)
-                            ]
+                            pops_select += pops[model.state_labels.index(label)]
                         except ValueError:
-                            raise Exception(f"C3:ERROR:State {label} not defined. Available are:\n {self.model.state_labels}")
+                            raise Exception(
+                                f"C3:ERROR:State {label} not defined. Available are:\n"
+                                f"{model.state_labels}"
+                            )
                     pops = pops_select
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
-            if "meas_rescale" in self.model.tasks:
-                pops = self.model.tasks["meas_rescale"].rescale(pops)
+            if "meas_rescale" in model.tasks:
+                pops = model.tasks["meas_rescale"].rescale(pops)
             populations_final.append(pops)
         return populations_final
 
@@ -241,20 +234,24 @@ class Experiment:
         dict
             A dictionary of gate names and their unitary representation.
         """
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
         gates = {}
-        if "opt_gates" in self.__dict__:
-            gate_keys = self.opt_gates
-        else:
-            gate_keys = self.gateset.instructions.keys()
+        gate_keys = self.opt_gates
+        if gate_keys is None:
+            gate_keys = instructions.keys()
         for gate in gate_keys:
             try:
-                instr = self.gateset.instructions[gate]
+                instr = instructions[gate]
             except KeyError:
-                raise Exception(f"C3:Error: Gate \'{gate}\' is not defined."
-                                f" Available gates are:\n {list(self.gateset.instructions.keys())}.")
-            signal, ts = self.generator.generate_signals(instr)
-            U = self.propagation(signal, ts, gate)
-            if self.model.use_FR:
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            signal = generator.generate_signals(instr)
+            U = self.propagation(signal, gate)
+            if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
                 framechanges = {}
@@ -262,70 +259,52 @@ class Experiment:
                     # TODO calculate properly the average frequency that each qubit sees
                     offset = 0.0
                     if "gauss" in ctrls:
-                        if ctrls['gauss'].params["amp"] != 0.0:
-                            offset = ctrls['gauss'].params['freq_offset'].get_value()
+                        if ctrls["gauss"].params["amp"] != 0.0:
+                            offset = ctrls["gauss"].params["freq_offset"].get_value()
                     if "flux" in ctrls:
-                        if ctrls['flux'].params["amp"] != 0.0:
-                            offset = ctrls['flux'].params['freq_offset'].get_value()
+                        if ctrls["flux"].params["amp"] != 0.0:
+                            offset = ctrls["flux"].params["freq_offset"].get_value()
                     if "pwc" in ctrls:
-                        offset = ctrls['pwc'].params['freq_offset'].get_value()
+                        offset = ctrls["pwc"].params["freq_offset"].get_value()
                     # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
                     freqs[line] = tf.cast(
-                        ctrls['carrier'].params['freq'].get_value()
-                        + offset,
-                        tf.complex128
+                        ctrls["carrier"].params["freq"].get_value() + offset,
+                        tf.complex128,
                     )
                     framechanges[line] = tf.cast(
-                        ctrls['carrier'].params['framechange'].get_value(),
-                        tf.complex128
+                        ctrls["carrier"].params["framechange"].get_value(),
+                        tf.complex128,
                     )
-                t_final = tf.constant(
-                    instr.t_end - instr.t_start,
-                    dtype=tf.complex128
-                )
-                FR = self.model.get_Frame_Rotation(
-                    t_final,
-                    freqs,
-                    framechanges
-                )
-                if self.model.lindbladian:
+                t_final = tf.Variable(instr.t_end - instr.t_start, dtype=tf.complex128)
+                FR = model.get_Frame_Rotation(t_final, freqs, framechanges)
+                if model.lindbladian:
                     SFR = tf_utils.tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
                 else:
                     U = tf.matmul(FR, U)
                     self.FR = FR
-            if self.model.dephasing_strength != 0.0:
-                if not self.model.lindbladian:
-                    raise ValueError(
-                        'Dephasing can only be added when lindblad is on.'
-                    )
+            if model.dephasing_strength != 0.0:
+                if not model.lindbladian:
+                    raise ValueError("Dephasing can only be added when lindblad is on.")
                 else:
                     amps = {}
                     for line, ctrls in instr.comps.items():
-                        amp, sum = self.generator.devices['awg'].get_average_amp()
+                        amp, sum = generator.devices["awg"].get_average_amp()
                         amps[line] = tf.cast(amp, tf.complex128)
-                    t_final = tf.constant(
-                        instr.t_end - instr.t_start,
-                        dtype=tf.complex128
+                    t_final = tf.Variable(
+                        instr.t_end - instr.t_start, dtype=tf.complex128
                     )
-                    dephasing_channel = self.model.get_dephasing_channel(
-                        t_final,
-                        amps
-                    )
+                    dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
             self.unitaries = gates
         return gates
 
-    def propagation(
-        self,
-        signal: dict,
-        ts,
-        gate
-    ):
+    def propagation(self, signal: dict, gate):
         """
-        Solve the equation of motion (Lindblad or Schrödinger) for a given control signal and Hamiltonians.
+        Solve the equation of motion (Lindblad or Schrödinger) for a given control
+        signal and Hamiltonians.
 
         Parameters
         ----------
@@ -341,16 +320,18 @@ class Experiment:
         unitary
             Matrix representation of the gate.
         """
-        h0, hctrls = self.model.get_Hamiltonians()
+        model = self.pmap.model
+        h0, hctrls = model.get_Hamiltonians()
         signals = []
         hks = []
         for key in signal:
             signals.append(signal[key]["values"])
+            ts = signal[key]["ts"]
             hks.append(hctrls[key])
-        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+        dt = tf.Variable(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
-        if self.model.lindbladian:
-            col_ops = self.model.get_Lindbladians()
+        if model.lindbladian:
+            col_ops = model.get_Lindbladians()
             dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
@@ -360,50 +341,27 @@ class Experiment:
         self.U = U
         return U
 
-    def set_opt_gates(self, opt_gates):
+    def set_opt_gates(self, gates):
         """
         Specify a selection of gates to be computed.
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest.
+        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
 
         """
-        self.opt_gates = opt_gates
+        self.opt_gates = gates
 
-    def set_enable_dynamics_plots(self, flag, logdir):
+    def set_opt_gates_seq(self, seqs):
         """
-        Plotting of time-resolved populations.
-
-        Parameters
-        ----------
-        flag: boolean
-            Enable or disable plotting.
-        logdir: str
-            File path location for the resulting plots.
-        """
-        self.enable_dynamics_plots = flag
-        self.logdir = logdir
-        if self.enable_dynamics_plots:
-            os.mkdir(self.logdir + "dynamics/")
-            self.dynamics_plot_counter = 0
-
-    def set_enable_pules_plots(self, flag, logdir):
-        """
-        Plotting of pulse shapes.
+        Specify a selection of gates to be computed.
 
         Parameters
         ----------
-        flag: boolean
-            Enable or disable plotting.
-        logdir: str
-            File path location for the resulting plots.
+        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+
         """
-        self.enable_pulses_plots = flag
-        self.logdir = logdir
-        if self.enable_pulses_plots:
-            os.mkdir(self.logdir + "pulses/")
-            self.pulses_plot_counter = 0
+        self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
     def set_enable_store_unitaries(self, flag, logdir):
         """
@@ -422,220 +380,6 @@ class Experiment:
             os.mkdir(self.logdir + "unitaries/")
             self.store_unitaries_counter = 0
 
-    def plot_dynamics(self, psi_init, seq, goal=-1, debug=False):
-        # TODO double check if it works well
-        """
-        Plotting code for time-resolved populations.
-
-        Parameters
-        ----------
-        psi_init: tf.Tensor
-            Initial state or density matrix.
-        seq: list
-            List of operations to apply to the initial state.
-        goal: tf.float64
-            Value of the goal function, if used.
-        debug: boolean
-            If true, return a matplotlib figure instead of saving.
-        """
-        dUs = self.dUs
-        psi_t = psi_init.numpy()
-        pop_t = self.populations(psi_t, self.model.lindbladian)
-        for gate in seq:
-            for du in dUs[gate]:
-                psi_t = np.matmul(du.numpy(), psi_t)
-                pops = self.populations(psi_t, self.model.lindbladian)
-                pop_t = np.append(pop_t, pops, axis=1)
-            if self.model.use_FR:
-                instr = self.gateset.instructions[gate]
-                signal, ts = self.generator.generate_signals(instr)
-                # TODO change LO freq to at the level of a line
-                freqs = {}
-                framechanges = {}
-                for line, ctrls in instr.comps.items():
-                    offset = 0.0
-                    if "gauss" in ctrls:
-                        if ctrls['gauss'].params["amp"] != 0.0:
-                            offset = ctrls['gauss'].params['freq_offset'].get_value()
-
-                    freqs[line] = tf.cast(
-                        ctrls['carrier'].params['freq'].get_value()
-                        + offset,
-                        tf.complex128
-                    )
-                    framechanges[line] = tf.cast(
-                        ctrls['carrier'].params['framechange'].get_value(),
-                        tf.complex128
-                    )
-                t_final = tf.constant(
-                    instr.t_end - instr.t_start,
-                    dtype=tf.complex128
-                )
-                FR = self.model.get_Frame_Rotation(
-                    t_final,
-                    freqs,
-                    framechanges
-                )
-                if self.model.lindbladian:
-                    FR = tf_utils.tf_super(FR)
-                psi_t = tf.matmul(FR, psi_t)
-                # TODO added framchanged psi to list
-
-        fig, axs = plt.subplots(1, 1)
-        ts = self.ts
-        dt = ts[1] - ts[0]
-        ts = np.linspace(0.0, dt*pop_t.shape[1], pop_t.shape[1])
-        axs.plot(ts / 1e-9, pop_t.T)
-        axs.grid(linestyle="--")
-        axs.tick_params(
-            direction="in", left=True, right=True, top=True, bottom=True
-        )
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Population')
-        plt.legend(self.model.state_labels)
-        if debug:
-            plt.show()
-        else:
-            plt.savefig(self.logdir + f"dynamics/eval_{self.dynamics_plot_counter}_{seq[0]}_{goal}.png", dpi=300)
-
-    def plot_pulses(self, instr, goal=-1, debug=False):
-        """
-        Plotting of pulse shapes.
-
-        Parameters
-        ----------
-        instr : str
-            Identifier of the current instruction.
-        goal: tf.float64
-            Value of the goal function, if used.
-        debug: boolean
-            If true, return a matplotlib figure instead of saving.
-        """
-        signal, ts = self.generator.generate_signals(instr)
-        awg = self.generator.devices["awg"]
-        awg_ts = awg.ts
-
-        if debug:
-            pass
-        else:
-            # TODO Use os module to build paths
-            foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
-            if not os.path.exists(foldername):
-                os.mkdir(foldername)
-            os.mkdir(foldername + str(instr.name) + "/")
-
-        fig, axs = plt.subplots(1, 1)
-
-        for channel in instr.comps:
-            inphase = awg.signal[channel]["inphase"]
-            quadrature = awg.signal[channel]["quadrature"]
-            axs.plot(awg_ts / 1e-9, inphase/1e-3, label="I " + channel)
-            axs.plot(awg_ts / 1e-9, quadrature/1e-3, label="Q " + channel)
-            axs.grid()
-            axs.set_xlabel('Time [ns]')
-            axs.set_ylabel('Pulse amplitude[mV]')
-            plt.legend()
-            if debug:
-                pass
-            else:
-                with open(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/awg.log",
-                    'a+'
-                ) as logfile:
-                    logfile.write(f"{channel}, inphase :\n")
-                    logfile.write(json.dumps(inphase.numpy().tolist()))
-                    logfile.write("\n")
-                    logfile.write(f"{channel}, quadrature :\n")
-                    logfile.write(json.dumps(quadrature.numpy().tolist()))
-                    logfile.write("\n")
-        if debug:
-            plt.show()
-        else:
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                f"awg_{list(instr.comps.keys())}.png",
-                dpi=300
-            )
-
-        dac = self.generator.devices["dac"]
-        dac_ts = dac.ts
-        inphase = dac.signal["inphase"]
-        quadrature = dac.signal["quadrature"]
-
-        fig, axs = plt.subplots(1, 1)
-        axs.plot(dac_ts / 1e-9, inphase/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
-        if debug:
-            plt.show()
-        else:
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                f"dac_inphase_{list(instr.comps.keys())}.png", dpi=300
-            )
-
-        fig, axs = plt.subplots(1, 1)
-        axs.plot(dac_ts / 1e-9, quadrature/1e-3)
-        axs.grid()
-        axs.set_xlabel('Time [ns]')
-        axs.set_ylabel('Pulse amplitude[mV]')
-        if debug:
-            plt.show()
-        else:
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                f"dac_quadrature_{list(instr.comps.keys())}.png", dpi=300
-            )
-
-        if "resp" in self.generator.devices:
-            resp = self.generator.devices["resp"]
-            resp_ts = dac_ts
-            inphase = resp.signal["inphase"]
-            quadrature = resp.signal["quadrature"]
-
-            fig, axs = plt.subplots(1, 1)
-            axs.plot(resp_ts / 1e-9, inphase/1e-3)
-            axs.grid()
-            axs.set_xlabel('Time [ns]')
-            axs.set_ylabel('Pulse amplitude[mV]')
-            if debug:
-                plt.show()
-            else:
-                plt.savefig(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                    f"resp_inphase_{list(instr.comps.keys())}.png", dpi=300
-                )
-
-            fig, axs = plt.subplots(1, 1)
-            axs.plot(resp_ts / 1e-9, quadrature/1e-3)
-            axs.grid()
-            axs.set_xlabel('Time [ns]')
-            axs.set_ylabel('Pulse amplitude[mV]')
-            if debug:
-                plt.show()
-            else:
-                plt.savefig(
-                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                    f"resp_quadrature_{list(instr.comps.keys())}.png", dpi=300
-                )
-
-        for channel in instr.comps:
-            fig, axs = plt.subplots(1, 1)
-            axs.plot(ts / 1e-9, signal[channel]["values"], label=channel)
-            axs.grid()
-            axs.set_xlabel('Time [ns]')
-            axs.set_ylabel('signal')
-            plt.legend()
-        if debug:
-            plt.show()
-        else:
-            plt.savefig(
-                self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{instr.name}/"
-                f"signal_{list(instr.comps.keys())}.png",
-                dpi=300
-            )
-
     def store_Udict(self, goal):
         """
         Save unitary as text and pickle.
@@ -646,10 +390,17 @@ class Experiment:
             Value of the goal function, if used.
 
         """
-        folder = self.logdir + "unitaries/eval_" + str(self.store_unitaries_counter) + "_" + str(goal) + "/"
+        folder = (
+            self.logdir
+            + "unitaries/eval_"
+            + str(self.store_unitaries_counter)
+            + "_"
+            + str(goal)
+            + "/"
+        )
         if not os.path.exists(folder):
             os.mkdir(folder)
-        with open(folder + 'Us.pickle', 'wb+') as file:
+        with open(folder + "Us.pickle", "wb+") as file:
             pickle.dump(self.unitaries, file)
         for key, value in self.unitaries.items():
             np.savetxt(folder + key + ".txt", value)
@@ -675,4 +426,4 @@ class Experiment:
             pops = tf.math.real(tf.linalg.diag_part(rho))
             return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
-            return tf.abs(state)**2
+            return tf.abs(state) ** 2

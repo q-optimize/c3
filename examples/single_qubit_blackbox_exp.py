@@ -2,6 +2,7 @@ import copy
 import numpy as np
 from c3.system.model import Model as Mdl
 from c3.c3objs import Quantity as Qty
+from c3.parametermap import ParameterMap as PMap
 from c3.experiment import Experiment as Exp
 from c3.generator.generator import Generator as Gnr
 import c3.signal.gates as gates
@@ -12,14 +13,6 @@ import c3.signal.pulse as pulse
 import c3.libraries.envelopes as envelopes
 import c3.system.tasks as tasks
 
-import time
-import itertools
-import c3.libraries.fidelities as fidelities
-import matplotlib.pyplot as plt
-import tensorflow as tf
-import tensorflow_probability as tfp
-import c3.utils.qt_utils as qt_utils
-import c3.utils.tf_utils as tf_utils
 
 def create_experiment():
     lindblad = False
@@ -33,8 +26,6 @@ def create_experiment():
     t_final = 7e-9   # Time for single qubit gates
     sim_res = 100e9
     awg_res = 2e9
-    meas_offset = 0.0
-    meas_scale = 1.0
     sideband = 50e6 * 2 * np.pi
     lo_freq = 5e9 * 2 * np.pi + sideband
 
@@ -91,7 +82,7 @@ def create_experiment():
     awg = devices.AWG(name='awg', resolution=awg_res)
     mixer = devices.Mixer(name='mixer')
 
-    v_to_hz = devices.Volts_to_Hertz(
+    v_to_hz = devices.VoltsToHertz(
         name='v_to_hz',
         V_to_Hz=Qty(
             value=v2hz,
@@ -100,7 +91,7 @@ def create_experiment():
             unit='Hz 2pi/V'
         )
     )
-    dig_to_an = devices.Digital_to_Analog(
+    dig_to_an = devices.DigitalToAnalog(
         name="dac",
         resolution=sim_res
     )
@@ -120,7 +111,6 @@ def create_experiment():
     generator.devices['awg'].enable_drag_2()
 
     # ### MAKE GATESET
-    gateset = gates.GateSet()
     gauss_params_single = {
         'amp': Qty(
             value=0.45,
@@ -228,9 +218,8 @@ def create_experiment():
     X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 
-    for gate in [QId, X90p, Y90p, X90m, Y90m]:
-        gateset.add_instruction(gate)
+    parameter_map = PMap(instructions=[QId, X90p, Y90p, X90m, Y90m], model=model, generator=generator)
 
     # ### MAKE EXPERIMENT
-    exp = Exp(model=model, generator=generator, gateset=gateset)
+    exp = Exp(pmap=parameter_map)
     return exp

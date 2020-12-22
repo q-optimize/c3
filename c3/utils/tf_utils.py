@@ -8,16 +8,14 @@ from c3.utils import qt_utils
 
 
 def tf_setup():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         try:
             # Currently, memory growth needs to be the same across GPUs
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(
-                len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs"
-            )
+            logical_gpus = tf.config.experimental.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
             print(e)
@@ -26,21 +24,21 @@ def tf_setup():
 def tf_log_level_info():
     """Display the information about different log levels in tensorflow."""
     info = (
-            "Log levels of tensorflow:\n"
-            "\t0 = all messages are logged (default behavior)\n"
-            "\t1 = INFO messages are not printed\n"
-            "\t2 = INFO and WARNING messages are not printed\n"
-            "\t3 = INFO, WARNING, and ERROR messages are not printed\n"
-            )
+        "Log levels of tensorflow:\n"
+        "\t0 = all messages are logged (default behavior)\n"
+        "\t1 = INFO messages are not printed\n"
+        "\t2 = INFO and WARNING messages are not printed\n"
+        "\t3 = INFO, WARNING, and ERROR messages are not printed\n"
+    )
     print(info)
 
 
 def get_tf_log_level():
     """Display the current tensorflow log level of the system."""
-    log_lvl = '0'
+    log_lvl = "0"
 
-    if 'TF_CPP_MIN_LOG_LEVEL' in os.environ:
-        log_lvl = os.environ['TF_CPP_MIN_LOG_LEVEL']
+    if "TF_CPP_MIN_LOG_LEVEL" in os.environ:
+        log_lvl = os.environ["TF_CPP_MIN_LOG_LEVEL"]
 
     return log_lvl
 
@@ -54,7 +52,7 @@ def set_tf_log_level(lvl):
             integer, as casting string to string does nothing. feels hacked?
             but I guess it's just python...
     """
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = str(lvl)
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(lvl)
 
 
 def tf_list_avail_devices():
@@ -77,23 +75,20 @@ def tf_limit_gpu_memory(memory_limit):
     Set a limit for the GPU memory.
 
     """
-    gpus = tf.config.experimental.list_physical_devices('GPU')
+    gpus = tf.config.experimental.list_physical_devices("GPU")
     if gpus:
         # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
         try:
             tf.config.experimental.set_virtual_device_configuration(
                 gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(
-                    memory_limit=memory_limit
-                )]
+                [
+                    tf.config.experimental.VirtualDeviceConfiguration(
+                        memory_limit=memory_limit
+                    )
+                ],
             )
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            print(
-                len(gpus),
-                "Physical GPUs,",
-                len(logical_gpus),
-                "Logical GPUs"
-            )
+            logical_gpus = tf.config.experimental.list_logical_devices("GPU")
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
             # Virtual devices must be set before GPUs have been initialized
             print(e)
@@ -180,20 +175,15 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     h = h0
     for ii in range(len(hks)):
         h += cflds_t[ii] * hks[ii]
-    lind_op = -1j * (tf_spre(h)-tf_spost(h))
+    lind_op = -1j * (tf_spre(h) - tf_spost(h))
     for col_op in col_ops:
-        super_clp = tf.matmul(
-                        tf_spre(col_op),
-                        tf_spost(tf.linalg.adjoint(col_op))
-                        )
+        super_clp = tf.matmul(tf_spre(col_op), tf_spost(tf.linalg.adjoint(col_op)))
         anticomm_L_clp = 0.5 * tf.matmul(
-                                    tf_spre(tf.linalg.adjoint(col_op)),
-                                    tf_spre(col_op)
-                                    )
+            tf_spre(tf.linalg.adjoint(col_op)), tf_spre(col_op)
+        )
         anticomm_R_clp = 0.5 * tf.matmul(
-                                    tf_spost(col_op),
-                                    tf_spost(tf.linalg.adjoint(col_op))
-                                    )
+            tf_spost(col_op), tf_spost(tf.linalg.adjoint(col_op))
+        )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
     terms = int(1e12 * dt) + 2  # Eyeball number of terms in expm
     dU = tf_expm(lind_op * dt, terms)
@@ -232,6 +222,7 @@ def tf_propagation(h0, hks, cflds, dt):
             cf_t.append(tf.cast(fields[ii], tf.complex128))
         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
     return dUs
+
 
 # def tf_propagation(h0, hks, cflds, dt):
 #    """
@@ -330,7 +321,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
         List of incremental propagators dU.
 
     """
-    with tf.name_scope('Propagation'):
+    with tf.name_scope("Propagation"):
         dUs = []
         for ii in range(len(cflds[0])):
             cf_t = []
@@ -342,10 +333,8 @@ def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
 
 # MATRIX MULTIPLICATION FUNCTIONS
 
-def evaluate_sequences(
-    U_dict: dict,
-    sequences: list
-):
+
+def evaluate_sequences(U_dict: dict, sequences: list):
     """
     Compute the total propagator of a sequence of gates.
 
@@ -354,7 +343,8 @@ def evaluate_sequences(
     U_dict : dict
         Dictionary of unitary representation of gates.
     sequences : list
-        List of keys from U_dict specifying a gate sequence. The sequence is multiplied from the left, i.e.
+        List of keys from U_dict specifying a gate sequence.
+        The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
             ... U2 * U1 * U0
@@ -406,11 +396,11 @@ def tf_matmul_n(tensor_list):
     """
     # TODO does it multiply from the left?
     ln = len(tensor_list)
-    if (ln == 1):
+    if ln == 1:
         return tensor_list[0]
     else:
-        left_half = tensor_list[0:int(ln / 2)]
-        right_half = tensor_list[int(ln / 2):ln]
+        left_half = tensor_list[0 : int(ln / 2)]
+        right_half = tensor_list[int(ln / 2) : ln]
         return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
 
 
@@ -418,13 +408,13 @@ def tf_matmul_n(tensor_list):
 def tf_log10(x):
     """Tensorflow had no logarithm with base 10. This is ours."""
     numerator = tf.log(x)
-    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
+    denominator = tf.log(tf.Variable(10, dtype=numerator.dtype))
     return numerator / denominator
 
 
 def tf_abs_squared(x):
     """Rewritten so that is has a gradient."""
-    return tf.reshape(tf.cast(tf.math.conj(x)*x, dtype=tf.float64), shape=[1])
+    return tf.reshape(tf.cast(tf.math.conj(x) * x, dtype=tf.float64), shape=[1])
 
 
 def tf_abs(x):
@@ -435,7 +425,7 @@ def tf_abs(x):
 
 def tf_ave(x: list):
     """Take average of a list of values in tensorflow."""
-    return tf.add_n(x)/len(x)
+    return tf.add_n(x) / len(x)
 
 
 def tf_diff(l):
@@ -444,13 +434,14 @@ def tf_diff(l):
     returns the same shape by adding a 0 in the last entry.
     """
     dim = l.shape[0] - 1
-    diagonal = tf.constant([-1] * dim + [0], dtype=l.dtype)
-    offdiagonal = tf.constant([1] * dim, dtype=l.dtype)
+    diagonal = tf.Variable([-1] * dim + [0], dtype=l.dtype)
+    offdiagonal = tf.Variable([1] * dim, dtype=l.dtype)
     proj = tf.linalg.diag(diagonal) + tf.linalg.diag(offdiagonal, k=1)
     return tf.linalg.matvec(proj, l)
 
 
 # MATRIX FUNCTIONS
+
 
 def tf_expm(A, terms):
     """
@@ -501,7 +492,7 @@ def tf_expm_dynamic(A, acc=1e-4):
     A_powers = A
     r += A
 
-    ii = tf.constant(2, dtype=tf.complex128)
+    ii = tf.Variable(2, dtype=tf.complex128)
     while tf.reduce_max(tf.abs(A_powers)) > acc:
         A_powers = tf.matmul(A_powers, A) / ii
         ii += 1
@@ -519,17 +510,15 @@ def Id_like(A):
 def tf_kron(A, B):
     """Kronecker product of 2 matrices."""
     # TODO make kronecker product general to different dimensions
-    dims = tf.shape(A)*tf.shape(B)
+    dims = tf.shape(A) * tf.shape(B)
     tensordot = tf.tensordot(A, B, axes=0)
-    reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-        dims
-    )
+    reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
     return reshaped
 
 
 # SUPEROPER FUNCTIONS
 # TODO migrate all superoper functions to using tf_kron
+
 
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
@@ -537,8 +526,7 @@ def tf_spre(A):
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(A, Id, axes=0)
     reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-        [dim**2, dim**2]
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
     )
     return reshaped
 
@@ -549,18 +537,14 @@ def tf_spost(A):
     dim = tf.shape(A)[0]
     tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
     reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]),
-        [dim**2, dim**2]
+        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
     )
     return reshaped
 
 
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
-    superA = tf.matmul(
-        tf_spre(A),
-        tf_spost(tf.linalg.adjoint(A))
-    )
+    superA = tf.matmul(tf_spre(A), tf_spost(tf.linalg.adjoint(A)))
     return superA
 
 
@@ -571,8 +555,8 @@ def tf_choi_to_chi(U, dims=None):
     """
     if dims is None:
         dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.constant(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
-    return (tf.linalg.adjoint(B) @ U @ B)
+    B = tf.Variable(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
+    return tf.linalg.adjoint(B) @ U @ B
 
 
 def super_to_choi(A):
@@ -582,11 +566,7 @@ def super_to_choi(A):
     """
     sqrt_shape = int(np.sqrt(A.shape[0]))
     A_choi = tf.reshape(
-        tf.transpose(
-            tf.reshape(A, [sqrt_shape] * 4),
-            perm=[3, 1, 2, 0]
-            ),
-        A.shape
+        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
     )
     return A_choi
 
@@ -615,17 +595,13 @@ def tf_dmdm_fid(rho, sigma):
     # TODO needs fixing
     rhosqrt = tf.linalg.sqrtm(rho)
     return tf.linalg.trace(
-        tf.linalg.sqrtm(
-            tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt)
-        )
+        tf.linalg.sqrtm(tf.matmul(tf.matmul(rhosqrt, sigma), rhosqrt))
     )
 
 
 def tf_dmket_fid(rho, psi):
     """Fidelity between a state vector and a density matrix."""
-    return tf.sqrt(
-        tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi)
-    )
+    return tf.sqrt(tf.matmul(tf.matmul(tf.linalg.adjoint(psi), rho), psi))
 
 
 def tf_ketket_fid(psi1, psi2):
@@ -633,17 +609,42 @@ def tf_ketket_fid(psi1, psi2):
     return tf_abs(tf.matmul(tf.linalg.adjoint(psi1), psi2))
 
 
-def tf_unitary_overlap(A, B, lvls=None):
+def tf_unitary_overlap(A: tf.Tensor, B: tf.Tensor, lvls: tf.Tensor = None) -> tf.Tensor:
+    """Unitary overlap between two matrices.
+
+    Parameters
+    ----------
+    A : tf.Tensor
+        Unitary A
+    B : tf.Tensor
+        Unitary B
+    lvls : tf.Tensor, optional
+        Levels, by default None
+
+    Returns
+    -------
+    tf.Tensor
+        Overlap between the two unitaries
+
+    Raises
+    ------
+    TypeError
+        For errors during cast
+    ValueError
+        For errors during matrix multiplicaton
     """
-    Unitary overlap between two matrices.
-    """
-    if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    overlap = tf_abs(
-        tf.linalg.trace(
-            tf.matmul(A, tf.linalg.adjoint(B))
-        ) / lvls
-    )**2
+    try:
+        if lvls is None:
+            lvls = tf.cast(B.shape[0], B.dtype)
+        overlap = (
+            tf_abs(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls) ** 2
+        )
+    except TypeError:
+        raise TypeError("Possible Inconsistent Dimensions while casting tensors")
+    except ValueError:
+        raise ValueError(
+            "Possible Inconsistent Dimensions during Matrix Multiplication"
+        )
     return overlap
 
 
@@ -651,13 +652,9 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     # TODO: This is just wrong, probably.
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    overlap = tf_abs(
-        tf.sqrt(
-            tf.linalg.trace(
-                tf.matmul(A, tf.linalg.adjoint(B))
-            )
-        ) / lvls
-    )**2
+    overlap = (
+        tf_abs(tf.sqrt(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B)))) / lvls) ** 2
+    )
 
     return overlap
 
@@ -666,9 +663,7 @@ def tf_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls)), B
-    )
+    Lambda = tf.matmul(tf.linalg.adjoint(tf_project_to_comp(A, lvls)), B)
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
@@ -676,9 +671,7 @@ def tf_superoper_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
         lvls = tf.sqrt(tf.cast(B.shape[0], B.dtype))
-    lambda_super = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, True)), B
-    )
+    lambda_super = tf.matmul(tf.linalg.adjoint(tf_project_to_comp(A, lvls, True)), B)
     return tf_super_to_fid(lambda_super, lvls)
 
 
@@ -704,5 +697,5 @@ def tf_project_to_comp(A, dims, to_super=False):
     proj = proj_list.pop()
     while not proj_list == []:
         proj = np.kron(proj_list.pop(), proj)
-    P = tf.constant(proj, dtype=A.dtype)
+    P = tf.Variable(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)

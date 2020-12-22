@@ -1,17 +1,18 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import json
+import shutil
 import pickle
 import itertools
-import time
 import numpy as np
 import tensorflow as tf
-import c3.utils.display as display
 from c3.optimizers.optimizer import Optimizer
-import matplotlib.pyplot as plt
 from c3.utils.utils import log_setup
-from c3.libraries.estimators import dv_g_LL_prime, g_LL_prime_combined, g_LL_prime, neg_loglkh_multinom_norm
+from c3.libraries.estimators import (
+    g_LL_prime_combined,
+    g_LL_prime,
+    neg_loglkh_multinom_norm,
+)
 
 
 class SET(Optimizer):
@@ -48,16 +49,17 @@ class SET(Optimizer):
         estimator_list,
         sampling,
         batch_sizes,
+        pmap,
         state_labels=None,
         sweep_map=None,
         sweep_bounds=None,
         algorithm=None,
         run_name=None,
         same_dyn=False,
-        options={}
+        options={},
     ):
         """Initiliase."""
-        super().__init__(algorithm=algorithm)
+        super().__init__(pmap=pmap, algorithm=algorithm)
         self.fom = fom
         self.estimator_list = estimator_list
         self.sampling = sampling
@@ -70,9 +72,10 @@ class SET(Optimizer):
         self.inverse = False
         self.learn_data = {}
         self.same_dyn = same_dyn
-        self.log_setup(dir_path, run_name)
+        self.__dir_path = dir_path
+        self.__run_name = run_name
 
-    def log_setup(self, dir_path, run_name):
+    def log_setup(self, dir_path, run_name) -> None:
         """
         Create the folders to store data.
 
@@ -84,14 +87,20 @@ class SET(Optimizer):
             User specified name for the run
 
         """
-        self.dir_path = os.path.abspath(dir_path)
+        dir_path = os.path.abspath(self.__dir_path)
+        run_name = self.__run_name
         if run_name is None:
-            run_name = "sensitivity" \
-                + self.algorithm.__name__ + '-' \
-                + self.sampling.__name__ + '-' \
-                + self.fom.__name__
-        self.logdir = log_setup(self.dir_path, run_name)
+            run_name = "-".join(
+                [
+                    "sensitivity",
+                    self.algorithm.__name__,
+                    self.sampling.__name__,
+                    self.fom.__name__,
+                ]
+            )
+        self.logdir = log_setup(dir_path, run_name)
         self.logname = "sensitivity.log"
+        shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles):
         # TODO move common methods of sensitivity and c3 to super class
@@ -103,25 +112,10 @@ class SET(Optimizer):
         datafiles : list of str
             List of paths for files that contain learning data.
         """
+        self.__real_model_folder = os.path.dirname(datafiles.values()[0])
         for target, datafile in datafiles.items():
-            with open(datafile, 'rb+') as file:
+            with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)
-
-    def load_best(self, init_point):
-        """
-        Load a previous parameter point to start the optimization from.
-
-        Parameters
-        ----------
-        init_point : str
-            File location of the initial point
-
-        """
-        with open(init_point) as init_file:
-            best = init_file.readlines()
-            best_exp_opt_map = [tuple(a) for a in json.loads(best[0])]
-            init_p = json.loads(best[1])['params']
-            self.exp.set_parameters(init_p, best_exp_opt_map)
 
     def select_from_data(self, batch_size):
         """
@@ -157,25 +151,25 @@ class SET(Optimizer):
         for ii in range(len(self.sweep_map)):
             self.dfname = "data.dat"
             self.opt_map = [self.sweep_map[ii]]
-            self.options['bounds'] = [self.sweep_bounds[ii]]
+            self.options["bounds"] = [self.sweep_bounds[ii]]
             print(f"C3:STATUS:Sweeping {self.opt_map}: {self.sweep_bounds[ii]}")
             self.log_setup(self.dir_path, "_".join(self.opt_map[0]))
             self.start_log()
             print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-            x0 = self.exp.get_parameters(self.opt_map, scaled=False)
+            x_init = self.exp.get_parameters(self.opt_map, scaled=False)
             self.init_gateset_params = self.exp.gateset.get_parameters()
             self.init_gateset_opt_map = self.exp.gateset.list_parameters()
             try:
                 self.algorithm(
-                    x0,
+                    x_init,
                     fun=self.fct_to_min,
                     fun_grad=self.fct_to_min_autograd,
                     grad_lookup=self.lookup_gradient,
-                    options=self.options
+                    options=self.options,
                 )
             except KeyboardInterrupt:
                 pass
-            self.exp.set_parameters(x0, self.opt_map, scaled=False)
+            self.exp.set_parameters(x_init, self.opt_map, scaled=False)
 
         # #=== Get the resulting data ======================================
 
@@ -185,7 +179,7 @@ class SET(Optimizer):
         # Xs=Xs[Ks]
         # Ys=Ys[Ks]
 
-    def goal_run(self, val):
+    def goal_run(self, current_params):
         """
         Evaluate the figure of merit for the current model parameters.
 
@@ -207,20 +201,12 @@ class SET(Optimizer):
         goals = []
         seq_weigths = []
         count = 0
-        #TODO: seq per point is not constant. Remove.
+        # TODO: seq per point is not constant. Remove.
 
-        # print("tup: " + str(tup))
-        # print("val: " + str(val))
-        # print(self.opt_map)
-        self.exp.set_parameters(val, self.opt_map, scaled=False)
-        # print("params>>> ")
-        # print(self.exp.print_parameters(self.opt_map))
-
-        # print("self.learn_data.items(): " + str(len(self.learn_data.items())))
         for target, data in self.learn_data.items():
 
-            self.learn_from = data['seqs_grouped_by_param_set']
-            self.gateset_opt_map = data['opt_map']
+            self.learn_from = data["seqs_grouped_by_param_set"]
+            self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
@@ -229,70 +215,59 @@ class SET(Optimizer):
 
                 count += 1
                 m = self.learn_from[ipar]
-                gateset_params = m['params']
+                gateset_params = m["params"]
                 gateset_opt_map = self.gateset_opt_map
-                m_vals = m['results']
-                m_stds = np.array(m['results_std'])
-                m_shots = m['shots']
-                sequences = m['seqs']
+                m_vals = m["results"]
+                m_stds = np.array(m["results_std"])
+                m_shots = m["shots"]
+                sequences = m["seqs"]
                 num_seqs = len(sequences)
-                if target == 'all':
+                if target == "all":
                     num_seqs = len(sequences) * 3
 
-                self.exp.gateset.set_parameters(
-                    self.init_gateset_params,
-                    self.init_gateset_opt_map,
-                    scaled=False
-                )
-                self.exp.gateset.set_parameters(
-                    gateset_params, gateset_opt_map, scaled=False
-                )
+                self.pmap.set_parameters_scaled(current_params)
+                self.pmap.model.update_model()
+
+                self.pmap.set_parameters(gateset_params, gateset_opt_map)
                 # We find the unique gates used in the sequence and compute
                 # only them.
-                self.exp.opt_gates = list(
-                    set(itertools.chain.from_iterable(sequences))
-                )
+                self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
                 self.exp.get_gates()
-                self.exp.evaluate(sequences)
-                sim_vals = self.exp.process(labels=self.state_labels[target])
+                pops = self.exp.evaluate(sequences)
+                sim_vals = self.exp.process(
+                    labels=self.state_labels[target], populations=pops
+                )
 
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
 
-                if target == 'all':
+                if target == "all":
                     goal = neg_loglkh_multinom_norm(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.Variable(m_stds, dtype=tf.float64),
+                        tf.Variable(m_shots, dtype=tf.float64),
                     )
                 else:
                     goal = g_LL_prime(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.constant(m_stds, dtype=tf.float64),
-                        tf.constant(m_shots, dtype=tf.float64)
+                        tf.Variable(m_stds, dtype=tf.float64),
+                        tf.Variable(m_shots, dtype=tf.float64),
                     )
                 goals.append(goal.numpy())
                 seq_weigths.append(num_seqs)
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
 
-                with open(self.logdir + self.logname, 'a') as logfile:
+                with open(self.logdir + self.logname, "a") as logfile:
                     logfile.write(
-                        "\n  Parameterset {}, #{} of {}:\n {}\n {}\n".format(
-                            ipar + 1,
-                            count,
-                            len(indeces),
-                            json.dumps(self.gateset_opt_map),
-                            self.exp.gateset.get_parameters(
-                                self.gateset_opt_map, to_str=True
-                            ),
-                        )
+                        f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n"
+                        f"{str(self.exp.pmap)}\n"
                     )
                     logfile.write(
-                        "Sequence    Simulation  Experiment  Std         Shots"
-                        "       Diff\n"
+                        "Sequence    Simulation  Experiment  Std           Shots"
+                        "    Diff\n"
                     )
 
                 for iseq in range(len(sequences)):
@@ -300,8 +275,7 @@ class SET(Optimizer):
                     m_std = np.array(m_stds[iseq])
                     shots = np.array(m_shots[iseq])
                     sim_val = sim_vals[iseq].numpy()
-                    int_len = len(str(num_seqs))
-                    with open(self.logdir + self.logname, 'a') as logfile:
+                    with open(self.logdir + self.logname, "a") as logfile:
                         for ii in range(len(sim_val)):
                             logfile.write(
                                 f"{iseq + 1:8}    "
@@ -314,25 +288,21 @@ class SET(Optimizer):
                         logfile.flush()
 
         goal = g_LL_prime_combined(goals, seq_weigths)
-        # TODO make gradient free function use any fom
 
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
             logfile.write("{}: {}\n".format(self.fom.__name__, goal))
             print("{}: {}".format(self.fom.__name__, goal))
             for est in self.estimator_list:
-                val = float(
-                    est(exp_values, sim_values, exp_stds, exp_shots).numpy()
-                )
+                val = float(est(exp_values, sim_values, exp_stds, exp_shots).numpy())
                 logfile.write("{}: {}\n".format(est.__name__, val))
-                #print("{}: {}".format(est.__name__, val))
+                # print("{}: {}".format(est.__name__, val))
             print("")
             logfile.flush()
 
-        self.optim_status['params'] = [
-            par.numpy().tolist()
-            for par in self.exp.get_parameters(self.opt_map)
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.exp.get_parameters(self.opt_map)
         ]
-        self.optim_status['goal'] = goal
+        self.optim_status["goal"] = goal
         self.evaluation += 1
         return goal
