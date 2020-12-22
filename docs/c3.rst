@@ -10,6 +10,15 @@ C3objs
    :undoc-members:
    :show-inheritance:
 
+
+Parameter map
+-------------
+
+ .. automodule:: c3.parametermap
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Experiment module
 -----------------
 

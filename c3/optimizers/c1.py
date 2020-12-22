@@ -50,17 +50,13 @@ class C1(Optimizer):
         pmap,
         callback_fids=[],
         algorithm=None,
-        plot_dynamics=False,
-        plot_pulses=False,
         store_unitaries=False,
         options={},
         run_name=None,
-    ):
+    ) -> None:
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
-            plot_dynamics=plot_dynamics,
-            plot_pulses=plot_pulses,
             store_unitaries=store_unitaries,
         )
         self.fid_func = fid_func
@@ -71,7 +67,7 @@ class C1(Optimizer):
         self.__run_name = run_name
         self.update_model = False
 
-    def log_setup(self):
+    def log_setup(self) -> None:
         """
         Create the folders to store data.
 
@@ -94,24 +90,27 @@ class C1(Optimizer):
         if isinstance(self.created_by, str):
             shutil.copy2(self.created_by, self.logdir)
 
-    def optimize_controls(self):
+    def load_model_parameters(self, adjust_exp: str) -> None:
+        self.pmap.load_values(adjust_exp)
+        self.pmap.model.update_model()
+        shutil.copy(adjust_exp, os.path.join(self.logdir, "adjust_exp.log"))
+
+    def optimize_controls(self) -> None:
         """
         Apply a search algorithm to your gateset given a fidelity function.
         """
         self.log_setup()
         self.start_log()
-        self.exp.set_enable_dynamics_plots(self.plot_dynamics, self.logdir)
-        self.exp.set_enable_pules_plots(self.plot_pulses, self.logdir)
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
         index = []
         for name in self.fid_subspace:
             index.append(self.pmap.model.names.index(name))
         self.index = index
-        x0 = self.pmap.get_parameters_scaled()
+        x_init = self.pmap.get_parameters_scaled()
         try:
             self.algorithm(
-                x0,
+                x_init,
                 fun=self.fct_to_min,
                 fun_grad=self.fct_to_min_autograd,
                 grad_lookup=self.lookup_gradient,
@@ -122,7 +121,7 @@ class C1(Optimizer):
         self.load_best(self.logdir + "best_point_" + self.logname)
         self.end_log()
 
-    def goal_run(self, current_params: tf.Tensor):
+    def goal_run(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function for current parameters.
 

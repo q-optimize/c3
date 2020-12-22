@@ -19,7 +19,7 @@ setup(
         "cma==3.0.3",
         "cython",
         "ipython==7.15.0",
-	"hjson==3.0.2",
+	    "hjson==3.0.2",
         "latex==0.7.0",
         "matplotlib==3.3.2",
         "numpy==1.18.5",

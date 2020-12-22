@@ -3,6 +3,7 @@
 
 import numpy as np
 import tensorflow as tf
+
 # import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from c3.utils.tf_utils import (
@@ -234,7 +235,8 @@ def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
 @fid_reg_deco
 def unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
     """
-    Mean unitary overlap between ideal and actually performed gate for the gates in U_dict.
+    Mean unitary overlap between ideal and actually performed gate for the gates in
+    U_dict.
 
     Parameters
     ----------
@@ -376,6 +378,33 @@ def average_infid_set(U_dict: dict, index, dims, eval, proj=True):
         infid = average_infid(U_dict, gate, index, dims, proj)
         infids.append(infid)
     return tf.reduce_mean(infids)
+
+
+@fid_reg_deco
+def average_infid_seq(U_dict: dict, index, dims, eval, proj=True):
+    """
+    Average sequence fidelity over all gates in U_dict.
+
+    Parameters
+    ----------
+    U_dict : dict
+        Contains unitary representations of the gates, identified by a key.
+    index : int
+        Index of the qubit(s) in the Hilbert space to be evaluated
+    dims : list
+        List of dimensions of qubits
+    proj : boolean
+        Project to computational subspace
+
+    Returns
+    -------
+    tf.float64
+        Mean average fidelity
+    """
+    fid = 1
+    for gate in U_dict.keys():
+        fid *= 1 - average_infid(U_dict, gate, index, dims, proj)
+    return 1 - fid
 
 
 @fid_reg_deco

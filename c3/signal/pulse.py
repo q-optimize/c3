@@ -2,6 +2,7 @@ from c3.c3objs import C3obj
 from c3.c3objs import Quantity as Qty
 from c3.libraries.envelopes import envelopes
 import tensorflow as tf
+import numpy as np
 import types
 import hjson
 
@@ -49,8 +50,8 @@ class Envelope(C3obj):
             ),
             'delta': Qty(
                 value=0.0,
-                min_val=-1.0,
-                max_val=+1.0,
+                min_val=-5.0,
+                max_val=+5.0,
                 unit="V"
             ),
             'freq_offset': Qty(
@@ -64,6 +65,12 @@ class Envelope(C3obj):
                 min_val=-1.0,
                 max_val=+1.0,
                 unit='rad'
+            ),
+            'sigma': Qty(
+                value=5e-9,
+                min_val=-2.0,
+                max_val=+2.0,
+                unit="s"
             ),
             't_final': Qty(
                 value=0.0,
@@ -133,11 +140,26 @@ class Carrier(C3obj):
             comment: str = " ",
             params: dict = {},
     ):
+        params_default = {
+            'freq': Qty(
+                value=0.0,
+                min_val=-1.0,
+                max_val=+1.0,
+                unit="V"
+            ),
+            'framechange': Qty(
+                value=0.0,
+                min_val=-np.pi,
+                max_val=np.pi,
+                unit="rad"
+            )
+        }
+        params_default.update(params)
         super().__init__(
             name=name,
             desc=desc,
             comment=comment,
-            params=params,
+            params=params_default,
         )
 
     def write_config(self, filepath: str) -> None:

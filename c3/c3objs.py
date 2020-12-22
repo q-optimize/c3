@@ -68,7 +68,9 @@ class Quantity:
 
     """
 
-    def __init__(self, value, min_val, max_val, unit="undefined", symbol=r"\alpha"):
+    def __init__(
+        self, value, min_val=None, max_val=None, unit="undefined", symbol=r"\alpha"
+    ):
         if "pi" in unit:
             pref = np.pi
         if "2pi" in unit:
@@ -76,6 +78,10 @@ class Quantity:
         else:
             pref = 1.0
         self.pref = pref
+        if min_val is None and max_val is None:
+            minmax = [0.9 * value, 1.1 * value]
+            min_val = min(minmax)
+            max_val = max(minmax)
         self.offset = np.array(min_val) * pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit
@@ -157,7 +163,7 @@ class Quantity:
             val = self.value
         return self.scale * (val + 1) / 2 + self.offset
 
-    def set_value(self, val: float) -> None:
+    def set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
@@ -184,7 +190,5 @@ class Quantity:
         val : tf.float64
             Tensorflow number that will be mapped to a value between -1 and 1.
         """
-        self.value = (
-            tf.acos(tf.cos((tf.reshape(val, self.shape) + 1) * np.pi / 2)) / np.pi * 2
-            - 1
-        )
+        bound_val = tf.cos((tf.reshape(val, self.shape) + 1) * np.pi / 2)
+        self.value = tf.acos(bound_val) / np.pi * 2 - 1

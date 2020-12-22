@@ -10,8 +10,10 @@ are put through via a mixer device to produce an effective modulated signal.
 """
 
 import copy
+from typing import List
 import hjson
 import numpy as np
+import tensorflow as tf
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
 
@@ -30,10 +32,7 @@ class Generator:
     """
 
     def __init__(
-            self,
-            devices: dict = None,
-            chain: list = None,
-            resolution: np.float64 = 0.0
+        self, devices: dict = None, chain: list = None, resolution: np.float64 = 0.0
     ):
         self.devices = {}
         if devices:
@@ -95,8 +94,8 @@ class Generator:
 
     def generate_signals(self, instr: Instruction):
         """
-        Perform the signal chain for a specified instruction, including local oscillator, AWG
-        generation and IQ mixing.
+        Perform the signal chain for a specified instruction, including local
+        oscillator, AWG generation and IQ mixing.
 
         Parameters
         ----------
@@ -111,14 +110,14 @@ class Generator:
         """
         gen_signal = {}
         for chan in instr.comps:
-            signal_stack = []
+            signal_stack: List[tf.Variable] = []
             for dev_id in self.chain:
                 dev = self.devices[dev_id]
                 inputs = []
-                for input_num in range(dev.inputs):
+                for _input_num in range(dev.inputs):
                     inputs.append(signal_stack.pop())
                 outputs = dev.process(instr, chan, *inputs)
                 signal_stack.append(outputs)
-             # The stack is reused here, thus we need to deepcopy.
+            # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
         return gen_signal

@@ -57,26 +57,26 @@ helper ``qt_utils`` provides these sequences.
 
 .. parsed-literal::
 
-    [['Id',
-      'Id',
-      'Id',
-      'Id',
+    [['X90p',
       'Y90m',
-      'Id',
-      'Id',
-      'Id',
       'X90p',
-      'Y90m',
-      'X90m',
       'Id',
       'Y90m',
-      'X90m',
+      'X90p',
+      'X90p',
+      'Id',
+      'Y90m',
+      'X90p',
       'Id',
       'Id',
       'X90p',
       'X90p',
       'Y90p',
-      'Y90p']]
+      'Y90p',
+      'Y90p',
+      'X90p',
+      'Id',
+      'Id']]
 
 
 
@@ -92,7 +92,6 @@ Some of the following code is specific to the fact that this a
 
 .. code-block:: python
 
-    import itertools
     import numpy as np
     import tensorflow as tf
 
@@ -119,10 +118,8 @@ Some of the following code is specific to the fact that this a
         )
 
         # Transmitting the parameters to the experiment #
-        exp.gateset.set_parameters(params, opt_map, scaled=False)
-        exp.opt_gates = list(
-            set(itertools.chain.from_iterable(seqs))
-        )
+        exp.pmap.set_parameters(params, opt_map)
+        exp.set_opt_gates(seqs)
 
         # Simulating the gates #
         U_dict = exp.get_gates()
@@ -170,6 +167,7 @@ We first import algorithms and the correct optimizer object.
 
     from c3.experiment import Experiment as Exp
     from c3.c3objs import Quantity as Qty
+    from c3.parametermap import ParameterMap as PMap
     from c3.libraries import algorithms, envelopes
     from c3.signal import gates, pulse
     from c3.optimizers.c2 import C2
@@ -224,7 +222,6 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     lo_freq = 5e9 * 2 * np.pi + sideband
 
      # ### MAKE GATESET
-    gateset = gates.GateSet()
     gauss_params_single = {
         'amp': Qty(
             value=0.45,
@@ -332,26 +329,75 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 
-    for gate in [QId, X90p, Y90p, X90m, Y90m]:
-        gateset.add_instruction(gate)
+    parameter_map = PMap(instructions=[QId, X90p, Y90p, X90m, Y90m])
 
     # ### MAKE EXPERIMENT
-    exp = Exp(gateset=gateset)
+    exp = Exp(pmap=parameter_map)
+
+Next, we define the parameters we whish to calibrate. See how these gate
+instructions are defined in the experiment setup example or in
+``single_qubit_blackbox_exp.py``. Our gate-set is made up of 4 gates,
+rotations of 90 degrees around the :math:`x` and :math:`y`-axis in
+positive and negative direction. While it is possible to optimize each
+parameters of each gate individually, in this example all four gates
+share parameters. They only differ in the phase :math:`\phi_{xy}` that
+is set in the definitions.
+
+.. code-block:: python
+
+    gateset_opt_map =   [
+        [
+          ("X90p", "d1", "gauss", "amp"),
+          ("Y90p", "d1", "gauss", "amp"),
+          ("X90m", "d1", "gauss", "amp"),
+          ("Y90m", "d1", "gauss", "amp")
+        ],
+        [
+          ("X90p", "d1", "gauss", "delta"),
+          ("Y90p", "d1", "gauss", "delta"),
+          ("X90m", "d1", "gauss", "delta"),
+          ("Y90m", "d1", "gauss", "delta")
+        ],
+        [
+          ("X90p", "d1", "gauss", "freq_offset"),
+          ("Y90p", "d1", "gauss", "freq_offset"),
+          ("X90m", "d1", "gauss", "freq_offset"),
+          ("Y90m", "d1", "gauss", "freq_offset")
+        ],
+        [
+          ("Id", "d1", "carrier", "framechange")
+        ]
+      ]
+
+    parameter_map.set_opt_map(gateset_opt_map)
 
 As defined above, we have 16 parameters where 4 share their numerical
 value. This leaves 4 values to optimize.
 
 .. code-block:: python
 
-    print(exp.gateset.print_parameters(gateset_opt_map))
+    parameter_map.print_parameters()
 
 
 .. parsed-literal::
 
-    Y90m-d1-gauss-amp                     : 450.000 mV
-    Y90m-d1-gauss-delta                   : -1.000
-    Y90m-d1-gauss-freq_offset             : -50.500 MHz 2pi
+    X90p-d1-gauss-amp                     : 450.000 mV
+    Y90p-d1-gauss-amp
+    X90m-d1-gauss-amp
+    Y90m-d1-gauss-amp
+
+    X90p-d1-gauss-delta                   : -1.000
+    Y90p-d1-gauss-delta
+    X90m-d1-gauss-delta
+    Y90m-d1-gauss-delta
+
+    X90p-d1-gauss-freq_offset             : -50.500 MHz 2pi
+    Y90p-d1-gauss-freq_offset
+    X90m-d1-gauss-freq_offset
+    Y90m-d1-gauss-freq_offset
+
     Id-d1-carrier-framechange             : 4.084 rad
+
 
 
 
@@ -373,7 +419,7 @@ options specific to this algorithm.
 
     alg_options = {
         "popsize" : 10,
-        "maxfevals" : 450,
+        "maxfevals" : 300,
         "init_point" : "True",
         "tolfun" : 0.01,
         "spread" : 0.1
@@ -409,7 +455,7 @@ setup:
         dir_path='/tmp/c3logs/',
         run_name="ORBIT_cal",
         eval_func=ORBIT_wrapper,
-        gateset_opt_map=gateset_opt_map,
+        pmap=parameter_map,
         algorithm=algorithms.cmaes,
         options=alg_options
     )
@@ -419,20 +465,21 @@ And run the calibration:
 
 .. code-block:: python
 
+    x = parameter_map.get_parameters_scaled()
+
+.. code:: ipython3
+
     opt.optimize_controls()
 
 
 
-
-
-
-.. image:: output_27_1.png
+.. image:: output_28_1.png
 
 
 .. parsed-literal::
 
-       46    460 1.557234516198212e-01 7.1e+01 1.47e-02  6e-04  3e-02 30:36.2
-    termination on maxfevals=450
-    final/bestever f-value = 1.557235e-01 1.329754e-01
-    incumbent solution: [-0.40581604993823245, -0.0005859716897853456, -0.020653590731025552, 0.1461736852226334]
-    std deviation: [0.015007549485140903, 0.007691055155016825, 0.0311819805480421, 0.0006222775472235989]
+       31    310 1.223366138929153e-01 1.3e+01 1.00e-02  8e-04  8e-03 19:28.4
+    termination on maxfevals=300
+    final/bestever f-value = 1.223366e-01 1.024497e-01
+    incumbent solution: [-0.44344882706464556, -0.03326456564421698, -0.2353687837955444, 0.14641733602693577]
+    std deviation: [0.007660467617184307, 0.003940959436714393, 0.008318064822358036, 0.0007827676857480827]
