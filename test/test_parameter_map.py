@@ -4,6 +4,7 @@ testing module ParameterMap class
 
 import copy
 import numpy as np
+import pytest
 
 import c3.libraries.envelopes as envelopes
 
@@ -159,6 +160,7 @@ def setup_pmap() -> ParameterMap:
 pmap = setup_pmap()
 
 
+@pytest.mark.unit
 def test_parameter_print() -> None:
     """
     Check parameter printing.
@@ -166,6 +168,7 @@ def test_parameter_print() -> None:
     pmap.print_parameters()
 
 
+@pytest.mark.unit
 def test_parameter_str() -> None:
     """
     Check casting to string.
@@ -173,6 +176,7 @@ def test_parameter_str() -> None:
     str(pmap)
 
 
+@pytest.mark.unit
 def test_parameter_get() -> None:
     """
     Check that four parameters are set.
@@ -180,6 +184,7 @@ def test_parameter_get() -> None:
     assert len(pmap.get_parameters()) == 4
 
 
+@pytest.mark.unit
 def test_parameter_get_value() -> None:
     """
     Check that four parameters are set.
@@ -187,6 +192,7 @@ def test_parameter_get_value() -> None:
     assert str(pmap.get_parameter(("X90p", "d1", "gauss", "amp"))) == "450.000 mV "
 
 
+@pytest.mark.unit
 def test_parameter_equiv() -> None:
     """
     Check that two equivalent parameters do not point to the same memory address.
@@ -196,6 +202,7 @@ def test_parameter_equiv() -> None:
     assert amp1 is not amp2
 
 
+@pytest.mark.unit
 def test_parameter_set_equiv() -> None:
     """
     Check that setting equivalent parameters also sets the other one.
@@ -212,6 +219,7 @@ def test_parameter_set_equiv() -> None:
     assert amp1.get_value() == amp2.get_value()
 
 
+@pytest.mark.unit
 def test_parameter_set_indepentent() -> None:
     """
     Check that setting equivalent parameters also sets the other one.
@@ -230,6 +238,7 @@ def test_parameter_set_indepentent() -> None:
     assert amp1.get_value() != amp2.get_value()
 
 
+@pytest.mark.unit
 def test_parameter_set_opt() -> None:
     """
     Test the setting in optimizer format.

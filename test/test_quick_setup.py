@@ -2,6 +2,7 @@
 testing module quick setup class
 """
 
+import pytest
 from c3.experiment import Experiment
 
 exp = Experiment()
@@ -11,6 +12,7 @@ model = pmap.model
 generator = pmap.generator
 
 
+@pytest.mark.integration
 def test_exp_quick_setup_freqs() -> None:
     """
     Test the quick setup.

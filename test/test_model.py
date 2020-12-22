@@ -2,6 +2,7 @@
 testing module for Model class
 """
 
+import pytest
 import numpy as np
 from c3.c3objs import Quantity
 from c3.system.chip import Qubit, Coupling, Drive
@@ -102,16 +103,19 @@ model.set_dressed(False)
 hdrift, hks = model.get_Hamiltonians()
 
 
+@pytest.mark.unit
 def test_model_eigenfrequencies_1() -> None:
     "Eigenfrequency of qubit 1"
     assert hdrift[3, 3] - hdrift[0, 0] == freq_q1 * 2 * np.pi
 
 
+@pytest.mark.unit
 def test_model_eigenfrequencies_2() -> None:
     "Eigenfrequency of qubit 2"
     assert hdrift[1, 1] - hdrift[0, 0] == freq_q2 * 2 * np.pi
 
 
+@pytest.mark.unit
 def test_model_couplings() -> None:
     assert hks["d1"][3, 0] == 1
     assert hks["d2"][1, 0] == 1

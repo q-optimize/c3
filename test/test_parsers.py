@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 from c3.c3objs import Quantity
 from c3.libraries.envelopes import envelopes
 from c3.signal.gates import Instruction
@@ -16,22 +17,27 @@ pmap = ParameterMap(model=model, generator=gen)
 pmap.read_config("test/instructions.cfg")
 
 
+@pytest.mark.unit
 def test_subsystems() -> None:
     assert list(model.subsystems.keys()) == ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6']
 
 
+@pytest.mark.unit
 def test_couplings() -> None:
     assert list(model.couplings.keys()) == ['Q1-Q2', 'Q4-Q6', 'd1', 'd2']
 
 
+@pytest.mark.unit
 def test_q6_freq() -> None:
     assert str(model.subsystems['Q6'].params['freq']) == '4.600 GHz 2pi '
 
 
+@pytest.mark.unit
 def test_instructions() -> None:
     assert list(pmap.instructions.keys()) == ["X90p", "Y90p", "X90m", "Y90m"]
 
 
+@pytest.mark.integration
 def test_signal_generation() -> None:
     t_final = 7e-9   # Time for single qubit gates
     sideband = 50e6 * 2 * np.pi
@@ -113,6 +119,7 @@ def test_signal_generation() -> None:
     gen.generate_signals(X90p_q1)
 
 
+@pytest.mark.unit
 def test_signal_generation_from_config() -> None:
     """
     Check that signal generation works.
@@ -120,6 +127,7 @@ def test_signal_generation_from_config() -> None:
     gen.generate_signals(pmap.instructions["X90p"])
 
 
+@pytest.mark.integration
 def test_parser_integration() -> None:
     """
     Check that an Experiment can be initialized.
@@ -127,13 +135,16 @@ def test_parser_integration() -> None:
     Exp(pmap=pmap)
 
 
+@pytest.mark.unit
 def test_model_writer() -> None:
     model.asdict()
 
 
+@pytest.mark.unit
 def test_generator_writer() -> None:
     gen.asdict()
 
 
+@pytest.mark.unit
 def test_pmap_writer() -> None:
     pmap.asdict()

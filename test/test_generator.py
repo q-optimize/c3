@@ -2,6 +2,7 @@
 
 import pickle
 import numpy as np
+import pytest
 from c3.generator.devices import LO, AWG, Mixer, Response, DigitalToAnalog, VoltsToHertz
 from c3.generator.generator import Generator
 from c3.signal.gates import Instruction
@@ -176,6 +177,7 @@ with open("test/generator_data.pickle", "rb") as filename:
     data = pickle.load(filename)
 
 
+@pytest.mark.unit
 def test_LO() -> None:
     lo_sig = lo.process(X90p_q1, "d1")
     assert (lo_sig["inphase"].numpy() - data["lo_sig"]["values"][0].numpy() < 1e-12).all()
@@ -183,12 +185,14 @@ def test_LO() -> None:
     assert (lo_sig["ts"].numpy() == data["lo_sig"]["ts"].numpy()).all()
 
 
+@pytest.mark.unit
 def test_AWG() -> None:
     awg_sig = awg.process(X90p_q1, "d1")
     assert (awg_sig["inphase"].numpy() - data["awg_sig"]["inphase"].numpy() < 1e-12).all()
     assert (awg_sig["quadrature"].numpy() - data["awg_sig"]["quadrature"].numpy() < 1e-12).all()
 
 
+@pytest.mark.unit
 def test_DAC() -> None:
     dac_sig = dac.process(X90p_q1, "d1", data["awg_sig"])
     assert (dac_sig["inphase"].numpy() - data["dig_to_an_sig"]["inphase"].numpy() < 1e-12).all()
@@ -197,12 +201,14 @@ def test_DAC() -> None:
     ).all()
 
 
+@pytest.mark.unit
 def test_Response() -> None:
     resp_sig = resp.process(X90p_q1, "d1", data["dig_to_an_sig"])
     assert (resp_sig["inphase"].numpy() - data["resp_sig"]["inphase"].numpy() < 1e-12).all()
     assert (resp_sig["quadrature"].numpy() - data["resp_sig"]["quadrature"].numpy() < 1e-12).all()
 
 
+@pytest.mark.unit
 def test_mixer() -> None:
     # For compatiblity with old dataset we need to wrap the LO output
     lo_signal = {
@@ -214,12 +220,13 @@ def test_mixer() -> None:
     assert (mixed_sig["values"].numpy() - data["mixer_sig"].numpy() < 1e-12).all()
 
 
+@pytest.mark.unit
 def test_v2hz() -> None:
     mixer_sig = {"values": data["mixer_sig"], "ts": data["lo_sig"]["ts"]}
     final_sig = v_to_hz.process(X90p_q1, "d1", mixer_sig)
     assert (final_sig["values"].numpy() - data["v2hz_sig"].numpy() < 1).all()
 
-
+@pytest.mark.integration
 def test_full_signal_chain() -> None:
     full_signal = generator.generate_signals(X90p_q1)
     assert (
