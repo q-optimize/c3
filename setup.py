@@ -4,7 +4,7 @@ setup(
     name="c3",
     version="1.0rc-dev",
     description="Toolset for control, calibration and characterization of physical systems",
-    url="c3-toolset.readthedocs.io",
+    url="http://www.q-optimize.org",
     author_email="c3@q-optimize.org",
     include_package_data=True,
     packages=[
