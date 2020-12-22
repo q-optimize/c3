@@ -263,7 +263,7 @@ class ParameterMap:
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
 
-    def set_opt_map(self, opt_map: List[List[Tuple[str]]]) -> None:
+    def set_opt_map(self, opt_map) -> None:
         """
         Set the opt_map, i.e. which parameters will be optimized.
         """
