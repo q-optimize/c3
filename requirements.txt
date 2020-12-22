@@ -29,11 +29,9 @@ Jinja2==2.11.2
 jupyter==1.0.0
 Keras-Preprocessing==1.1.2
 kiwisolver==1.2.0
-latex==0.7.0
 lazy-object-proxy==1.4.3
 Markdown==3.2.2
 MarkupSafe==1.1.1
-matplotlib==3.3.2
 multidict==4.7.6
 notebook==6.1.4
 numpy==1.18.5
