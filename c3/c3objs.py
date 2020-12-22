@@ -163,7 +163,7 @@ class Quantity:
             val = self.value
         return self.scale * (val + 1) / 2 + self.offset
 
-    def set_value(self, val: float) -> None:
+    def set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
