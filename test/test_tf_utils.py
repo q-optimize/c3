@@ -5,7 +5,8 @@ from c3.utils.tf_utils import tf_unitary_overlap
 import pytest
 from typing import Tuple, List
 
-
+@pytest.mark.tensorflow
+@pytest.mark.unit
 @pytest.mark.parametrize(
     "args",
     [

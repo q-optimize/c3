@@ -6,6 +6,7 @@ import copy
 import pickle
 import numpy as np
 from typing import List
+import pytest
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -324,7 +325,10 @@ def test_hamiltonians() -> None:
 def test_propagation() -> None:
     assert (propagator.numpy() - test_data["propagator"].numpy() < 1e-12).all()
 
-
+@pytest.mark.slow
+@pytest.mark.tensorflow
+@pytest.mark.optimizers
+@pytest.mark.integration
 def test_optim_tf_sgd() -> None:
     """
     check if optimization result is below 1e-2
@@ -332,7 +336,9 @@ def test_optim_tf_sgd() -> None:
     opt.optimize_controls()
     assert opt.current_best_goal < 0.01
 
-
+@pytest.mark.optimizers
+@pytest.mark.slow
+@pytest.mark.integration
 def test_optim_lbfgs() -> None:
     lbfgs_opt = C1(
         dir_path="/tmp/c3log/",
