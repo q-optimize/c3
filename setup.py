@@ -3,6 +3,10 @@ from distutils.core import setup
 setup(
     name="c3",
     version="1.0rc-dev",
+    description="Toolset for control, calibration and characterization of physical systems",
+    url="c3-toolset.readthedocs.io",
+    author_email="c3@q-optimize.org",
+    include_package_data=True,
     packages=[
         "c3",
         "c3/generator",
@@ -13,7 +17,21 @@ setup(
         "c3/system",
         "c3/utils",
     ],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Science/Research",
+        "Operating System :: MacOS",
+        "Operating System :: Microsoft :: Windows :: Windows 10",
+        "Operating System :: Unix",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.6",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Physics"
+    ],
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     install_requires=[
         "adaptive==0.11.1",
         "cma==3.0.3",
@@ -28,4 +46,5 @@ setup(
         "tensorflow-estimator==2.3.0",
         "tensorflow-probability==0.11.1",
     ],
+    python_requires="~=3.6",    
 )
