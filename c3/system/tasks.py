@@ -12,40 +12,27 @@ class Task(C3obj):
     """Task that is part of the measurement setup."""
 
     def __init__(
-            self,
-            name: str = " ",
-            desc: str = " ",
-            comment: str = " ",
+        self,
+        name: str = " ",
+        desc: str = " ",
+        comment: str = " ",
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-    
-    def write_config(self):
-        cfg = copy.deepcopy(self.__dict__)
-        for param in self.params:
-            cfg['params'][param] = self.params[param].tolist()
-        return cfg
+        super().__init__(name=name, desc=desc, comment=comment)
+        self.params = {}
 
 
 class InitialiseGround(Task):
     """Initialise the ground state with a given thermal distribution."""
 
     def __init__(
-            self,
-            name: str = "init_ground",
-            desc: str = " ",
-            comment: str = " ",
-            init_temp: Quantity = None
+        self,
+        name: str = "init_ground",
+        desc: str = " ",
+        comment: str = " ",
+        init_temp: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.params['init_temp'] = init_temp
+        super().__init__(name=name, desc=desc, comment=comment)
+        self.params["init_temp"] = init_temp
 
     def initialise(self, drift_H, lindbladian=False, init_temp=None):
         """
@@ -67,7 +54,7 @@ class InitialiseGround(Task):
         """
         if init_temp is None:
             init_temp = tf.cast(
-                self.params['init_temp'].get_value(), dtype=tf.complex128
+                self.params["init_temp"].get_value(), dtype=tf.complex128
             )
         diag = tf.linalg.diag_part(drift_H)
         dim = len(diag)
@@ -81,14 +68,10 @@ class InitialiseGround(Task):
             if lindbladian:
                 return tf_utils.tf_dm_to_vec(dm)
             else:
-                raise Warning(
-                    "C3:WARNING: We still need to do Von Neumann right."
-                )
+                raise Warning("C3:WARNING: We still need to do Von Neumann right.")
         else:
-            state = tf.constant(
-                qt_utils.basis(dim, 0),
-                shape=[dim, 1],
-                dtype=tf.complex128
+            state = tf.Variable(
+                qt_utils.basis(dim, 0), shape=[dim, 1], dtype=tf.complex128
             )
             if lindbladian:
                 return tf_utils.tf_dm_to_vec(tf_utils.tf_state_to_dm(state))
@@ -100,19 +83,15 @@ class ConfusionMatrix(Task):
     """Allows for misclassificaiton of readout measurement."""
 
     def __init__(
-            self,
-            name: str = "conf_matrix",
-            desc: str = " ",
-            comment: str = " ",
-            **confusion_rows
+        self,
+        name: str = "conf_matrix",
+        desc: str = " ",
+        comment: str = " ",
+        **confusion_rows
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
+        super().__init__(name=name, desc=desc, comment=comment)
         for qubit, conf_row in confusion_rows.items():
-            self.params['confusion_row_'+qubit] = conf_row
+            self.params["confusion_row_" + qubit] = conf_row
 
     def confuse(self, pops):
         """
@@ -129,7 +108,7 @@ class ConfusionMatrix(Task):
             Populations after misclassification.
 
         """
-        conf_matrix = tf.constant([[1]], dtype=tf.float64)
+        conf_matrix = tf.Variable([[1]], dtype=tf.float64)
         for conf_row in self.params.values():
             row1 = conf_row.get_value()
             row2 = tf.ones_like(row1) - row1
@@ -153,20 +132,16 @@ class MeasurementRescale(Task):
     """
 
     def __init__(
-            self,
-            name: str = "meas_rescale",
-            desc: str = " ",
-            comment: str = " ",
-            meas_offset: Quantity = None,
-            meas_scale: Quantity = None,
+        self,
+        name: str = "meas_rescale",
+        desc: str = " ",
+        comment: str = " ",
+        meas_offset: Quantity = None,
+        meas_scale: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment
-        )
-        self.params['meas_offset'] = meas_offset
-        self.params['meas_scale'] = meas_scale
+        super().__init__(name=name, desc=desc, comment=comment)
+        self.params["meas_offset"] = meas_offset
+        self.params["meas_scale"] = meas_scale
 
     def rescale(self, pop1):
         """
@@ -182,4 +157,7 @@ class MeasurementRescale(Task):
         tf.float64
             Population after rescaling.
         """
-        return pop1 * self.params['meas_scale'].get_value() + self.params['meas_offset'].get_value()
+        return (
+            pop1 * self.params["meas_scale"].get_value()
+            + self.params["meas_offset"].get_value()
+        )

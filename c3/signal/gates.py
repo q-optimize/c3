@@ -1,9 +1,11 @@
-import copy
+import hjson
 import numpy as np
-from c3.signal.pulse import InstructionComponent
+from c3.c3objs import C3obj, Quantity
+from c3.signal.pulse import Envelope, Carrier
+from c3.libraries.envelopes import gaussian_nonorm
 
 
-class Instruction():
+class Instruction:
     """
     Collection of components making up the control signal for a line.
 
@@ -34,34 +36,38 @@ class Instruction():
     """
 
     def __init__(
-            self,
-            name: str = " ",
-            channels: list = [],
-            t_start: np.float64 = 0.0,
-            t_end: np.float64 = 0.0,
-            ):
+        self,
+        name: str = " ",
+        channels: list = [],
+        t_start: np.float64 = 0.0,
+        t_end: np.float64 = 0.0,
+    ):
         self.name = name
         self.t_start = t_start
         self.t_end = t_end
-        self.comps = {}
+        self.comps = {}  # type: ignore
         for chan in channels:
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
 
-    def write_config(self):
-        cfg = copy.deepcopy(self.__dict__)
-        for chan in self.comps:
-            for comp in self.comps[chan]:
-                cfg['comps'][chan][comp] = self.comps[chan][comp].write_config()
-        return cfg
+    def asdict(self) -> dict:
+        components = {}  # type:ignore
+        for chan, item in self.comps.items():
+            components[chan] = {}
+            for key, comp in item.items():
+                components[chan][key] = comp.asdict()
+        return {"gate_length": self.t_end - self.t_start, "drive_channels": components}
 
-    def add_component(self, comp: InstructionComponent, chan: str):
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict())
+
+    def add_component(self, comp: C3obj, chan: str) -> None:
         """
         Add one component, e.g. an envelope, local oscillator, to a channel.
 
         Parameters
         ----------
-        comp : InstructionComponent
+        comp : C3obj
             Component to be added.
         chan : str
             Identifier for the target channel
@@ -69,10 +75,26 @@ class Instruction():
         """
         self.comps[chan][comp.name] = comp
 
-
-def merge_instructions(gates: list):
-    pass
-
-
-def stack_instructions(gates: list):
-    pass
+    def quick_setup(self, chan, qubit_freq, gate_time, v2hz=1, sideband=None) -> None:
+        """
+        Initialize this instruction with a default envelope and carrier.
+        """
+        pi_half_amp = np.pi / 2 / gate_time / v2hz * 2 * np.pi
+        env_params = {
+            "t_final": Quantity(value=gate_time, unit="s"),
+            "amp": Quantity(
+                value=pi_half_amp,
+                min_val=0.0,
+                max_val=3*pi_half_amp,
+                unit="V"),
+        }
+        carrier_freq = qubit_freq
+        if sideband:
+            env_params["freq_offset"] = Quantity(value=sideband, unit="Hz 2pi")
+            carrier_freq -= sideband
+        self.comps[chan]["gaussian"] = Envelope(
+            "gaussian", shape=gaussian_nonorm, params=env_params
+        )
+        self.comps[chan]["carrier"] = Carrier(
+            "Carr_" + chan, params={"freq": Quantity(value=carrier_freq, unit="Hz 2pi")}
+        )

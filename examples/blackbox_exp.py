@@ -167,7 +167,7 @@ def create_experiment():
     awg = devices.AWG(name='awg', resolution=awg_res)
     mixer = devices.Mixer(name='mixer')
 
-    v_to_hz = devices.Volts_to_Hertz(
+    v_to_hz = devices.VoltsToHertz(
         name='v_to_hz',
         V_to_Hz=Qty(
             value=v2hz,
@@ -176,7 +176,7 @@ def create_experiment():
             unit='Hz 2pi/V'
         )
     )
-    dig_to_an = devices.Digital_to_Analog(
+    dig_to_an = devices.DigitalToAnalog(
         name="dac",
         resolution=sim_res
     )

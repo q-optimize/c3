@@ -8,19 +8,32 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
-import matplotlib.pyplot as plt
 
+envelopes = dict()
+
+
+def env_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    envelopes[str(func.__name__)] = func
+    return func
+
+
+@env_reg_deco
 def no_drive(t, params):
     """Do nothing."""
     return tf.zeros_like(t, dtype=tf.float64)
 
 
+@env_reg_deco
 def pwc(t, params):
     """Piecewise constant pulse."""
     # TODO make pwc return actual values like other envelopes
     return params
 
 
+@env_reg_deco
 def pwc_symmetric(t, params):
     """symmetic PWC pulse
     This works only for inphase component"""
@@ -37,7 +50,7 @@ def pwc_symmetric(t, params):
     return shape
 
 
-
+@env_reg_deco
 def fourier_sin(t, params):
     """Fourier basis of the pulse constant pulse (sin).
 
@@ -69,6 +82,7 @@ def fourier_sin(t, params):
     return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
 
 
+@env_reg_deco
 def fourier_cos(t, params):
     """Fourier basis of the pulse constant pulse (cos).
 
@@ -96,13 +110,16 @@ def fourier_cos(t, params):
     return tf.reduce_sum(amps * tf.cos(freqs * t), 0)
 
 
+@env_reg_deco
 def rect(t, params):
     """Rectangular pulse. Returns 1 at every time step."""
     return tf.ones_like(t, dtype=tf.float64)
 
+
+@env_reg_deco
 def trapezoid(t, params):
     """Trapezoidal pulse. Width of linear slope.
-    
+
     Parameters
     ----------
     params : dict
@@ -120,6 +137,7 @@ def trapezoid(t, params):
     return envelope
 
 
+@env_reg_deco
 def flattop_risefall(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
 
@@ -141,6 +159,7 @@ def flattop_risefall(t, params):
            (1 + tf.math.erf((-t + t_down) / risefall)) / 2
 
 
+@env_reg_deco
 def flattop(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
 
@@ -161,6 +180,8 @@ def flattop(t, params):
     return (1 + tf.math.erf((t - t_up) / (risefall))) / 2 * \
            (1 + tf.math.erf((-t + t_down) / (risefall))) / 2
 
+
+@env_reg_deco
 def flattop_cut(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
 
@@ -181,6 +202,8 @@ def flattop_cut(t, params):
     shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
     return tf.clip_by_value(shape,0,2)
 
+
+@env_reg_deco
 def flattop_cut_center(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
 
@@ -205,6 +228,7 @@ def flattop_cut_center(t, params):
     return shape
 
 
+@env_reg_deco
 def slepian_fourier(t, params):
     """
     ----
@@ -219,13 +243,20 @@ def slepian_fourier(t, params):
         shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
     shape = tf.where(tf.abs(t_final/2 - t) > width / 2, tf.zeros_like(t), shape)
     shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
-    shape = shape * (1 - offset/amp) + offset/amp 
+    shape = shape * (1 - offset/amp) + offset/amp
     # plt.plot(t, shape)
     # plt.show()
     return shape
 
 
+@env_reg_deco
+def flattop_risefall_1ns(t, params):
+    """Flattop gaussian with fixed width of 1ns."""
+    params['risefall'] = 1e-9
+    return flattop_risefall(t, params)
 
+
+@env_reg_deco
 def gaussian_sigma(t, params):
     """
     Normalized gaussian. Total area is 1, maximum is determined accordingly.
@@ -249,6 +280,7 @@ def gaussian_sigma(t, params):
     return (gauss - offset) / norm
 
 
+@env_reg_deco
 def gaussian(t, params):
     """
     Normalized gaussian with fixed time/sigma ratio.
@@ -269,6 +301,7 @@ def gaussian(t, params):
     return gaussian_sigma(t, params)
 
 
+@env_reg_deco
 def gaussian_nonorm(t, params):
     """
     Non-normalized gaussian. Maximum value is 1, area is given by length.
@@ -289,6 +322,7 @@ def gaussian_nonorm(t, params):
     return gauss
 
 
+@env_reg_deco
 def gaussian_der_nonorm(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
@@ -298,6 +332,7 @@ def gaussian_der_nonorm(t, params):
     return gauss_der
 
 
+@env_reg_deco
 def gaussian_der(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
@@ -310,6 +345,7 @@ def gaussian_der(t, params):
     return gauss_der / norm
 
 
+@env_reg_deco
 def drag_sigma(t, params):
     """Second order gaussian."""
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
@@ -322,6 +358,7 @@ def drag_sigma(t, params):
     return (drag - offset) ** 2 / norm
 
 
+@env_reg_deco
 def drag(t, params):
     """Second order gaussian with fixed time/sigma ratio."""
     DeprecationWarning("Using standard width. Better use drag_sigma.")
@@ -334,6 +371,7 @@ def drag(t, params):
     return drag_sigma(t, params)
 
 
+@env_reg_deco
 def drag_der(t, params):
     """Derivative of second order gaussian."""
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
@@ -348,6 +386,7 @@ def drag_der(t, params):
     return der
 
 
+@env_reg_deco
 def flattop_variant(t, params):
     """
     Flattop variant.

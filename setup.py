@@ -1,8 +1,12 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
-    name="c3",
-    version="1.0rc",
+    name="c3-toolset",
+    version="1.1",
+    description="Toolset for control, calibration and characterization of physical systems",
+    url="http://www.q-optimize.org",
+    author_email="c3@q-optimize.org",
+    include_package_data=True,
     packages=[
         "c3",
         "c3/generator",
@@ -13,18 +17,33 @@ setup(
         "c3/system",
         "c3/utils",
     ],
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "License :: OSI Approved :: Apache Software License",
+        "Intended Audience :: Science/Research",
+        "Operating System :: MacOS",
+        "Operating System :: Microsoft :: Windows :: Windows 10",
+        "Operating System :: Unix",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.6",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Physics"
+    ],
     long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     install_requires=[
         "adaptive==0.11.1",
         "cma==3.0.3",
         "cython",
         "ipython==7.15.0",
-        "latex==0.7.0",
-        "matplotlib==3.3.2",
+	    "hjson==3.0.2",
+        "rich==9.2.0",
         "numpy==1.18.5",
         "scipy==1.5.2",
         "tensorflow==2.3.1",
         "tensorflow-estimator==2.3.0",
         "tensorflow-probability==0.11.1",
     ],
+    python_requires="~=3.6",    
 )

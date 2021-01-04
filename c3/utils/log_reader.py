@@ -1,43 +1,50 @@
 #!/usr/bin/python -u
 
 import argparse
-import json
+import hjson
 import numpy as np
 from c3.utils.utils import num3str
+from rich.console import Console
+from rich.table import Table
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("log_file")
 args = parser.parse_args()
 
-with open(args.log_file) as file:
-    log = json.load(file)
+log = None
 
-opt_map = log["opt_map"]
-optim_status = log["optim_status"]
-units = log["units"]
-params = optim_status["params"]
-grads = optim_status["gradient"]
+try:
+    with open(args.log_file) as file:
+        log = hjson.load(file)
+except FileNotFoundError:
+    print("Logfile not found.")
 
-print(f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n")
-print("|------Parameter--------------------------------Value-----------Gradient--|")
-ret = []
-for ii in range(len(opt_map)):
-    equiv_ids = opt_map[ii]
-    par = params[ii]
-    grad = grads[ii]
-    if units[ii] == "Hz 2pi":
-        par = par / 2 / np.pi
-        grad = grad / 2 / np.pi
-        
-    par = num3str(par)
-    grad = num3str(grad)
-    par_id = equiv_ids[0]
-    nice_id = "-".join(par_id)
-    ret.append(f"{nice_id:38}: {par+units[ii]:>16} {grad+units[ii]:>16}\n")
-    if len(equiv_ids) > 1:
-        for par_id in equiv_ids[1:]:
-            ret.append("-".join(par_id))
-            ret.append("\n")
-        ret.append("\n")
-                
-print("".join(ret))
+if log:
+    opt_map = log["opt_map"]
+    optim_status = log["optim_status"]
+    units = log["units"]
+    params = optim_status["params"]
+    grads = optim_status["gradient"]
+
+    print(f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n")
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Parameter")
+    table.add_column("Value", justify="right")
+    table.add_column("Gradient", justify="right")
+    for ii in range(len(opt_map)):
+        equiv_ids = opt_map[ii]
+        par = params[ii]
+        grad = grads[ii]
+        par = num3str(par)
+        grad = num3str(grad)
+        par_id = equiv_ids[0]
+        nice_id = "-".join(par_id)
+        table.add_row(nice_id, par+units[ii], grad+units[ii])
+        if len(equiv_ids) > 1:
+            for par_id in equiv_ids[1:]:
+                nice_id = "-".join(par_id)
+                table.add_row(nice_id, "''", "''")
+
+console = Console()
+console.print(table)
