@@ -37,6 +37,7 @@ setup(
         "cma==3.0.3",
         "cython",
         "ipython==7.15.0",
+        "gast==0.3.3",
 	    "hjson==3.0.2",
         "rich==9.2.0",
         "numpy==1.18.5",
