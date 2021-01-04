@@ -195,21 +195,39 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
-    
+#     def update_drift_eigen(self, ordered=True):
+#         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
+#         transformation matrix."""
+#         e, v = tf.linalg.eigh(self.drift_H)
+#         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
+#         if ordered:
+#             eigenframe = tf.linalg.matvec(reorder_matrix, e)
+#             transform = tf.matmul(v, tf.transpose(reorder_matrix))
+#         else:
+#             eigenframe = tf.linalg.diag(e)
+#             transform = v
+#         self.eigenframe = eigenframe
+#         self.transform = transform
+        
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
         transformation matrix."""
         # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
-        reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
-            eigenframe = tf.linalg.matvec(reorder_matrix, e)
-            transform = tf.matmul(v, tf.transpose(reorder_matrix))
+            reorder_matrix = tf.round(tf.abs(v)**2)
+            signed_rm = tf.cast(tf.sign(tf.math.real(v)) * reorder_matrix, dtype=tf.complex128)
+            eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
+            transform = tf.matmul(v, tf.transpose(signed_rm))
         else:
-            eigenframe = e
+            eigenframe = tf.math.real(e)
             transform = v
+#             reorder =  tf.linalg.matvec(np.abs(reorder_matrix),tf.arange(18,dtype=tf.complex128))
+#             self.ordered_labels = [self.state_labels[int(index)] for index in reorder]
+#             self.reorder_matrix = reorder_matrix
         self.eigenframe = eigenframe
-        self.transform = transform
+        self.transform = tf.cast(transform,dtype=tf.complex128)
+
 
     def update_dressed(self, ordered=True):
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
@@ -279,11 +297,11 @@ class Model:
                 dtype=tf.complex128
             )
             # TODO test this
-            if self.dressed:
-                num_oper = tf.matmul(
-                    tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
-                    self.transform
-                )
+            # if self.dressed:
+            #     num_oper = tf.matmul(
+            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
+            #         self.transform
+            #     )
             exponent = exponent +\
                 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)

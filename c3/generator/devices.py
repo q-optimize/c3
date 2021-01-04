@@ -358,6 +358,76 @@ class FluxTuning(Device):
         return self.freq
 
 
+class FluxTuningLinear(Device):
+    """
+    Flux tunable qubit frequency linear adjustment.
+
+    Parameters
+    ----------
+    phi_0 : Quantity
+        Flux bias.
+    Phi : Quantity
+        Current flux.
+    omega_0 : Quantity
+        Maximum frequency.
+
+    """
+
+    def __init__(
+            self,
+            name: str = " ",
+            desc: str = " ",
+            comment: str = " ",
+            resolution: np.float64 = 0.0,
+            phi_0: np.float = 0.0,
+            phi: np.float = 0.0,
+            omega_0: np.float = 0.0,
+            d = None
+    ):
+
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            resolution=resolution
+        )
+        self.params['phi_0'] = phi_0
+        self.params['phi'] = phi
+        self.params['omega_0'] = omega_0
+        if d:
+            self.params['d'] = d
+        self.freq = None
+
+    def frequency(self, signal):
+        """
+        Compute the qubit frequency resulting from an applied flux.
+
+        Parameters
+        ----------
+        signal : tf.float64
+
+
+        Returns
+        -------
+        tf.float64
+            Qubit frequency.
+        """
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        phi = self.params['phi'].get_value()
+        omega_0 = self.params['omega_0'].get_value()
+        phi_0 = self.params['phi_0'].get_value()
+        if 'd' in self.params:
+            d = self.params['d'].get_value()
+            max_freq = omega_0               
+            min_freq = omega_0 * tf.sqrt(tf.sqrt(
+                tf.cos(pi * 0.5)**2 + d**2 * tf.sin(pi * 0.5)**2
+            ))
+        else:
+            max_freq = omega_0
+            min_freq = tf.constant(0.0, dtype=tf.float64)
+        self.freq = 2 * (signal-phi) * (min_freq - max_freq)
+        return self.freq
+
 class Response(Device):
     """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
 
@@ -888,6 +958,9 @@ class AWG(Device):
 
     def enable_drag_2(self):
         self.__options = 'drag_2'
+        
+    def enable_pwc(self):
+        self.__options = 'pwc'
 
     def log_shapes(self):
         # TODO log shapes in the generator instead
