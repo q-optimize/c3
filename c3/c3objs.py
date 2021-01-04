@@ -97,10 +97,16 @@ class Quantity:
         try:
             self.set_value(value)
         except ValueError:
-            raise ValueError(
-                f"Value has to be within {min:.3} .. {max:.3}"
-                f" but is {value:.3}."
-            )
+            try:
+                raise ValueError(
+                    f"Value has to be within {min:.3} .. {max:.3}"
+                    f" but is {value:.3}."
+                )
+            except TypeError:
+                raise ValueError(
+                    f"Value has to be within {min} .. {max}"
+                    f" but is {value}."
+                )
         self.symbol = symbol
         self.unit = unit
         if hasattr(value, "shape"):
@@ -153,9 +159,8 @@ class Quantity:
             ret += num3str(q, use_prefix) + self.unit + " "
         return ret
 
-    # TODO not consistent if array    
-    def __float__(self):
-        return self.numpy()
+    def tolist(self):
+        return self.numpy().tolist()
 
     def numpy(self):
         """
@@ -185,7 +190,7 @@ class Quantity:
         if np.any(tmp < -1) or np.any(tmp > 1):
             # TODO choose which error to raise
             # raise Exception(f"Value {val} out of bounds for quantity.")
-            raise ValueError(f"Value {val} out of bounds ({self.offset},{self.offset+self.scale})for quantity.")
+            raise ValueError(f"Value {val} out of bounds ({self.offset}, {self.offset + self.scale})for quantity.")
             # TODO if we want we can extend bounds when force flag is given
         else:
             self.value = tf.constant(tmp, dtype=tf.float64)
@@ -205,7 +210,13 @@ class Quantity:
         self.value = tf.acos(tf.cos(
             (tf.reshape(val, self.shape) + 1) * np.pi / 2
         )) / np.pi * 2 - 1
+        # TODO ask Niklas about this code
+        # self.value = 0.810535 * tf.sin(0.5 * np.pi * val) - \
+        #              0.09002924 * tf.sin(0.5 * np.pi * val * 3) + \
+        #              0.03238869 * tf.sin(0.5 * np.pi * val * 3)
 
+    def get_range(self):
+        return self.offset, self.offset + self.scale
 
 class ParameterMap:
     """
@@ -269,14 +280,14 @@ class ParameterMap:
         Returns the full parameter vector, including model and control parameters.
         """
         return self.__pars
-    
+
     def get_opt_units(self):
         """
         Returns a list of the units of the optimized quantities.
         """
         units = []
         for equiv_ids in self.opt_map:
-            units.append(self.__pars[equiv_ids[0]].unit)    
+            units.append(self.__pars[equiv_ids[0]].unit)
         return units
 
     def get_parameters(self):
@@ -366,7 +377,7 @@ class ParameterMap:
 
         """
         val_indx = 0
-        for equiv_ids in self.opt_map:        
+        for equiv_ids in self.opt_map:
             par_len = self.__pars[equiv_ids[0]].length
             for id in equiv_ids:
                 par = self.__pars[id]

@@ -80,14 +80,24 @@ class Generator:
             dig_to_an = self.devices["dac"]
             if "resp" in self.devices:
                 resp = self.devices["resp"]
+            if "highpass" in self.devices:
+                highpass = self.devices["highpass"]
             if "fluxbias" in self.devices:
                 fluxbias = self.devices["fluxbias"]
             if "lo_noise" in self.devices:
                 lo_noise = self.devices["lo_noise"]
             if "pink_noise" in self.devices:
                 pink_noise = self.devices["pink_noise"]
+            if "flux_noise" in self.devices:
+                flux_noise = self.devices["flux_noise"]
             if "awg_pink_noise" in self.devices:
                 awg_pink_noise = self.devices["awg_pink_noise"]
+            if "awg_noise" in self.devices:
+                awg_noise = self.devices["awg_noise"]
+            if "signal_noise" in self.devices:
+                signal_noise = self.devices["signal_noise"]
+            if "dc_noise" in self.devices:
+                dc_noise = self.devices["dc_noise"]
             t_start = instr.t_start
             t_end = instr.t_end
             for chan in instr.comps:
@@ -95,6 +105,8 @@ class Generator:
                 components = instr.comps[chan]
                 lo_signal, omega_lo = lo.create_signal(components, t_start, t_end)
                 awg_signal = awg.create_IQ(chan, components, t_start, t_end)
+                if "awg_noise" in self.devices:
+                    awg_signal = awg_noise.distort(awg_signal)
                 flat_signal = dig_to_an.resample(awg_signal, t_start, t_end)
                 if "resp" in self.devices:
                     conv_signal = resp.process(flat_signal)
@@ -102,12 +114,20 @@ class Generator:
                     conv_signal = flat_signal
                 if "awg_pink_noise" in self.devices:
                     conv_signal = awg_pink_noise.distort(conv_signal)
+                if "highpass" in self.devices:
+                    conv_signal = highpass.process(conv_signal)
                 if "lo_noise" in self.devices:
                     lo_signal = lo_noise.distort(lo_signal)
                 signal = mixer.combine(lo_signal, conv_signal)
-                if "pink_noise" in self.devices:
-                    signal = pink_noise.distort(signal)
+                if "signal_noise" in self.devices:
+                    signal = signal_noise.distort(signal)
                 if "fluxbias" in self.devices and (chan == "TC" or chan == "FluxDrive"):
+                    if "dc_noise" in self.devices:
+                        signal = dc_noise.distort(signal)
+                    if "dc_offset" in self.devices:
+                        signal = self.devices["dc_offset"].distort(signal)
+                    if "flux_noise" in self.devices:
+                        signal = flux_noise.distort(signal)
                     signal = fluxbias.frequency(signal)
                 else:
                     signal = v_to_hz.transform(signal, omega_lo)

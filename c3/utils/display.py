@@ -18,10 +18,10 @@ rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 # for Palatino and other serif fonts use:
 # rc('font',**{'family':'serif','serif':['Palatino']})
 
-if find_executable('latex'):
-    rc('text', usetex=True)
-else:
-    print('Latex was not found and will not be used')
+# if find_executable('latex'):
+#     rc('text', usetex=True)
+# else:
+#     print('Latex was not found and will not be used')
 
 plots = dict()
 

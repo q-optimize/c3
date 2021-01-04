@@ -8,6 +8,7 @@ Given this information an experiment run is simulated, returning either processe
 """
 
 import os
+import shutil
 import json
 import pickle
 import itertools
@@ -304,7 +305,7 @@ class Experiment:
         """
         self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
-    def set_enable_dynamics_plots(self, flag, logdir):
+    def set_enable_dynamics_plots(self, flag, logdir, exist_ok=False):
         """
         Plotting of time-resolved populations.
 
@@ -318,10 +319,10 @@ class Experiment:
         self.enable_dynamics_plots = flag
         self.logdir = logdir
         if self.enable_dynamics_plots:
-            os.mkdir(self.logdir + "dynamics/")
+            os.makedirs(self.logdir + "dynamics/", exist_ok=exist_ok)
             self.dynamics_plot_counter = 0
 
-    def set_enable_pules_plots(self, flag, logdir):
+    def set_enable_pules_plots(self, flag, logdir, exist_ok=False):
         """
         Plotting of pulse shapes.
 
@@ -335,10 +336,10 @@ class Experiment:
         self.enable_pulses_plots = flag
         self.logdir = logdir
         if self.enable_pulses_plots:
-            os.mkdir(self.logdir + "pulses/")
+            os.makedirs(self.logdir + "pulses/", exist_ok=exist_ok)
             self.pulses_plot_counter = 0
 
-    def set_enable_store_unitaries(self, flag, logdir):
+    def set_enable_store_unitaries(self, flag, logdir, exist_ok=False):
         """
         Saving of unitary propagators.
 
@@ -352,7 +353,7 @@ class Experiment:
         self.enable_store_unitaries = flag
         self.logdir = logdir
         if self.enable_store_unitaries:
-            os.mkdir(self.logdir + "unitaries/")
+            os.makedirs(self.logdir + "unitaries/", exist_ok=exist_ok)
             self.store_unitaries_counter = 0
 
     def plot_dynamics(self, psi_init, seq, goal=None, debug=False, oper=None, title=False):
@@ -461,12 +462,14 @@ class Experiment:
 
         Parameters
         ----------
-        instr : str
+        instr : Instruction
             Identifier of the current instruction.
         goal: tf.float64
             Value of the goal function, if used.
         debug: boolean
             If true, return a matplotlib figure instead of saving.
+        title: boolean
+            If true, include a title in the saved figure, according to the experiment name
         """
         generator = self.pmap.generator
         signal, ts = generator.generate_signals(instr)
@@ -480,7 +483,11 @@ class Experiment:
             foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
             if not os.path.exists(foldername):
                 os.mkdir(foldername)
-            os.mkdir(foldername + str(instr.name).replace(':','.') + "/")
+            pulsefolder = foldername + str(instr.name).replace(':', '.') + "/"
+            if os.path.exists(pulsefolder):
+                Warning(f"Pulsefolder was replaced: {pulsefolder}")
+                shutil.rmtree(pulsefolder)
+            os.mkdir(pulsefolder)
 
         fig, axs = plt.subplots(1, 1)
 
@@ -509,6 +516,14 @@ class Experiment:
                     logfile.write(f"{channel}, quadrature :\n")
                     logfile.write(json.dumps(quadrature.numpy().tolist()))
                     logfile.write("\n")
+        if not debug:
+            with open(
+                    self.logdir + f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':', '.')}/awg.log",
+                    'a+'
+            ) as logfile:
+                logfile.write(f"ts :\n")
+                logfile.write(json.dumps(awg.ts.numpy().tolist()))
+                logfile.write("\n")
         if debug:
             plt.show()
         else:
@@ -608,6 +623,105 @@ class Experiment:
             )
         plt.cla()
         plt.close("all")
+
+
+    def plot_all_pulses(self, instr, goal=-1, debug=False, title=False):
+        """
+        Plotting of pulse shapes.
+
+        Parameters
+        ----------
+        instr : str
+            Identifier of the current instruction.
+        goal: tf.float64
+            Value of the goal function, if used.
+        debug: boolean
+            If true, return a matplotlib figure instead of saving.
+        """
+        signal, ts = self.generator.generate_signals(instr)
+
+        if debug:
+            pass
+        else:
+            # TODO Use os module to build paths
+            foldername = self.logdir + "pulses/eval_" + str(self.pulses_plot_counter) + "_" + str(goal) + "/"
+            if not os.path.exists(foldername):
+                os.mkdir(foldername)
+            os.mkdir(foldername + str(instr.name).replace(':', '.') + "/")
+
+        for key, device in self.generator.devices.items():
+
+            try:
+                device_ts = device.ts
+                no_time = False
+            except AttributeError:
+                device_ts = None
+                no_time = True
+
+            fig, axs = plt.subplots(1, 1)
+
+            if type(device.signal) is not dict:
+                signal = {'signal': device.signal}
+            else:
+                signal = device.signal
+            for channel in signal:
+                if type(signal[channel]) is dict:
+                    inphase = signal[channel]["inphase"]
+                    quadrature = signal[channel]["quadrature"]
+                    if device_ts is None:
+                        device_ts = np.arange(len(inphase)) * 1e-9
+                    axs.plot(device_ts / 1e-9, inphase/1e-3, label="I " + channel)
+                    axs.plot(device_ts / 1e-9, quadrature/1e-3, label="Q " + channel)
+
+                elif type(signal[channel]) is tuple:
+                    for i, sig in enumerate(signal[channel]):
+                        if len(sig.shape) > 0:
+                            if device_ts is None:
+                                axs.plot(range(len(sig)), sig / 1e-3, label=channel + " " + str(i))
+                            else:
+                                axs.plot(device_ts / 1e-9, sig / 1e-3, label=channel + " " + str(i))
+                else:
+                    if len(signal[channel].shape) > 0:
+                        if device_ts is None:
+                            axs.plot(range(len(signal[channel])), signal[channel] / 1e-3, label=channel + " " + str(i))
+                        else:
+                            axs.plot(device_ts / 1e-9, signal[channel] / 1e-3, label=channel + " " + str(i))
+
+
+                if debug or key is not 'awg':
+                    pass
+                else:
+                    # TODO better way of changing name of instruction on Windows.
+                    with open(
+                        self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/{key}.log",
+                        'a+'
+                    ) as logfile:
+                        logfile.write(f"{channel}, inphase :\n")
+                        logfile.write(json.dumps(inphase.numpy().tolist()))
+                        logfile.write("\n")
+                        logfile.write(f"{channel}, quadrature :\n")
+                        logfile.write(json.dumps(quadrature.numpy().tolist()))
+                        logfile.write("\n")
+            axs.grid()
+            if title:
+                axs.set_title(key + ": " + self.name)
+            else:
+                axs.set_title(key)
+            if not no_time:
+                axs.set_xlabel('Time [ns]')
+            axs.set_ylabel('Pulse amplitude[mV]')
+            plt.legend()
+            if debug:
+                plt.show()
+            else:
+                plt.savefig(
+                    self.logdir+f"pulses/eval_{self.pulses_plot_counter}_{goal}/{str(instr.name).replace(':','.')}/"
+                    f"{key}_{list(instr.comps.keys())}.png",
+                    dpi=300
+                )
+
+                plt.cla()
+                plt.close("all")
 
     def store_Udict(self, goal):
         """

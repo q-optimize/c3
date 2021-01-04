@@ -26,7 +26,7 @@ class Task(C3obj):
     def write_config(self):
         cfg = copy.deepcopy(self.__dict__)
         for param in self.params:
-            cfg['params'][param] = float(self.params[param])
+            cfg['params'][param] = self.params[param].tolist()
         return cfg
 
 

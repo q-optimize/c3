@@ -35,9 +35,9 @@ class InstructionComponent(C3obj):
         cfg = copy.deepcopy(self.__dict__)
         for param in self.params:
             if isinstance(self.params[param], Qty):
-                cfg['params'][param] = self.params[param].numpy()
+                cfg['params'][param] = self.params[param].tolist()
         if 'shape' in cfg:
-            cfg['shape'] = self.shape.__name__
+            cfg['shape'] = self.shape.__name__ if self.shape else 'None'
         return cfg
 
 
@@ -124,6 +124,51 @@ class Envelope(InstructionComponent):
         # With the offset, we make sure the signal starts with amplitude 0.
         return vals*mask
 
+
+class EnvelopeNetZero(Envelope):
+    """
+    Represents the envelopes shaping a pulse.
+
+    Parameters
+    ----------
+    shape: function
+        function evaluating the shape in time
+    params: dict
+        Parameters of the envelope
+        Note: t_final 
+    """
+    def __init__(
+            self,
+            name: str,
+            desc: str = " ",
+            comment: str = " ",
+            params: dict = {},
+            shape: types.FunctionType = None,
+            ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            shape=shape,
+            )
+        
+    def get_shape_values(self, ts, t_before=None):
+        """Return the value of the shape function at the specified times.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        t_before : tf.float64
+            Offset the beginning of the shape by this time.
+        """
+        N_red = len(ts) // 2
+        ts_red = tf.split(ts, [N_red, len(ts) - N_red], 0)[0]
+        shape_values = super().get_shape_values(ts=ts_red, t_before=t_before)
+        netzero_shape_values = tf.concat([shape_values, -shape_values, [0] * (len(ts) % 2)], axis=0)
+        return netzero_shape_values
+        
 
 class Carrier(InstructionComponent):
     """Represents the carrier of a pulse."""

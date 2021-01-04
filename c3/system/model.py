@@ -112,6 +112,9 @@ class Model:
         del cfg['ann_opers']
         del cfg['control_Hs']
         del cfg['dressed_control_Hs']
+        if 'col_ops' in cfg:
+            del cfg['col_ops']
+            del cfg['dressed_col_ops']
         
         return cfg
 
@@ -166,12 +169,12 @@ class Model:
         else:
             return self.col_ops
 
-    def update_model(self):
+    def update_model(self, ordered=True):
         self.update_Hamiltonians()
         if self.lindbladian:
             self.update_Lindbladians()
         if self.dressed:
-            self.update_dressed()
+            self.update_dressed(ordered=ordered)
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
@@ -208,7 +211,7 @@ class Model:
 #             transform = v
 #         self.eigenframe = eigenframe
 #         self.transform = transform
-        
+
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
         transformation matrix."""
@@ -226,8 +229,7 @@ class Model:
 #             self.ordered_labels = [self.state_labels[int(index)] for index in reorder]
 #             self.reorder_matrix = reorder_matrix
         self.eigenframe = eigenframe
-        self.transform = tf.cast(transform,dtype=tf.complex128)
-
+        self.transform = tf.cast(transform, dtype=tf.complex128)
 
     def update_dressed(self, ordered=True):
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting

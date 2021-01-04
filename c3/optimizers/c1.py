@@ -146,7 +146,10 @@ class C1(Optimizer):
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.get_gates()
-        goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        try:
+            goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        except TypeError:
+            goal = self.fid_func(self.exp, propagators, self.index, dims, self.evaluation + 1)
         try:
             display.plot_C1(self.logdir, interactive=self.interactive)
         except TypeError:
@@ -177,16 +180,16 @@ class C1(Optimizer):
 
         import os
         import pickle
-        import numpy as np
-        if not os.path.exists(self.logdir + "unitaries/"):
-            os.mkdir(self.logdir + "unitaries/")
-        folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal) + "/"
-        if not os.path.exists(folder):
-            os.mkdir(folder)
-        with open(folder + 'Us.pickle', 'wb+') as file:
-            pickle.dump(U_dict, file)
-        for key, value in U_dict.items():
-            np.savetxt(folder + key + ".txt", value)
+        # import numpy as np
+        # if not os.path.exists(self.logdir + "unitaries/"):
+        #     os.mkdir(self.logdir + "unitaries/")
+        # folder = self.logdir + "unitaries/eval_" + str(self.evaluation) + "_" + str(goal) + "/"
+        # if not os.path.exists(folder):
+        #     os.mkdir(folder)
+        # with open(folder + 'Us.pickle', 'wb+') as file:
+        #     pickle.dump(U_dict, file)
+        # for key, value in U_dict.items():
+        #     np.savetxt(folder + key + ".txt", value)
 
         return goal
 

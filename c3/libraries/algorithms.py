@@ -271,7 +271,7 @@ def lbfgs(x0, fun=None, fun_grad=None, grad_lookup=None, options={}):
         Scipy result object.
     """
     # TODO print from the log not from here
-    options.update({'disp': True})
+    # options.update({'disp': True})
     return minimize(
         fun_grad,
         x0,
