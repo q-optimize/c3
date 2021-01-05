@@ -288,13 +288,11 @@ class SymmetricTransmon(PhysicalComponent):
         return biased_freq
 
     def init_Hs(self, ann_oper):
-        self.Hs["freq"] = tf.Variable(
-            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
-        )
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
-            self.Hs['anhar'] = tf.constant(
-                duffing(ann_oper), dtype=tf.complex128
-            )
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
 
     def init_Ls(self, ann_oper):
         pass
@@ -382,13 +380,11 @@ class AsymmetricTransmon(PhysicalComponent):
         return biased_freq
 
     def init_Hs(self, ann_oper):
-        self.Hs["freq"] = tf.Variable(
-            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
-        )
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
-            self.Hs['anhar'] = tf.constant(
-                duffing(ann_oper), dtype=tf.complex128
-            )
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
 
     def init_Ls(self, ann_oper):
         """
