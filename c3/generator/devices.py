@@ -4,12 +4,12 @@ import copy
 import tempfile
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj
 
 devices = dict()
-
 
 def dev_reg_deco(func):
     """
@@ -29,13 +29,15 @@ class Device(C3obj):
     """
 
     def __init__(self, **props):
-        self.inputs = props.pop("inputs", 0)
-        self.outputs = props.pop("outputs", 0)
+        if "inputs" not in self.__dict__:
+            self.inputs = props.pop("inputs", 0)
+        if "outputs" not in self.__dict__:
+            self.outputs = props.pop("outputs", 0)
         self.resolution = props.pop("resolution", 0)
         name = props.pop("name")
         desc = props.pop("desc", "")
         comment = props.pop("comment", "")
-        params = props.pop("params", None)
+        params = props
         super().__init__(name, desc, comment, params)
         self.signal = {}
 
@@ -164,10 +166,8 @@ class VoltsToHertz(Device):
         Drive frequency offset.
     """
 
-    def __init__(self, V_to_Hz=None, **props):
+    def __init__(self, **props):
         super().__init__(**props)
-        if V_to_Hz:
-            self.params["V_to_Hz"] = V_to_Hz
 
     def process(self, instr, chan, mixed_signal):
         """Transform signal from value of V to Hz.
@@ -196,8 +196,10 @@ class DigitalToAnalog(Device):
 
     def __init__(self, **props):
         super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.ts = None
-        self.sampling_method = sampling_method
+        self.sampling_method = props.pop("sampling_method", "nearest")
 
     def process(self, instr, chan, awg_signal):
         """Resample the awg values to higher resolution.
@@ -271,7 +273,7 @@ class FluxTuning(Device):
     ----------
     phi_0 : Quantity
         Flux bias.
-    Phi : Quantity
+    phi : Quantity
         Current flux.
     omega_0 : Quantity
         Maximum frequency.
@@ -279,14 +281,15 @@ class FluxTuning(Device):
     """
     def __init__(self, **props):
         super().__init__(**props)
-        for par in ["phi_0", "Phi", "omega_0"]:
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
+        for par in ["phi_0", "phi", "omega_0"]:
             if not par in self.params:
                 raise Exception(
                     f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
                 )
-        self.freq = None
 
-    def frequency(self, signal):
+    def process(self, instr: Instruction, chan: str, signal_in):
         """
         Compute the qubit frequency resulting from an applied flux.
 
@@ -304,6 +307,8 @@ class FluxTuning(Device):
         phi = self.params['phi'].get_value()
         omega_0 = self.params['omega_0'].get_value()
         phi_0 = self.params['phi_0'].get_value()
+        signal = signal_in["values"]
+        self.signal["ts"] = signal_in["ts"]
 
         if 'd' in self.params:
             d = self.params['d'].get_value()
@@ -311,14 +316,14 @@ class FluxTuning(Device):
             base_freq = omega_0 * tf.sqrt(tf.sqrt(
                 tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
             ))
-            self.freq = omega_0 * tf.sqrt(tf.sqrt(
+            freq = omega_0 * tf.sqrt(tf.sqrt(
                 tf.cos(pi * (phi + signal) / phi_0)**2 + d**2 * tf.sin(pi * (phi + signal) / phi_0)**2
             )) - base_freq
         else:
             base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
-            self.freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0))) - base_freq
-        self.signal = self.freq
-        return self.freq
+            freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0))) - base_freq
+        self.signal["values"] = freq
+        return self.signal
 
 
 class FluxTuningLinear(Device):
@@ -388,6 +393,8 @@ class Response(Device):
         super().__init__(**props)
         if rise_time:
             self.params["rise_time"] = rise_time
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
 
     def convolve(self, signal: list, resp_shape: list):
         """
@@ -588,6 +595,11 @@ class HighpassFilter(Response):
 class Mixer(Device):
     """Mixer device, combines inputs from the local oscillator and the AWG."""
 
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 2)
+        self.outputs = props.pop("outputs", 1)
+
     def process(self, instr: Instruction, chan: str, in1: dict, in2: dict):
         """Combine signal from AWG and LO.
 
@@ -613,6 +625,7 @@ class Mixer(Device):
         return self.signal
 
 
+@dev_reg_deco
 class LONoise(Device):
     """Noise applied to the local oscillator"""
 
@@ -644,6 +657,7 @@ class LONoise(Device):
         return self.signal
 
 
+@dev_reg_deco
 class Additive_Noise(Device):
     """Noise applied to a signal"""
 
@@ -681,6 +695,7 @@ class Additive_Noise(Device):
         return self.signal
 
 
+@dev_reg_deco
 class DC_Noise(Device):
     """Noise applied to a signal"""
 
@@ -717,6 +732,8 @@ class DC_Noise(Device):
         self.signal = out_signal
         return self.signal
 
+
+@dev_reg_deco
 class DC_Offset(Device):
     """Noise applied to a signal"""
 
@@ -755,44 +772,46 @@ class DC_Offset(Device):
 
 
 # TODO: We should write out own function to calculate the Pink noise in a continuous fft fashion.
-import colorednoise
-class Pink_Noise_Cont(Device):
-    """Noise applied to a signal"""
+# import colorednoise
+# @dev_reg_deco
+# class Pink_Noise_Cont(Device):
+#     """Noise applied to a signal"""
+#
+#     def __init__(
+#             self,
+#             name: str = "pink_noise",
+#             desc: str = " ",
+#             comment: str = " ",
+#             resolution: np.float64 = 0.0,
+#             noise_amp: Quantity = None
+#     ):
+#         super().__init__(
+#             name=name,
+#             desc=desc,
+#             comment=comment,
+#             resolution=resolution
+#         )
+#         self.signal = None
+#         self.params['noise_amp'] = noise_amp
+#
+#     def distort(self, signal):
+#         """Distort signal by adding noise."""
+#         noise_amp = self.params['noise_amp'].get_value()
+#         if noise_amp < 1e-17:
+#             self.signal = signal
+#             return signal
+#         out_signal = {}
+#         # print(signal)
+#         if type(signal) is dict:
+#             for k, sig in signal.items():
+#                 out_signal[k] = sig + tf.constant(noise_amp * colorednoise.powerlaw_psd_gaussian(1,))
+#         else:
+#             out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
+#         self.signal = out_signal
+#         return self.signal
 
-    def __init__(
-            self,
-            name: str = "pink_noise",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            noise_amp: Quantity = None
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
-        self.signal = None
-        self.params['noise_amp'] = noise_amp
 
-    def distort(self, signal):
-        """Distort signal by adding noise."""
-        noise_amp = self.params['noise_amp'].get_value()
-        if noise_amp < 1e-17:
-            self.signal = signal
-            return signal
-        out_signal = {}
-        # print(signal)
-        if type(signal) is dict:
-            for k, sig in signal.items():
-                out_signal[k] = sig + tf.constant(noise_amp * colorednoise.powerlaw_psd_gaussian(1,))
-        else:
-            out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
-        self.signal = out_signal
-        return self.signal
-
-
+@dev_reg_deco
 class Pink_Noise(Device):
     """Device creating pink noise, i.e. 1/f noise."""
 
@@ -858,36 +877,22 @@ class Pink_Noise(Device):
 class LO(Device):
     """Local oscillator device, generates a constant oscillating signal."""
 
-    def __init__(
-        self,
-        name: str = "lo",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        phase_noise: Quantity = None,
-        amp_noise: Quantity = None,
-        freq_noise: Quantity = None
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
-        self.phase_noise = phase_noise
-        self.freq_noise = freq_noise
-        self.amp_noise = amp_noise
-        self.signal = {}
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.outputs = props.pop("outputs", 1)
+        self.phase_noise = props.pop("phase_noise", 0)
+        self.freq_noise = props.pop("freq_noise", 0)
+        self.amp_noise = props.pop("amp_noise", 0)
 
     def process(self, instr: Instruction, chan: str) -> dict:
         # TODO check somewhere that there is only 1 carrier per instruction
-        ts = self.create_ts(t_start, t_end, centered=True)
+        ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         dt = ts[1] - ts[0]
         phase_noise = self.phase_noise
         amp_noise = self.amp_noise
         freq_noise = self.freq_noise
-        for c in channel:
-            comp = channel[c]
+        components = instr.comps
+        for comp in components[chan].values():
             if isinstance(comp, Carrier):
                 cos, sin = [], []
                 omega_lo = comp.params['freq'].get_value()
@@ -954,6 +959,7 @@ class AWG(Device):
         self.logname = "awg.log"
         options = props.pop("options", "")
         super().__init__(**props)
+        self.outputs = props.pop("outputs", 1)
         # TODO move the options pwc & drag to the instruction object
         self.amp_tot_sq = None
         self.process = self.create_IQ
