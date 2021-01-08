@@ -168,6 +168,8 @@ class VoltsToHertz(Device):
 
     def __init__(self, **props):
         super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
 
     def process(self, instr, chan, mixed_signal):
         """Transform signal from value of V to Hz.
@@ -837,8 +839,8 @@ class Pink_Noise(Device):
         if not bfl_num:
             bfl_num = Quantity(
                 value=5,
-                min=1,
-                max=10
+                min_val=1,
+                max_val=10
             )
         self.params['bfl_num'] = bfl_num
 #         self.params['infrared_cutoff'] = infrared_cutoff

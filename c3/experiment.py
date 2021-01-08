@@ -364,7 +364,7 @@ class Experiment:
         """
         self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
-    def set_enable_store_unitaries(self, flag, logdir):
+    def set_enable_store_unitaries(self, flag, logdir, exist_ok=False):
         """
         Saving of unitary propagators.
 
@@ -380,6 +380,7 @@ class Experiment:
         if self.enable_store_unitaries:
             os.makedirs(self.logdir + "unitaries/", exist_ok=exist_ok)
             self.store_unitaries_counter = 0
+
 
     def store_Udict(self, goal):
         """

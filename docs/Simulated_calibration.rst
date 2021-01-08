@@ -225,38 +225,38 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     gauss_params_single = {
         'amp': Qty(
             value=0.45,
-            min=0.4,
-            max=0.6,
+            min_val=0.4,
+            max_val=0.6,
             unit="V"
         ),
         't_final': Qty(
             value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
+            min_val=0.5 * t_final,
+            max_val=1.5 * t_final,
             unit="s"
         ),
         'sigma': Qty(
             value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
+            min_val=t_final / 8,
+            max_val=t_final / 2,
             unit="s"
         ),
         'xy_angle': Qty(
             value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
             unit='rad'
         ),
         'freq_offset': Qty(
             value=-sideband - 0.5e6 * 2 * np.pi,
-            min=-53 * 1e6 * 2 * np.pi,
-            max=-47 * 1e6 * 2 * np.pi,
+            min_val=-53 * 1e6 * 2 * np.pi,
+            max_val=-47 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
             value=-1,
-            min=-5,
-            max=3,
+            min_val=-5,
+            max_val=3,
             unit=""
         )
     }
@@ -272,8 +272,8 @@ the blackbox. We mirror the blackbox by creating an experiment in the
         params={
             't_final': Qty(
                 value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
+                min_val=0.5 * t_final,
+                max_val=1.5 * t_final,
                 unit="s"
             )
         },
@@ -282,14 +282,14 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     carrier_parameters = {
         'freq': Qty(
             value=lo_freq,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
+            min_val=4.5e9 * 2 * np.pi,
+            max_val=6e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'framechange': Qty(
             value=0.0,
-            min= -np.pi,
-            max= 3 * np.pi,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
             unit='rad'
         )
     }

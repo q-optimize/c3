@@ -294,8 +294,8 @@ def gaussian(t, params):
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params['sigma'] = Qty(
         value=params['t_final'].get_value()/6,
-        min=params['t_final'].get_value()/8,
-        max=params['t_final'].get_value()/4,
+        min_val=params['t_final'].get_value()/8,
+        max_val=params['t_final'].get_value()/4,
         unit=params['t_final'].unit
     )
     return gaussian_sigma(t, params)
@@ -364,8 +364,8 @@ def drag(t, params):
     DeprecationWarning("Using standard width. Better use drag_sigma.")
     params['sigma'] = Qty(
         value=params['t_final'].get_value()/4,
-        min=params['t_final'].get_value()/8,
-        max=params['t_final'].get_value()/2,
+        min_val=params['t_final'].get_value()/8,
+        max_val=params['t_final'].get_value()/2,
         unit=params['t_final'].unit
     )
     return drag_sigma(t, params)
