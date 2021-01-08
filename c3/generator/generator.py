@@ -51,8 +51,9 @@ class Generator:
                 signals += self.devices[device_id].outputs
             if signals != 1:
                 raise Exception(
-                    "C3:ERROR: Signal chain for channel \'" + channel +
-                    "\' contains unmatched number of inputs and outputs."
+                    "C3:ERROR: Signal chain for channel '"
+                    + channel
+                    + "' contains unmatched number of inputs and outputs."
                 )
 
     def read_config(self, filepath: str) -> None:
@@ -72,7 +73,7 @@ class Generator:
             dev_type = props.pop("c3type")
             self.devices[name] = dev_lib[dev_type](**props)
         self.chains = cfg["Chains"]
-        self.__check_signal_chain()
+        self.__check_signal_chains()
 
     def write_config(self, filepath: str) -> None:
         """

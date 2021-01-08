@@ -26,6 +26,7 @@ from c3.utils.qt_utils import (
     cliffords_decomp,
     cliffords_decomp_xId,
     single_length_RB,
+    cliffords_string,
 )
 
 fidelities = dict()
@@ -59,53 +60,48 @@ def iswap_transfer(U_dict: dict, index, dims, eval, proj=True):
 
 
 @fid_reg_deco
-def iswap_comp_sub(
-    U_dict: dict, index, dims, eval, proj=True
-):
+def iswap_comp_sub(U_dict: dict, index, dims, eval, proj=True):
     U = {}
-    U["iSWAP"] = U_dict["Id:iSWAP"][:dims[1]*dims[2],:dims[1]*dims[2]]
-    infid = unitary_infid(U, "iSWAP", [0,1], [dims[1], dims[2]], proj=proj)
+    U["iSWAP"] = U_dict["Id:iSWAP"][: dims[1] * dims[2], : dims[1] * dims[2]]
+    infid = unitary_infid(U, "iSWAP", [0, 1], [dims[1], dims[2]], proj=proj)
     return infid
 
-@fid_reg_deco
-def cphase_comp_sub(
-    U_dict: dict, index, dims, eval, proj=True
-):
-    U = {}
-    U["CZ"] = U_dict["Id:CZ"][:dims[1]*dims[2],:dims[1]*dims[2]]
-    infid = unitary_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
-    return infid
 
 @fid_reg_deco
-def cphase_comp_sub_avg(
-    U_dict: dict, index, dims, eval, proj=True
-):
+def cphase_comp_sub(U_dict: dict, index, dims, eval, proj=True):
     U = {}
-    U["CZ"] = U_dict["Id:CZ"][:dims[1]*dims[2],:dims[1]*dims[2]]
-    infid = average_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
+    U["CZ"] = U_dict["Id:CZ"][: dims[1] * dims[2], : dims[1] * dims[2]]
+    infid = unitary_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
     return infid
 
+
 @fid_reg_deco
-def cphase_comp(
-    U_dict: dict, index, dims, eval, proj=True
-):
+def cphase_comp_sub_avg(U_dict: dict, index, dims, eval, proj=True):
+    U = {}
+    U["CZ"] = U_dict["Id:CZ"][: dims[1] * dims[2], : dims[1] * dims[2]]
+    infid = average_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
+    return infid
+
+
+@fid_reg_deco
+def cphase_comp(U_dict: dict, index, dims, eval, proj=True):
     U = {}
     U["CZ"] = U_dict["CZ"]
-    infid = unitary_infid(U, "CZ", [0,1], dims, proj=proj)
+    infid = unitary_infid(U, "CZ", [0, 1], dims, proj=proj)
     return infid
 
+
 @fid_reg_deco
-def lindbladian_cphase_comp_sub(
-    U_dict: dict, index, dims, eval, proj=True
-):
+def lindbladian_cphase_comp_sub(U_dict: dict, index, dims, eval, proj=True):
     U = {}
-    proj = np.zeros([dims[0],1])
-    proj[0,0] = 1
-    p = np.kron(proj,np.eye(dims[1]*dims[2]))
-    pr = tf.constant(np.kron(p,p), dtype=tf.complex128)
-    U["CZ"] = tf.matmul(tf.transpose(pr),tf.matmul(U_dict["Id:CZ"], pr))
-    infid = lindbladian_average_infid(U, "CZ", [0,1], [dims[1], dims[2]], proj=proj)
+    proj = np.zeros([dims[0], 1])
+    proj[0, 0] = 1
+    p = np.kron(proj, np.eye(dims[1] * dims[2]))
+    pr = tf.constant(np.kron(p, p), dtype=tf.complex128)
+    U["CZ"] = tf.matmul(tf.transpose(pr), tf.matmul(U_dict["Id:CZ"], pr))
+    infid = lindbladian_average_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
     return infid
+
 
 @fid_reg_deco
 def iswap_leakage(U_dict: dict, index, dims, eval, proj=True):
@@ -240,7 +236,7 @@ def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
         Unitary fidelity.
     """
     U = U_dict[gate]
-    projection = 'fulluni'
+    projection = "fulluni"
     fid_lvls = np.prod([dims[i] for i in index])
     if proj:
         projection = "wzeros"
@@ -482,7 +478,7 @@ def lindbladian_average_infid_set(U_dict: dict, index, dims, eval, proj=True):
 
 
 @fid_reg_deco
-def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
+def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
     # TODO check this work with new index and dims (double-check)
     num_gates = len(dims)
     if cliffords:
@@ -491,10 +487,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
-    ideal_cliffords = perfect_cliffords(
-        lvls=[2]*num_gates,
-        num_gates=num_gates
-    )
+    ideal_cliffords = perfect_cliffords(lvls=[2] * num_gates, num_gates=num_gates)
     # gate = list(U_dict.keys())[0]
     # U = U_dict[gate]
     # num_gates = len(gate.split(":"))
@@ -512,10 +505,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
-        C_ideal = tf.constant(
-                    ideal_cliffords[C_indx],
-                    dtype=tf.complex128
-                  )
+        C_ideal = tf.constant(ideal_cliffords[C_indx], dtype=tf.complex128)
         ave_fid = tf_average_fidelity(C_real, C_ideal, lvls=dims)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
@@ -523,7 +513,7 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
 
 
 @fid_reg_deco
-def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords = False):
+def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
     num_gates = len(dims)
     if cliffords:
         real_cliffords = evaluate_sequences(U_dict, [[C] for C in cliffords_string])
@@ -531,33 +521,25 @@ def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords 
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
-    ideal_cliffords = perfect_cliffords(
-        lvls=[2]*num_gates,
-        num_gates=num_gates
-    )
+    ideal_cliffords = perfect_cliffords(lvls=[2] * num_gates, num_gates=num_gates)
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
-        C_ideal = tf_super(
-                   tf.constant(
-                        ideal_cliffords[C_indx],
-                        dtype=tf.complex128
-                        )
-                   )
+        C_ideal = tf_super(tf.constant(ideal_cliffords[C_indx], dtype=tf.complex128))
         ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=dims)
-    # real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
-    # lvls = int(np.sqrt(real_cliffords[0].shape[0]))
-    # projection = "fulluni"
-    # fid_lvls = lvls
-    # if proj:
-    #     projection = "wzeros"
-    #     fid_lvls = 2
-    # ideal_cliffords = perfect_cliffords(str(lvls), projection)
-    # fids = []
-    # for C_indx in range(24):
-    #     C_real = real_cliffords[C_indx]
-    #     C_ideal = tf_super(tf.Variable(ideal_cliffords[C_indx], dtype=tf.complex128))
-    #     ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=fid_lvls)
+        # real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+        # lvls = int(np.sqrt(real_cliffords[0].shape[0]))
+        # projection = "fulluni"
+        # fid_lvls = lvls
+        # if proj:
+        #     projection = "wzeros"
+        #     fid_lvls = 2
+        # ideal_cliffords = perfect_cliffords(str(lvls), projection)
+        # fids = []
+        # for C_indx in range(24):
+        #     C_real = real_cliffords[C_indx]
+        #     C_ideal = tf_super(tf.Variable(ideal_cliffords[C_indx], dtype=tf.complex128))
+        #     ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=fid_lvls)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
@@ -671,7 +653,7 @@ def RB(
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
     # print("epc:", epc)
-    epg = 1 - ((1-epc)**(1/4)) #TODO: adjust to be mean length of
+    epg = 1 - ((1 - epc) ** (1 / 4))  # TODO: adjust to be mean length of
     # print("epg:", epg)
     # print('example seq: ', seqs[0])
 

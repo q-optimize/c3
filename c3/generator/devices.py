@@ -1,6 +1,5 @@
 import os
 import hjson
-import copy
 import tempfile
 import tensorflow as tf
 import numpy as np
@@ -9,6 +8,7 @@ from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj
 
 devices = dict()
+
 
 def dev_reg_deco(func):
     """
@@ -62,11 +62,7 @@ class Device(C3obj):
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def calc_slice_num(
-            self,
-            t_start: np.float64,
-            t_end: np.float64
-    ):
+    def calc_slice_num(self, t_start: np.float64, t_end: np.float64):
         """
         Effective number of time slices given start, end and resolution.
 
@@ -122,9 +118,9 @@ class Readout(Device):
 
     def __init__(self, **props):
         super().__init__(**props)
-        if not "factor" in self.params:
+        if "factor" not in self.params:
             raise Exception("C3:ERROR: Readout device needs a 'factor' parameter.")
-        if not "offset" in self.params:
+        if "offset" not in self.params:
             raise Exception("C3:ERROR: Readout device needs an 'offset' parameter.")
 
     def readout(self, phase):
@@ -215,23 +211,21 @@ class DigitalToAnalog(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         old_dim = awg_signal["inphase"].shape[0]
         new_dim = ts.shape[0]
-        #TODO add following zeros
+        # TODO add following zeros
         inphase = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["inphase"],
-                shape=[1, old_dim, 1]),
+                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]),
                 size=[1, new_dim],
-                method=self.sampling_method
+                method=self.sampling_method,
             ),
             shape=[new_dim],
         )
         inphase = tf.cast(inphase, dtype=tf.float64)
         quadrature = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["quadrature"],
-                shape=[1, old_dim, 1]),
+                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]),
                 size=[1, new_dim],
-                method=self.sampling_method
+                method=self.sampling_method,
             ),
             shape=[new_dim],
         )
@@ -273,12 +267,13 @@ class FluxTuning(Device):
         Maximum frequency.
 
     """
+
     def __init__(self, **props):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
         for par in ["phi_0", "phi", "omega_0"]:
-            if not par in self.params:
+            if par not in self.params:
                 raise Exception(
                     f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
                 )
@@ -298,24 +293,37 @@ class FluxTuning(Device):
             Qubit frequency.
         """
         pi = tf.constant(np.pi, dtype=tf.float64)
-        phi = self.params['phi'].get_value()
-        omega_0 = self.params['omega_0'].get_value()
-        phi_0 = self.params['phi_0'].get_value()
+        phi = self.params["phi"].get_value()
+        omega_0 = self.params["omega_0"].get_value()
+        phi_0 = self.params["phi_0"].get_value()
         signal = signal_in["values"]
         self.signal["ts"] = signal_in["ts"]
 
-        if 'd' in self.params:
-            d = self.params['d'].get_value()
-#             print('assuming asymmetric transmon with d=', d)
-            base_freq = omega_0 * tf.sqrt(tf.sqrt(
-                tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
-            ))
-            freq = omega_0 * tf.sqrt(tf.sqrt(
-                tf.cos(pi * (phi + signal) / phi_0)**2 + d**2 * tf.sin(pi * (phi + signal) / phi_0)**2
-            )) - base_freq
+        if "d" in self.params:
+            d = self.params["d"].get_value()
+            #             print('assuming asymmetric transmon with d=', d)
+            base_freq = omega_0 * tf.sqrt(
+                tf.sqrt(
+                    tf.cos(pi * phi / phi_0) ** 2
+                    + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+                )
+            )
+            freq = (
+                omega_0
+                * tf.sqrt(
+                    tf.sqrt(
+                        tf.cos(pi * (phi + signal) / phi_0) ** 2
+                        + d ** 2 * tf.sin(pi * (phi + signal) / phi_0) ** 2
+                    )
+                )
+                - base_freq
+            )
         else:
             base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
-            freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0))) - base_freq
+            freq = (
+                omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0)))
+                - base_freq
+            )
         self.signal["values"] = freq
         return self.signal
 
@@ -334,10 +342,11 @@ class FluxTuningLinear(Device):
         Maximum frequency.
 
     """
+
     def __init__(self, **props):
         super().__init__(**props)
         for par in ["phi_0", "Phi", "omega_0"]:
-            if not par in self.params:
+            if par not in self.params:
                 raise Exception(
                     f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
                 )
@@ -358,20 +367,21 @@ class FluxTuningLinear(Device):
             Qubit frequency.
         """
         pi = tf.constant(np.pi, dtype=tf.float64)
-        phi = self.params['phi'].get_value()
-        omega_0 = self.params['omega_0'].get_value()
-        phi_0 = self.params['phi_0'].get_value()
-        if 'd' in self.params:
-            d = self.params['d'].get_value()
+        phi = self.params["phi"].get_value()
+        omega_0 = self.params["omega_0"].get_value()
+        # phi_0 = self.params["phi_0"].get_value()
+        if "d" in self.params:
+            d = self.params["d"].get_value()
             max_freq = omega_0
-            min_freq = omega_0 * tf.sqrt(tf.sqrt(
-                tf.cos(pi * 0.5)**2 + d**2 * tf.sin(pi * 0.5)**2
-            ))
+            min_freq = omega_0 * tf.sqrt(
+                tf.sqrt(tf.cos(pi * 0.5) ** 2 + d ** 2 * tf.sin(pi * 0.5) ** 2)
+            )
         else:
             max_freq = omega_0
             min_freq = tf.constant(0.0, dtype=tf.float64)
-        self.freq = 2 * (signal-phi) * (min_freq - max_freq)
+        self.freq = 2 * (signal - phi) * (min_freq - max_freq)
         return self.freq
+
 
 @dev_reg_deco
 class Response(Device):
@@ -383,10 +393,8 @@ class Response(Device):
         Time constant for the gaussian convolution.
     """
 
-    def __init__(self, rise_time=None, **props):
+    def __init__(self, **props):
         super().__init__(**props)
-        if rise_time:
-            self.params["rise_time"] = rise_time
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
 
@@ -474,7 +482,7 @@ class Response(Device):
         return self.signal
 
 
-class HighpassFilter(Response):
+class HighpassFilter(Device):
     """Introduce a highpass filter
 
     Parameters
@@ -486,22 +494,17 @@ class HighpassFilter(Response):
     """
 
     def __init__(
-            self,
-            name: str = "highpass",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            cutoff: Quantity = None,
-            rise_time: Quantity = None
+        self,
+        name: str = "highpass",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        cutoff: Quantity = None,
+        rise_time: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
-        self.params['cutoff'] = cutoff
-        self.params['rise_time'] = rise_time
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+        self.params["cutoff"] = cutoff
+        self.params["rise_time"] = rise_time
         self.signal = None
 
     def convolve(self, signal: list, resp_shape: list):
@@ -523,16 +526,27 @@ class HighpassFilter(Response):
         """
         convolution = tf.zeros(0, dtype=tf.float64)
         signal = tf.concat(
-            [tf.zeros(int(len(resp_shape) // 2), dtype=tf.float64), signal, tf.zeros(int(len(resp_shape) * 3 / 2) + 1, dtype=tf.float64)], 0
+            [
+                tf.zeros(int(len(resp_shape) // 2), dtype=tf.float64),
+                signal,
+                tf.zeros(int(len(resp_shape) * 3 / 2) + 1, dtype=tf.float64),
+            ],
+            0,
         )
         for p in range(len(signal) - 2 * len(resp_shape)):
             convolution = tf.concat(
                 [
                     convolution,
                     tf.reshape(
-                        tf.math.reduce_sum(tf.math.multiply(signal[p:p + len(resp_shape)], resp_shape)), shape=[1]
-                    )
-                ], 0
+                        tf.math.reduce_sum(
+                            tf.math.multiply(
+                                signal[p : p + len(resp_shape)], resp_shape
+                            )
+                        ),
+                        shape=[1],
+                    ),
+                ],
+                0,
             )
         return convolution
 
@@ -551,10 +565,10 @@ class HighpassFilter(Response):
             Filtered IQ signal.
 
         """
-        fc = self.params['cutoff'].get_value() / self.resolution
+        fc = self.params["cutoff"].get_value() / self.resolution
 
-        if self.params['rise_time']:
-            tb = self.params['rise_time'].get_value() / self.resolution
+        if self.params["rise_time"]:
+            tb = self.params["rise_time"].get_value() / self.resolution
         else:
             tb = fc / 2
 
@@ -563,7 +577,7 @@ class HighpassFilter(Response):
 
         N_ts = tf.cast(tf.math.ceil(4 / tb), dtype=tf.int32)
         N_ts += 1 - tf.math.mod(N_ts, 2)  # make n_ts odd
-        if N_ts > len(iq_signal['inphase'] * 100):
+        if N_ts > len(iq_signal["inphase"] * 100):
             self.signal = iq_signal
             return self.signal
 
@@ -577,11 +591,11 @@ class HighpassFilter(Response):
         w = tf.signal.hamming_window(N_ts)
         w = tf.cast(w, dtype=tf.double)
         h *= w
-        h /= - tf.reduce_sum(h)
+        h /= -tf.reduce_sum(h)
         h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
-        inphase = self.convolve(iq_signal['inphase'], h)
-        quadrature = self.convolve(iq_signal['quadrature'], h)
-        self.signal = {'inphase': inphase, 'quadrature': quadrature}
+        inphase = self.convolve(iq_signal["inphase"], h)
+        quadrature = self.convolve(iq_signal["quadrature"], h)
+        self.signal = {"inphase": inphase, "quadrature": quadrature}
         return self.signal
 
 
@@ -624,28 +638,23 @@ class LONoise(Device):
     """Noise applied to the local oscillator"""
 
     def __init__(
-            self,
-            name: str = "lo_noise",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            noise_perc: Quantity = None
+        self,
+        name: str = "lo_noise",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        noise_perc: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
         self.signal = None
-        self.params['noise_perc'] = noise_perc
+        self.params["noise_perc"] = noise_perc
 
     def distort(self, lo_signal):
         """Distort signal by adding noise."""
-        noise_perc = self.params['noise_perc'].get_value()
+        noise_perc = self.params["noise_perc"].get_value()
         cos, sin = lo_signal["values"]
-        cos = cos + noise_perc * np.random.normal(loc=0.0,scale=1.0, size=len(cos))
-        sin = sin + noise_perc * np.random.normal(loc=0.0,scale=1.0, size=len(sin))
+        cos = cos + noise_perc * np.random.normal(loc=0.0, scale=1.0, size=len(cos))
+        sin = sin + noise_perc * np.random.normal(loc=0.0, scale=1.0, size=len(sin))
         lo_signal["values"] = (cos, sin)
         self.signal = lo_signal
         return self.signal
@@ -656,25 +665,20 @@ class Additive_Noise(Device):
     """Noise applied to a signal"""
 
     def __init__(
-            self,
-            name: str = "signal_noise",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            noise_amp: Quantity = None
+        self,
+        name: str = "signal_noise",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        noise_amp: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
         self.signal = None
-        self.params['noise_amp'] = noise_amp
+        self.params["noise_amp"] = noise_amp
 
     def distort(self, signal):
         """Distort signal by adding noise."""
-        noise_amp = self.params['noise_amp'].get_value()
+        noise_amp = self.params["noise_amp"].get_value()
         if noise_amp < 1e-17:
             self.signal = signal
             return signal
@@ -682,9 +686,13 @@ class Additive_Noise(Device):
         # print(signal)
         if type(signal) is dict:
             for k, sig in signal.items():
-                out_signal[k] = sig + tf.constant(noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0))
+                out_signal[k] = sig + tf.constant(
+                    noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
+                )
         else:
-            out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
+            out_signal = signal + tf.constant(
+                noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0)
+            )
         self.signal = out_signal
         return self.signal
 
@@ -694,25 +702,20 @@ class DC_Noise(Device):
     """Noise applied to a signal"""
 
     def __init__(
-            self,
-            name: str = "dc_noise",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            noise_amp: Quantity = None
+        self,
+        name: str = "dc_noise",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        noise_amp: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
         self.signal = None
-        self.params['noise_amp'] = noise_amp
+        self.params["noise_amp"] = noise_amp
 
     def distort(self, signal):
         """Distort signal by adding noise."""
-        noise_amp = self.params['noise_amp'].get_value()
+        noise_amp = self.params["noise_amp"].get_value()
         if noise_amp < 1e-17:
             self.signal = signal
             return signal
@@ -720,9 +723,13 @@ class DC_Noise(Device):
         # print(signal)
         if type(signal) is dict:
             for k, sig in signal.items():
-                out_signal[k] = sig + tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+                out_signal[k] = sig + tf.constant(
+                    noise_amp * np.random.normal(loc=0.0, scale=1.0)
+                )
         else:
-            out_signal = signal + tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+            out_signal = signal + tf.constant(
+                noise_amp * np.random.normal(loc=0.0, scale=1.0)
+            )
         self.signal = out_signal
         return self.signal
 
@@ -732,25 +739,20 @@ class DC_Offset(Device):
     """Noise applied to a signal"""
 
     def __init__(
-            self,
-            name: str = "dc_offset",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            offset_amp: Quantity = None
+        self,
+        name: str = "dc_offset",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        offset_amp: Quantity = None,
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
         self.signal = None
-        self.params['offset_amp'] = offset_amp
+        self.params["offset_amp"] = offset_amp
 
     def distort(self, signal):
         """Distort signal by adding noise."""
-        offset_amp = self.params['offset_amp'].get_value()
+        offset_amp = self.params["offset_amp"].get_value()
         if np.abs(offset_amp) < 1e-17:
             self.signal = signal
             return signal
@@ -810,60 +812,55 @@ class Pink_Noise(Device):
     """Device creating pink noise, i.e. 1/f noise."""
 
     def __init__(
-            self,
-            name: str = "pink_noise",
-            desc: str = " ",
-            comment: str = " ",
-            resolution: np.float64 = 0.0,
-            noise_strength: Quantity = None,
-            bfl_num: Quantity = None,
-#             infrared_cutoff = None,
-#             ultraviolet_cutoff = None
+        self,
+        name: str = "pink_noise",
+        desc: str = " ",
+        comment: str = " ",
+        resolution: np.float64 = 0.0,
+        noise_strength: Quantity = None,
+        bfl_num: Quantity = None,
+        #             infrared_cutoff = None,
+        #             ultraviolet_cutoff = None
     ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            resolution=resolution
-        )
+        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
         self.signal = None
-        self.params['noise_strength'] = noise_strength
+        self.params["noise_strength"] = noise_strength
         if not bfl_num:
-            bfl_num = Quantity(
-                value=5,
-                min_val=1,
-                max_val=10
-            )
-        self.params['bfl_num'] = bfl_num
-#         self.params['infrared_cutoff'] = infrared_cutoff
-#         self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
+            bfl_num = Quantity(value=5, min_val=1, max_val=10)
+        self.params["bfl_num"] = bfl_num
+        #         self.params['infrared_cutoff'] = infrared_cutoff
+        #         self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
         self.ts = None
         self.signal = None
 
     def distort(self, mixed_signal):
-        bfl_num = np.int(self.params['bfl_num'].get_value().numpy())
-        noise_strength = self.params['noise_strength'].get_value().numpy()
+        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
+        noise_strength = self.params["noise_strength"].get_value().numpy()
 
-#         noise = []
-#         bfls = np.random.randint(2, size=bfl_num)
-#         for step in range(len(mixed_signal)):
-#             for indx in range(bfl_num):
-#                 if np.floor(np.random.random() * (10^indx))==0:
-#                     bfls[indx] = not(bfls[indx])
-#             noise.append(np.sum(bfls) * noise_strength)
+        #         noise = []
+        #         bfls = np.random.randint(2, size=bfl_num)
+        #         for step in range(len(mixed_signal)):
+        #             for indx in range(bfl_num):
+        #                 if np.floor(np.random.random() * (10^indx))==0:
+        #                     bfls[indx] = not(bfls[indx])
+        #             noise.append(np.sum(bfls) * noise_strength)
 
         noise = []
         bfls = 2 * np.random.randint(2, size=bfl_num) - 1
         num_steps = len(mixed_signal)
-        flip_rates = np.logspace(0, np.log(num_steps), num=bfl_num+1, endpoint=True, base=10.0)
+        flip_rates = np.logspace(
+            0, np.log(num_steps), num=bfl_num + 1, endpoint=True, base=10.0
+        )
         for step in range(num_steps):
             for indx in range(bfl_num):
-                if np.floor(np.random.random() * flip_rates[indx+1])==0:
-                    bfls[indx] = - bfls[indx]
+                if np.floor(np.random.random() * flip_rates[indx + 1]) == 0:
+                    bfls[indx] = -bfls[indx]
             noise.append(np.sum(bfls) * noise_strength)
 
         self.noise = noise
-        self.signal = mixed_signal + tf.constant(noise, shape=mixed_signal.shape, dtype= tf.float64)
+        self.signal = mixed_signal + tf.constant(
+            noise, shape=mixed_signal.shape, dtype=tf.float64
+        )
         return self.signal
 
 
@@ -889,9 +886,9 @@ class LO(Device):
         for comp in components[chan].values():
             if isinstance(comp, Carrier):
                 cos, sin = [], []
-                omega_lo = comp.params['freq'].get_value()
+                omega_lo = comp.params["freq"].get_value()
                 if amp_noise and freq_noise:
-                    print('amp and freq noise')
+                    print("amp and freq noise")
                     phi = omega_lo * ts[0]
                     for t in ts:
                         A = np.random.normal(loc=1.0, scale=amp_noise)
@@ -900,22 +897,22 @@ class LO(Device):
                         omega = omega_lo + np.random.normal(loc=0.0, scale=freq_noise)
                         phi = phi + omega * dt
                 elif amp_noise and phase_noise:
-                    print('amp and phase noise')
+                    print("amp and phase noise")
                     for t in ts:
-                        A = np.random.normal(loc=1.0,scale=amp_noise)
-                        phi = np.random.normal(loc=0.0,scale=phase_noise)
+                        A = np.random.normal(loc=1.0, scale=amp_noise)
+                        phi = np.random.normal(loc=0.0, scale=phase_noise)
                         cos.append(A * np.cos(omega_lo * t + phi))
                         sin.append(A * np.sin(omega_lo * t + phi))
                 elif amp_noise:
-                    print('amp noise')
+                    print("amp noise")
                     for t in ts:
-                        A = np.random.normal(loc=1.0,scale=amp_noise)
+                        A = np.random.normal(loc=1.0, scale=amp_noise)
                         cos.append(A * np.cos(omega_lo * t))
                         sin.append(A * np.sin(omega_lo * t))
                 elif phase_noise:
-                    print('phase noise')
+                    print("phase noise")
                     for t in ts:
-                        phi = np.random.normal(loc=0.0,scale=phase_noise)
+                        phi = np.random.normal(loc=0.0, scale=phase_noise)
                         cos.append(np.cos(omega_lo * t + phi))
                         sin.append(np.sin(omega_lo * t + phi))
                 elif freq_noise:
@@ -923,7 +920,7 @@ class LO(Device):
                     for t in ts:
                         cos.append(np.cos(phi))
                         sin.append(np.sin(phi))
-                        omega = omega_lo + np.random.normal(loc=0.0,scale=freq_noise)
+                        omega = omega_lo + np.random.normal(loc=0.0, scale=freq_noise)
                         phi = phi + omega * dt
                 else:
                     cos = tf.cos(omega_lo * ts)
@@ -999,8 +996,8 @@ class AWG(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         components = instr.comps
         self.ts = ts
-        dt = ts[1] - ts[0]
-        t_before = ts[0] - dt
+        # dt = ts[1] - ts[0]
+        # t_before = ts[0] - dt
         amp_tot_sq = 0.0
         inphase_comps = []
         quadrature_comps = []
@@ -1015,10 +1012,11 @@ class AWG(Device):
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
                 phase = -xy_angle + freq_offset * ts
-                inphase_comps.append(amp * comp.get_shape_values(ts) * tf.cos(phase))
-                quadrature_comps.append(
-                    -amp * comp.get_shape_values(ts) * tf.sin(phase)
-                )
+                env = comp.get_shape_values(ts)
+                # TODO option to have t_before
+                # env = comp.get_shape_values(ts, t_before)
+                inphase_comps.append(amp * env * tf.cos(phase))
+                quadrature_comps.append(-amp * env * tf.sin(phase))
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
         inphase = tf.add_n(inphase_comps, name="inphase")
@@ -1071,7 +1069,7 @@ class AWG(Device):
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
                 # TODO should we remove this redefinition?
-                delta = -comp.params['delta'].get_value()
+                delta = -comp.params["delta"].get_value()
                 if self.__options == "drag_2":
                     delta = delta * dt
 
@@ -1127,8 +1125,7 @@ class AWG(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         components = instr.comps
         self.ts = ts
-        dt = ts[1] - ts[0]
-        t_before = ts[0] - dt
+        # dt = ts[1] - ts[0]
         amp_tot_sq = 0.0
         inphase_comps = []
         quadrature_comps = []
@@ -1138,21 +1135,20 @@ class AWG(Device):
             if isinstance(comp, Envelope):
                 amp_tot_sq += 1
                 if comp.shape is None:
-                    inphase = comp.params['inphase'].get_value()
-                    quadrature = comp.params['quadrature'].get_value()
+                    inphase = comp.params["inphase"].get_value()
+                    quadrature = comp.params["quadrature"].get_value()
                 else:
-                    #TODO include quadrature shape
+                    # TODO include quadrature shape
                     inphase = comp.get_shape_values(ts)
                     quadrature = tf.zeros_like(inphase)
                 xy_angle = comp.params["xy_angle"].get_value()
                 phase = -xy_angle
 
                 if len(inphase) != len(quadrature):
-                    raise ValueError('inphase and quadrature are of different lengths.')
+                    raise ValueError("inphase and quadrature are of different lengths.")
                 if len(inphase) < len(ts):
                     zeros = tf.constant(
-                       np.zeros(len(ts)-len(inphase)),
-                       dtype=inphase.dtype
+                        np.zeros(len(ts) - len(inphase)), dtype=inphase.dtype
                     )
                     inphase = tf.concat([inphase, zeros], axis=0)
                     quadrature = tf.concat([quadrature, zeros], axis=0)
@@ -1167,7 +1163,6 @@ class AWG(Device):
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
         inphase = tf.add_n(inphase_comps, name="inphase")
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
-        freq_offset = 0.0
 
         self.amp_tot = norm
         self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
@@ -1190,10 +1185,10 @@ class AWG(Device):
         return av, sum
 
     def get_I(self, line):
-        return self.signal[line]['inphase'] # * self.amp_tot
+        return self.signal[line]["inphase"]  # * self.amp_tot
 
     def get_Q(self, line):
-        return self.signal[line]['quadrature'] # * self.amp_tot
+        return self.signal[line]["quadrature"]  # * self.amp_tot
 
     def enable_drag(self):
         self.process = self.create_IQ_drag

@@ -3,7 +3,6 @@
 import numpy as np
 import hjson
 import itertools
-import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
@@ -176,28 +175,6 @@ class Model:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def write_config(self):
-        cfg = copy.deepcopy(self.__dict__)
-        for subsys in self.subsystems:
-                cfg['subsystems'][subsys]= self.subsystems[subsys].write_config()
-        for coupling in self.couplings:
-                cfg['couplings'][coupling]= self.couplings[coupling].write_config()
-        for task in self.tasks:
-                cfg['tasks'][task]= self.tasks[task].write_config()
-        if 'tot_dim' in cfg:
-            cfg['tot_dim'] = float(self.tot_dim)
-        for elem in list(cfg.keys()):
-            if 'EagerTensor' in cfg[elem].__class__.__name__:
-                del cfg[elem]
-        del cfg['ann_opers']
-        del cfg['control_Hs']
-        del cfg['dressed_control_Hs']
-        if 'col_ops' in cfg:
-            del cfg['col_ops']
-            del cfg['dressed_col_ops']
-
-        return cfg
-
     def set_dressed(self, dressed):
         """
         Go to a dressed frame where static couplings have been eliminated.
@@ -280,19 +257,19 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
-#     def update_drift_eigen(self, ordered=True):
-#         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
-#         transformation matrix."""
-#         e, v = tf.linalg.eigh(self.drift_H)
-#         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
-#         if ordered:
-#             eigenframe = tf.linalg.matvec(reorder_matrix, e)
-#             transform = tf.matmul(v, tf.transpose(reorder_matrix))
-#         else:
-#             eigenframe = tf.linalg.diag(e)
-#             transform = v
-#         self.eigenframe = eigenframe
-#         self.transform = transform
+    #     def update_drift_eigen(self, ordered=True):
+    #         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
+    #         transformation matrix."""
+    #         e, v = tf.linalg.eigh(self.drift_H)
+    #         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
+    #         if ordered:
+    #             eigenframe = tf.linalg.matvec(reorder_matrix, e)
+    #             transform = tf.matmul(v, tf.transpose(reorder_matrix))
+    #         else:
+    #             eigenframe = tf.linalg.diag(e)
+    #             transform = v
+    #         self.eigenframe = eigenframe
+    #         self.transform = transform
 
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
@@ -300,16 +277,18 @@ class Model:
         # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
-            reorder_matrix = tf.round(tf.abs(v)**2)
-            signed_rm = tf.cast(tf.sign(tf.math.real(v)) * reorder_matrix, dtype=tf.complex128)
+            reorder_matrix = tf.round(tf.abs(v) ** 2)
+            signed_rm = tf.cast(
+                tf.sign(tf.math.real(v)) * reorder_matrix, dtype=tf.complex128
+            )
             eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
             transform = tf.matmul(v, tf.transpose(signed_rm))
         else:
             eigenframe = tf.math.real(e)
             transform = v
-#             reorder =  tf.linalg.matvec(np.abs(reorder_matrix),tf.arange(18,dtype=tf.complex128))
-#             self.ordered_labels = [self.state_labels[int(index)] for index in reorder]
-#             self.reorder_matrix = reorder_matrix
+        #             reorder =  tf.linalg.matvec(np.abs(reorder_matrix),tf.arange(18,dtype=tf.complex128))
+        #             self.ordered_labels = [self.state_labels[int(index)] for index in reorder]
+        #             self.reorder_matrix = reorder_matrix
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
 
@@ -419,8 +398,8 @@ class Model:
             p = t_final * amp * self.dephasing_strength
             print("dephasing stength: ", p)
             if p.numpy() > 1 or p.numpy() < 0:
-                raise ValueError('strengh of dephasing channels outside [0,1]')
-                print('dephasing stength: ', p)
+                raise ValueError("strengh of dephasing channels outside [0,1]")
+                print("dephasing stength: ", p)
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch
