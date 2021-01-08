@@ -348,7 +348,7 @@ class Model:
             num_oper = tf.Variable(
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
-            # TODO test this
+            # TODO test dressing of FR
             # if self.dressed:
             #     num_oper = tf.matmul(
             #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
