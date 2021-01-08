@@ -332,8 +332,165 @@ class AsymmetricTransmon(PhysicalComponent):
             )
         )
         return freq * factor * self.Hs["freq"]
+    
+class SNAIL(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as more general anharmonic Fluxmon Qubit for capacitive drive SNAIL.
 
+    Parameters
+    ----------
+    freq: np.float64
+        frequency of the qubit
+    anhar: np.float64
+        anharmonicity of the qubit. defined as w01 - w12
+    beta: np.float64
+        third order non_linearity of the qubit. 
+    t1: np.float64
+        t1, the time decay of the qubit due to dissipation
+    t2star: np.float64
+        t2star, the time decay of the qubit due to pure dephasing
+    temp: np.float64
+        temperature of the qubit, used to determine the Boltzmann distribution
+        of energy level populations
 
+    """
+
+    def __init__(
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 4,
+        freq: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+        beta: np.float64 = 0.0,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+        )
+        self.params['freq'] = freq
+        self.params['beta'] = beta
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
+
+    def init_Hs(self, ann_oper):
+        """
+        Initialize the SNAIL Hamiltonians.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
+        self.Hs['freq'] = tf.constant(
+            resonator(ann_oper), dtype=tf.complex128
+        )
+        self.Hs['beta'] = tf.constant(
+            third_order(ann_oper), dtype=tf.complex128
+        )
+        if self.hilbert_dim > 2:
+            self.Hs['anhar'] = tf.constant(
+                duffing(ann_oper), dtype=tf.complex128
+            )
+
+    def get_Hamiltonian(self):
+        """
+        Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
+        the Duffing part and returns their sum.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+
+        """
+        h = tf.cast(
+                self.params['freq'].get_value(),
+                tf.complex128
+        ) * self.Hs['freq']
+        h += tf.cast(
+                self.params['beta'].get_value(),
+                tf.complex128
+        ) * self.Hs['beta']
+        if self.hilbert_dim > 2:
+            h += tf.cast(
+                self.params['anhar'].get_value(),
+                tf.complex128
+            ) * self.Hs['anhar']
+
+        return h
+
+    def init_Ls(self, ann_oper):
+        """
+        Initialize Lindbladian components.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
+        self.collapse_ops['t1'] = ann_oper
+        self.collapse_ops['temp'] = ann_oper.T.conj()
+        self.collapse_ops['t2star'] = 2 * tf.matmul(
+            ann_oper.T.conj(),
+            ann_oper
+        )
+
+    def get_Lindbladian(self, dims):
+        """
+        Compute the Lindbladian, based on relaxation, dephasing constants and finite temperature.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+
+        """
+        Ls = []
+        if 't1' in self.params:
+            t1 = self.params['t1'].get_value()
+            gamma = (0.5 / t1) ** 0.5
+            L = gamma * self.collapse_ops['t1']
+            Ls.append(L)
+            if 'temp' in self.params:
+                if self.hilbert_dim > 2:
+                    freq_diff = np.array(
+                        [(self.params['freq'].get_value()
+                          + n*self.params['anhar'].get_value())
+                            for n in range(self.hilbert_dim)]
+                    )
+                else:
+                    freq_diff = np.array(
+                        [self.params['freq'].get_value(), 0]
+                    )
+                beta = 1 / (self.params['temp'].get_value() * kb)
+                det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
+                det_bal_mat = hskron(
+                    tf.linalg.tensor_diag(det_bal), self.index, dims
+                )
+                L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
+                Ls.append(L)
+        if 't2star' in self.params:
+            gamma = (0.5/self.params['t2star'].get_value())**0.5
+            L = gamma * self.collapse_ops['t2star']
+            Ls.append(L)
+        return tf.cast(sum(Ls), tf.complex128)    
+    
+    
 @dev_reg_deco
 class LineComponent(C3obj):
     """
