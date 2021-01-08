@@ -30,6 +30,30 @@ def resonator(a):
     return np.matmul(a_dag, a)
 
 @hamiltonian_reg_deco
+def third_order(a):
+    """
+    
+    Parameters
+    ----------
+    a : Tensor
+        Annihilator.
+
+    Returns
+    -------
+    Tensor
+        Number operator.
+
+    """
+    a_dag = a.T.conj()
+    n = np.matmul(a_dag, a)
+    return np.matmul(n,a)+np.matmul(a_dag,n)
+
+
+
+
+
+
+@hamiltonian_reg_deco
 def duffing(a):
     """
     Anharmonic part of the duffing oscillator.
