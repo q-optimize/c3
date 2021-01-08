@@ -146,10 +146,6 @@ class C1(Optimizer):
             goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
         except TypeError:
             goal = self.fid_func(self.exp, propagators, self.index, dims, self.evaluation + 1)
-        try:
-            display.plot_C1(self.logdir, interactive=self.interactive)
-        except TypeError:
-            pass
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
