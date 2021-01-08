@@ -157,30 +157,6 @@ class Optimizer:
                 }
                 best_point.write(hjson.dumps(best_dict))
                 best_point.write("\n")
-        if self.plot_dynamics:
-            # psi_init = self.pmap.model.tasks["init_ground"].initialise(
-            #     self.pmap.model.drift_H,
-            #     self.pmap.model.lindbladian
-            # )
-            dims=self.exp.model.dims
-            XX = qt_utils.perfect_gate("Id:Xp:Xp", index=[0,1,2], dims=dims)
-            if self.exp.model.lindbladian:
-                XX = tf_utils.tf_super(XX)
-            psi_init = tf.matmul(
-                XX,
-                self.exp.model.tasks["init_ground"].initialise(
-                    self.exp.model.drift_H,
-                    self.exp.model.lindbladian
-                )
-            )
-            for gate in self.exp.dUs.keys():
-                self.exp.plot_dynamics(psi_init, [gate], self.optim_status['goal'])
-            self.exp.dynamics_plot_counter += 1
-        if self.plot_pulses:
-            for gate in self.opt_gates:
-                instr = self.pmap.instructions[gate]
-                self.exp.plot_pulses(instr, self.optim_status['goal'])
-            self.exp.pulses_plot_counter += 1
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1
