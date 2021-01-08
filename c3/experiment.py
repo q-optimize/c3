@@ -22,7 +22,6 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils import tf_utils
-plt.rcParams['figure.figsize'] = 16,8
 
 class Experiment:
     """
