@@ -352,7 +352,9 @@ class SNAIL(PhysicalComponent):
     temp: np.float64
         temperature of the qubit, used to determine the Boltzmann distribution
         of energy level populations
-
+    Class is mostly an exact copy of the Qubit class. The only difference is the added third order non linearity with a prefactor beta.
+    The only modification is the get hamiltonian and init hamiltonian definition. Also imported the necessary third order non linearity
+    from the hamiltonian library. 
     """
 
     def __init__(
