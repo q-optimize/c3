@@ -80,7 +80,7 @@ class C3QasmSimulator(Backend):
         ],
     }
 
-    DEFAULT_OPTIONS = {"initial_statevector": None, "chop_threshold": 1e-15}
+    DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
     SHOW_FINAL_STATE = False  # noqa
 
     def __init__(self, configuration=None, provider=None, **fields):
@@ -91,6 +91,10 @@ class C3QasmSimulator(Backend):
             provider=provider,
             **fields
         )
+
+    @classmethod
+    def _default_options(cls) -> Options:
+        return Options(shots=1024, memory=False, initial_statevector=None)
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
