@@ -32,7 +32,7 @@ class C3QasmSimulator(Backend):
     """
 
     MAX_QUBITS_MEMORY = 10
-    configuration = {
+    _configuration = {
         "backend_name": "c3_qasm_simulator",
         "backend_version": "1.1",
         "n_qubits": min(5, MAX_QUBITS_MEMORY),
@@ -86,7 +86,7 @@ class C3QasmSimulator(Backend):
     def __init__(self, configuration=None, provider=None, **fields):
         super().__init__(
             configuration=(
-                configuration or QasmBackendConfiguration.from_dict(self.configuration)
+                configuration or QasmBackendConfiguration.from_dict(self._configuration)
             ),
             provider=provider,
             **fields
@@ -218,7 +218,17 @@ class C3QasmSimulator(Backend):
         # TODO implement interface with C3
         end = time.time()
         # TODO return dict with experiment result
-        return {}
+        result = {
+            "name": "dummy_name",
+            "seed": 2441129,
+            "shots": 100,
+            "data": {"counts": {"0x9": 5}, "memory": ["0x9", "0xF", "0x1D", "0x9"]},
+            "status": "Job Done",
+            "success": True,
+            "time_taken": 123456,
+        }
+
+        return result
 
     def _validate(self, qobj):
         """Semantic validations of the qobj which cannot be done via schemas."""
@@ -242,4 +252,30 @@ class C3QasmSimulator(Backend):
                     'No measurements in circuit "%s", '
                     "classical register will remain all zeros.",
                     name,
+                )
+
+    def _set_options(self, qobj_config=None, backend_options=None):
+        """Set the backend options for all experiments in a qobj"""
+        # Reset default options
+        self._initial_statevector = self.options.get("initial_statevector")
+        if "backend_options" in backend_options and backend_options["backend_options"]:
+            backend_options = backend_options["backend_options"]
+
+        # Check for custom initial statevector in backend_options first,
+        # then config second
+        if "initial_statevector" in backend_options:
+            self._initial_statevector = np.array(
+                backend_options["initial_statevector"], dtype=complex
+            )
+        elif hasattr(qobj_config, "initial_statevector"):
+            self._initial_statevector = np.array(
+                qobj_config.initial_statevector, dtype=complex
+            )
+        if self._initial_statevector is not None:
+            # Check the initial statevector is normalized
+            norm = np.linalg.norm(self._initial_statevector)
+            if round(norm, 12) != 1:
+                raise C3QiskitError(
+                    "initial statevector is not normalized: "
+                    + "norm {} != 1".format(norm)
                 )
