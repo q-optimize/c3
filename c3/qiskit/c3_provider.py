@@ -20,7 +20,7 @@ class C3Provider(ProviderV1):
     def __init__(self):
         super().__init__()
 
-        self.name = "qtf_provider"
+        self.name = "c3_provider"
         self._backends = self._verify_backends()
 
     def backends(self, name=None, filters=None, **kwargs):
@@ -95,4 +95,4 @@ class C3Provider(ProviderV1):
         return backend_instance
 
     def __str__(self):
-        return "QTF"
+        return "C3"
