@@ -72,7 +72,7 @@ hdrift, hks = model.get_Hamiltonians()
 @pytest.mark.unit
 def test_SNAIL_eigenfrequencies_1() -> None:
     "Eigenfrequency of SNAIL"
-    assert hdrift[1,1] - hdrift[0,0] == freq_S #*2*np.pi
+    assert hdrift[1,1] - hdrift[0,0] == freq_S * 2 * np.pi # for the 0.2dev version, comment out the 2 pi
 
 
 @pytest.mark.unit
