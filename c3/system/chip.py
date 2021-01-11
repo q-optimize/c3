@@ -394,16 +394,14 @@ class SNAIL(PhysicalComponent):
         ann_oper : np.array
             Annihilation operator in the full Hilbert space
         """
-        self.Hs['freq'] = tf.constant(
-            resonator(ann_oper), dtype=tf.complex128
-        )
-        self.Hs['beta'] = tf.constant(
-            third_order(ann_oper), dtype=tf.complex128
-        )
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
-            self.Hs['anhar'] = tf.constant(
-                duffing(ann_oper), dtype=tf.complex128
-            )
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+        third = hamiltonians["third_order"]
+        self.Hs['beta'] = tf.Variable(third(ann_oper), dtype=tf.complex128)
+
 
     def get_Hamiltonian(self):
         """
