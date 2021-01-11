@@ -140,6 +140,10 @@ class Qubit(PhysicalComponent):
             h += anhar * self.Hs["anhar"]
         return h
 
+    init_Ls = Qubit.__dict__['init_Ls']
+    get_Lindbladian = Qubit.__dict__['get_Lindbladian']  
+    
+    '''
     def init_Ls(self, ann_oper):
         """
         Initialize Lindbladian components.
@@ -190,7 +194,7 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
         return tf.cast(sum(Ls), tf.complex128)
-
+    '''
 
 @dev_reg_deco
 class Resonator(PhysicalComponent):
