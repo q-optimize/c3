@@ -56,11 +56,11 @@ conf_matrix = ConfusionMatrix(Q1=confusion_row1, Q2=confusion_row2)
 
 init_temp = 50e-3
 init_ground = InitialiseGround(
-    init_temp=Quantity(value=init_temp, min_val=-0.001, max_val=0.22, unit="K")
+    init_temp=Quantity(value=init_temp, min=-0.001, max=0.22, unit="K")
 )
 
 model = Model(
-    [S1],  # Individual, self-contained components
+    [S],  # Individual, self-contained components
     [drive],  # Interactions between components
     [conf_matrix, init_ground],  # SPAM processing
 )
@@ -72,18 +72,15 @@ hdrift, hks = model.get_Hamiltonians()
 @pytest.mark.unit
 def test_SNAIL_eigenfrequencies_1() -> None:
     "Eigenfrequency of SNAIL"
-    assert hdrift[1] - hdrift[0] == freq_S * 2 * np.pi
+    assert hdrift[1,1] - hdrift[0,0] == freq_S #*2*np.pi
 
 
 @pytest.mark.unit
 def test_three_wave_mixer_properties() -> None:
     "Test if the values of the three wave mixer element are assigned correctly"
-    
+
     assert model.subsystems["Test"].params["freq"].get_value() == freq_S
     assert model.subsystems["Test"].params["anhar"].get_value() == anhar_S
-    assert model.subsystems["Test"].params["hilbert_dim"].get_value() == qubit_lvls
     assert model.subsystems["Test"].params["t1"].get_value() == t1_S
     assert model.subsystems["Test"].params["beta"].get_value() == beta_S
-    assert model.subsystems["Test"].params["t2star"].get_value() == t2star_S
     assert model.subsystems["Test"].params["temp"].get_value() == S_temp
-    
