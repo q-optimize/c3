@@ -56,7 +56,7 @@ conf_matrix = ConfusionMatrix(Q1=confusion_row1, Q2=confusion_row2)
 
 init_temp = 50e-3
 init_ground = InitialiseGround(
-    init_temp=Quantity(value=init_temp, min=-0.001, max=0.22, unit="K")
+    init_temp=Quantity(value=init_temp, min_val=-0.001, max_val=0.22, unit="K")
 )
 
 model = Model(
