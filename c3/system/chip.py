@@ -335,7 +335,8 @@ class AsymmetricTransmon(PhysicalComponent):
 @dev_reg_deco
 class SNAIL(PhysicalComponent):
     """
-    Represents the element in a chip functioning as more general anharmonic Fluxmon Qubit for capacitive drive SNAIL.
+    Represents the element in a chip functioning as a three wave mixing element also knwon as a SNAIL.
+    Reference: https://arxiv.org/pdf/1702.00869.pdf
     Parameters
     ----------
     freq: np.float64
