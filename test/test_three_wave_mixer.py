@@ -79,8 +79,8 @@ def test_SNAIL_eigenfrequencies_1() -> None:
 def test_three_wave_mixer_properties() -> None:
     "Test if the values of the three wave mixer element are assigned correctly"
 
-    assert float(model.subsystems["Test"].params["freq"].get_value()) == freq_S
-    assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S
+    assert float(model.subsystems["Test"].params["freq"].get_value()) == freq_S* 2 * np.pi
+    assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S* 2 * np.pi
     assert float(model.subsystems["Test"].params["t1"].get_value()) == t1_S
-    assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S
+    assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S* 2 * np.pi
     assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp 
