@@ -83,4 +83,4 @@ def test_three_wave_mixer_properties() -> None:
     assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S
     assert float(model.subsystems["Test"].params["t1"].get_value()) == t1_S
     assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S
-    assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp
+    assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp 
