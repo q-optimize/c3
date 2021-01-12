@@ -5,6 +5,7 @@ setup(
     version="1.1.1",
     description="Toolset for control, calibration and characterization of physical systems",
     url="http://www.q-optimize.org",
+    author="q-optimize",
     author_email="c3@q-optimize.org",
     include_package_data=True,
     packages=[
