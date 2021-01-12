@@ -6,7 +6,9 @@ from c3.qiskit.c3_job import C3Job
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from test.conftest import get_test_circuit  # noqa
+from test.conftest import get_bell_circuit  # noqa
 from qiskit.providers import BackendV1 as Backend
+from qiskit import execute
 
 import pytest
 
@@ -57,10 +59,10 @@ def test_transpile(get_test_circuit, backend):  # noqa
     )
 
 
-@pytest.mark.integration
+@pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
-def test_run_job(get_test_circuit, backend):  # noqa
+def test_get_job(get_test_circuit, backend):  # noqa
     """Test if Backend.run() gives a Job instance
 
     Parameters
@@ -75,3 +77,24 @@ def test_run_job(get_test_circuit, backend):  # noqa
     trans_qc = transpile(get_test_circuit, received_backend)
     job = received_backend.run(trans_qc)
     assert isinstance(job, C3Job)
+
+
+@pytest.mark.integration
+@pytest.mark.qiskit
+@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+def test_get_result(get_bell_circuit, backend):  # noqa
+    """Test the counts from running a Bell Circuit
+
+    Parameters
+    ----------
+    get_bell_circuit : callable
+        pytest fixture for a bell circuit
+    backend : str
+        name of the backend which is to be tested
+    """
+    c3_qiskit = C3Provider()
+    received_backend = c3_qiskit.get_backend(backend)
+    qc = get_bell_circuit
+    job_sim = execute(qc, received_backend, shots=10)
+    result_sim = job_sim.result()
+    assert result_sim.get_counts(qc) == {"00": 4, "11": 4, "01": 1, "10": 1}
