@@ -17,6 +17,7 @@ from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 
 from typing import Any, Dict
+from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,6 @@ class C3QasmSimulator(Backend):
     }
 
     DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
-    SHOW_FINAL_STATE = False  # noqa
 
     def __init__(self, configuration=None, provider=None, **fields):
         super().__init__(
@@ -90,6 +90,19 @@ class C3QasmSimulator(Backend):
             provider=provider,
             **fields
         )
+        # Define attributes in __init__.
+        self._local_random = np.random.RandomState()
+        self._classical_memory = 0
+        self._classical_register = 0
+        self._statevector = 0
+        self._number_of_cmembits = 0
+        self._number_of_qubits = 0
+        self._shots = 0
+        self._memory = False
+        self._initial_statevector = self.options.get("initial_statevector")
+        self._qobj_config = None
+        # TEMP
+        self._sample_measure = False
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -214,8 +227,78 @@ class C3QasmSimulator(Backend):
             If an error occured
         """
         start = time.time()
-        # TODO implement interface with C3
+
+        # initialise parameters
+        self._number_of_qubits = experiment.config.n_qubits
+        self._number_of_cmembits = experiment.config.memory_slots
+        self._statevector = 0
+        self._classical_memory = 0
+        self._classical_register = 0
+        global_phase = experiment.header.global_phase
+        # Validate the dimension of initial statevector if set
+        self._validate_initial_statevector()
+
+        # Get the seed looking in circuit, qobj, and then random.
+        if hasattr(experiment.config, "seed_simulator"):
+            seed_simulator = experiment.config.seed_simulator
+        elif hasattr(self._qobj_config, "seed_simulator"):
+            seed_simulator = self._qobj_config.seed_simulator
+        else:
+            # For compatibility on Windows force dyte to be int32
+            # and set the maximum value to be (2 ** 31) - 1
+            seed_simulator = np.random.randint(2147483647, dtype="int32")
+
+        self._local_random.seed(seed=seed_simulator)
+
+        # List of final counts for all shots
+        memory = []
+
+        shots = self._shots
+        for _ in range(shots):
+            self._initialize_statevector()
+            # apply global_phase
+            self._statevector *= np.exp(1j * global_phase)
+            # Initialize classical memory to all 0
+            self._classical_memory = 0
+            self._classical_register = 0
+
+            # run instructions
+            for operation in experiment.instructions:
+                conditional = getattr(operation, "conditional", None)  # noqa
+                # TODO conditional
+
+                # TODO unitary
+
+                # TODO U, u1, u2, u3
+
+                # TODO CX, cx
+
+                # TODO id, u0
+
+                # TODO reset
+
+                # TODO barrier
+
+                # TODO measure
+
+                # TODO binary function
+
+                # TODO raise C3QiskitError if unknown instruction
+
+            # Add final creg data to memory list
+            if self._number_of_cmembits > 0:
+                # Turn classical_memory (int) into bit string and pad zero for unused cmembits
+                outcome = bin(self._classical_memory)[2:]
+                memory.append(hex(int(outcome, 2)))
+
+        # Add data
+        data = {"counts": dict(Counter(memory))}
+        # Optionally add memory list
+        if self._memory:
+            data["memory"] = {}
+
         end = time.time()
+
         # TODO make dict with experiment result
         exp_result = {
             "name": experiment.header.name,
@@ -267,6 +350,12 @@ class C3QasmSimulator(Backend):
                     "classical register will remain all zeros.",
                     name,
                 )
+
+    def _validate_initial_statevector(self):
+        pass
+
+    def _initialize_statevector(self):
+        pass
 
     def _set_options(self, qobj_config=None, backend_options=None):
         """Set the backend options for all experiments in a qobj"""
