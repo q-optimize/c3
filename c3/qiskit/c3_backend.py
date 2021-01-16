@@ -45,18 +45,8 @@ class C3QasmSimulator(Backend):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments",
-        "basis_gates": ["u1", "u2", "u3", "cx", "id", "unitary"],
+        "basis_gates": ["u3", "cx", "id", "unitary"],
         "gates": [
-            {
-                "name": "u1",
-                "parameters": ["lambda"],
-                "qasm_def": "gate u1(lambda) q { U(0,0,lambda) q; }",
-            },
-            {
-                "name": "u2",
-                "parameters": ["phi", "lambda"],
-                "qasm_def": "gate u2(phi,lambda) q { U(pi/2,phi,lambda) q; }",
-            },
             {
                 "name": "u3",
                 "parameters": ["theta", "phi", "lambda"],
