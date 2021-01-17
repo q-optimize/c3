@@ -1,3 +1,4 @@
+from c3.system.chip import Coupling
 import uuid
 import time
 import numpy as np
@@ -13,8 +14,15 @@ from qiskit.result import Result
 from qiskit.compiler import assemble
 from qiskit.qobj.qasm_qobj import QasmQobjExperiment
 
+from c3.c3objs import Quantity as Qty
+from c3.parametermap import ParameterMap as Pmap
+from c3.experiment import Experiment as Exp
+from c3.system.model import Model as Mdl
+from c3.generator.generator import Generator as Gnr
+
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
+from .c3_qasm_utils import *
 
 from typing import Any, Dict
 from collections import Counter
@@ -243,37 +251,51 @@ class C3QasmSimulator(Backend):
         # List of final counts for all shots
         memory = []
 
+        # setup simulator
+        qubits = get_perfect_qubits(self._number_of_qubits)
+        couplings = get_coupling_fc(self._number_of_qubits)
+        drives = get_drives(self._number_of_qubits)
+        conf_matrix = get_confusion_no_spam(self._number_of_qubits)
+        init_state = get_perfect_init_state()
+        model = Mdl(qubits, drives + couplings, conf_matrix + init_state)
+        model.set_lindbladian(False)
+        model.set_dressed(True)
+        generator = get_generator()
+        gates = get_gate_set(self._number_of_qubits)
+        parameter_map = Pmap(instructions=gates, model=model, generator=generator)
+        exp = Exp(pmap=parameter_map)
+        opt_gates = get_opt_gates(self._number_of_qubits)
+        exp.set_opt_gates(opt_gates)
+        gateset_opt_map = get_gateset_opt_map(self._number_of_qubits)
+        parameter_map.set_opt_map(gateset_opt_map)
+        unitaries = exp.get_perfect_gates()
+
         shots = self._shots
         for _ in range(shots):
-            self._initialize_statevector()
+            # self._initialize_statevector()
+            psi_init = exp.model.tasks["init_ground"].initialise(
+                exp.model.drift_H, exp.model.lindbladian
+            )
+
             # apply global_phase
-            self._statevector *= np.exp(1j * global_phase)
+            # self._statevector *= np.exp(1j * global_phase)
             # Initialize classical memory to all 0
             self._classical_memory = 0
             self._classical_register = 0
 
-            # run instructions
-            for operation in experiment.instructions:
-                conditional = getattr(operation, "conditional", None)  # noqa
-                # TODO conditional
+            # convert qasm instruction set to c3 sequence
+            sequence = get_sequence(experiment.instructions)
 
-                # TODO unitary
+            model = exp.pmap.model
+            psi_t = psi_init.numpy()
+            pop_t = exp.populations(psi_t, model.lindbladian)
 
-                # TODO U, u1, u2, u3
-
-                # TODO CX, cx
-
-                # TODO id, u0
-
-                # TODO reset
-
-                # TODO barrier
-
-                # TODO measure
-
-                # TODO binary function
-
-                # TODO raise C3QiskitError if unknown instruction
+            # simulate sequence
+            for gate in sequence:
+                gate_unitary = unitaries[gate]
+                psi_t = np.matmul(gate_unitary.numpy(), psi_t)
+                pops = exp.populations(psi_t, model.lindbladian)
+                pop_t = np.append(pop_t, pops, axis=1)
 
             # Add final creg data to memory list
             if self._number_of_cmembits > 0:

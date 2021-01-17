@@ -2,7 +2,8 @@
 c3_qasm_simulator
 """
 
-from typing import List
+from typing import List, Tuple
+from qiskit import qobj
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -124,4 +125,72 @@ def get_gate_set(n_qubits: int) -> List[gates.Instruction]:
     List[gates.Instruction]
         List of u3, cx, id and unitary gates for all qubits
     """
+    pass
+
+
+def get_opt_gates(n_qubits: int) -> List[str]:
+    """Return the list of gates to optimize
+
+    Parameters
+    ----------
+    n_qubits : int
+        Number of qubits in system
+
+    Returns
+    -------
+    List[str]
+        Dummy list containing all gates
+    """
+    pass
+
+
+def get_gateset_opt_map(n_qubits: int) -> List[List[Tuple]]:
+    """Return parameter map to optimize
+
+    Parameters
+    ----------
+    n_qubits : int
+        Number of qubits in the system
+
+    Returns
+    -------
+    List[List[Tuple]]
+        Dummy list of gate parameters to optimize
+    """
+    pass
+
+
+def get_sequence(instructions: qobj.QasmQobjExperiment.instructions) -> List[str]:
+    """Return a sequence of gates from instructions
+
+    Parameters
+    ----------
+    instructions : qobj.QasmQobjExperiment.instructions
+        Instructions from the qasm experiment
+
+    Returns
+    -------
+    List[str]
+        List of gates
+    """
+    # TODO conditional
+    # conditional = getattr(instructions, "conditional", None)  # noqa
+
+    # TODO unitary
+
+    # TODO U, u3
+
+    # TODO CX, cx
+
+    # TODO id, u0
+
+    # TODO reset
+
+    # TODO barrier
+
+    # TODO measure
+
+    # TODO binary function
+
+    # TODO raise C3QiskitError if unknown instruction
     pass
