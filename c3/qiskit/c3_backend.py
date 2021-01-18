@@ -256,7 +256,7 @@ class C3QasmSimulator(Backend):
         couplings = get_coupling_fc(self._number_of_qubits)
         drives = get_drives(self._number_of_qubits)
         conf_matrix = get_confusion_no_spam(self._number_of_qubits)
-        init_state = get_perfect_init_state()
+        init_state = get_init_thermal_state()
         model = Mdl(qubits, drives + couplings, conf_matrix + init_state)
         model.set_lindbladian(False)
         model.set_dressed(True)
@@ -266,29 +266,28 @@ class C3QasmSimulator(Backend):
         exp = Exp(pmap=parameter_map)
         opt_gates = get_opt_gates(self._number_of_qubits)
         exp.set_opt_gates(opt_gates)
-        gateset_opt_map = get_gateset_opt_map(self._number_of_qubits)
-        parameter_map.set_opt_map(gateset_opt_map)
-        unitaries = exp.get_perfect_gates()
+        # gateset_opt_map = get_gateset_opt_map(self._number_of_qubits)
+        # parameter_map.set_opt_map(gateset_opt_map)
+        unitaries = exp.get_gates()
+
+        # convert qasm instruction set to c3 sequence
+        # sequence = get_sequence(experiment.instructions)
+        sequence = ["X90p:Id"]
 
         shots = self._shots
-        for _ in range(shots):
+        for shot in range(shots):
             # self._initialize_statevector()
-            psi_init = exp.model.tasks["init_ground"].initialise(
-                exp.model.drift_H, exp.model.lindbladian
-            )
+
+            psi_init = get_init_ground_state(self._number_of_qubits)
+            model = exp.pmap.model
+            psi_t = psi_init.numpy()
+            pop_t = exp.populations(psi_t, model.lindbladian)
 
             # apply global_phase
             # self._statevector *= np.exp(1j * global_phase)
             # Initialize classical memory to all 0
             self._classical_memory = 0
             self._classical_register = 0
-
-            # convert qasm instruction set to c3 sequence
-            sequence = get_sequence(experiment.instructions)
-
-            model = exp.pmap.model
-            psi_t = psi_init.numpy()
-            pop_t = exp.populations(psi_t, model.lindbladian)
 
             # simulate sequence
             for gate in sequence:
