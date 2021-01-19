@@ -138,8 +138,9 @@ class Qubit(PhysicalComponent):
         if self.hilbert_dim > 2:
             anhar = tf.cast(self.params["anhar"].get_value(), tf.complex128)
             h += anhar * self.Hs["anhar"]
-        return h
-
+        return h 
+    
+    
     def init_Ls(self, ann_oper):
         """
         Initialize Lindbladian components.
@@ -190,7 +191,7 @@ class Qubit(PhysicalComponent):
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
         return tf.cast(sum(Ls), tf.complex128)
-
+    
 
 @dev_reg_deco
 class Resonator(PhysicalComponent):
@@ -332,8 +333,107 @@ class AsymmetricTransmon(PhysicalComponent):
             )
         )
         return freq * factor * self.Hs["freq"]
+@dev_reg_deco
+class SNAIL(PhysicalComponent):
+    """
+    Represents the element in a chip functioning as a three wave mixing element also knwon as a SNAIL.
+    Reference: https://arxiv.org/pdf/1702.00869.pdf
+    Parameters
+    ----------
+    freq: np.float64
+        frequency of the qubit
+    anhar: np.float64
+        anharmonicity of the qubit. defined as w01 - w12
+    beta: np.float64
+        third order non_linearity of the qubit. 
+    t1: np.float64
+        t1, the time decay of the qubit due to dissipation
+    t2star: np.float64
+        t2star, the time decay of the qubit due to pure dephasing
+    temp: np.float64
+        temperature of the qubit, used to determine the Boltzmann distribution
+        of energy level populations
+    Class is mostly an exact copy of the Qubit class. The only difference is the added third order non linearity with a prefactor beta.
+    The only modification is the get hamiltonian and init hamiltonian definition. Also imported the necessary third order non linearity
+    from the hamiltonian library. 
+    """
+
+    def __init__(
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        hilbert_dim: int = 4,
+        freq: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+        beta: np.float64 = 0.0,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+        )
+        self.params['freq'] = freq
+        self.params['beta'] = beta
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
+
+    def init_Hs(self, ann_oper):
+        """
+        Initialize the SNAIL Hamiltonians.
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+        """
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        if self.hilbert_dim > 2:
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+        third = hamiltonians["third_order"]
+        self.Hs['beta'] = tf.Variable(third(ann_oper), dtype=tf.complex128)
 
 
+    def get_Hamiltonian(self):
+        """
+        Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
+        the Duffing part and returns their sum.
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+        """
+        h = tf.cast(
+                self.params['freq'].get_value(),
+                tf.complex128
+        ) * self.Hs['freq']
+        h += tf.cast(
+                self.params['beta'].get_value(),
+                tf.complex128
+        ) * self.Hs['beta']
+        if self.hilbert_dim > 2:
+            h += tf.cast(
+                self.params['anhar'].get_value(),
+                tf.complex128
+            ) * self.Hs['anhar']
+
+        return h
+    
+    init_Ls = Qubit.__dict__['init_Ls']
+    get_Lindbladian = Qubit.__dict__['get_Lindbladian'] 
+    
+    
 @dev_reg_deco
 class LineComponent(C3obj):
     """
