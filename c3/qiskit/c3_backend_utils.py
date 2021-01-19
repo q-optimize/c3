@@ -1,17 +1,18 @@
 """Convenience Module for creating different c3 components
 c3_qasm_simulator
 """
-from typing import List
+from typing import Any, Dict, List
 import tensorflow as tf
 import math
+from .c3_exceptions import C3QiskitError
 
 
-def get_sequence(instructions: dict) -> List[str]:
+def get_sequence(instructions: List[Dict[Any, Any]]) -> List[str]:
     """Return a sequence of gates from instructions
 
     Parameters
     ----------
-    instructions : dict
+    instructions : List[dict]
         Instructions from the qasm experiment
 
     Returns
@@ -19,27 +20,55 @@ def get_sequence(instructions: dict) -> List[str]:
     List[str]
         List of gates
     """
-    # TODO conditional
-    # conditional = getattr(instructions, "conditional", None)  # noqa
 
-    # TODO unitary
+    sequence = []
 
-    # TODO U, u3
+    for instruction in instructions:
 
-    # TODO CX, cx
+        # Conditional operations are not supported
+        conditional = getattr(instructions, "conditional", None)  # noqa
+        if conditional is not None:
+            raise C3QiskitError("C3 Simulator does not support conditional operations")
 
-    # TODO id, u0
+        # reset is not supported
+        if instruction.name == "reset":  # type: ignore
+            raise C3QiskitError("C3 Simulator does not support qubit reset")
 
-    # TODO reset
+        # binary functions are not supported
+        elif instruction.name == "bfunc":  # type: ignore
+            raise C3QiskitError("C3 Simulator does not support binary functions")
 
-    # TODO barrier
+        # barrier is implemented internally through Identity gates
+        elif instruction.name == "barrier":  # type: ignore
+            pass
 
-    # TODO measure
+        # TODO unitary
+        elif instruction.name == "unitary":  # type: ignore
+            pass
 
-    # TODO binary function
+        # TODO U, u3
+        elif instruction.name in ("U", "u3"):  # type: ignore
+            pass
 
-    # TODO raise C3QiskitError if unknown instruction
-    pass
+        # TODO CX, cx
+        elif instruction.name in ("CX", "cx"):  # type: ignore
+            pass
+
+        # id, u0 implemented internally
+        elif instruction.name in ("id", "u0"):  # type: ignore
+            pass
+
+        # TODO measure using evaluate()
+        elif instruction.name == "measure":  # type: ignore
+            pass
+
+        # raise C3QiskitError if unknown instruction
+        else:
+            raise C3QiskitError(
+                "Encountered unknown operation {}".format(instruction.name)  # type: ignore
+            )
+    sequence = ["X90p:Id"]
+    return sequence
 
 
 def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:

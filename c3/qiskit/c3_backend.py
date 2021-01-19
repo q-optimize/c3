@@ -17,7 +17,7 @@ from c3.experiment import Experiment
 
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
-from .c3_backend_utils import *
+from .c3_backend_utils import get_init_ground_state, get_sequence
 
 from typing import Any, Dict
 from collections import Counter
@@ -264,12 +264,14 @@ class C3QasmSimulator(Backend):
         pmap = exp.pmap
         model = pmap.model
         generator = pmap.generator
-        unitaries = exp.get_gates()
+
+        # TODO implement get_perfect_gates in Experiment
+        # unitaries = exp.get_perfect_gates()
+        exp.get_gates()
         dUs = exp.dUs
 
-        # TODO convert qasm instruction set to c3 sequence
-        # sequence = get_sequence(experiment.instructions)
-        sequence = ["X90p:Id"]
+        # convert qasm instruction set to c3 sequence
+        sequence = get_sequence(experiment.instructions)
 
         shots = self._shots
 
@@ -286,7 +288,6 @@ class C3QasmSimulator(Backend):
             # self._statevector *= np.exp(1j * global_phase)
             # Initialize classical memory to all 0
             self._classical_memory = 0
-            self._classical_register = 0
 
             # simulate sequence
             for gate in sequence:
@@ -296,8 +297,7 @@ class C3QasmSimulator(Backend):
                     pop_t = np.append(pop_t, pops, axis=1)
 
             # TODO implement qasm, unitary and statevector readout
-            # TODO classical registers
-            # TODO classical memory
+            # TODO classical memory, must be same in size as n_qubits
 
             # Add final creg data to memory list
             if self._number_of_cmembits > 0:
