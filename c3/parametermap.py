@@ -166,7 +166,7 @@ class ParameterMap:
             raise Exception(f"C3:ERROR:Parameter {key} not defined.") from ke
         return value
 
-    def get_parameters(self) -> List[Quantity]:
+    def get_parameters(self, opt_map=None) -> List[Quantity]:
         """
         Return the current parameters.
 
@@ -181,7 +181,9 @@ class ParameterMap:
 
         """
         values = []
-        for equiv_ids in self.opt_map:
+        if opt_map is None:
+            opt_map = self.opt_map
+        for equiv_ids in opt_map:
             key = "-".join(equiv_ids[0])
             values.append(self.__pars[key])
         return values
@@ -277,7 +279,7 @@ class ParameterMap:
                     )
         self.opt_map = opt_map
 
-    def str_parameters(self, opt_map: List[List[Tuple[str]]]) -> str:
+    def str_parameters(self, opt_map: List[List[Tuple[str]]] = None) -> str:
         """
         Return a multi-line human-readable string of the optmization parameter names and
         current values.
@@ -292,6 +294,8 @@ class ParameterMap:
         str
             Parameters and their values
         """
+        if opt_map is None:
+            opt_map = self.opt_map
         ret = []
         for equiv_ids in opt_map:
             par_id = equiv_ids[0]
@@ -305,8 +309,10 @@ class ParameterMap:
                 ret.append("\n")
         return "".join(ret)
 
-    def print_parameters(self) -> None:
+    def print_parameters(self, opt_map = None) -> None:
         """
         Print current parameters to stdout.
         """
-        print(self.str_parameters(self.opt_map))
+        if opt_map is None:
+            opt_map = self.opt_map
+        print(self.str_parameters(opt_map))
