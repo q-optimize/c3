@@ -356,14 +356,20 @@ def evaluate_sequences(U_dict: dict, sequences: list):
 
     """
     gates = U_dict
+    # get dims to deal with the case where a sequence is empty
+    dim = list(gates.values())[0].shape[0]
+    dtype = list(gates.values())[0].dtype
     # TODO deal with the case where you only evaluate one sequence
     U = []
     for sequence in sequences:
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U.append(tf_matmul_left(Us))
-        # ### WARNING WARNING ^^ look there, it says left WARNING
+        if len(sequence) == 0:
+            U.append(tf.linalg.eye(dim,dtype=dtype))
+        else:
+            Us = []
+            for gate in sequence:
+                Us.append(gates[gate])
+            U.append(tf_matmul_left(Us))
+            # ### WARNING WARNING ^^ look there, it says left WARNING
     return U
 
 
