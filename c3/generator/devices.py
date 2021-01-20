@@ -1138,15 +1138,16 @@ class AWG(Device):
                     inphase = comp.params["inphase"].get_value()
                     quadrature = comp.params["quadrature"].get_value()
                 else:
-                    # TODO include quadrature shape
-                    inphase = comp.get_shape_values(ts)
-                    quadrature = tf.zeros_like(inphase)
+                    shape = comp.get_shape_values(ts)
+                    inphase = tf.math.real(shape)
+                    quadrature = tf.math.imag(shape)
                 xy_angle = comp.params["xy_angle"].get_value()
-                phase = -xy_angle
+                freq_offset = comp.params["freq_offset"].get_value()
+                phase = -xy_angle + freq_offset * ts
 
                 if len(inphase) != len(quadrature):
                     raise ValueError("inphase and quadrature are of different lengths.")
-                if len(inphase) < len(ts):
+                elif len(inphase) < len(ts):
                     zeros = tf.constant(
                         np.zeros(len(ts) - len(inphase)), dtype=inphase.dtype
                     )
