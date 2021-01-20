@@ -192,6 +192,7 @@ class Experiment:
         """
         model = self.pmap.model
         populations_final = []
+        populations_no_rescale = []
         for pops in populations:
             # TODO: Loop over all tasks in a general fashion
             # TODO: Selecting states by label in the case of computational space
@@ -219,9 +220,10 @@ class Experiment:
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
             if "meas_rescale" in model.tasks:
+                populations_no_rescale.append(pops)
                 pops = model.tasks["meas_rescale"].rescale(pops)
             populations_final.append(pops)
-        return populations_final
+        return populations_final, populations_no_rescale
 
     def get_gates(self):
         """
