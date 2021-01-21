@@ -279,7 +279,11 @@ class Model:
         if ordered:
             reorder_matrix = tf.round(tf.abs(v) ** 2)
             signed_rm = tf.cast(
-                tf.sign(tf.math.real(v)) * reorder_matrix, dtype=tf.complex128
+                # TODO determine if the changing of sign is needed
+                # (by looking at TC_eneregies_bases I see no difference)
+                # reorder_matrix, dtype=tf.complex128
+                tf.sign(tf.math.real(v)) * reorder_matrix,
+                dtype=tf.complex128,
             )
             eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
             transform = tf.matmul(v, tf.transpose(signed_rm))
