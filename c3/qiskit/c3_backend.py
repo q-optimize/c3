@@ -20,7 +20,6 @@ from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence
 
 from typing import Any, Dict
-from collections import Counter
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +33,17 @@ class C3QasmSimulator(Backend):
         The C3QasmSimulator is derived from BackendV1
     """
 
-    MAX_QUBITS_MEMORY = 10
+    MAX_QUBITS_MEMORY = 15
     _configuration = {
         "backend_name": "c3_qasm_simulator",
         "backend_version": "1.1",
-        "n_qubits": min(5, MAX_QUBITS_MEMORY),
+        "n_qubits": min(15, MAX_QUBITS_MEMORY),
         "url": "https://github.com/q-optimize/c3",
         "simulator": True,
         "local": True,
         "conditional": True,
         "open_pulse": False,
-        "memory": True,
+        "memory": False,
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments",
@@ -211,6 +210,7 @@ class C3QasmSimulator(Backend):
         -------
         Dict[str, Any]
             A result dictionary which looks something like::
+
             {
             "name": name of this experiment (obtained from qobj.experiment header)
             "seed": random seed used for simulation
@@ -234,11 +234,7 @@ class C3QasmSimulator(Backend):
 
         # initialise parameters
         self._number_of_qubits = experiment.config.n_qubits
-        self._number_of_cmembits = experiment.config.memory_slots
-        self._statevector = 0
-        self._classical_memory = 0
-        self._classical_register = 0
-        global_phase = experiment.header.global_phase
+        shots = self._shots
         # TODO get number of hilbert dimensions from device
         # self._number_of_levels = 2
         # Validate the dimension of initial statevector if set
@@ -256,15 +252,13 @@ class C3QasmSimulator(Backend):
 
         self._local_random.seed(seed=seed_simulator)
 
-        # List of final counts for all shots
-        memory = []
-
         exp = Experiment()
         exp.quick_setup(self._device_config)
         pmap = exp.pmap
         model = pmap.model
-        generator = pmap.generator
+        generator = pmap.generator  # noqa
 
+        # TODO private functions for perfect and physics based sim
         # TODO implement get_perfect_gates in Experiment
         # unitaries = exp.get_perfect_gates()
         exp.get_gates()
@@ -273,47 +267,34 @@ class C3QasmSimulator(Backend):
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
 
-        shots = self._shots
+        # TODO Implement extracting n_qubits and n_levels
+        # create initial state for qubits and levels
+        psi_init = get_init_ground_state(6, 2)
+        psi_t = psi_init.numpy()
+        pop_t = exp.populations(psi_t, model.lindbladian)
 
-        # TODO implement shots style data collection
-        for _ in range(shots):
-            # self._initialize_statevector()
+        # simulate sequence
+        for gate in sequence:
+            for du in dUs[gate]:
+                psi_t = np.matmul(du.numpy(), psi_t)
+                pops = exp.populations(psi_t, model.lindbladian)
+                pop_t = np.append(pop_t, pops, axis=1)
 
-            # TODO Implement extracting n_qubits and n_levels
-            psi_init = get_init_ground_state(6, 2)
-            psi_t = psi_init.numpy()
-            pop_t = exp.populations(psi_t, model.lindbladian)
+        # generate shots style readout with no SPAM
+        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32")
 
-            # apply global_phase
-            # self._statevector *= np.exp(1j * global_phase)
-            # Initialize classical memory to all 0
-            self._classical_memory = 0
+        # generate state labels
+        # TODO use n_qubits and n_levels
+        labels = [hex(i) for i in range(0, pow(2, 6))]
 
-            # simulate sequence
-            for gate in sequence:
-                for du in dUs[gate]:
-                    psi_t = np.matmul(du.numpy(), psi_t)
-                    pops = exp.populations(psi_t, model.lindbladian)
-                    pop_t = np.append(pop_t, pops, axis=1)
+        # create results dict
+        counts = dict(zip(labels, shots_data))
 
-            # TODO implement qasm, unitary and statevector readout
-            # TODO classical memory, must be same in size as n_qubits
-
-            # Add final creg data to memory list
-            if self._number_of_cmembits > 0:
-                # Turn classical_memory (int) into bit string and pad zero for unused cmembits
-                outcome = bin(self._classical_memory)[2:]
-                memory.append(hex(int(outcome, 2)))
-
-        # TODO Add data
-        data = {"counts": dict(Counter(memory))}
-        # TODO Optionally add memory list
-        if self._memory:
-            data["memory"] = {}
+        # keep only non-zero states
+        counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
 
         end = time.time()
 
-        # TODO make dict with experiment result
         exp_result = {
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
@@ -321,21 +302,7 @@ class C3QasmSimulator(Backend):
             "seed": 88,
             "status": "DONE",
             "success": True,
-            "data": {
-                "counts": {"0x0": 4, "0x3": 4, "0x1": 1, "0x2": 1},
-                "memory": [
-                    "0x1",
-                    "0x0",
-                    "0x0",
-                    "0x2",
-                    "0x0",
-                    "0x3",
-                    "0x3",
-                    "0x3",
-                    "0x0",
-                    "0x3",
-                ],
-            },
+            "data": {"counts": counts},
             "time_taken": (end - start),
         }
 
@@ -366,13 +333,37 @@ class C3QasmSimulator(Backend):
                 )
 
     def _validate_initial_statevector(self):
-        pass
+        """Raise an error when experiment tries to set initial statevector
+
+        Raises
+        ------
+        C3QiskitError
+            Error for statevector initialisation not implemented
+        """
+        if self._initial_statevector is not None:
+            raise C3QiskitError(
+                "Setting initial statevector is not implemented in this simulator"
+            )
+        else:
+            pass
 
     def _initialize_statevector(self):
-        pass
+        """Raise an error when experiment tries to set initial statevector
+
+        Raises
+        ------
+        C3QiskitError
+            Error for statevector initialisation not implemented
+        """
+        if self._initial_statevector is not None:
+            raise C3QiskitError(
+                "Setting initial statevector is not implemented in this simulator"
+            )
+        else:
+            pass
 
     def _set_options(self, qobj_config=None, backend_options=None):
-        """Set the backend options for all experiments in a qobj"""
+        """Qiskit stock method to Set the backend options for all experiments in a qobj"""
         # Reset default options
         self._initial_statevector = self.options.get("initial_statevector")
         if "backend_options" in backend_options and backend_options["backend_options"]:

@@ -4,8 +4,6 @@
 from c3.qiskit import C3Provider
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
-from test.conftest import get_test_circuit  # noqa
-from test.conftest import get_bell_circuit  # noqa
 from qiskit.providers import BackendV1 as Backend
 from qiskit import execute
 
@@ -62,20 +60,20 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.qiskit
 @pytest.mark.slow
 @pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
-def test_get_result(get_bell_circuit, backend):  # noqa
+def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     """Test the counts from running a Bell Circuit
 
     Parameters
     ----------
-    get_bell_circuit : callable
-        pytest fixture for a bell circuit
+    get_6_qubit_circuit : callable
+        pytest fixture for a 6 qubit circuit
     backend : str
         name of the backend which is to be tested
     """
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
-    qc = get_bell_circuit
+    qc = get_6_qubit_circuit
     job_sim = execute(qc, received_backend, shots=10)
     result_sim = job_sim.result()
-    assert result_sim.get_counts(qc) == {"00": 4, "11": 4, "01": 1, "10": 1}
+    assert result_sim.get_counts(qc) == get_result_qiskit
