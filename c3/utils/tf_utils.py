@@ -342,12 +342,14 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     ----------
     U_dict : dict
         Dictionary of unitary representation of gates.
+    
     sequences : list
         List of keys from U_dict specifying a gate sequence.
         The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
             ... U2 * U1 * U0
+    
     Returns
     -------
     tf.tensor
