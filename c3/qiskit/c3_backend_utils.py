@@ -15,14 +15,14 @@ def get_sequence(instructions: List) -> List[str]:
         Instructions from the qasm experiment, for example::
 
         instructions: [
-                {"name": "u1", "qubits": [1], "params": [0.4]},
-                {"name": "u2", "qubits": [1], "params": [0.4,0.2]},
-                {"name": "u3", "qubits": [1], "params": [0.4,0.2,-0.3]},
+                {"name": "u1", "qubits": [0], "params": [0.4]},
+                {"name": "u2", "qubits": [0], "params": [0.4,0.2]},
+                {"name": "u3", "qubits": [0], "params": [0.4,0.2,-0.3]},
                 {"name": "snapshot", "label": "snapstate1", "snapshot_type": "statevector"},
-                {"name": "cx", "qubits": [1,2]},
-                {"name": "barrier", "qubits": [1]},
-                {"name": "measure", "qubits": [1], "register": [2], "memory": [0]},
-                {"name": "u2", "qubits": [1], "params": [0.4,0.2], "conditional": 2}
+                {"name": "cx", "qubits": [0,1]},
+                {"name": "barrier", "qubits": [0]},
+                {"name": "measure", "qubits": [0], "register": [1], "memory": [0]},
+                {"name": "u2", "qubits": [0], "params": [0.4,0.2], "conditional": 2}
             ]
 
     Returns
@@ -70,17 +70,24 @@ def get_sequence(instructions: List) -> List[str]:
 
         # TODO U, u3
         elif instruction.name in ("U", "u3"):
-            pass
+            raise C3QiskitError("U3 gates are not yet implemented in C3 Simulator")
 
-        # TODO CX, cx
+        # TODO scalable way to name and assign CX, cx gate in multi qubit systems
         elif instruction.name in ("CX", "cx"):
-            pass
+            if instruction.qubits == [0, 1]:
+                sequence.append("CR90")
+            else:
+                raise C3QiskitError(
+                    "Gate {0} on qubits {1} not possible".format(
+                        instruction.name, instruction.qubits
+                    )
+                )
 
         # id, u0 implemented internally
         elif instruction.name in ("id", "u0"):
             pass
 
-        # TODO measure using evaluate()
+        # measure implemented outside sequences
         elif instruction.name == "measure":
             pass
 
@@ -89,7 +96,6 @@ def get_sequence(instructions: List) -> List[str]:
             raise C3QiskitError(
                 "Encountered unknown operation {}".format(instruction.name)
             )
-    # sequence = ["X90p:Id"]
     return sequence
 
 

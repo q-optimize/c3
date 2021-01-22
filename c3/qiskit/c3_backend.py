@@ -256,6 +256,7 @@ class C3QasmSimulator(Backend):
                 pop_t = np.append(pop_t, pops, axis=1)
 
         # generate shots style readout with no SPAM
+        # TODO a more sophisticated readout/measurement routine
         shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32")
 
         # generate state labels
