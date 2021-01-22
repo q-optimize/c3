@@ -1,0 +1,33 @@
+name: Notebook Test
+
+on:
+  push:
+    branches: [ master, dev, 'release/*' ]
+  pull_request:
+    branches: [ master, dev, 'release/*' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-18.04, macos-latest, windows-latest]
+        python-version: [3.6, 3.7, 3.8]
+    env:
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install jupyter notebook ipykernel matplotlib
+    - name: Test with nbconvert
+      run: |
+        jupyter nbconvert --to notebook --inplace --execute examples/*.ipynb
