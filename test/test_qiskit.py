@@ -74,6 +74,6 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
     qc = get_6_qubit_circuit
-    job_sim = execute(qc, received_backend, shots=10)
+    job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
     assert result_sim.get_counts(qc) == get_result_qiskit

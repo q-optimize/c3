@@ -46,6 +46,7 @@ def get_6_qubit_circuit() -> QuantumCircuit:
     """
     qc = QuantumCircuit(6, 6)
     qc.x(0)
+    qc.cx(0, 1)
     qc.measure([0], [0])
     return qc
 
@@ -75,5 +76,5 @@ def get_result_qiskit() -> Dict[str, Any]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    counts = {"000000": 5, "100000": 5}
+    counts = {"000000": 291, "010000": 577, "100000": 105}
     return counts
