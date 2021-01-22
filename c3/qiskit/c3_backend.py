@@ -47,29 +47,8 @@ class C3QasmSimulator(Backend):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments",
-        "basis_gates": ["u3", "cx", "id", "unitary"],
-        "gates": [
-            {
-                "name": "u3",
-                "parameters": ["theta", "phi", "lambda"],
-                "qasm_def": "gate u3(theta,phi,lambda) q { U(theta,phi,lambda) q; }",
-            },
-            {
-                "name": "cx",
-                "parameters": ["c", "t"],
-                "qasm_def": "gate cx c,t { CX c,t; }",
-            },
-            {
-                "name": "id",
-                "parameters": ["a"],
-                "qasm_def": "gate id a { U(0,0,0) a; }",
-            },
-            {
-                "name": "unitary",
-                "parameters": ["matrix"],
-                "qasm_def": "unitary(matrix) q1, q2,...",
-            },
-        ],
+        "basis_gates": ["u3", "cx", "id", "x"],
+        "gates": [],
     }
 
     DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
@@ -232,34 +211,30 @@ class C3QasmSimulator(Backend):
         """
         start = time.time()
 
-        # initialise parameters
-        self._number_of_qubits = experiment.config.n_qubits
-        shots = self._shots
-        # TODO get number of hilbert dimensions from device
-        # self._number_of_levels = 2
-        # Validate the dimension of initial statevector if set
-        self._validate_initial_statevector()
-
-        # Get the seed looking in circuit, qobj, and then random.
-        if hasattr(experiment.config, "seed_simulator"):
-            seed_simulator = experiment.config.seed_simulator
-        elif hasattr(self._qobj_config, "seed_simulator"):
-            seed_simulator = self._qobj_config.seed_simulator
-        else:
-            # For compatibility on Windows force dyte to be int32
-            # and set the maximum value to be (2 ** 31) - 1
-            seed_simulator = np.random.randint(2147483647, dtype="int32")
-
-        self._local_random.seed(seed=seed_simulator)
-
+        # setup C3 Experiment
         exp = Experiment()
         exp.quick_setup(self._device_config)
         pmap = exp.pmap
         model = pmap.model
-        generator = pmap.generator  # noqa
 
-        # TODO private functions for perfect and physics based sim
-        # TODO implement get_perfect_gates in Experiment
+        # initialise parameters
+        # TODO get n_qubits from device config and raise error if mismatch
+        self._number_of_qubits = experiment.config.n_qubits
+        # TODO ensure number of quantum and classical bits is same
+        shots = self._shots
+        # TODO get number of hilbert dimensions from device config
+        self._number_of_levels = 2
+
+        # Validate the dimension of initial statevector if set
+        self._validate_initial_statevector()
+
+        # TODO set simulator seed, check qiskit python qasm simulator
+        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
+        seed_simulator = 2441129
+
+        # TODO check for user-defined perfect and physics based sim
+        # TODO resolve use of evaluate(), process() in Experiment, possibly extend
+        # TODO implement get_perfect_gates() in Experiment
         # unitaries = exp.get_perfect_gates()
         exp.get_gates()
         dUs = exp.dUs
@@ -267,9 +242,9 @@ class C3QasmSimulator(Backend):
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
 
-        # TODO Implement extracting n_qubits and n_levels
+        # TODO Implement extracting n_qubits and n_levels from device
         # create initial state for qubits and levels
-        psi_init = get_init_ground_state(6, 2)
+        psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
         psi_t = psi_init.numpy()
         pop_t = exp.populations(psi_t, model.lindbladian)
 
@@ -285,7 +260,10 @@ class C3QasmSimulator(Backend):
 
         # generate state labels
         # TODO use n_qubits and n_levels
-        labels = [hex(i) for i in range(0, pow(2, 6))]
+        labels = [
+            hex(i)
+            for i in range(0, pow(self._number_of_qubits, self._number_of_levels))
+        ]
 
         # create results dict
         counts = dict(zip(labels, shots_data))
@@ -299,7 +277,7 @@ class C3QasmSimulator(Backend):
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
             "shots": self._shots,
-            "seed": 88,
+            "seed": seed_simulator,
             "status": "DONE",
             "success": True,
             "data": {"counts": counts},

@@ -1,5 +1,4 @@
-"""Convenience Module for creating different c3 components
-c3_qasm_simulator
+"""Convenience Module for creating different c3_backend
 """
 from typing import Any, Dict, List
 import tensorflow as tf
@@ -42,8 +41,8 @@ def get_sequence(instructions: List[Dict[Any, Any]]) -> List[str]:
         elif instruction.name == "barrier":  # type: ignore
             pass
 
-        # TODO unitary
-        elif instruction.name == "unitary":  # type: ignore
+        # TODO X
+        elif instruction.name == "x":  # type: ignore
             pass
 
         # TODO U, u3
