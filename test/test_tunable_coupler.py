@@ -507,6 +507,7 @@ def test_energy_levels() -> None:
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
     assert (dressed_basis == data["dressed_basis"]).all()
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
@@ -547,6 +548,7 @@ def test_separate_chains() -> None:
     assert generator.chains['TC'] != generator.chains['Q2']
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_flux_signal() -> None:
     instr = exp.pmap.instructions["Id:CZ"]
