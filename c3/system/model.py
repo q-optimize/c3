@@ -257,20 +257,6 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
-    #     def update_drift_eigen(self, ordered=True):
-    #         """Compute the eigendecomposition of the drift Hamiltonian and store both the Eigenenergies and the
-    #         transformation matrix."""
-    #         e, v = tf.linalg.eigh(self.drift_H)
-    #         reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
-    #         if ordered:
-    #             eigenframe = tf.linalg.matvec(reorder_matrix, e)
-    #             transform = tf.matmul(v, tf.transpose(reorder_matrix))
-    #         else:
-    #             eigenframe = tf.linalg.diag(e)
-    #             transform = v
-    #         self.eigenframe = eigenframe
-    #         self.transform = transform
-
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
@@ -290,9 +276,6 @@ class Model:
         else:
             eigenframe = tf.math.real(e)
             transform = v
-        #             reorder =  tf.linalg.matvec(np.abs(reorder_matrix),tf.arange(18,dtype=tf.complex128))
-        #             self.ordered_labels = [self.state_labels[int(index)] for index in reorder]
-        #             self.reorder_matrix = reorder_matrix
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
 
@@ -353,11 +336,6 @@ class Model:
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
             # TODO test dressing of FR
-            # if self.dressed:
-            #     num_oper = tf.matmul(
-            #         tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
-            #         self.transform
-            #     )
             exponent = exponent + 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)
         return FR
