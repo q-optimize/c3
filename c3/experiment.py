@@ -409,7 +409,7 @@ class Experiment:
             # Windows is not able to parse ":" as file path
             np.savetxt(folder + key.replace(':','.') + ".txt", value)
 
-    def populations(self, state, lindbladian, oper=None):
+    def populations(self, state, lindbladian):
         """
         Compute populations from a state or density vector.
 
@@ -425,17 +425,17 @@ class Experiment:
         tf.Tensor
             Vector of populations.
         """
-        if oper is not None:
-            if lindbladian:
-                rho = tf_utils.tf_vec_to_dm(state)
-            else:
-                rho = tf_utils.tf_state_to_dm(state)
-            trace = np.trace(np.matmul(rho,oper))
-            return [[np.real(trace)]] #,[np.imag(trace)]]
+        if lindbladian:
+            rho = tf_utils.tf_vec_to_dm(state)
+            pops = tf.math.real(tf.linalg.diag_part(rho))
+            return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
-            if lindbladian:
-                rho = tf_utils.tf_vec_to_dm(state)
-                pops = tf.math.real(tf.linalg.diag_part(rho))
-                return tf.reshape(pops, shape=[pops.shape[0], 1])
-            else:
-                return tf.abs(state)**2
+            return tf.abs(state)**2
+
+    def expect_oper(self, state, lindbladian, oper):
+        if lindbladian:
+            rho = tf_utils.tf_vec_to_dm(state)
+        else:
+            rho = tf_utils.tf_state_to_dm(state)
+        trace = np.trace(np.matmul(rho,oper))
+        return [[np.real(trace)]] #,[np.imag(trace)]]
