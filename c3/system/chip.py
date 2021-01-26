@@ -189,6 +189,8 @@ class Qubit(PhysicalComponent):
             gamma = (0.5 / self.params["t2star"].get_value()) ** 0.5
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
+        if Ls == []:
+            raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
 
 
@@ -448,6 +450,8 @@ class AsymmetricTransmon(PhysicalComponent):
             gamma = (0.5/self.params['t2star'].get_value())**0.5
             L = gamma * self.collapse_ops['t2star']
             Ls.append(L)
+        if Ls == []:
+            raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
 
 
