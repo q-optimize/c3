@@ -30,10 +30,8 @@ def median_dist(exp_values, sim_values, exp_stds, shots):
 @estimator_reg_deco
 def rms_dist(exp_values, sim_values, exp_stds, shots):
     """Return the root mean squared of the differences."""
-    diffs = tf.subtract(exp_values, sim_values)
-    rms = tf.sqrt(tf.reduce_mean(diffs**2))
-    print(f"{exp_values=}\n{sim_values=}\n{diffs=}\n{rms=}")
-    return rms
+    diffs = tf.abs(tf.subtract(exp_values, sim_values))
+    return tf.sqrt(tf.reduce_mean(diffs ** 2))
 
 
 @estimator_reg_deco
@@ -152,16 +150,10 @@ def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
 
 
 @estimator_reg_deco
-def g_LL_prime(exp_values, sim_values, exp_stds, shots, scale = None, pops = None):
-    if scale:
-        std = [tf.sqrt(pops*(1-pops)/shots)+0.001]*tf.abs(scale)
-        # print(f"{pops=}\n{scale=}\n{shots=}\n{std=}")
-    else:
-        std = tf.sqrt(sim_values*(1-sim_values)/shots)
-    gg=((exp_values-sim_values)**2 / std**2 - 1) / 2
-    mean = tf.reduce_mean(gg)
-    # print(f"{exp_values=}\n{sim_values=}\n{gg=}\n{mean=}\n")
-    return mean
+def g_LL_prime(exp_values, sim_values, exp_stds, shots):
+    std = tf.sqrt(sim_values*(1-sim_values)/shots)
+    return tf.reduce_mean(((exp_values-sim_values)**2 / std**2 - 1) / 2)
+
 
 def dv_g_LL_prime(gs, dv_gs, weights):
     K = np.sum(weights)
