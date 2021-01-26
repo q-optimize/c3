@@ -32,27 +32,29 @@ class Generator:
     """
 
     def __init__(
-        self, devices: dict = None, chain: list = None, resolution: np.float64 = 0.0
+        self, devices: dict = None, chains: dict = None, resolution: np.float64 = 0.0
     ):
         self.devices = {}
         if devices:
             self.devices = devices
-        self.chain = []
-        if chain:
-            self.chain = chain
-            self.__check_signal_chain()
+        self.chains = {}
+        if chains:
+            self.chains = chains
+            self.__check_signal_chains()
         self.resolution = resolution
 
-    def __check_signal_chain(self) -> None:
-        signals = 0
-        for device_id in self.chain:
-            signals -= self.devices[device_id].inputs
-            signals += self.devices[device_id].outputs
-        if signals != 1:
-            raise Exception(
-                "C3:ERROR: Signal chain contains unmatched number"
-                " of inputs and outputs."
-            )
+    def __check_signal_chains(self) -> None:
+        for channel, chain in self.chains.items():
+            signals = 0
+            for device_id in chain:
+                signals -= self.devices[device_id].inputs
+                signals += self.devices[device_id].outputs
+            if signals != 1:
+                raise Exception(
+                    "C3:ERROR: Signal chain for channel '"
+                    + channel
+                    + "' contains unmatched number of inputs and outputs."
+                )
 
     def read_config(self, filepath: str) -> None:
         """
@@ -70,8 +72,8 @@ class Generator:
             props["name"] = name
             dev_type = props.pop("c3type")
             self.devices[name] = dev_lib[dev_type](**props)
-        self.chain = cfg["Chain"]
-        self.__check_signal_chain()
+        self.chains = cfg["Chains"]
+        self.__check_signal_chains()
 
     def write_config(self, filepath: str) -> None:
         """
@@ -87,7 +89,7 @@ class Generator:
         devices = {}
         for name, dev in self.devices.items():
             devices[name] = dev.asdict()
-        return {"Devices": devices, "Chain": self.chain}
+        return {"Devices": devices, "Chains": self.chains}
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
@@ -111,7 +113,7 @@ class Generator:
         gen_signal = {}
         for chan in instr.comps:
             signal_stack: List[tf.Variable] = []
-            for dev_id in self.chain:
+            for dev_id in self.chains[chan]:
                 dev = self.devices[dev_id]
                 inputs = []
                 for _input_num in range(dev.inputs):

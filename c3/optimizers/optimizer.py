@@ -6,6 +6,8 @@ import hjson
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
+import c3.utils.qt_utils as qt_utils
+import c3.utils.tf_utils as tf_utils
 from typing import Union
 
 
@@ -41,6 +43,9 @@ class Optimizer:
         self.created_by = None
         self.logname = None
         self.options = None
+        self.set_algorithm(algorithm)
+
+    def set_algorithm(self, algorithm):
         if algorithm:
             self.algorithm = algorithm
         else:
@@ -58,9 +63,15 @@ class Optimizer:
         """
         old_logdir = self.logdir
         self.logdir = new_logdir
-        os.remove(self.dir_path + "/recent")
-        # os.remove(self.dir_path + self.string)
-        os.rmdir(old_logdir)
+        try:
+            os.remove(os.path.join(self.dir_path,'recent'))
+        except FileNotFoundError:
+            pass
+        #os.remove(self.dir_path + self.string)
+        try:
+            os.rmdir(old_logdir)
+        except OSError:
+            pass
 
     def set_exp(self, exp) -> None:
         self.exp = exp

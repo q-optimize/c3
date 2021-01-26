@@ -52,33 +52,33 @@ def create_experiment():
         desc="Qubit 1",
         freq=Qty(
             value=freq_q1,
-            min=4.995e9 * 2 * np.pi,
-            max=5.005e9 * 2 * np.pi,
+            min_val=4.995e9 * 2 * np.pi,
+            max_val=5.005e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q1,
-            min=-380e6 * 2 * np.pi,
-            max=-120e6 * 2 * np.pi,
+            min_val=-380e6 * 2 * np.pi,
+            max_val=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
             value=t1_q1,
-            min=1e-6,
-            max=90e-6,
+            min_val=1e-6,
+            max_val=90e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star_q1,
-            min=10e-6,
-            max=90e-6,
+            min_val=10e-6,
+            max_val=90e-6,
             unit='s'
         ),
         temp=Qty(
             value=qubit_temp,
-            min=0.0,
-            max=0.12,
+            min_val=0.0,
+            max_val=0.12,
             unit='K'
         )
     )
@@ -87,33 +87,33 @@ def create_experiment():
         desc="Qubit 2",
         freq=Qty(
             value=freq_q2,
-            min=5.595e9 * 2 * np.pi,
-            max=5.605e9 * 2 * np.pi,
+            min_val=5.595e9 * 2 * np.pi,
+            max_val=5.605e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         anhar=Qty(
             value=anhar_q2,
-            min=-380e6 * 2 * np.pi,
-            max=-120e6 * 2 * np.pi,
+            min_val=-380e6 * 2 * np.pi,
+            max_val=-120e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hilbert_dim=qubit_lvls,
         t1=Qty(
             value=t1_q2,
-            min=1e-6,
-            max=90e-6,
+            min_val=1e-6,
+            max_val=90e-6,
             unit='s'
         ),
         t2star=Qty(
             value=t2star_q2,
-            min=10e-6,
-            max=90e-6,
+            min_val=10e-6,
+            max_val=90e-6,
             unit='s'
         ),
         temp=Qty(
             value=qubit_temp,
-            min=0.0,
-            max=0.12,
+            min_val=0.0,
+            max_val=0.12,
             unit='K'
         )
     )
@@ -125,8 +125,8 @@ def create_experiment():
         connected=["Q1", "Q2"],
         strength=Qty(
             value=coupling_strength,
-            min=-1 * 1e3 * 2 * np.pi,
-            max=200e6 * 2 * np.pi,
+            min_val=-1 * 1e3 * 2 * np.pi,
+            max_val=200e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         hamiltonian_func=hamiltonians.int_XX
@@ -152,8 +152,8 @@ def create_experiment():
     init_ground = tasks.InitialiseGround(
         init_temp=Qty(
             value=init_temp,
-            min=-0.001,
-            max=0.22,
+            min_val=-0.001,
+            max_val=0.22,
             unit='K'
         )
     )
@@ -171,8 +171,8 @@ def create_experiment():
         name='v_to_hz',
         V_to_Hz=Qty(
             value=v2hz,
-            min=0.9e9,
-            max=1.1e9,
+            min_val=0.9e9,
+            max_val=1.1e9,
             unit='Hz 2pi/V'
         )
     )
@@ -184,8 +184,8 @@ def create_experiment():
         name='resp',
         rise_time=Qty(
             value=0.3e-9,
-            min=0.05e-9,
-            max=0.6e-9,
+            min_val=0.05e-9,
+            max_val=0.6e-9,
             unit='s'
         ),
         resolution=sim_res
@@ -200,38 +200,38 @@ def create_experiment():
     gauss_params_single = {
         'amp': Qty(
             value=0.45,
-            min=0.4,
-            max=0.6,
+            min_val=0.4,
+            max_val=0.6,
             unit="V"
         ),
         't_final': Qty(
             value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
+            min_val=0.5 * t_final,
+            max_val=1.5 * t_final,
             unit="s"
         ),
         'sigma': Qty(
             value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
+            min_val=t_final / 8,
+            max_val=t_final / 2,
             unit="s"
         ),
         'xy_angle': Qty(
             value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
             unit='rad'
         ),
         'freq_offset': Qty(
             value=-sideband - 0.5e6 * 2 * np.pi,
-            min=-53 * 1e6 * 2 * np.pi,
-            max=-47 * 1e6 * 2 * np.pi,
+            min_val=-53 * 1e6 * 2 * np.pi,
+            max_val=-47 * 1e6 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'delta': Qty(
             value=-1,
-            min=-5,
-            max=3,
+            min_val=-5,
+            max_val=3,
             unit=""
         )
     }
@@ -247,8 +247,8 @@ def create_experiment():
         params={
             't_final': Qty(
                 value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
+                min_val=0.5 * t_final,
+                max_val=1.5 * t_final,
                 unit="s"
             )
         },
@@ -257,14 +257,14 @@ def create_experiment():
     carrier_parameters = {
         'freq': Qty(
             value=lo_freq_q1,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
+            min_val=4.5e9 * 2 * np.pi,
+            max_val=6e9 * 2 * np.pi,
             unit='Hz 2pi'
         ),
         'framechange': Qty(
             value=0.0,
-            min= -np.pi,
-            max= 3 * np.pi,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
             unit='rad'
         )
     }

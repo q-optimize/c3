@@ -3,12 +3,14 @@ import time
 import os
 import numpy as np
 
+from typing import Tuple
+
 
 # SYSTEM AND SETUP
-def log_setup(data_path, run_name=None):
+def log_setup(data_path: str, run_name: str = 'run') -> str:
     """
-    Make sure the file path to save data exists. Create an appropriately named folder with date and time.
-     Also creates a symlink "recent" to the folder.
+    Make sure the file path to save data exists. Create an appropriately named
+    folder with date and time. Also creates a symlink "recent" to the folder.
 
     Parameters
     ----------
@@ -45,16 +47,20 @@ def log_setup(data_path, run_name=None):
     return os.path.join(pwd, '')
 
 
-def replace_symlink(path, alias):
+def replace_symlink(path: str, alias: str) -> None:
+    """Create a symbolic link."""
     try:
         os.remove(alias)
     except FileNotFoundError:
         pass
-    os.symlink(path, alias)
+    try:
+        os.symlink(path, alias)
+    except FileExistsError:
+        pass
 
 
 # NICE PRINTING FUNCTIONS
-def eng_num(val):
+def eng_num(val: float) -> Tuple[float, str]:
     """Convert a number to engineering notation by returning number and prefix."""
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
@@ -67,24 +73,25 @@ def eng_num(val):
     tmp = np.log10(val)
     idx = int(tmp // 3)
     if tmp < 0:
-        prefix = small_units[-(idx+1)]
+        prefix = small_units[-(idx + 1)]
     else:
         prefix = big_units[idx]
 
     return sign * (10 ** (tmp % 3)), prefix
 
 
-def num3str(val, use_prefix=True):
+def num3str(val: float, use_prefix: bool = True) -> str:
     """Convert a number to a human readable string in engineering notation. """
     if use_prefix:
         num, prefix = eng_num(val)
-        return f"{num:.3f} " + prefix
+        formatted_string = f"{num:.3f} " + prefix
     else:
-        return f"{val:.3f} "
+        formatted_string = f"{val:.3f} "
+    return formatted_string
 
 
 # USER INTERACTION
-def ask_yn():
+def ask_yn() -> bool:
     """Ask for y/n user decision in the command line."""
     asking = True
     text = input("(y/n): ")

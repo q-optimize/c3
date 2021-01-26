@@ -53,6 +53,7 @@ class C1(Optimizer):
         store_unitaries=False,
         options={},
         run_name=None,
+        interactive=True
     ) -> None:
         super().__init__(
             pmap=pmap,
@@ -65,6 +66,7 @@ class C1(Optimizer):
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.interactive = interactive
         self.update_model = False
 
     def log_setup(self) -> None:
@@ -140,7 +142,10 @@ class C1(Optimizer):
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.get_gates()
-        goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        try:
+            goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        except TypeError:
+            goal = self.fid_func(self.exp, propagators, self.index, dims, self.evaluation + 1)
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
