@@ -527,6 +527,7 @@ def test_dynamics_CPHASE() -> None:
 @pytest.mark.integration
 @pytest.mark.slow
 @pytest.mark.heavy
+@pytest.mark.skip(reason="takes way too long")
 def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
