@@ -12,38 +12,6 @@ import c3.libraries.envelopes as env_lib
 
 sim_res = 100e9  # Resolution for numerical simulation
 awg_res = 2e9  # Realistic, limited resolution of an AWG
-# lo = LO(name='lo', resolution=sim_res)
-# awg = AWG(name='awg', resolution=awg_res)
-# mixer = Mixer(name='mixer')
-#
-# resp = Response(
-#     name='resp',
-#     rise_time=Quantity(
-#         value=0.3e-9,
-#         min_val=0.05e-9,
-#         max_val=0.6e-9,
-#         unit='s'
-#     ),
-#     resolution=sim_res
-# )
-#
-# dig_to_an = DigitalToAnalog(
-#     name="dac",
-#     resolution=sim_res
-# )
-#
-# v2hz = 1e9
-# v_to_hz = VoltsToHertz(
-#     name='v_to_hz',
-#     V_to_Hz=Quantity(
-#         value=v2hz,
-#         min_val=0.9e9,
-#         max_val=1.1e9,
-#         unit='Hz 2pi/V'
-#     )
-# )
-#
-# generator = Generator([lo, awg, mixer, v_to_hz, dig_to_an, resp])
 
 lo = LO(name="lo", resolution=sim_res, outputs=1)
 awg = AWG(name="awg", resolution=awg_res, outputs=1)
