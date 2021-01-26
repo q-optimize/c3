@@ -48,6 +48,7 @@ def log_setup(data_path: str, run_name: str = 'run') -> str:
 
 
 def replace_symlink(path: str, alias: str) -> None:
+    """Create a symbolic link."""
     try:
         os.remove(alias)
     except FileNotFoundError:
@@ -72,14 +73,14 @@ def eng_num(val: float) -> Tuple[float, str]:
     tmp = np.log10(val)
     idx = int(tmp // 3)
     if tmp < 0:
-        prefix = small_units[-(idx+1)]
+        prefix = small_units[-(idx + 1)]
     else:
         prefix = big_units[idx]
 
     return sign * (10 ** (tmp % 3)), prefix
 
 
-def num3str(val, use_prefix=True) -> str:
+def num3str(val: float, use_prefix: bool = True) -> str:
     """Convert a number to a human readable string in engineering notation. """
     if use_prefix:
         num, prefix = eng_num(val)
