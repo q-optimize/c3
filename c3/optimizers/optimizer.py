@@ -64,7 +64,7 @@ class Optimizer:
         old_logdir = self.logdir
         self.logdir = new_logdir
         try:
-            os.remove(self.dir_path + '/recent')
+            os.remove(os.path.join(self.dir_path,'recent'))
         except FileNotFoundError:
             pass
         #os.remove(self.dir_path + self.string)
