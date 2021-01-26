@@ -517,7 +517,6 @@ def test_dynamics_CPHASE() -> None:
     assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-8).all()
-    assert (np.abs(np.angle(dUs) - np.angle(data["dUs"])) < 1e-8).all()
 
 
 @pytest.mark.integration
