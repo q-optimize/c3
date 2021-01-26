@@ -514,10 +514,10 @@ def test_dynamics_CPHASE() -> None:
         if indx % 50 == 0:
             dUs.append(exp.dUs['Id:CZ'][indx].numpy())
     dUs = np.array(dUs)
-    assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.angle(dUs) - np.angle(data["dUs"])) < 1e-12).all()
+    assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
+    assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
+    assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-8).all()
+    assert (np.abs(np.angle(dUs) - np.angle(data["dUs"])) < 1e-8).all()
 
 
 @pytest.mark.integration
@@ -529,10 +529,10 @@ def test_dynamics_CPHASE_lindblad() -> None:
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.get_gates()
     U_super = U_dict['Id:CZ']
-    assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.angle(U_super) - np.angle(data["U_super"])) < 1e-12).all()
+    assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.angle(U_super) - np.angle(data["U_super"])) < 1e-8).all()
 
 
 @pytest.mark.integration
