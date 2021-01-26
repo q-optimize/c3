@@ -10,7 +10,6 @@ import pytest
 import numpy as np
 import time
 import itertools
-import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_probability as tfp
 
