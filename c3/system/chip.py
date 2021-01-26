@@ -278,7 +278,7 @@ class Transmon(PhysicalComponent):
 
         if d:
             self.params['d'] = d
-        elif:
+        elif gamma:
             self.params['gamma'] = gamma
         else:
             raise Warning(

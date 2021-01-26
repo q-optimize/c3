@@ -22,22 +22,15 @@ class C1(Optimizer):
         Indeces identifying the subspace to be compared
     pmap : ParameterMap
         Identifiers for the parameter vector
-    opt_gates : list
-        Identifiers of gate to be optimized, a subset of the full gateset
     callback_fids : list of callable
         Additional fidelity function to be evaluated and stored for reference
     algorithm : callable
         From the algorithm library
-    plot_dynamics : boolean
-        Save plots of time-resolved dynamics in dir_path
-    plot_pulses : boolean
         Save plots of control signals
     store_unitaries : boolean
         Store propagators as text and pickle
     options : dict
         Options to be passed to the algorithm
-    update_model : boolean
-        Include the model in the optimization process
     run_name : str
         User specified name for the run, will be used as root folder
     """
