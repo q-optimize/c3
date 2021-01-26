@@ -1023,8 +1023,8 @@ class AWG(Device):
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return self.signal
+        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
+        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
 
     def create_IQ_drag(self, instr: Instruction, chan: str) -> dict:
         """
@@ -1094,8 +1094,8 @@ class AWG(Device):
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return self.signal
+        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
+        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
 
     def create_IQ_pwc(self, instr: Instruction, chan: str) -> dict:
         """
@@ -1166,8 +1166,8 @@ class AWG(Device):
         quadrature = tf.add_n(quadrature_comps, name="quadrature")
 
         self.amp_tot = norm
-        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return self.signal
+        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
+        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
 
     def get_average_amp(self, line):
         """
