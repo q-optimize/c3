@@ -496,15 +496,12 @@ def test_energy_levels() -> None:
     product_basis = np.array(product_basis)
     print((np.abs(product_basis - data["product_basis"]) < 1).all())
     assert (np.abs(product_basis - data["product_basis"]) < 1).all()
-    assert (product_basis == data["product_basis"]).all()
     assert (np.abs(ordered_basis - data["ordered_basis"]) < 1).all()
-    assert (ordered_basis == data["ordered_basis"]).all()
     # Dressed basis might change at avoided crossings depending on how we
     # decide to deal with it. Atm now error is given and the energy levels
     # are mapped to the lowest level.
     # This happens when an eigenvalue doesn't have any overlap larger than 50%
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
-    assert (dressed_basis == data["dressed_basis"]).all()
 
 @pytest.mark.slow
 @pytest.mark.integration
@@ -521,7 +518,6 @@ def test_dynamics_CPHASE() -> None:
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-12).all()
     assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-12).all()
     assert (np.abs(np.angle(dUs) - np.angle(data["dUs"])) < 1e-12).all()
-    assert (dUs == data["dUs"]).all()
 
 
 @pytest.mark.integration
@@ -537,7 +533,6 @@ def test_dynamics_CPHASE_lindblad() -> None:
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-12).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-12).all()
     assert (np.abs(np.angle(U_super) - np.angle(data["U_super"])) < 1e-12).all()
-    assert (U_super == data["U_super"]).all()
 
 
 @pytest.mark.integration
@@ -564,24 +559,19 @@ def test_flux_signal() -> None:
         (tc_signal - data['tc_signal'])/np.max(data['tc_signal'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_signal == data['tc_signal']).all()
     rel_diff = np.abs(
         (tc_ts - data['tc_ts'])/np.max(data['tc_ts'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_ts == data['tc_ts']).all()
     rel_diff = np.abs(
         (tc_awg_I - data['tc_awg_I'])/np.max(data['tc_awg_I'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_I == data['tc_awg_I']).all()
     rel_diff = np.abs(
         (tc_awg_Q - data['tc_awg_Q'])/np.max(data['tc_awg_Q'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_Q == data['tc_awg_Q']).all()
     rel_diff = np.abs(
         (tc_awg_ts - data['tc_awg_ts'])/np.max(data['tc_awg_ts'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_ts == data['tc_awg_ts']).all()
