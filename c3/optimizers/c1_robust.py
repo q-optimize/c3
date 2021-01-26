@@ -62,6 +62,7 @@ class C1_robust(C1):
         self.num_runs = num_runs
         self.noise_map = noise_map
 
+
     def goal_run_with_grad(self, current_params):
         goals = []
         goals_float = []

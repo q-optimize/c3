@@ -10,7 +10,6 @@ import pytest
 import numpy as np
 import time
 import itertools
-import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -149,7 +148,7 @@ q2 = chip.Qubit(
         unit='K'
     )
 )
-tc_at = chip.AsymmetricTransmon(
+tc_at = chip.Transmon(
     name="TC",
     desc="Tunable Coupler",
     freq=Qty(
@@ -497,16 +496,14 @@ def test_energy_levels() -> None:
     product_basis = np.array(product_basis)
     print((np.abs(product_basis - data["product_basis"]) < 1).all())
     assert (np.abs(product_basis - data["product_basis"]) < 1).all()
-    assert (product_basis == data["product_basis"]).all()
     assert (np.abs(ordered_basis - data["ordered_basis"]) < 1).all()
-    assert (ordered_basis == data["ordered_basis"]).all()
     # Dressed basis might change at avoided crossings depending on how we
     # decide to deal with it. Atm now error is given and the energy levels
     # are mapped to the lowest level.
     # This happens when an eigenvalue doesn't have any overlap larger than 50%
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
-    assert (dressed_basis == data["dressed_basis"]).all()
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
@@ -517,11 +514,9 @@ def test_dynamics_CPHASE() -> None:
         if indx % 50 == 0:
             dUs.append(exp.dUs['Id:CZ'][indx].numpy())
     dUs = np.array(dUs)
-    assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-12).all()
-    assert (np.abs(np.angle(dUs) - np.angle(data["dUs"])) < 1e-12).all()
-    assert (dUs == data["dUs"]).all()
+    assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
+    assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
+    assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-8).all()
 
 
 @pytest.mark.integration
@@ -533,11 +528,10 @@ def test_dynamics_CPHASE_lindblad() -> None:
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.get_gates()
     U_super = U_dict['Id:CZ']
-    assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-12).all()
-    assert (np.abs(np.angle(U_super) - np.angle(data["U_super"])) < 1e-12).all()
-    assert (U_super == data["U_super"]).all()
+    assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
+    assert (np.abs(np.angle(U_super) - np.angle(data["U_super"])) < 1e-8).all()
 
 
 @pytest.mark.integration
@@ -547,6 +541,7 @@ def test_separate_chains() -> None:
     assert generator.chains['TC'] != generator.chains['Q2']
 
 
+@pytest.mark.slow
 @pytest.mark.integration
 def test_flux_signal() -> None:
     instr = exp.pmap.instructions["Id:CZ"]
@@ -563,24 +558,19 @@ def test_flux_signal() -> None:
         (tc_signal - data['tc_signal'])/np.max(data['tc_signal'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_signal == data['tc_signal']).all()
     rel_diff = np.abs(
         (tc_ts - data['tc_ts'])/np.max(data['tc_ts'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_ts == data['tc_ts']).all()
     rel_diff = np.abs(
         (tc_awg_I - data['tc_awg_I'])/np.max(data['tc_awg_I'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_I == data['tc_awg_I']).all()
     rel_diff = np.abs(
         (tc_awg_Q - data['tc_awg_Q'])/np.max(data['tc_awg_Q'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_Q == data['tc_awg_Q']).all()
     rel_diff = np.abs(
         (tc_awg_ts - data['tc_awg_ts'])/np.max(data['tc_awg_ts'])
     )
     assert (rel_diff < 1e-12).all()
-    assert (tc_awg_ts == data['tc_awg_ts']).all()

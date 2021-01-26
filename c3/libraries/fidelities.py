@@ -41,88 +41,6 @@ def fid_reg_deco(func):
 
 
 @fid_reg_deco
-def iswap_transfer(U_dict: dict, index, dims, eval, proj=True):
-    infids = []
-    indeces = [0, 1, dims[2], dims[2] + 1]
-    for indx in indeces:
-        psi_init = [0] * np.prod(dims)
-        psi_init[indx] = 1
-        psi_0 = tf.Variable(psi_init, dtype=tf.complex128, shape=[np.prod(dims), 1])
-        infid = state_transfer_infid(U_dict, "Id:iSWAP", index, dims, psi_0, proj)
-        infids.append(infid)
-    # for indx in [0,2,4,6]:
-    #     psi_init = [0] * 8
-    #     psi_init[indx] = 1
-    #     psi_0 = tf.Variable(psi_init, dtype=tf.complex128, shape=[8,1])
-    #     infid = state_transfer_infid(U_dict, "iSWAP:Id", index, dims, psi_0, proj)
-    #     infids.append(infid)
-    return tf.reduce_mean(infids)
-
-
-@fid_reg_deco
-def iswap_comp_sub(U_dict: dict, index, dims, eval, proj=True):
-    U = {}
-    U["iSWAP"] = U_dict["Id:iSWAP"][: dims[1] * dims[2], : dims[1] * dims[2]]
-    infid = unitary_infid(U, "iSWAP", [0, 1], [dims[1], dims[2]], proj=proj)
-    return infid
-
-
-@fid_reg_deco
-def cphase_comp_sub(U_dict: dict, index, dims, eval, proj=True):
-    U = {}
-    U["CZ"] = U_dict["Id:CZ"][: dims[1] * dims[2], : dims[1] * dims[2]]
-    infid = unitary_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
-    return infid
-
-
-@fid_reg_deco
-def cphase_comp_sub_avg(U_dict: dict, index, dims, eval, proj=True):
-    U = {}
-    U["CZ"] = U_dict["Id:CZ"][: dims[1] * dims[2], : dims[1] * dims[2]]
-    infid = average_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
-    return infid
-
-
-@fid_reg_deco
-def cphase_comp(U_dict: dict, index, dims, eval, proj=True):
-    U = {}
-    U["CZ"] = U_dict["CZ"]
-    infid = unitary_infid(U, "CZ", [0, 1], dims, proj=proj)
-    return infid
-
-
-@fid_reg_deco
-def lindbladian_cphase_comp_sub(U_dict: dict, index, dims, eval, proj=True):
-    U = {}
-    proj = np.zeros([dims[0], 1])
-    proj[0, 0] = 1
-    p = np.kron(proj, np.eye(dims[1] * dims[2]))
-    pr = tf.constant(np.kron(p, p), dtype=tf.complex128)
-    U["CZ"] = tf.matmul(tf.transpose(pr), tf.matmul(U_dict["Id:CZ"], pr))
-    infid = lindbladian_average_infid(U, "CZ", [0, 1], [dims[1], dims[2]], proj=proj)
-    return infid
-
-
-@fid_reg_deco
-def iswap_leakage(U_dict: dict, index, dims, eval, proj=True):
-    indeces = np.append(
-        np.append(np.arange(2, dims[1]), np.arange(2, dims[1]) + dims[2]),
-        np.arange(dims[1] * dims[2], np.prod(dims)),
-    )
-    psi_init = [0] * np.prod(dims)
-    psi_init[1] = 1
-    psi_0 = tf.Variable(psi_init, dtype=tf.complex128, shape=[np.prod(dims), 1])
-    psi_actual = tf.matmul(U_dict["Id:iSWAP"], psi_0)
-    leakage = 0
-    for indx in indeces:  # fix indeces
-        psi = [0] * np.prod(dims)
-        psi[indx] = 1
-        psi = tf.Variable(psi, dtype=tf.complex128, shape=[np.prod(dims), 1])
-        leakage = leakage + tf_ketket_fid(psi, psi_actual)
-    return leakage
-
-
-@fid_reg_deco
 def state_transfer_infid_set(U_dict: dict, index, dims, psi_0, proj=True):
     """
     Mean state transfer infidelity.
@@ -189,27 +107,6 @@ def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool
     overlap = tf_ketket_fid(psi_ideal, psi_actual)
     infid = 1 - overlap
     return infid
-
-
-# def population(U_dict: dict, lvl: int, gate: str):
-#     U = U_dict[gate]
-#     lvls = U.shape[0]
-#     psi_0 = tf.Variable(basis(lvls, 0), dtype=tf.complex128)
-#     psi_f = tf.Variable(basis(lvls, lvl), dtype=tf.complex128)
-#     psi_actual = tf.matmul(U, psi_0)
-#     overlap = tf_ketket_fid(psi_f, psi_actual)
-#     return overlap
-#
-#
-# def lindbladian_population(U_dict: dict, lvl: int, gate: str):
-#     U = U_dict[gate]
-#     lvls = int(np.sqrt(U.shape[0]))
-#     psi_0 = tf.Variable(basis(lvls, 0), dtype=tf.complex128)
-#     dv_0 = tf_dm_to_vect(tf_state_to_dm(psi_0))
-#     psi_f = tf.Variable(basis(lvls, lvl), dtype=tf.complex128)
-#     dv_actual = tf.matmul(U, dv_0)
-#     overlap = tf_dmket_fid(dv_actual, psi_f)
-#     return overlap
 
 
 @fid_reg_deco
@@ -488,20 +385,6 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
     elif num_gates == 2:
         real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
     ideal_cliffords = perfect_cliffords(lvls=[2] * num_gates, num_gates=num_gates)
-    # gate = list(U_dict.keys())[0]
-    # U = U_dict[gate]
-    # num_gates = len(gate.split(":"))
-    # lvls = int(U.shape[0] ** (1 / num_gates))
-    # fid_lvls = lvls
-    # if num_gates == 1:
-    #     real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
-    # elif num_gates == 2:
-    #     real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
-    # projection = "fulluni"
-    # if proj:
-    #     projection = "wzeros"
-    #     fid_lvls = 2 ** num_gates
-    # ideal_cliffords = perfect_cliffords(str(lvls), proj=projection, num_gates=num_gates)
     fids = []
     for C_indx in range(24):
         C_real = real_cliffords[C_indx]
@@ -527,19 +410,6 @@ def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=
         C_real = real_cliffords[C_indx]
         C_ideal = tf_super(tf.constant(ideal_cliffords[C_indx], dtype=tf.complex128))
         ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=dims)
-        # real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
-        # lvls = int(np.sqrt(real_cliffords[0].shape[0]))
-        # projection = "fulluni"
-        # fid_lvls = lvls
-        # if proj:
-        #     projection = "wzeros"
-        #     fid_lvls = 2
-        # ideal_cliffords = perfect_cliffords(str(lvls), projection)
-        # fids = []
-        # for C_indx in range(24):
-        #     C_real = real_cliffords[C_indx]
-        #     C_ideal = tf_super(tf.Variable(ideal_cliffords[C_indx], dtype=tf.complex128))
-        #     ave_fid = tf_superoper_average_fidelity(C_real, C_ideal, lvls=fid_lvls)
         fids.append(ave_fid)
     infid = 1 - tf_ave(fids)
     return infid
@@ -587,7 +457,6 @@ def RB(
     lindbladian=False,
     padding="",
 ):
-    # print('Performing RB fit experiment.')
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     dim = int(U.shape[0])
@@ -652,36 +521,7 @@ def RB(
                 surv_prob.append(pop0s)
             lengths = np.append(lengths, new_lengths)
     epc = 0.5 * (1 - r)
-    # print("epc:", epc)
     epg = 1 - ((1 - epc) ** (1 / 4))  # TODO: adjust to be mean length of
-    # print("epg:", epg)
-    # print('example seq: ', seqs[0])
-
-    # fig, ax = plt.subplots()
-    # ax.plot(lengths,
-    #         surv_prob,
-    #         marker='o',
-    #         color='red',
-    #         linestyle='None')
-    # ax.errorbar(lengths,
-    #             means,
-    #             yerr=stds,
-    #             color='blue',
-    #             marker='x',
-    #             linestyle='None')
-    # plt.title('RB results')
-    # plt.ylabel('Population in 0')
-    # plt.xlabel('\# Cliffords')
-    # plt.ylim(0, 1)
-    # plt.xlim(0, lengths[-1])
-    # fitted = RB_fit(lengths, r, A, B)
-    # ax.plot(lengths, fitted)
-    # plt.text(0.1, 0.1,
-    #          'r={:.4f}, A={:.3f}, B={:.3f}'.format(r, A, B),
-    #          size=16,
-    #          transform=ax.transAxes)
-    # plt.show()
-    # return epc, r, A, B, fig, ax
     return epg
 
 
@@ -711,7 +551,6 @@ def leakage_RB(
     logspace=False,
     lindbladian=False,
 ):
-    # print('Performing leakage RB fit experiment.')
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     dim = int(U.shape[0])
