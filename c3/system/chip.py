@@ -235,17 +235,18 @@ class Resonator(PhysicalComponent):
 
 
 @dev_reg_deco
-class SymmetricTransmon(PhysicalComponent):
+class Transmon(PhysicalComponent):
     """
-    Represents the element in a chip functioning as tunable coupler.
+    Represents the element in a chip functioning as tunanble transmon qubit.
 
     Parameters
     ----------
     freq: np.float64
-        base frequency of the TC
+        base frequency of the Transmon
     phi_0: np.float64
         half period of the phase dependant function
-    phi: np.fl
+    phi: np.float64
+        flux position
 
     """
 
@@ -258,81 +259,8 @@ class SymmetricTransmon(PhysicalComponent):
         freq: np.float64 = 0.0,
         phi: np.float64 = 0.0,
         phi_0: np.float64 = 0.0,
-        anhar: np.float64 = 0.0,
-    ):
-        super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            hilbert_dim=hilbert_dim
-            )
-        self.params['freq'] = freq
-        self.params['phi'] = phi
-        self.params['phi_0'] = phi_0
-        if hilbert_dim > 2:
-            self.params['anhar'] = anhar
-
-    def get_factor(self):
-        pi = tf.constant(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params['phi'].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.complex128)
-        factor = tf.cast(tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))), tf.complex128)
-        return factor
-
-    def get_anhar(self):
-        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        return anhar
-
-    def get_freq(self):
-        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
-        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
-        biased_freq = (freq - anhar) * self.get_factor() + anhar
-        return biased_freq
-
-    def init_Hs(self, ann_oper):
-        resonator = hamiltonians["resonator"]
-        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
-        if self.hilbert_dim > 2:
-            duffing = hamiltonians["duffing"]
-            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
-
-    def init_Ls(self, ann_oper):
-        pass
-
-    def get_Hamiltonian(self):
-        h = self.get_freq() * self.Hs['freq']
-        if self.hilbert_dim > 2:
-            h += self.get_anhar() * self.Hs['anhar']
-        return h
-
-
-
-@dev_reg_deco
-class AsymmetricTransmon(PhysicalComponent):
-    """
-    Represents the element in a chip functioning as tunanble coupler.
-
-    Parameters
-    ----------
-    freq: np.float64
-        base frequency of the TC
-    phi_0: np.float64
-        half period of the phase dependant function
-    phi: np.fl
-
-    """
-
-    def __init__(
-        self,
-        name: str,
-        desc: str = " ",
-        comment: str = " ",
-        hilbert_dim: int = 2,
-        freq: np.float64 = 0.0,
-        phi: np.float64 = 0.0,
-        phi_0: np.float64 = 0.0,
-        # gamma: np.float64 = 0.0,
-        d: np.float64 = 0.0,
+        gamma: np.float64 = None,
+        d: np.float64 = None,
         t1: np.float64 = 0.0,
         t2star: np.float64 = 0.0,
         temp: np.float64 = 0.0,
@@ -347,8 +275,15 @@ class AsymmetricTransmon(PhysicalComponent):
         self.params['freq'] = freq
         self.params['phi'] = phi
         self.params['phi_0'] = phi_0
-        self.params['d'] = d
-#         self.params['gamma'] = gamma
+
+        if d:
+            self.params['d'] = d
+        elif:
+            self.params['gamma'] = gamma
+        else:
+            raise Warning(
+                "no gamma or d provided. setting d=0, i.e. symmetric case"
+            )
         if hilbert_dim > 2:
             self.params['anhar'] = anhar
         if t1:
@@ -362,9 +297,13 @@ class AsymmetricTransmon(PhysicalComponent):
         pi = tf.constant(np.pi, dtype=tf.float64)
         phi = tf.cast(self.params['phi'].get_value(), tf.float64)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.float64)
-        d = tf.cast(self.params['d'].get_value(), tf.float64)
-#         gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
-#         d = (gamma - 1) / (gamma + 1)
+        if 'd' in params:
+            d = tf.cast(self.params['d'].get_value(), tf.float64)
+        elif 'gamma' in params:
+            gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+            d = (gamma - 1) / (gamma + 1)
+        else:
+            d = 0
         factor = tf.sqrt(tf.sqrt(
             tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
         ))
