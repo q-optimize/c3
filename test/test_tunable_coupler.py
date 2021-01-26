@@ -149,7 +149,7 @@ q2 = chip.Qubit(
         unit='K'
     )
 )
-tc_at = chip.AsymmetricTransmon(
+tc_at = chip.Transmon(
     name="TC",
     desc="Tunable Coupler",
     freq=Qty(

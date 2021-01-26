@@ -138,9 +138,9 @@ class Qubit(PhysicalComponent):
         if self.hilbert_dim > 2:
             anhar = tf.cast(self.params["anhar"].get_value(), tf.complex128)
             h += anhar * self.Hs["anhar"]
-        return h 
-    
-    
+        return h
+
+
     def init_Ls(self, ann_oper):
         """
         Initialize Lindbladian components.
@@ -193,7 +193,7 @@ class Qubit(PhysicalComponent):
         if Ls == []:
             raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
-    
+
 
 @dev_reg_deco
 class Resonator(PhysicalComponent):
@@ -298,9 +298,9 @@ class Transmon(PhysicalComponent):
         pi = tf.constant(np.pi, dtype=tf.float64)
         phi = tf.cast(self.params['phi'].get_value(), tf.float64)
         phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.float64)
-        if 'd' in params:
+        if 'd' in self.params:
             d = tf.cast(self.params['d'].get_value(), tf.float64)
-        elif 'gamma' in params:
+        elif 'gamma' in self.params:
             gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
             d = (gamma - 1) / (gamma + 1)
         else:
@@ -406,7 +406,7 @@ class SNAIL(PhysicalComponent):
     anhar: np.float64
         anharmonicity of the qubit. defined as w01 - w12
     beta: np.float64
-        third order non_linearity of the qubit. 
+        third order non_linearity of the qubit.
     t1: np.float64
         t1, the time decay of the qubit due to dissipation
     t2star: np.float64
@@ -416,7 +416,7 @@ class SNAIL(PhysicalComponent):
         of energy level populations
     Class is mostly an exact copy of the Qubit class. The only difference is the added third order non linearity with a prefactor beta.
     The only modification is the get hamiltonian and init hamiltonian definition. Also imported the necessary third order non linearity
-    from the hamiltonian library. 
+    from the hamiltonian library.
     """
     def __init__(
         self,
@@ -489,11 +489,11 @@ class SNAIL(PhysicalComponent):
             ) * self.Hs['anhar']
 
         return h
-    
+
     init_Ls = Qubit.__dict__['init_Ls']
-    get_Lindbladian = Qubit.__dict__['get_Lindbladian'] 
-    
-    
+    get_Lindbladian = Qubit.__dict__['get_Lindbladian']
+
+
 @dev_reg_deco
 class LineComponent(C3obj):
     """
