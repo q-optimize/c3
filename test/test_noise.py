@@ -239,7 +239,7 @@ def test_c1_robust():
         data = pickle.load(f)
 
     for k, v in data['c1_robust_lbfgs'].items():
-        assert np.abs(np.any(np.array(opt.optim_status[k]) - np.array(v))) < 1e-7
+        assert np.any(np.abs(np.array(opt.optim_status[k]) - np.array(v)) < 1e-7)
 
 
 @pytest.mark.slow
