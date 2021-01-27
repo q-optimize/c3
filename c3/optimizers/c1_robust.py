@@ -3,6 +3,7 @@ import time
 import hjson
 import tensorflow as tf
 from c3.optimizers.c1 import C1
+from c3.utils.utils import jsonify_list
 
 
 class C1_robust(C1):
@@ -70,7 +71,7 @@ class C1_robust(C1):
         evaluation = int(self.evaluation)
         for noise_vals, noise_map in self.noise_map:
             for noise_val in noise_vals:
-                self.exp.set_parameters([noise_val], noise_map)
+                self.exp.pmap.set_parameters([noise_val], [noise_map])
                 self.evaluation = evaluation
                 with tf.GradientTape() as t:
                     t.watch(current_params)
@@ -79,7 +80,7 @@ class C1_robust(C1):
                 goals.append(goal)
                 goals_float.append(float(goal))
                 grads.append(grad)
-            self.exp.set_parameters([0], noise_map)
+            self.exp.pmap.set_parameters([0], [noise_map])
 
         self.optim_status["goals_individual"] = [float(goal) for goal in goals]
         self.optim_status["goal_std"] = float(tf.math.reduce_std(goals))
@@ -96,7 +97,7 @@ class C1_robust(C1):
         super().start_log()
         with open(self.logdir + self.logname, 'a') as logfile:
             logfile.write("Robust values ")
-            logfile.write(hjson.dumps(self.noise_map))
+            print(len(self.noise_map))
+            logfile.write(hjson.dumps(jsonify_list(self.noise_map)))
             logfile.write("\n")
             logfile.flush()
-        os.mkdir(self.logdir + 'robustness')

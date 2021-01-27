@@ -166,8 +166,6 @@ class VoltsToHertz(Device):
         ----------
         mixed_signal: tf.Tensor
             Waveform as line voltages after IQ mixing
-        drive_frequency: Quantity
-            For frequency-dependent attenuation
 
         Returns
         -------
@@ -493,18 +491,10 @@ class HighpassFilter(Device):
         should the mean of the signal be restored
     """
 
-    def __init__(
-        self,
-        name: str = "highpass",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        cutoff: Quantity = None,
-        rise_time: Quantity = None,
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
-        self.params["cutoff"] = cutoff
-        self.params["rise_time"] = rise_time
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
 
     def convolve(self, signal: list, resp_shape: list):
@@ -550,7 +540,7 @@ class HighpassFilter(Device):
             )
         return convolution
 
-    def process(self, iq_signal: dict):
+    def process(self,  instr, chan, iq_signal):
         """
         Apply a highpass cutoff to an IQ signal.
 
@@ -595,7 +585,7 @@ class HighpassFilter(Device):
         h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
         inphase = self.convolve(iq_signal["inphase"], h)
         quadrature = self.convolve(iq_signal["quadrature"], h)
-        self.signal = {"inphase": inphase, "quadrature": quadrature}
+        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": iq_signal["ts"]}
         return self.signal
 
 
@@ -637,19 +627,14 @@ class Mixer(Device):
 class LONoise(Device):
     """Noise applied to the local oscillator"""
 
-    def __init__(
-        self,
-        name: str = "lo_noise",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        noise_perc: Quantity = None,
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_perc"] = noise_perc
+        self.params["noise_perc"] = props.pop("noise_perc")
 
-    def distort(self, lo_signal):
+    def process(self,  instr, chan, lo_signal):
         """Distort signal by adding noise."""
         noise_perc = self.params["noise_perc"].get_value()
         cos, sin = lo_signal["values"]
@@ -664,35 +649,27 @@ class LONoise(Device):
 class Additive_Noise(Device):
     """Noise applied to a signal"""
 
-    def __init__(
-        self,
-        name: str = "signal_noise",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        noise_amp: Quantity = None,
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_amp"] = noise_amp
+        self.params["noise_amp"] = props.pop("noise_amp")
 
-    def distort(self, signal):
+    def process(self,  instr, chan, signal):
         """Distort signal by adding noise."""
         noise_amp = self.params["noise_amp"].get_value()
-        if noise_amp < 1e-17:
-            self.signal = signal
-            return signal
-        out_signal = {}
-        # print(signal)
-        if type(signal) is dict:
-            for k, sig in signal.items():
-                out_signal[k] = sig + tf.constant(
-                    noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
-                )
-        else:
-            out_signal = signal + tf.constant(
-                noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0)
-            )
+        out_signal = {"ts": signal["ts"]}
+        for k, sig in signal.items():
+            if 'ts' is not k:
+                if noise_amp < 1e-17:
+                    noise = tf.zeros_like(sig)
+                else:
+                    noise = tf.constant(noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0))
+                noise_key = 'noise' + ('-' + k if k != "values" else "")
+                out_signal[noise_key] = noise
+
+                out_signal[k] = sig + noise
         self.signal = out_signal
         return self.signal
 
@@ -701,35 +678,26 @@ class Additive_Noise(Device):
 class DC_Noise(Device):
     """Noise applied to a signal"""
 
-    def __init__(
-        self,
-        name: str = "dc_noise",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        noise_amp: Quantity = None,
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_amp"] = noise_amp
+        self.params["noise_amp"] = props.pop("noise_amp", 0)
 
-    def distort(self, signal):
+    def process(self,  instr, chan, signal):
         """Distort signal by adding noise."""
         noise_amp = self.params["noise_amp"].get_value()
-        if noise_amp < 1e-17:
-            self.signal = signal
-            return signal
-        out_signal = {}
-        # print(signal)
-        if type(signal) is dict:
-            for k, sig in signal.items():
-                out_signal[k] = sig + tf.constant(
-                    noise_amp * np.random.normal(loc=0.0, scale=1.0)
-                )
-        else:
-            out_signal = signal + tf.constant(
-                noise_amp * np.random.normal(loc=0.0, scale=1.0)
-            )
+        out_signal = {"ts": signal["ts"]}
+        for k, sig in signal.items():
+            if 'ts' is not k:
+                if noise_amp < 1e-17:
+                    noise = tf.zeros_like(sig)
+                else:
+                    noise = tf.ones_like(sig) * tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+                noise_key = 'noise' + ('-' + k if k != "values" else "")
+                out_signal[noise_key] = noise
+                out_signal[k] = sig + noise
         self.signal = out_signal
         return self.signal
 
@@ -738,26 +706,20 @@ class DC_Noise(Device):
 class DC_Offset(Device):
     """Noise applied to a signal"""
 
-    def __init__(
-        self,
-        name: str = "dc_offset",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        offset_amp: Quantity = None,
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["offset_amp"] = offset_amp
+        self.params["offset_amp"] = props.pop("offset_amp")
 
-    def distort(self, signal):
+    def process(self,  instr, chan, signal):
         """Distort signal by adding noise."""
         offset_amp = self.params["offset_amp"].get_value()
         if np.abs(offset_amp) < 1e-17:
             self.signal = signal
             return signal
         out_signal = {}
-        # print(signal)
         if type(signal) is dict:
             for k, sig in signal.items():
                 out_signal[k] = sig + offset_amp
@@ -811,43 +773,20 @@ class DC_Offset(Device):
 class Pink_Noise(Device):
     """Device creating pink noise, i.e. 1/f noise."""
 
-    def __init__(
-        self,
-        name: str = "pink_noise",
-        desc: str = " ",
-        comment: str = " ",
-        resolution: np.float64 = 0.0,
-        noise_strength: Quantity = None,
-        bfl_num: Quantity = None,
-        #             infrared_cutoff = None,
-        #             ultraviolet_cutoff = None
-    ):
-        super().__init__(name=name, desc=desc, comment=comment, resolution=resolution)
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_strength"] = noise_strength
-        if not bfl_num:
-            bfl_num = Quantity(value=5, min_val=1, max_val=10)
-        self.params["bfl_num"] = bfl_num
-        #         self.params['infrared_cutoff'] = infrared_cutoff
-        #         self.params['ultraviolet_cutoff'] = ultraviolet_cutoff
+        self.params["noise_strength"] = props.pop("noise_strength")
+        self.params["bfl_num"] = props.pop("bfl_num", Quantity(value=5, min_val=1, max_val=10))
         self.ts = None
         self.signal = None
 
-    def distort(self, mixed_signal):
-        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
-        noise_strength = self.params["noise_strength"].get_value().numpy()
-
-        #         noise = []
-        #         bfls = np.random.randint(2, size=bfl_num)
-        #         for step in range(len(mixed_signal)):
-        #             for indx in range(bfl_num):
-        #                 if np.floor(np.random.random() * (10^indx))==0:
-        #                     bfls[indx] = not(bfls[indx])
-        #             noise.append(np.sum(bfls) * noise_strength)
-
+    def get_noise(self, sig, noise_strength, bfl_num):
         noise = []
         bfls = 2 * np.random.randint(2, size=bfl_num) - 1
-        num_steps = len(mixed_signal)
+        num_steps = len(sig)
         flip_rates = np.logspace(
             0, np.log(num_steps), num=bfl_num + 1, endpoint=True, base=10.0
         )
@@ -856,13 +795,26 @@ class Pink_Noise(Device):
                 if np.floor(np.random.random() * flip_rates[indx + 1]) == 0:
                     bfls[indx] = -bfls[indx]
             noise.append(np.sum(bfls) * noise_strength)
+        return noise
 
-        self.noise = noise
-        self.signal = mixed_signal + tf.constant(
-            noise, shape=mixed_signal.shape, dtype=tf.float64
-        )
+
+    def process(self, intr, chan, signal):
+        noise_strength = self.params["noise_strength"].get_value().numpy()
+        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
+
+        out_signal = {"ts": signal["ts"]}
+        for k, sig in signal.items():
+            if 'ts' is not k:
+                if noise_strength < 1e-17:
+                    noise = tf.zeros_like(sig)
+                else:
+                    noise = tf.constant(self.get_noise(sig, noise_strength, bfl_num), shape=sig.shape, dtype=tf.float64)
+                noise_key = 'noise' + ('-' + k if k != "values" else "")
+                out_signal[noise_key] = noise
+
+                out_signal[k] = sig + noise
+        self.signal = out_signal
         return self.signal
-
 
 @dev_reg_deco
 class LO(Device):
