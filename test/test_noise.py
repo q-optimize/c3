@@ -208,9 +208,10 @@ gateset_opt_map = [
 
 pmap.set_opt_map(gateset_opt_map)
 
-
-@pytest.mark.unit
-def test_c1robust():
+@pytest.mark.slow
+@pytest.mark.optimizers
+@pytest.mark.integration
+def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [('dc_offset', 'offset_amp')]]]
     opt = C1_robust(
         dir_path="/tmp/c3log/",
@@ -240,7 +241,8 @@ def test_c1robust():
         assert opt.optim_status[k] == v, f"{k} in optim_status not matching"
 
 
-@pytest.mark.unit
+@pytest.mark.slow
+@pytest.mark.integration
 def test_noise_devices():
     exp.get_gates()
     fidelity0 = fidelities.average_infid_set(exp.unitaries, [1], exp.pmap.model.dims, 0, proj=True)
@@ -279,7 +281,7 @@ def test_noise_devices():
 
         assert np.std(awg_noiseA) >= 0.7 * params[2]
         assert np.std(awg_noiseA) < 1.3 * params[2] + 1e-15
-        if params[0] > 1e-15:
+        if params[2] > 1e-15:
             assert np.median(np.abs(awg_noiseA - awg_noiseB) > 1e-10)
 
         if np.max(params) > 0:

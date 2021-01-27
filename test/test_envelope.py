@@ -45,14 +45,14 @@ flux_env_netzero = EnvelopeNetZero(
 )
 
 
-@pytest.mark.envelope
+@pytest.mark.unit
 def test_envelope() -> None:
     ts = np.arange(0, 12e-9, 1e-9)
     shape = flux_env.get_shape_values(ts)
     assert np.all(shape.numpy() == np.array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 0., 0.]))
 
 
-@pytest.mark.envelope
+@pytest.mark.unit
 def test_envelope_netzero() -> None:
     ts = np.arange(0, 12e-9, 1e-9)
     shape = flux_env_netzero.get_shape_values(ts)

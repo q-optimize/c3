@@ -661,7 +661,7 @@ class Additive_Noise(Device):
         noise_amp = self.params["noise_amp"].get_value()
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if 'ts' is not k:
+            if k != 'ts':
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
@@ -690,7 +690,7 @@ class DC_Noise(Device):
         noise_amp = self.params["noise_amp"].get_value()
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if 'ts' is not k:
+            if k != 'ts':
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
@@ -804,7 +804,7 @@ class Pink_Noise(Device):
 
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if 'ts' is not k:
+            if k != 'ts':
                 if noise_strength < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
