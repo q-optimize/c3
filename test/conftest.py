@@ -76,5 +76,5 @@ def get_result_qiskit() -> Dict[str, Any]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    counts = {"000000": 291, "010000": 577, "100000": 105}
+    counts = {"000000": 164, "010000": 799, "100000": 14}
     return counts

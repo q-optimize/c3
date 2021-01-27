@@ -1,4 +1,4 @@
-C3 Simulator as a backend for Qiskit Experiments
+C3 Backend for Qiskit Experiments
 ================================================
 
 This notebook demonstrates the use of the C3 Simulator with a high-level
@@ -30,7 +30,7 @@ Define a basic circuit to make a Bell State
 
 .. parsed-literal::
 
-    <qiskit.circuit.instructionset.InstructionSet at 0x7f861ec7fb50>
+    <qiskit.circuit.instructionset.InstructionSet at 0x7f086f0b3280>
 
 
 
@@ -129,7 +129,7 @@ Run the simulation job
 .. code:: ipython3
 
     c3_backend.set_device_config("quickstart.hjson")
-    c3_job = execute(qc, c3_backend, shots=100)
+    c3_job = execute(qc, c3_backend, shots=1000)
     result = c3_job.result()
 
 .. code:: ipython3
@@ -140,7 +140,7 @@ Run the simulation job
 
 .. parsed-literal::
 
-    {'000000': 29, '010000': 58, '100000': 10}
+    {'000000': 164, '010000': 799, '100000': 14}
 
 
 .. code:: ipython3
@@ -150,6 +150,6 @@ Run the simulation job
 
 
 
-.. image:: c3_qiskit_files/c3_qiskit_16_0.svg
+.. image:: c3_qiskit_files/c3_qiskit_16_0.png
 
 
