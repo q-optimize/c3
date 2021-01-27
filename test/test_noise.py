@@ -134,6 +134,7 @@ generator2 = Gnr(
         "PinkNoise": devices.Pink_Noise(
             name='pink_noise',
             noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit='V'),
+            bfl_num=Qty(value=15),
             resolution=sim_res
         ),
         "VoltsToHertz": devices.VoltsToHertz(
@@ -238,7 +239,12 @@ def test_c1_robust():
         data = pickle.load(f)
 
     for k, v in data['c1_robust_lbfgs'].items():
-        assert opt.optim_status[k] == v, f"{k} in optim_status not matching"
+        if type(v) is list and v[0] is float:
+            assert np.abs(np.any(np.array(opt.optim_status[k]) - np.array(opt.optim_status))) < 1e-10
+        elif type(v) is float:
+            assert np.abs(opt.optim_status[k] - v) < 1e-10
+        else:
+            assert opt.optim_status[k] == v
 
 
 @pytest.mark.slow
@@ -282,7 +288,7 @@ def test_noise_devices():
         assert np.std(awg_noiseA) >= 0.7 * params[2]
         assert np.std(awg_noiseA) < 1.3 * params[2] + 1e-15
         if params[2] > 1e-15:
-            assert np.median(np.abs(awg_noiseA - awg_noiseB) > 1e-10)
+            assert np.mean(np.abs(awg_noiseA - awg_noiseB) > 1e-10)
 
         if np.max(params) > 0:
             assert fidelityA != fidelityB
