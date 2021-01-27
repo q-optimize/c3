@@ -1,0 +1,50 @@
+Qiskit modules for C3
+===================
+
+C3 Backend module
+------------------------
+
+.. automodule:: c3.qiskit.c3_backend
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C3 Provider module
+------------------------
+
+.. automodule:: c3.qiskit.c3_provider
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C3 Job module
+------------------------
+
+.. automodule:: c3.qiskit.c3_job
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C3 Exceptions module
+------------------------
+
+.. automodule:: c3.qiskit.c3_exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+C3 Backend Utilities module
+----------------------------
+
+.. automodule:: c3.qiskit.c3_backend_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: c3.qiskit
+   :members:
+   :undoc-members:
+   :show-inheritance:

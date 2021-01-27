@@ -30,7 +30,7 @@ When combined in sequence, these three procedures represent a recipe for system 
    two_qubits
    optimal_control
    Simulated_calibration
-   c3_qiskit
+   c3_qiskit_example
    c3
 
 
