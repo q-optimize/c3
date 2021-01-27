@@ -575,10 +575,3 @@ def test_flux_signal() -> None:
     )
     assert (rel_diff < 1e-12).all()
 
-def test_FluxTuning():
-    flux_tune = devices.FluxTuning(phi_0=phi_0_tc, phi=0, omega_0=freq_tc, anhar=anhar_TC)
-    
-    flux_tune.process(None, None, )
-
-
-test_FluxTuning()
