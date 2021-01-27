@@ -41,7 +41,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap=None):
+    def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
         self.unitaries = {}
