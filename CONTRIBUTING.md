@@ -1,0 +1,15 @@
+- [ ] Finding Issues to Contribute
+- [ ] Opening and Discussing new Issues
+- [ ] Forking and Cloning the Repo
+- [ ] Setting up the development environment
+- [ ] Setting up and using Pre-Commit Hooks
+- [ ] Branches and remotes
+- [ ] Tests and Test Coverage
+- [ ] CI Checks and Running Tests Locally
+- [ ] Type Annotations
+- [ ] Doc Strings
+- [ ] Building and Viewing Documentation locally
+- [ ] Merging and Rebasing for syncing changes
+- [ ] Pull Request Best Practices
+- [ ] CLA Signing
+- [ ] Git flow development style for Releases
