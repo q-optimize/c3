@@ -1,5 +1,6 @@
 - [ ] Finding Issues to Contribute
 - [ ] Opening and Discussing new Issues
+- [ ] Developer FAQ - common gotchas, development & extension philosophy
 - [ ] Forking and Cloning the Repo
 - [ ] Setting up the development environment
 - [ ] Setting up and using Pre-Commit Hooks
