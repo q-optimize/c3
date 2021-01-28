@@ -18,15 +18,15 @@ def create_experiment():
     lindblad = False
     dressed = True
     qubit_lvls = 3
-    freq = 5e9 * 2 * np.pi
-    anhar = -210e6 * 2 * np.pi
+    freq = 5e9
+    anhar = -210e6
     init_temp = 0
     qubit_temp = 0
     t_final = 7e-9  # Time for single qubit gates
     sim_res = 100e9
     awg_res = 2e9
-    sideband = 50e6 * 2 * np.pi
-    lo_freq = 5e9 * 2 * np.pi + sideband
+    sideband = 50e6
+    lo_freq = 5e9 + sideband
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
@@ -34,14 +34,14 @@ def create_experiment():
         desc="Qubit 1",
         freq=Qty(
             value=freq,
-            min_val=4.995e9 * 2 * np.pi,
-            max_val=5.005e9 * 2 * np.pi,
+            min_val=4.995e9,
+            max_val=5.005e9,
             unit="Hz 2pi",
         ),
         anhar=Qty(
             value=anhar,
-            min_val=-380e6 * 2 * np.pi,
-            max_val=-120e6 * 2 * np.pi,
+            min_val=-380e6,
+            max_val=-120e6,
             unit="Hz 2pi",
         ),
         hilbert_dim=qubit_lvls,
@@ -108,9 +108,9 @@ def create_experiment():
             value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"
         ),
         "freq_offset": Qty(
-            value=-sideband - 0.5e6 * 2 * np.pi,
-            min_val=-60 * 1e6 * 2 * np.pi,
-            max_val=-40 * 1e6 * 2 * np.pi,
+            value=-sideband - 0.5e6,
+            min_val=-60 * 1e6,
+            max_val=-40 * 1e6,
             unit="Hz 2pi",
         ),
         "delta": Qty(value=-1, min_val=-5, max_val=3, unit=""),
@@ -134,8 +134,8 @@ def create_experiment():
     carrier_parameters = {
         "freq": Qty(
             value=lo_freq,
-            min_val=4.5e9 * 2 * np.pi,
-            max_val=6e9 * 2 * np.pi,
+            min_val=4.5e9,
+            max_val=6e9,
             unit="Hz 2pi",
         ),
         "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
