@@ -42,9 +42,10 @@ def pwc_symmetric(t, params):
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     inphase = tf.cast(params['inphase'].get_value(), dtype=tf.float64)
 
-    t_interp = tf.where(tf.greater(t, t_final / 2),  - t + t_final , t)
+    t_interp = tf.where(tf.greater(t, t_final / 2), - t + t_final, t)
     shape = tf.reshape(
-        tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0, fill_value_above=0), [len(t)])
+        tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0,
+                                        fill_value_above=0), [len(t)])
 
     return shape
 
@@ -63,21 +64,21 @@ def fourier_sin(t, params):
 
     """
     amps = tf.reshape(
-                tf.cast(params['amps'].get_value(), dtype=tf.float64),
-                [params['amps'].shape[0], 1]
-           )
+        tf.cast(params['amps'].get_value(), dtype=tf.float64),
+        [params['amps'].shape[0], 1]
+    )
     freqs = tf.reshape(
-                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
-                [params['freqs'].shape[0], 1]
-           )
+        tf.cast(params['freqs'].get_value(), dtype=tf.float64),
+        [params['freqs'].shape[0], 1]
+    )
     phases = tf.reshape(
-            tf.cast(params['phases'].get_value(), dtype=tf.float64),
-            [params['phases'].shape[0], 1]
-       )
+        tf.cast(params['phases'].get_value(), dtype=tf.float64),
+        [params['phases'].shape[0], 1]
+    )
     t = tf.reshape(
-                tf.cast(t, dtype=tf.float64),
-                [1, t.shape[0]]
-           )
+        tf.cast(t, dtype=tf.float64),
+        [1, t.shape[0]]
+    )
     return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
 
 
@@ -95,17 +96,17 @@ def fourier_cos(t, params):
 
     """
     amps = tf.reshape(
-                tf.cast(params['amps'].get_value(), dtype=tf.float64),
-                [params['amps'].shape[0], 1]
-           )
+        tf.cast(params['amps'].get_value(), dtype=tf.float64),
+        [params['amps'].shape[0], 1]
+    )
     freqs = tf.reshape(
-                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
-                [params['freqs'].shape[0], 1]
-           )
+        tf.cast(params['freqs'].get_value(), dtype=tf.float64),
+        [params['freqs'].shape[0], 1]
+    )
     t = tf.reshape(
-                tf.cast(t, dtype=tf.float64),
-                [1, t.shape[0]]
-           )
+        tf.cast(t, dtype=tf.float64),
+        [1, t.shape[0]]
+    )
     return tf.reduce_sum(amps * tf.cos(freqs * t), 0)
 
 
@@ -198,8 +199,8 @@ def flattop_cut(t, params):
     t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
     t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
-    return tf.clip_by_value(shape,0,2)
+    shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
+    return tf.clip_by_value(shape, 0, 2)
 
 
 @env_reg_deco
@@ -223,7 +224,7 @@ def flattop_cut_center(t, params):
     t_up = t_final / 2 - width / 2
     t_down = t_final / 2 + width / 2
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
-    shape = tf.clip_by_value(shape,0,2)
+    shape = tf.clip_by_value(shape, 0, 2)
     return shape
 
 
@@ -239,10 +240,10 @@ def slepian_fourier(t, params):
     amp = tf.cast(params["amp"].get_value(), dtype=tf.float64)
     shape = tf.zeros_like(t)
     for n, coeff in enumerate(fourier_coeffs):
-        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
-    shape = tf.where(tf.abs(t_final/2 - t) > width / 2, tf.zeros_like(t), shape)
+        shape += coeff * (1 - tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
+    shape = tf.where(tf.abs(t_final / 2 - t) > width / 2, tf.zeros_like(t), shape)
     shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
-    shape = shape * (1 - offset/amp) + offset/amp
+    shape = shape * (1 - offset / amp) + offset / amp
     # plt.plot(t, shape)
     # plt.show()
     return shape
@@ -292,9 +293,9 @@ def gaussian(t, params):
     """
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params['sigma'] = Qty(
-        value=params['t_final'].get_value()/6,
-        min_val=params['t_final'].get_value()/8,
-        max_val=params['t_final'].get_value()/4,
+        value=params['t_final'].get_value() / 6,
+        min_val=params['t_final'].get_value() / 8,
+        max_val=params['t_final'].get_value() / 4,
         unit=params['t_final'].unit
     )
     return gaussian_sigma(t, params)
@@ -327,7 +328,7 @@ def gaussian_der_nonorm(t, params):
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
-        (t - t_final / 2) / sigma ** 2
+                (t - t_final / 2) / sigma ** 2
     return gauss_der
 
 
@@ -337,10 +338,10 @@ def gaussian_der(t, params):
     t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
     sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
     gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
-        (t - t_final / 2) / sigma ** 2
+                (t - t_final / 2) / sigma ** 2
     norm = tf.sqrt(2 * np.pi * sigma ** 2) \
-        * tf.math.erf(t_final / (tf.sqrt(8) * sigma)) \
-        - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2))
+           * tf.math.erf(t_final / (tf.sqrt(8) * sigma)) \
+           - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2))
     return gauss_der / norm
 
 
@@ -362,9 +363,9 @@ def drag(t, params):
     """Second order gaussian with fixed time/sigma ratio."""
     DeprecationWarning("Using standard width. Better use drag_sigma.")
     params['sigma'] = Qty(
-        value=params['t_final'].get_value()/4,
-        min_val=params['t_final'].get_value()/8,
-        max_val=params['t_final'].get_value()/2,
+        value=params['t_final'].get_value() / 4,
+        min_val=params['t_final'].get_value() / 8,
+        max_val=params['t_final'].get_value() / 2,
         unit=params['t_final'].unit
     )
     return drag_sigma(t, params)
@@ -380,8 +381,8 @@ def drag_der(t, params):
             - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
     offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
     der = - 2 * (tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) - offset) \
-        * (np.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))) \
-        * (t - t_final / 2) / sigma ** 2 / norm
+          * (np.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))) \
+          * (t - t_final / 2) / sigma ** 2 / norm
     return der
 
 
@@ -394,16 +395,16 @@ def flattop_variant(t, params):
     t_down = params['t_down']
     ramp = params['ramp']
     value = np.ones(len(t))
-    if ramp > (t_down-t_up)/2:
-        ramp = (t_down-t_up)/2
-    sigma = np.sqrt(2)*ramp*0.2
+    if ramp > (t_down - t_up) / 2:
+        ramp = (t_down - t_up) / 2
+    sigma = np.sqrt(2) * ramp * 0.2
     for i, e in enumerate(t):
-        if t_up <= e <= t_up+ramp:
-            value[i] = np.exp(-(e-t_up-ramp)**2/(2*sigma**2))
-        elif t_up+ramp < e < t_down-ramp:
+        if t_up <= e <= t_up + ramp:
+            value[i] = np.exp(-(e - t_up - ramp) ** 2 / (2 * sigma ** 2))
+        elif t_up + ramp < e < t_down - ramp:
             value[i] = 1
-        elif t_down >= e >= t_down-ramp:
-            value[i] = np.exp(-(e-t_down+ramp)**2/(2*sigma**2))
+        elif t_down >= e >= t_down - ramp:
+            value[i] = np.exp(-(e - t_down + ramp) ** 2 / (2 * sigma ** 2))
         else:
             value[i] = 0
     return value

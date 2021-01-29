@@ -133,7 +133,7 @@ generator2 = Gnr(
         ),
         "PinkNoise": devices.Pink_Noise(
             name='pink_noise',
-            noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit='V'),
+            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit='V'),
             bfl_num=Qty(value=15),
             resolution=sim_res
         ),
@@ -239,7 +239,7 @@ def test_c1_robust():
         data = pickle.load(f)
 
     for k, v in data['c1_robust_lbfgs'].items():
-        assert np.abs(np.any(np.array(opt.optim_status[k]) - np.array(v))) < 1e-7
+        assert np.any(np.abs(np.array(opt.optim_status[k]) - np.array(v)) < 1e-7)
 
 
 @pytest.mark.slow
@@ -248,7 +248,7 @@ def test_noise_devices():
     exp.get_gates()
     fidelity0 = fidelities.average_infid_set(exp.unitaries, [1], exp.pmap.model.dims, 0, proj=True)
 
-    noise_map = [[('pink_noise', 'noise_strength')], [('dc_noise', 'noise_amp')], [('awg_noise', 'noise_amp')]]
+    noise_map = [[('pink_noise', 'noise_amp')], [('dc_noise', 'noise_amp')], [('awg_noise', 'noise_amp')]]
     for i in range(len(noise_map) + 1):
         params = np.zeros(len(noise_map))
         if i < len(noise_map):

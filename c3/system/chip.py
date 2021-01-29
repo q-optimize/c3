@@ -285,8 +285,8 @@ class Transmon(PhysicalComponent):
             raise Warning(
                 "no gamma or d provided. setting d=0, i.e. symmetric case"
             )
-        if hilbert_dim > 2:
-            self.params['anhar'] = anhar
+        # Anharmonicity corresponding to the charging energy in the two-level case
+        self.params['anhar'] = anhar
         if t1:
             self.params['t1'] = t1
         if t2star:

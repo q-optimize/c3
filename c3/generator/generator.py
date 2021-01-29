@@ -94,7 +94,7 @@ class Generator:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def generate_signals(self, instr: Instruction):
+    def generate_signals(self, instr: Instruction) -> dict:
         """
         Perform the signal chain for a specified instruction, including local
         oscillator, AWG generation and IQ mixing.

@@ -57,6 +57,8 @@ def replace_symlink(path: str, alias: str) -> None:
         os.symlink(path, alias)
     except FileExistsError:
         pass
+    except OSError:
+        Warning("OSError encountered while creating symlink")
 
 
 # NICE PRINTING FUNCTIONS
@@ -73,8 +75,12 @@ def eng_num(val: float) -> Tuple[float, str]:
     tmp = np.log10(val)
     idx = int(tmp // 3)
     if tmp < 0:
+        if np.abs(idx) > len(small_units):
+            return val * (10 ** (3 * len(small_units))), small_units[-1]
         prefix = small_units[-(idx + 1)]
     else:
+        if np.abs(idx) > len(big_units) - 1:
+            return val * (10 ** (- 3 * (len(big_units) - 1))), big_units[-1]
         prefix = big_units[idx]
 
     return sign * (10 ** (tmp % 3)), prefix

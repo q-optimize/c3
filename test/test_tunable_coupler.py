@@ -35,7 +35,6 @@ import c3.libraries.envelopes as envelopes
 import c3.utils.qt_utils as qt_utils
 import c3.utils.tf_utils as tf_utils
 
-
 lindblad = False
 dressed = True
 q1_lvls = 3
@@ -63,14 +62,14 @@ t2star_q2 = 50e-6
 t2star_tc = 7e-6
 init_temp = 0.06
 v2hz = 1e9
-t_final = 10e-9 # Time for single qubit gates
+t_final = 10e-9  # Time for single qubit gates
 sim_res = 100e9
 awg_res = 2.4e9
 
-cphase_time = 100e-9 # Two qubit gate
+cphase_time = 100e-9  # Two qubit gate
 flux_freq = 829 * 1e6
 offset = 0 * 1e6
-fluxamp = 0.1 *phi_0_tc
+fluxamp = 0.1 * phi_0_tc
 t_down = cphase_time - 5e-9
 xy_angle = 0.3590456701578104
 framechange_q1 = 0.725 * np.pi
@@ -159,20 +158,20 @@ tc_at = chip.Transmon(
     ),
     phi=Qty(
         value=fluxpoint,
-        min_val=-5.0*phi_0_tc,
-        max_val=5.0*phi_0_tc,
+        min_val=-5.0 * phi_0_tc,
+        max_val=5.0 * phi_0_tc,
         unit='Wb'
     ),
     phi_0=Qty(
         value=phi_0_tc,
-        min_val=phi_0_tc*0.9,
-        max_val=phi_0_tc*1.1,
+        min_val=phi_0_tc * 0.9,
+        max_val=phi_0_tc * 1.1,
         unit='Wb'
     ),
     d=Qty(
         value=d,
-        min_val=d*0.9,
-        max_val=d*1.1,
+        min_val=d * 0.9,
+        max_val=d * 1.1,
         unit=''
     ),
     hilbert_dim=tc_lvls,
@@ -281,27 +280,33 @@ fluxbias = devices.FluxTuning(
     name='fluxbias',
     phi_0=Qty(
         value=phi_0_tc,
-        min_val=0.9*phi_0_tc,
-        max_val=1.1*phi_0_tc,
+        min_val=0.9 * phi_0_tc,
+        max_val=1.1 * phi_0_tc,
         unit='Wb'
     ),
     phi=Qty(
         value=fluxpoint,
-        min_val=-1.0*phi_0_tc,
-        max_val=1.0*phi_0_tc,
+        min_val=-1.0 * phi_0_tc,
+        max_val=1.0 * phi_0_tc,
         unit='Wb'
     ),
     omega_0=Qty(
         value=freq_tc,
-        min_val=0.9*freq_tc,
-        max_val=1.1*freq_tc,
+        min_val=0.9 * freq_tc,
+        max_val=1.1 * freq_tc,
         unit='Hz 2pi'
     ),
     d=Qty(
         value=d,
-        min_val=d*0.9,
-        max_val=d*1.1,
+        min_val=d * 0.9,
+        max_val=d * 1.1,
         unit=''
+    ),
+    anhar=Qty(
+        value=anhar_q1,
+        min_val=-380e6,
+        max_val=-120e6,
+        unit='Hz 2pi'
     )
 )
 v_to_hz = devices.VoltsToHertz(
@@ -313,13 +318,13 @@ v_to_hz = devices.VoltsToHertz(
         unit='Hz 2pi/V'
     )
 )
-device_dict = {dev.name:dev for dev in [lo, awg, mixer, dig_to_an, resp, v_to_hz, fluxbias]}
+device_dict = {dev.name: dev for dev in [lo, awg, mixer, dig_to_an, resp, v_to_hz, fluxbias]}
 generator = Gnr(
     devices=device_dict,
     chains={
-        "TC":["lo", "awg", "dac", "resp", "mixer", "fluxbias"],
-        "Q1":["lo", "awg", "dac", "resp", "mixer", "v2hz"],
-        "Q2":["lo", "awg", "dac", "resp", "mixer", "v2hz"],
+        "TC": ["lo", "awg", "dac", "resp", "mixer", "fluxbias"],
+        "Q1": ["lo", "awg", "dac", "resp", "mixer", "v2hz"],
+        "Q2": ["lo", "awg", "dac", "resp", "mixer", "v2hz"],
     }
 )
 
@@ -338,8 +343,8 @@ carrier_parameters = {
     ),
     'framechange': Qty(
         value=0.0,
-        min_val=-3*np.pi,
-        max_val=5*np.pi,
+        min_val=-3 * np.pi,
+        max_val=5 * np.pi,
         unit='rad'
     )
 }
@@ -352,7 +357,6 @@ carr_q2 = copy.deepcopy(carr_q1)
 carr_q2.params['freq'].set_value(freq_q2)
 carr_tc = copy.deepcopy(carr_q1)
 carr_tc.params['freq'].set_value(flux_freq)
-
 
 flux_params = {
     'amp': Qty(
@@ -368,7 +372,7 @@ flux_params = {
         unit="s"
     ),
     't_up': Qty(
-        value=5*1e-9,
+        value=5 * 1e-9,
         min_val=0.0 * cphase_time,
         max_val=0.5 * cphase_time,
         unit="s"
@@ -380,7 +384,7 @@ flux_params = {
         unit="s"
     ),
     'risefall': Qty(
-        value=5*1e-9,
+        value=5 * 1e-9,
         min_val=0.0 * cphase_time,
         max_val=1.0 * cphase_time,
         unit="s"
@@ -428,34 +432,37 @@ exp = Exp(pmap=parameter_map)
 with open("test/tunable_coupler_data.pickle", "rb") as filename:
     data = pickle.load(filename)
 
+
 @pytest.mark.integration
 def test_coupler_frequency() -> None:
     coupler_01 = np.abs(
-        np.abs(model.eigenframe[model.state_labels.index((0,0,0))])
-        - np.abs(model.eigenframe[model.state_labels.index((1,0,0))])
+        np.abs(model.eigenframe[model.state_labels.index((0, 0, 0))])
+        - np.abs(model.eigenframe[model.state_labels.index((1, 0, 0))])
     )
     rel_diff = np.abs(
         (coupler_01 - data["coupler_01"]) / data["coupler_01"]
     )
     assert rel_diff < 1e-12
 
+
 @pytest.mark.integration
 def test_coupler_anahrmonicity() -> None:
     coupler_12 = np.abs(
-        np.abs(model.eigenframe[model.state_labels.index((1,0,0))])
-        - np.abs(model.eigenframe[model.state_labels.index((2,0,0))])
+        np.abs(model.eigenframe[model.state_labels.index((1, 0, 0))])
+        - np.abs(model.eigenframe[model.state_labels.index((2, 0, 0))])
     )
     rel_diff = np.abs(
         (coupler_12 - data["coupler_12"]) / data["coupler_12"]
     )
     assert rel_diff < 1e-12
 
+
 @pytest.mark.integration
 def test_energy_levels() -> None:
     model = parameter_map.model
     parameter_map.set_parameters([0.0], [[["TC-phi"]]])
     model.update_model()
-    labels = [model.state_labels[indx] for indx in np.argsort(np.abs(model.eigenframe)/2/np.pi/1e9)]
+    labels = [model.state_labels[indx] for indx in np.argsort(np.abs(model.eigenframe) / 2 / np.pi / 1e9)]
     product_basis = []
     dressed_basis = []
     ordered_basis = []
@@ -463,31 +470,31 @@ def test_energy_levels() -> None:
     steps = 101
     min_ratio = -0.10
     max_ratio = 0.7
-    flux_ratios = np.linspace(min_ratio,max_ratio,steps,endpoint=True)
+    flux_ratios = np.linspace(min_ratio, max_ratio, steps, endpoint=True)
     for flux_ratio in flux_ratios:
         flux_bias = flux_ratio * phi_0_tc
         parameter_map.set_parameters(
-            [flux_bias,0.0,0.0,0.0],
-            [[["TC-phi"]],[["Q1-TC-strength"]],[["Q2-TC-strength"]],[["Q1-Q2-strength"]]]
+            [flux_bias, 0.0, 0.0, 0.0],
+            [[["TC-phi"]], [["Q1-TC-strength"]], [["Q2-TC-strength"]], [["Q1-Q2-strength"]]]
         )
         model.update_model()
         product_basis.append(
-            [model.eigenframe[model.state_labels.index(label)]/2/np.pi/1e9 for label in labels]
+            [model.eigenframe[model.state_labels.index(label)] / 2 / np.pi / 1e9 for label in labels]
         )
         parameter_map.set_parameters(
-            [coupling_strength_q1tc,coupling_strength_q2tc,coupling_strength_q1q2],
-            [[["Q1-TC-strength"]],[["Q2-TC-strength"]],[["Q1-Q2-strength"]]]
+            [coupling_strength_q1tc, coupling_strength_q2tc, coupling_strength_q1q2],
+            [[["Q1-TC-strength"]], [["Q2-TC-strength"]], [["Q1-Q2-strength"]]]
         )
         model.update_model()
         ordered_basis.append(
-            [model.eigenframe[model.state_labels.index(label)]/2/np.pi/1e9 for label in labels]
+            [model.eigenframe[model.state_labels.index(label)] / 2 / np.pi / 1e9 for label in labels]
         )
         parameter_map.model.update_dressed(ordered=False)
         dressed_basis.append(
-            [model.eigenframe[model.state_labels.index(label)]/2/np.pi/1e9 for label in model.state_labels]
+            [model.eigenframe[model.state_labels.index(label)] / 2 / np.pi / 1e9 for label in model.state_labels]
         )
         transforms.append(
-             np.array([np.real(model.transform[model.state_labels.index(label)])for label in labels])
+            np.array([np.real(model.transform[model.state_labels.index(label)]) for label in labels])
         )
     parameter_map.set_parameters([fluxpoint], [[["TC-phi"]]])
     model.update_model()
@@ -498,10 +505,9 @@ def test_energy_levels() -> None:
     assert (np.abs(product_basis - data["product_basis"]) < 1).all()
     assert (np.abs(ordered_basis - data["ordered_basis"]) < 1).all()
     # Dressed basis might change at avoided crossings depending on how we
-    # decide to deal with it. Atm now error is given and the energy levels
-    # are mapped to the lowest level.
-    # This happens when an eigenvalue doesn't have any overlap larger than 50%
+    # decide to deal with it. Atm no state with largest probability is chosen.
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
+
 
 @pytest.mark.slow
 @pytest.mark.integration
@@ -527,6 +533,7 @@ def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.get_gates()
+    # saved U_super currenlty likely to be wrong. Not recomputed in last dataset.
     U_super = U_dict['Id:CZ']
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
@@ -555,30 +562,64 @@ def test_flux_signal() -> None:
     tc_awg_Q = awg.signal[channel]["quadrature"].numpy()
     tc_awg_ts = awg.signal[channel]['ts'].numpy()
     rel_diff = np.abs(
-        (tc_signal - data['tc_signal'])/np.max(data['tc_signal'])
+        (tc_signal - data['tc_signal']) / np.max(data['tc_signal'])
     )
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs(
-        (tc_ts - data['tc_ts'])/np.max(data['tc_ts'])
+        (tc_ts - data['tc_ts']) / np.max(data['tc_ts'])
     )
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs(
-        (tc_awg_I - data['tc_awg_I'])/np.max(data['tc_awg_I'])
+        (tc_awg_I - data['tc_awg_I']) / np.max(data['tc_awg_I'])
     )
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs(
-        (tc_awg_Q - data['tc_awg_Q'])/np.max(data['tc_awg_Q'])
+        (tc_awg_Q - data['tc_awg_Q']) / np.max(data['tc_awg_Q'])
     )
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs(
-        (tc_awg_ts - data['tc_awg_ts'])/np.max(data['tc_awg_ts'])
+        (tc_awg_ts - data['tc_awg_ts']) / np.max(data['tc_awg_ts'])
     )
     assert (rel_diff < 1e-12).all()
 
+
+@pytest.mark.unit
 def test_FluxTuning():
-    flux_tune = devices.FluxTuning(phi_0=phi_0_tc, phi=0, omega_0=freq_tc, anhar=anhar_TC)
-    
-    flux_tune.process(None, None, )
+    flux_tune = devices.FluxTuning(
+        name="flux_tune",
+        phi_0=Qty(phi_0_tc),
+        phi=Qty(value=0, min_val=-phi_0_tc, max_val=phi_0_tc),
+        omega_0=Qty(freq_tc),
+        anhar=Qty(anhar_TC),
+        d=Qty(d)
+    )
 
+    transmon = chip.Transmon(
+        name="transmon",
+        hilbert_dim=3,
+        freq=Qty(freq_tc),
+        phi=Qty(value=0, min_val=-1.5 * phi_0_tc, max_val=1.5 * phi_0_tc),
+        phi_0=Qty(phi_0_tc),
+        d=Qty(d),
+        anhar=Qty(anhar_TC)
+    )
 
-test_FluxTuning()
+    bias_phis = [0, 0.2]
+    phis = np.linspace(-1, 1, 10) * phi_0_tc
+
+    for bias_phi in bias_phis:
+        flux_tune.params['phi'].set_value(bias_phi)
+        signal = {'ts': np.linspace(0, 1, 10), 'values': phis}
+        signal_out = flux_tune.process(None, None, signal)
+        flux_tune_frequencies = signal_out["values"].numpy()
+
+        transmon_frequencies = []
+        transmon.params["phi"].set_value(bias_phi)
+        bias_freq = transmon.get_freq()
+        for phi in (phis + bias_phi):
+            transmon.params["phi"].set_value(phi)
+            transmon_frequencies.append(transmon.get_freq())
+        transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
+
+        assert np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
+
