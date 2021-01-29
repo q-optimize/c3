@@ -43,7 +43,6 @@ def pwc_symmetric(t, params):
     inphase = tf.cast(params['inphase'].get_value(), dtype=tf.float64)
 
     t_interp = tf.where(tf.greater(t, t_final / 2),  - t + t_final , t)
-    plt.show()
     shape = tf.reshape(
         tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0, fill_value_above=0), [len(t)])
 

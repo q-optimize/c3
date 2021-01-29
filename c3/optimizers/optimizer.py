@@ -74,7 +74,8 @@ class Optimizer:
         except OSError:
             pass
 
-    def set_exp(self, exp) -> None:
+    def set_exp(self, exp: 
+               ) -> None:
         self.exp = exp
 
     def set_created_by(self, config) -> None:

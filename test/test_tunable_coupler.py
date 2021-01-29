@@ -574,3 +574,4 @@ def test_flux_signal() -> None:
         (tc_awg_ts - data['tc_awg_ts'])/np.max(data['tc_awg_ts'])
     )
     assert (rel_diff < 1e-12).all()
+
