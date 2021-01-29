@@ -38,11 +38,13 @@ class ParameterMap:
     def __initialize_parameters(self) -> None:
         par_lens = {}
         pars = {}
+        par_ids_model = []
         for comp in self.__components.values():
             for par_name, par_value in comp.params.items():
                 par_id = "-".join([comp.name, par_name])
                 par_lens[par_id] = par_value.length
                 pars[par_id] = par_value
+                par_ids_model.append(par_id)
 
         # Initializing control parameters
         for gate in self.instructions:
@@ -56,6 +58,7 @@ class ParameterMap:
 
         self.__par_lens = par_lens
         self.__pars = pars
+        self.__par_ids_model = par_ids_model
 
     def load_values(self, init_point):
         """
@@ -199,12 +202,14 @@ class ParameterMap:
             Corresponding identifiers for the parameter values.
 
         """
+        model_updated = False
         val_indx = 0
         if opt_map is None:
             opt_map = self.opt_map
         for equiv_ids in opt_map:
             for par_id in equiv_ids:
                 key = "-".join(par_id)
+                model_updated = True if key in self.__par_ids_model else model_updated
                 try:
                     par = self.__pars[key]
                 except ValueError as ve:
@@ -219,6 +224,8 @@ class ParameterMap:
                         f" {(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
+        if model_updated:
+            self.model.update_model()
 
     def get_parameters_scaled(self) -> np.ndarray:
         """
@@ -255,15 +262,19 @@ class ParameterMap:
             Corresponding identifiers for the parameter values.
 
         """
+        model_updated = False
         val_indx = 0
         for equiv_ids in self.opt_map:
             key = "-".join(equiv_ids[0])
             par_len = self.__pars[key].length
             for par_id in equiv_ids:
                 key = "-".join(par_id)
+                model_updated = True if key in self.__par_ids_model else model_updated
                 par = self.__pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
+        if model_updated:
+            self.model.update_model()
 
     def set_opt_map(self, opt_map) -> None:
         """
