@@ -6,6 +6,7 @@ import hjson
 import tensorflow as tf
 import numpy as np
 import c3.libraries.algorithms as algorithms
+from c3.experiment import Experiment
 import c3.utils.qt_utils as qt_utils
 import c3.utils.tf_utils as tf_utils
 from typing import Union
@@ -73,7 +74,7 @@ class Optimizer:
         except OSError:
             pass
 
-    def set_exp(self, exp) -> None:
+    def set_exp(self, exp: Experiment) -> None:
         self.exp = exp
 
     def set_created_by(self, config) -> None:
