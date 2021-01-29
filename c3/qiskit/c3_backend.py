@@ -36,7 +36,7 @@ class C3QasmSimulator(Backend):
     MAX_QUBITS_MEMORY = 15
     _configuration = {
         "backend_name": "c3_qasm_simulator",
-        "backend_version": "1.1",
+        "backend_version": "0.1",
         "n_qubits": min(15, MAX_QUBITS_MEMORY),
         "url": "https://github.com/q-optimize/c3",
         "simulator": True,
