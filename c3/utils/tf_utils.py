@@ -142,13 +142,13 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
         h += cflds_t[ii] * hks[ii]
         ii += 1
     terms = int(1e12 * dt) + 2
-    dU = tf_expm(-1j * h * dt, terms)
+    # dU = tf_expm(-1j * h * dt, terms)
     # TODO Make an option for the exponentation method
-    # dU = tf.linalg.expm(-1j * h * dt)
+    dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
 
-@tf.function
+# @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     """
     Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
@@ -185,10 +185,11 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
             tf_spost(col_op), tf_spost(tf.linalg.adjoint(col_op))
         )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    terms = int(1e12 * dt) + 2  # Eyeball number of terms in expm
-    dU = tf_expm(lind_op * dt, terms)
+    # terms = int(1e12 * dt) # Eyeball number of terms in expm
+#     print('terms in exponential: ', terms)
+    # dU = tf_expm(lind_op * dt, terms)
     # Built-in tensorflow exponential below
-    # dU = tf.linalg.expm(lind_op * dt)
+    dU = tf.linalg.expm(lind_op * dt)
     return dU
 
 
@@ -342,12 +343,14 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     ----------
     U_dict : dict
         Dictionary of unitary representation of gates.
+    
     sequences : list
         List of keys from U_dict specifying a gate sequence.
         The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
             ... U2 * U1 * U0
+    
     Returns
     -------
     tf.tensor
@@ -355,14 +358,20 @@ def evaluate_sequences(U_dict: dict, sequences: list):
 
     """
     gates = U_dict
+    # get dims to deal with the case where a sequence is empty
+    dim = list(gates.values())[0].shape[0]
+    dtype = list(gates.values())[0].dtype
     # TODO deal with the case where you only evaluate one sequence
     U = []
     for sequence in sequences:
-        Us = []
-        for gate in sequence:
-            Us.append(gates[gate])
-        U.append(tf_matmul_left(Us))
-        # ### WARNING WARNING ^^ look there, it says left WARNING
+        if len(sequence) == 0:
+            U.append(tf.linalg.eye(dim,dtype=dtype))
+        else:
+            Us = []
+            for gate in sequence:
+                Us.append(gates[gate])
+            U.append(tf_matmul_left(Us))
+            # ### WARNING WARNING ^^ look there, it says left WARNING
     return U
 
 
@@ -663,7 +672,10 @@ def tf_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(tf.linalg.adjoint(tf_project_to_comp(A, lvls)), B)
+    Lambda = tf.matmul(
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)),
+        B
+    )
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 

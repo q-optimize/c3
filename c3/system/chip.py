@@ -140,6 +140,7 @@ class Qubit(PhysicalComponent):
             h += anhar * self.Hs["anhar"]
         return h
 
+
     def init_Ls(self, ann_oper):
         """
         Initialize Lindbladian components.
@@ -189,6 +190,8 @@ class Qubit(PhysicalComponent):
             gamma = (0.5 / self.params["t2star"].get_value()) ** 0.5
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
+        if Ls == []:
+            raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
 
 
@@ -233,17 +236,18 @@ class Resonator(PhysicalComponent):
 
 
 @dev_reg_deco
-class SymmetricTransmon(PhysicalComponent):
+class Transmon(PhysicalComponent):
     """
-    Represents the element in a chip functioning as tunanble coupler.
+    Represents the element in a chip functioning as tunanble transmon qubit.
 
     Parameters
     ----------
     freq: np.float64
-        base frequency of the TC
+        base frequency of the Transmon
     phi_0: np.float64
         half period of the phase dependant function
-    phi: np.fl
+    phi: np.float64
+        flux position
 
     """
 
@@ -256,82 +260,238 @@ class SymmetricTransmon(PhysicalComponent):
         freq: np.float64 = 0.0,
         phi: np.float64 = 0.0,
         phi_0: np.float64 = 0.0,
+        gamma: np.float64 = None,
+        d: np.float64 = None,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
     ):
-        super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
-        self.params["freq"] = freq
-        self.params["phi"] = phi
-        self.params["phi_0"] = phi_0
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+            )
+        self.params['freq'] = freq
+        self.params['phi'] = phi
+        self.params['phi_0'] = phi_0
+
+        if d:
+            self.params['d'] = d
+        elif gamma:
+            self.params['gamma'] = gamma
+        else:
+            raise Warning(
+                "no gamma or d provided. setting d=0, i.e. symmetric case"
+            )
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
+
+    def get_factor(self):
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        phi = tf.cast(self.params['phi'].get_value(), tf.float64)
+        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.float64)
+        if 'd' in self.params:
+            d = tf.cast(self.params['d'].get_value(), tf.float64)
+        elif 'gamma' in self.params:
+            gamma = tf.cast(self.params['gamma'].get_value(), tf.complex128)
+            d = (gamma - 1) / (gamma + 1)
+        else:
+            d = 0
+        factor = tf.sqrt(tf.sqrt(
+            tf.cos(pi * phi / phi_0)**2 + d**2 * tf.sin(pi * phi / phi_0)**2
+        ))
+        factor = tf.cast(factor, tf.complex128)
+        return factor
+
+    def get_anhar(self):
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        return anhar
+
+    def get_freq(self):
+        freq = tf.cast(self.params['freq'].get_value(), tf.complex128)
+        anhar = tf.cast(self.params['anhar'].get_value(), tf.complex128)
+        biased_freq = (freq - anhar) * self.get_factor() + anhar
+        return biased_freq
 
     def init_Hs(self, ann_oper):
-        self.Hs["freq"] = tf.Variable(
-            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
-        )
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        if self.hilbert_dim > 2:
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
 
     def init_Ls(self, ann_oper):
-        pass
+        """
+        Initialize Lindbladian components.
+
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+
+        """
+        self.collapse_ops['t1'] = ann_oper
+        self.collapse_ops['temp'] = ann_oper.T.conj()
+        self.collapse_ops['t2star'] = 2 * tf.matmul(
+            ann_oper.T.conj(),
+            ann_oper
+        )
 
     def get_Hamiltonian(self):
-        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
-        pi = tf.Variable(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params["phi"].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.complex128)
-        return (
-            freq
-            * tf.cast(tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0))), tf.complex128)
-            * self.Hs["freq"]
-        )
+        h = self.get_freq() * self.Hs['freq']
+        if self.hilbert_dim > 2:
+            h += self.get_anhar() * self.Hs['anhar']
+        return h
+
+    def get_Lindbladian(self, dims):
+        """
+        Compute the Lindbladian, based on relaxation, dephasing constants and finite temperature.
+
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+        """
+        Ls = []
+        if 't1' in self.params:
+            t1 = self.params['t1'].get_value()
+            gamma = (0.5 / t1) ** 0.5
+            L = gamma * self.collapse_ops['t1']
+            Ls.append(L)
+            if 'temp' in self.params:
+                if self.params['temp'].get_value().numpy():
+                    if self.hilbert_dim > 2:
+                        freq_diff = np.array(
+                            [(self.params['freq'].get_value()
+                              + n*self.params['anhar'].get_value())
+                                for n in range(self.hilbert_dim)]
+                        )
+                    else:
+                        freq_diff = np.array(
+                            [self.params['freq'].get_value(), 0]
+                        )
+                    beta = 1 / (self.params['temp'].get_value() * kb)
+                    det_bal = tf.exp(-hbar*tf.cast(freq_diff, tf.float64)*beta)
+                    det_bal_mat = hskron(
+                        tf.linalg.tensor_diag(det_bal), self.index, dims
+                    )
+                    L = gamma * tf.matmul(self.collapse_ops['temp'], det_bal_mat)
+                    Ls.append(L)
+        if 't2star' in self.params:
+            gamma = (0.5/self.params['t2star'].get_value())**0.5
+            L = gamma * self.collapse_ops['t2star']
+            Ls.append(L)
+        if Ls == []:
+            raise Exception("No T1 or T2 provided")
+        return tf.cast(sum(Ls), tf.complex128)
 
 
 @dev_reg_deco
-class AsymmetricTransmon(PhysicalComponent):
+class SNAIL(PhysicalComponent):
     """
-    Represents the element in a chip functioning as tunanble coupler.
-
+    Represents the element in a chip functioning as a three wave mixing element also knwon as a SNAIL.
+    Reference: https://arxiv.org/pdf/1702.00869.pdf
     Parameters
     ----------
     freq: np.float64
-        base frequency of the TC
-    phi_0: np.float64
-        half period of the phase dependant function
-    phi: np.fl
-
+        frequency of the qubit
+    anhar: np.float64
+        anharmonicity of the qubit. defined as w01 - w12
+    beta: np.float64
+        third order non_linearity of the qubit.
+    t1: np.float64
+        t1, the time decay of the qubit due to dissipation
+    t2star: np.float64
+        t2star, the time decay of the qubit due to pure dephasing
+    temp: np.float64
+        temperature of the qubit, used to determine the Boltzmann distribution
+        of energy level populations
+    Class is mostly an exact copy of the Qubit class. The only difference is the added third order non linearity with a prefactor beta.
+    The only modification is the get hamiltonian and init hamiltonian definition. Also imported the necessary third order non linearity
+    from the hamiltonian library.
     """
-
     def __init__(
         self,
         name: str,
         desc: str = " ",
         comment: str = " ",
-        hilbert_dim: int = 2,
+        hilbert_dim: int = 4,
         freq: np.float64 = 0.0,
-        phi: np.float64 = 0.0,
-        phi_0: np.float64 = 0.0,
-        gamma: np.float64 = 0.0,
+        anhar: np.float64 = 0.0,
+        beta: np.float64 = 0.0,
+        t1: np.float64 = 0.0,
+        t2star: np.float64 = 0.0,
+        temp: np.float64 = 0.0
     ):
-        super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
-        self.params["freq"] = freq
-        self.parama["phi"] = phi  # type: ignore
-        self.parama["phi_0"] = phi_0  # type: ignore
-        self.parama["gamma"] = gamma  # type: ignore
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim
+        )
+        self.params['freq'] = freq
+        self.params['beta'] = beta
+        if hilbert_dim > 2:
+            self.params['anhar'] = anhar
+        if t1:
+            self.params['t1'] = t1
+        if t2star:
+            self.params['t2star'] = t2star
+        if temp:
+            self.params['temp'] = temp
 
     def init_Hs(self, ann_oper):
-        self.Hs["freq"] = tf.Variable(
-            hamiltonians["resonator"](ann_oper), dtype=tf.complex128
-        )
+        """
+        Initialize the SNAIL Hamiltonians.
+        Parameters
+        ----------
+        ann_oper : np.array
+            Annihilation operator in the full Hilbert space
+        """
+        resonator = hamiltonians["resonator"]
+        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        if self.hilbert_dim > 2:
+            duffing = hamiltonians["duffing"]
+            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+        third = hamiltonians["third_order"]
+        self.Hs['beta'] = tf.Variable(third(ann_oper), dtype=tf.complex128)
+
 
     def get_Hamiltonian(self):
-        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
-        pi = tf.Variable(np.pi, dtype=tf.complex128)
-        phi = tf.cast(self.params["phi"].get_value(), tf.complex128)
-        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.complex128)
-        gamma = tf.cast(self.params["gamma"].get_value(), tf.complex128)
-        d = (gamma - 1) / (gamma + 1)
-        factor = tf.sqrt(
-            tf.sqrt(
-                tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
-            )
-        )
-        return freq * factor * self.Hs["freq"]
+        """
+        Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
+        the Duffing part and returns their sum.
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonian
+        """
+        h = tf.cast(
+                self.params['freq'].get_value(),
+                tf.complex128
+        ) * self.Hs['freq']
+        h += tf.cast(
+                self.params['beta'].get_value(),
+                tf.complex128
+        ) * self.Hs['beta']
+        if self.hilbert_dim > 2:
+            h += tf.cast(
+                self.params['anhar'].get_value(),
+                tf.complex128
+            ) * self.Hs['anhar']
+
+        return h
+
+    init_Ls = Qubit.__dict__['init_Ls']
+    get_Lindbladian = Qubit.__dict__['get_Lindbladian']
 
 
 @dev_reg_deco

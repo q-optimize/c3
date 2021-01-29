@@ -6,6 +6,7 @@ All functions assume the input of a time vector.
 
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
 
 envelopes = dict()
@@ -33,6 +34,22 @@ def pwc(t, params):
 
 
 @env_reg_deco
+def pwc_symmetric(t, params):
+    """symmetic PWC pulse
+    This works only for inphase component"""
+    t_bin_start = tf.cast(params['t_bin_end'].get_value(), dtype=tf.float64)
+    t_bin_end = tf.cast(params['t_bin_start'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    inphase = tf.cast(params['inphase'].get_value(), dtype=tf.float64)
+
+    t_interp = tf.where(tf.greater(t, t_final / 2),  - t + t_final , t)
+    shape = tf.reshape(
+        tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0, fill_value_above=0), [len(t)])
+
+    return shape
+
+
+@env_reg_deco
 def fourier_sin(t, params):
     """Fourier basis of the pulse constant pulse (sin).
 
@@ -53,11 +70,15 @@ def fourier_sin(t, params):
                 tf.cast(params['freqs'].get_value(), dtype=tf.float64),
                 [params['freqs'].shape[0], 1]
            )
+    phases = tf.reshape(
+            tf.cast(params['phases'].get_value(), dtype=tf.float64),
+            [params['phases'].shape[0], 1]
+       )
     t = tf.reshape(
                 tf.cast(t, dtype=tf.float64),
                 [1, t.shape[0]]
            )
-    return tf.reduce_sum(amps * tf.sin(freqs * t), 0)
+    return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
 
 
 @env_reg_deco
@@ -91,11 +112,54 @@ def fourier_cos(t, params):
 @env_reg_deco
 def rect(t, params):
     """Rectangular pulse. Returns 1 at every time step."""
-    return 1.0
+    return tf.ones_like(t, dtype=tf.float64)
+
+
+@env_reg_deco
+def trapezoid(t, params):
+    """Trapezoidal pulse. Width of linear slope.
+
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of pulse.
+        risefall : float
+            Length of the slope
+    """
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+
+    envelope = tf.ones_like(t, dtype=tf.float64)
+    envelope = tf.where(tf.less_equal(t, risefall * 2.5), t / (risefall * 2.5), envelope)
+    envelope = tf.where(tf.greater_equal(t, t_final - risefall * 2.5), (t_final - t) / (risefall * 2.5), envelope)
+    return envelope
 
 
 @env_reg_deco
 def flattop_risefall(t, params):
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_final : float
+            Total length of pulse.
+        risefall : float
+            Length of the ramps. Position of ramps is so that the pulse starts
+            with the start of the ramp-up and ends at the end of the ramp-down
+
+    """
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    t_up = risefall
+    t_down = t_final - risefall
+    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
+           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
+
+
+@env_reg_deco
+def flattop(t, params):
     """Flattop gaussian with width of length risefall, modelled by error functions.
 
     Parameters
@@ -112,12 +176,80 @@ def flattop_risefall(t, params):
     t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
     t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
     risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
-           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
+    return (1 + tf.math.erf((t - t_up) / (risefall))) / 2 * \
+           (1 + tf.math.erf((-t + t_down) / (risefall))) / 2
 
 
 @env_reg_deco
-def flattop(t, params):
+def flattop_cut(t, params):
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_up : float
+            Center of the ramp up.
+        t_down : float
+            Center of the ramp down.
+        risefall : float
+            Length of the ramps.
+
+    """
+    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
+    return tf.clip_by_value(shape,0,2)
+
+
+@env_reg_deco
+def flattop_cut_center(t, params):
+    """Flattop gaussian with width of length risefall, modelled by error functions.
+
+    Parameters
+    ----------
+    params : dict
+        t_up : float
+            Center of the ramp up.
+        t_down : float
+            Center of the ramp down.
+        risefall : float
+            Length of the ramps.
+
+    """
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_up = t_final / 2 - width / 2
+    t_down = t_final / 2 + width / 2
+    shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
+    shape = tf.clip_by_value(shape,0,2)
+    return shape
+
+
+@env_reg_deco
+def slepian_fourier(t, params):
+    """
+    ----
+    """
+    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
+    fourier_coeffs = tf.cast(params['fourier_coeffs'].get_value(), dtype=tf.float64)
+    offset = tf.cast(params["offset"].get_value(), dtype=tf.float64)
+    amp = tf.cast(params["amp"].get_value(), dtype=tf.float64)
+    shape = tf.zeros_like(t)
+    for n, coeff in enumerate(fourier_coeffs):
+        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
+    shape = tf.where(tf.abs(t_final/2 - t) > width / 2, tf.zeros_like(t), shape)
+    shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
+    shape = shape * (1 - offset/amp) + offset/amp
+    # plt.plot(t, shape)
+    # plt.show()
+    return shape
+
+
+@env_reg_deco
+def flattop_risefall_1ns(t, params):
     """Flattop gaussian with fixed width of 1ns."""
     params['risefall'] = 1e-9
     return flattop_risefall(t, params)
@@ -160,9 +292,9 @@ def gaussian(t, params):
     """
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params['sigma'] = Qty(
-        value=params['t_final'].get_value()/4,
-        min=params['t_final'].get_value()/8,
-        max=params['t_final'].get_value()/2,
+        value=params['t_final'].get_value()/6,
+        min_val=params['t_final'].get_value()/8,
+        max_val=params['t_final'].get_value()/4,
         unit=params['t_final'].unit
     )
     return gaussian_sigma(t, params)
@@ -231,8 +363,8 @@ def drag(t, params):
     DeprecationWarning("Using standard width. Better use drag_sigma.")
     params['sigma'] = Qty(
         value=params['t_final'].get_value()/4,
-        min=params['t_final'].get_value()/8,
-        max=params['t_final'].get_value()/2,
+        min_val=params['t_final'].get_value()/8,
+        max_val=params['t_final'].get_value()/2,
         unit=params['t_final'].unit
     )
     return drag_sigma(t, params)

@@ -513,6 +513,11 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         noise = 0
 
+    if 'batch_noise' in options:
+        batch_noise = float(options.pop('batch_noise'))
+    else:
+        batch_noise = 0
+
     if "init_point" in options:
         init_point = bool(options.pop("init_point"))
     else:
@@ -562,10 +567,14 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
             samples.insert(0, x_init)
             print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
+        if batch_noise:
+            error = np.random.randn() * noise
         for sample in samples:
             goal = fun(sample)
             if noise:
-                goal = goal + (np.random.randn() * noise)
+                error = np.random.randn() * noise
+            if batch_noise or noise:
+                goal = goal + error
             solutions.append(goal)
         es.tell(samples, solutions)
         es.disp()

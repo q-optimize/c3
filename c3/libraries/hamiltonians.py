@@ -50,6 +50,27 @@ def duffing(a):
     return 1/2 * np.matmul(n - np.eye(int(n.shape[0]), dtype=np.complex128), n)
 
 @hamiltonian_reg_deco
+def third_order(a):
+    """
+    
+    Parameters
+    ----------
+    a : Tensor
+        Annihilator.
+    Returns
+    -------
+    Tensor
+        Number operator.
+    return literally the Hamiltonian a^\dag a a + a^\dag a^\dag a for the use in any Hamiltonian that uses more than 
+    just a resonator or Duffing part. A more general type of quantum element on a physical chip can have this type of interaction.
+    One example is a three wave mixing element used in signal amplification called a Superconducting non-linear asymmetric inductive eLement
+    (SNAIL in short). The code is a simple modification of the Duffing function and written in the same style. 
+    """
+    a_dag = a.T.conj()
+    n = np.matmul(a_dag, a)
+    return np.matmul(n,a)+np.matmul(a_dag,n)
+
+@hamiltonian_reg_deco
 def int_XX(anhs):
     """
     Dipole type coupling.

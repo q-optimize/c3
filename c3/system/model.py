@@ -228,12 +228,12 @@ class Model:
         else:
             return self.col_ops
 
-    def update_model(self):
+    def update_model(self, ordered=True):
         self.update_Hamiltonians()
         if self.lindbladian:
             self.update_Lindbladians()
         if self.dressed:
-            self.update_dressed()
+            self.update_dressed(ordered=ordered)
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
@@ -262,21 +262,27 @@ class Model:
         Eigenenergies and the transformation matrix."""
         # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
-        reorder_matrix = tf.cast(tf.round(tf.math.real(v)), tf.complex128)
         if ordered:
-            eigenframe = tf.linalg.matvec(reorder_matrix, e)
-            transform = tf.matmul(v, tf.transpose(reorder_matrix))
+            reorder_matrix = tf.round(tf.abs(v) ** 2)
+            signed_rm = tf.cast(
+                # TODO determine if the changing of sign is needed
+                # (by looking at TC_eneregies_bases I see no difference)
+                # reorder_matrix, dtype=tf.complex128
+                tf.sign(tf.math.real(v)) * reorder_matrix,
+                dtype=tf.complex128,
+            )
+            eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
+            transform = tf.matmul(v, tf.transpose(signed_rm))
         else:
-            eigenframe = tf.linalg.diag(e)
+            eigenframe = tf.math.real(e)
             transform = v
         self.eigenframe = eigenframe
-        self.transform = transform
+        self.transform = tf.cast(transform, dtype=tf.complex128)
 
-    def update_dressed(self):
-        """
-        Compute the Hamiltonians in the dressed basis by diagonalizing the drift and
-        applying the resulting transformation to the control Hamiltonians."""
-        self.update_drift_eigen()
+    def update_dressed(self, ordered=True):
+        """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
+        transformation to the control Hamiltonians."""
+        self.update_drift_eigen(ordered=ordered)
         dressed_control_Hs = {}
         dressed_col_ops = []
         dressed_drift_H = tf.matmul(
@@ -329,12 +335,7 @@ class Model:
             num_oper = tf.Variable(
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
-            # TODO test this
-            if self.dressed:
-                num_oper = tf.matmul(
-                    tf.matmul(tf.linalg.adjoint(self.transform), num_oper),
-                    self.transform,
-                )
+            # TODO test dressing of FR
             exponent = exponent + 1.0j * num_oper * (freq * t_final + framechange)
         FR = tf.linalg.expm(exponent)
         return FR
@@ -367,7 +368,7 @@ class Model:
             amp = amps[line]
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
-            ann_oper = self.ann_opers[qubit]
+            ann_oper = self.ann_opers[self.names.index(qubit)]
             num_oper = tf.Variable(
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
@@ -381,5 +382,6 @@ class Model:
             if p.numpy() > 1 or p.numpy() < 0:
                 raise ValueError("strengh of dephasing channels outside [0,1]")
                 print("dephasing stength: ", p)
+            # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch

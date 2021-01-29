@@ -88,73 +88,78 @@ Communication with the experiment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Some of the following code is specific to the fact that this a
-*simulated* calibration.
+*simulated* calibration. The interface of :math:`C^2` to the experiment
+is simple: parameters in :math:`\rightarrow` results out. Thus, we have
+to wrap the blackbox by defining the target states and the ``opt_map``.
 
 .. code-block:: python
 
     import numpy as np
     import tensorflow as tf
 
-    def ORBIT(params, exp, opt_map, qubit_labels, logdir):
+    def ORBIT_wrapper(p):
+        def ORBIT(params, exp, opt_map, qubit_labels, logdir):
+            ### ORBIT meta-parameters ###
+            RB_length = 60 # How long each sequence is
+            RB_number = 40  # How many sequences
+            shots = 1000    # How many averages per readout
 
-        ### ORBIT meta-parameters ###
-        RB_length = 60 # How long each sequence is
-        RB_number = 40  # How many sequences
-        shots = 1000    # How many averages per readout
+            ################################
+            ### Simulation specific part ###
+            ################################
 
-        ################################
-        ### Simulation specific part ###
-        ################################
+            do_noise = False  # Whether to add artificial noise to the results
 
-        do_noise = False  # Whether to add artificial noise to the results
+            qubit_label = list(qubit_labels.keys())[0]
+            state_labels = qubit_labels[qubit_label]
+            state_label = [tuple(l) for l in state_labels]
 
-        qubit_label = list(qubit_labels.keys())[0]
-        state_labels = qubit_labels[qubit_label]
-        state_label = [tuple(l) for l in state_labels]
+            # Creating the RB sequences #
+            seqs = qt_utils.single_length_RB(
+                    RB_number=RB_number, RB_length=RB_length
+            )
 
-        # Creating the RB sequences #
-        seqs = qt_utils.single_length_RB(
-                RB_number=RB_number, RB_length=RB_length
-        )
+            # Transmitting the parameters to the experiment #
+            exp.pmap.set_parameters(params, opt_map)
+            exp.set_opt_gates_seq(seqs)
 
-        # Transmitting the parameters to the experiment #
-        exp.pmap.set_parameters(params, opt_map)
-        exp.set_opt_gates(seqs)
+            # Simulating the gates #
+            U_dict = exp.get_gates()
 
-        # Simulating the gates #
-        U_dict = exp.get_gates()
+            # Running the RB sequences and read-out the results #
+            pops = exp.evaluate(seqs)
+            pop1s, _ = exp.process(pops, labels=state_label)
 
-        # Running the RB sequences and read-out the results #
-        pops = exp.evaluate(seqs)
-        pop1s = exp.process(pops, labels=state_label)
+            results = []
+            results_std = []
+            shots_nums = []
 
-        results = []
-        results_std = []
-        shots_nums = []
+            # Collecting results and statistics, add noise #
+            if do_noise:
+                for p1 in pop1s:
+                    draws = tf.keras.backend.random_binomial(
+                        [shots],
+                        p=p1[0],
+                        dtype=tf.float64,
+                    )
+                    results.append([np.mean(draws)])
+                    results_std.append([np.std(draws)/np.sqrt(shots)])
+                    shots_nums.append([shots])
+            else:
+                for p1 in pop1s:
+                    results.append(p1.numpy())
+                    results_std.append([0])
+                    shots_nums.append([shots])
 
-        # Collecting results and statistics, add noise #
-        if do_noise:
-            for p1 in pop1s:
-                draws = tf.keras.backend.random_binomial(
-                    [shots],
-                    p=p1[0],
-                    dtype=tf.float64,
+            #######################################
+            ### End of Simulation specific part ###
+            #######################################
+
+            goal = np.mean(results)
+            return goal, results, results_std, seqs, shots_nums
+        return ORBIT(
+                    p, blackbox, gateset_opt_map, state_labels, "/tmp/c3logs/blackbox"
                 )
-                results.append([np.mean(draws)])
-                results_std.append([np.std(draws)/np.sqrt(shots)])
-                shots_nums.append([shots])
-        else:
-            for p1 in pop1s:
-                results.append(p1.numpy())
-                results_std.append([0])
-                shots_nums.append([shots])
-
-        #######################################
-        ### End of Simulation specific part ###
-        #######################################
-
-        goal = np.mean(results)
-        return goal, results, results_std, seqs, shots_nums
 
 Optimization
 ~~~~~~~~~~~~
@@ -218,45 +223,45 @@ the blackbox. We mirror the blackbox by creating an experiment in the
 .. code-block:: python
 
     t_final = 7e-9   # Time for single qubit gates
-    sideband = 50e6 * 2 * np.pi
-    lo_freq = 5e9 * 2 * np.pi + sideband
+    sideband = 50e6
+    lo_freq = 5e9 + sideband
 
      # ### MAKE GATESET
     gauss_params_single = {
         'amp': Qty(
             value=0.45,
-            min=0.4,
-            max=0.6,
+            min_val=0.4,
+            max_val=0.6,
             unit="V"
         ),
         't_final': Qty(
             value=t_final,
-            min=0.5 * t_final,
-            max=1.5 * t_final,
+            min_val=0.5 * t_final,
+            max_val=1.5 * t_final,
             unit="s"
         ),
         'sigma': Qty(
             value=t_final / 4,
-            min=t_final / 8,
-            max=t_final / 2,
+            min_val=t_final / 8,
+            max_val=t_final / 2,
             unit="s"
         ),
         'xy_angle': Qty(
             value=0.0,
-            min=-0.5 * np.pi,
-            max=2.5 * np.pi,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
             unit='rad'
         ),
         'freq_offset': Qty(
-            value=-sideband - 0.5e6 * 2 * np.pi,
-            min=-53 * 1e6 * 2 * np.pi,
-            max=-47 * 1e6 * 2 * np.pi,
+            value=-sideband - 0.5e6,
+            min_val=-53 * 1e6,
+            max_val=-47 * 1e6,
             unit='Hz 2pi'
         ),
         'delta': Qty(
             value=-1,
-            min=-5,
-            max=3,
+            min_val=-5,
+            max_val=3,
             unit=""
         )
     }
@@ -272,8 +277,8 @@ the blackbox. We mirror the blackbox by creating an experiment in the
         params={
             't_final': Qty(
                 value=t_final,
-                min=0.5 * t_final,
-                max=1.5 * t_final,
+                min_val=0.5 * t_final,
+                max_val=1.5 * t_final,
                 unit="s"
             )
         },
@@ -282,14 +287,14 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     carrier_parameters = {
         'freq': Qty(
             value=lo_freq,
-            min=4.5e9 * 2 * np.pi,
-            max=6e9 * 2 * np.pi,
+            min_val=4.5e9,
+            max_val=6e9,
             unit='Hz 2pi'
         ),
         'framechange': Qty(
             value=0.0,
-            min= -np.pi,
-            max= 3 * np.pi,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
             unit='rad'
         )
     }
@@ -317,7 +322,7 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     QId.add_component(nodrive_env, "d1")
     QId.add_component(copy.deepcopy(carr), "d1")
     QId.comps['d1']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final) % (2*np.pi)
+        (-sideband * t_final * 2 * np.pi) % (2*np.pi)
     )
     Y90p = copy.deepcopy(X90p)
     Y90p.name = "Y90p"
@@ -422,7 +427,7 @@ options specific to this algorithm.
         "maxfevals" : 300,
         "init_point" : "True",
         "tolfun" : 0.01,
-        "spread" : 0.1
+        "spread" : 0.25
       }
 
 We define the subspace as both excited states :math:`\{|1>,|2>\}`,
@@ -434,25 +439,20 @@ assuming read-out can distinguish between 0, 1 and 2.
           "excited" : [(1,), (2,)]
       }
 
-The interface of :math:`C^2` to the experiment is simple: parameters in
-:math:`\rightarrow` results out. Thus, we have to wrap the blackbox by
-defining the target states and the ``opt_map``.
-
-.. code-block:: python
-
-    def ORBIT_wrapper(p):
-        return ORBIT(
-                    p, blackbox, gateset_opt_map, state_labels, "/tmp/c3logs/blackbox"
-                )
-
 In the real world, this setup needs to be handled in the experiment
 controller side. We construct the optimizer object with the options we
 setup:
 
 .. code-block:: python
 
+    import os
+    import tempfile
+
+    # Create a temporary directory to store logfiles, modify as needed
+    log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
+
     opt = C2(
-        dir_path='/tmp/c3logs/',
+        dir_path=log_dir,
         run_name="ORBIT_cal",
         eval_func=ORBIT_wrapper,
         pmap=parameter_map,
@@ -473,13 +473,116 @@ And run the calibration:
 
 
 
-.. image:: output_28_1.png
-
-
-.. parsed-literal::
-
-       31    310 1.223366138929153e-01 1.3e+01 1.00e-02  8e-04  8e-03 19:28.4
+    C3:STATUS:Saving as: /tmp/tmpicnnbliz/c3logs/ORBIT_cal/2021_01_28_T_15_17_30/calibration.log
+    (5_w,10)-aCMA-ES (mu_w=3.2,w_1=45%) in dimension 4 (seed=912463, Thu Jan 28 15:17:30 2021)
+    C3:STATUS:Adding initial point to CMA sample.
+    Iterat #Fevals   function value  axis ratio  sigma  min&max std  t[m:s]
+        1     10 1.446744168975211e-01 1.0e+00 2.11e-01  2e-01  2e-01 1:18.9
+        2     20 2.074359374665050e-01 1.4e+00 1.96e-01  1e-01  2e-01 2:28.5
+        3     30 1.042216610303495e-01 1.5e+00 1.76e-01  1e-01  2e-01 3:36.4
+        4     40 1.720244494886762e-01 1.9e+00 1.88e-01  1e-01  2e-01 4:46.5
+        5     50 9.761264536669531e-02 2.2e+00 2.05e-01  1e-01  2e-01 6:15.4
+        6     60 1.956493007802809e-01 2.8e+00 1.75e-01  8e-02  2e-01 7:17.9
+        7     70 6.625917264980545e-02 3.0e+00 2.20e-01  9e-02  3e-01 8:22.8
+        8     80 7.697621753428294e-02 4.1e+00 2.19e-01  8e-02  3e-01 9:25.8
+        9     90 8.826758030850271e-02 4.7e+00 1.85e-01  6e-02  3e-01 10:28.7
+       10    100 9.099567192014653e-02 5.3e+00 1.59e-01  4e-02  2e-01 11:32.7
+       11    110 6.673347151005890e-02 6.9e+00 1.49e-01  3e-02  2e-01 12:27.9
+       12    120 6.822093884865452e-02 7.6e+00 1.68e-01  4e-02  2e-01 13:26.6
+       13    130 6.307315835232992e-02 8.1e+00 1.42e-01  3e-02  2e-01 14:22.8
+       14    140 6.301017013241370e-02 7.8e+00 1.42e-01  2e-02  2e-01 15:18.7
+       15    150 6.795728963072037e-02 9.3e+00 1.32e-01  2e-02  2e-01 16:15.8
+       16    160 7.675314380135559e-02 9.2e+00 1.03e-01  2e-02  1e-01 17:12.9
+       17    170 6.806172046778505e-02 9.1e+00 8.05e-02  1e-02  1e-01 18:11.5
+       18    180 5.698438523961635e-02 1.0e+01 7.42e-02  9e-03  9e-02 19:06.1
+       19    190 5.536707419037251e-02 1.1e+01 6.89e-02  8e-03  9e-02 20:00.6
+       20    200 4.924177790655197e-02 1.2e+01 7.31e-02  8e-03  9e-02 20:58.2
+       21    210 5.836136870997249e-02 1.2e+01 8.20e-02  8e-03  1e-01 21:55.1
+       22    220 5.463139088536284e-02 1.3e+01 8.29e-02  9e-03  1e-01 22:51.0
+       23    230 4.562693294212217e-02 1.4e+01 8.66e-02  9e-03  1e-01 23:48.3
+       24    240 5.188441161313757e-02 1.6e+01 7.74e-02  7e-03  1e-01 24:46.1
+       25    250 5.199237655967553e-02 1.7e+01 7.41e-02  6e-03  9e-02 25:47.1
+       26    260 5.684400595430246e-02 1.6e+01 6.41e-02  5e-03  9e-02 26:43.7
+       27    270 4.441763519087279e-02 1.8e+01 5.12e-02  4e-03  7e-02 27:36.2
+       28    280 4.994977609185950e-02 1.8e+01 5.51e-02  5e-03  8e-02 28:33.9
+       29    290 6.108777009078262e-02 1.8e+01 5.14e-02  4e-03  7e-02 29:30.4
+       30    300 5.658962789881571e-02 1.8e+01 4.65e-02  4e-03  6e-02 30:28.0
+       31    310 5.765354335022381e-02 1.8e+01 4.77e-02  4e-03  6e-02 31:26.9
     termination on maxfevals=300
-    final/bestever f-value = 1.223366e-01 1.024497e-01
-    incumbent solution: [-0.44344882706464556, -0.03326456564421698, -0.2353687837955444, 0.14641733602693577]
-    std deviation: [0.007660467617184307, 0.003940959436714393, 0.008318064822358036, 0.0007827676857480827]
+    final/bestever f-value = 5.765354e-02 4.441764e-02
+    incumbent solution: [-0.4739081748676816, -0.09828275146514219, -1.0504851431889897, 0.9108808620989909]
+    std deviation: [0.013780217516583012, 0.0038070906112681576, 0.02460767003734409, 0.05816700836608336]
+
+
+Analysis
+~~~~~~~~
+
+The following code uses matplotlib to create an ORBIT plot from the
+logfile.
+
+.. code-block:: python
+
+    import json
+    from matplotlib.ticker import MaxNLocator
+    from  matplotlib import rcParams
+    from matplotlib import cycler
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+
+    rcParams['xtick.direction'] = 'in'
+    rcParams['axes.grid'] = True
+    rcParams['grid.linestyle'] = '--'
+    rcParams['markers.fillstyle'] = 'none'
+    rcParams['axes.prop_cycle'] = cycler(
+        'linestyle', ["-", "--"]
+    )
+    rcParams['text.usetex'] = True
+    rcParams['font.size'] = 16
+    rcParams['font.family'] = 'serif'
+
+    logfilename = opt.logdir + "calibration.log"
+    with open(logfilename, "r") as filename:
+        log = filename.readlines()
+
+
+    options = json.loads(log[7])
+
+    goal_function = []
+    batch = 0
+    batch_size = options["popsize"]
+
+
+    eval = 0
+    for line in log[9:]:
+        if line[0] == "{":
+            if not eval % batch_size:
+                batch = eval // batch_size
+                goal_function.append([])
+            eval += 1
+            point = json.loads(line)
+            if 'goal' in point.keys():
+                goal_function[batch].append(point['goal'])
+
+    # Clean unfinished batch
+    if len(goal_function[-1])<batch_size:
+        goal_function.pop(-1)
+
+    fig, ax = plt.subplots(1)
+    means = []
+    bests = []
+    for ii in range(len(goal_function)):
+        means.append(np.mean(np.array(goal_function[ii])))
+        bests.append(np.min(np.array(goal_function[ii])))
+        for pt in goal_function[ii]:
+            ax.plot(ii+1, pt, color='tab:blue', marker="D", markersize=2.5, linewidth=0)
+
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_ylabel('ORBIT')
+    ax.set_xlabel('Iterations')
+    ax.plot(
+        range(1, len(goal_function)+1), bests, color="tab:red", marker="D",
+        markersize=5.5, linewidth=0, fillstyle='full'
+    )
+
+
+.. image:: ORBIT.png

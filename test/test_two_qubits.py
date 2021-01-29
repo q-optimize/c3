@@ -147,7 +147,10 @@ generator = Gnr(
             outputs=1,
         ),
     },
-    chain=["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+    chains={
+        "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+        "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+    },
 )
 
 t_final = 7e-9  # Time for single qubit gates
@@ -325,6 +328,7 @@ def test_hamiltonians() -> None:
 def test_propagation() -> None:
     assert (propagator.numpy() - test_data["propagator"].numpy() < 1e-12).all()
 
+
 @pytest.mark.slow
 @pytest.mark.tensorflow
 @pytest.mark.optimizers
@@ -335,6 +339,7 @@ def test_optim_tf_sgd() -> None:
     """
     opt.optimize_controls()
     assert opt.current_best_goal < 0.01
+
 
 @pytest.mark.optimizers
 @pytest.mark.slow

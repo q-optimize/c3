@@ -23,7 +23,6 @@ from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils import tf_utils
 
-
 class Experiment:
     """
     It models all of the behaviour of the physical experiment, serving as a
@@ -42,7 +41,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap=None):
+    def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
         self.unitaries = {}
@@ -193,6 +192,7 @@ class Experiment:
         """
         model = self.pmap.model
         populations_final = []
+        populations_no_rescale = []
         for pops in populations:
             # TODO: Loop over all tasks in a general fashion
             # TODO: Selecting states by label in the case of computational space
@@ -220,9 +220,10 @@ class Experiment:
                 else:
                     pops = tf.reshape(pops, [pops.shape[0]])
             if "meas_rescale" in model.tasks:
+                populations_no_rescale.append(pops)
                 pops = model.tasks["meas_rescale"].rescale(pops)
             populations_final.append(pops)
-        return populations_final
+        return populations_final, populations_no_rescale
 
     def get_gates(self):
         """
@@ -241,6 +242,7 @@ class Experiment:
         gate_keys = self.opt_gates
         if gate_keys is None:
             gate_keys = instructions.keys()
+
         for gate in gate_keys:
             try:
                 instr = instructions[gate]
@@ -363,7 +365,7 @@ class Experiment:
         """
         self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))
 
-    def set_enable_store_unitaries(self, flag, logdir):
+    def set_enable_store_unitaries(self, flag, logdir, exist_ok=False):
         """
         Saving of unitary propagators.
 
@@ -377,8 +379,9 @@ class Experiment:
         self.enable_store_unitaries = flag
         self.logdir = logdir
         if self.enable_store_unitaries:
-            os.mkdir(self.logdir + "unitaries/")
+            os.makedirs(self.logdir + "unitaries/", exist_ok=exist_ok)
             self.store_unitaries_counter = 0
+
 
     def store_Udict(self, goal):
         """
@@ -403,7 +406,8 @@ class Experiment:
         with open(folder + "Us.pickle", "wb+") as file:
             pickle.dump(self.unitaries, file)
         for key, value in self.unitaries.items():
-            np.savetxt(folder + key + ".txt", value)
+            # Windows is not able to parse ":" as file path
+            np.savetxt(folder + key.replace(':','.') + ".txt", value)
 
     def populations(self, state, lindbladian):
         """
@@ -426,4 +430,12 @@ class Experiment:
             pops = tf.math.real(tf.linalg.diag_part(rho))
             return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
-            return tf.abs(state) ** 2
+            return tf.abs(state)**2
+
+    def expect_oper(self, state, lindbladian, oper):
+        if lindbladian:
+            rho = tf_utils.tf_vec_to_dm(state)
+        else:
+            rho = tf_utils.tf_state_to_dm(state)
+        trace = np.trace(np.matmul(rho,oper))
+        return [[np.real(trace)]] #,[np.imag(trace)]]

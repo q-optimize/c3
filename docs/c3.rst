@@ -55,3 +55,4 @@ Subpackages
    c3.signal
    c3.system
    c3.utils
+   c3.qiskit

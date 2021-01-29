@@ -22,22 +22,15 @@ class C1(Optimizer):
         Indeces identifying the subspace to be compared
     pmap : ParameterMap
         Identifiers for the parameter vector
-    opt_gates : list
-        Identifiers of gate to be optimized, a subset of the full gateset
     callback_fids : list of callable
         Additional fidelity function to be evaluated and stored for reference
     algorithm : callable
         From the algorithm library
-    plot_dynamics : boolean
-        Save plots of time-resolved dynamics in dir_path
-    plot_pulses : boolean
         Save plots of control signals
     store_unitaries : boolean
         Store propagators as text and pickle
     options : dict
         Options to be passed to the algorithm
-    update_model : boolean
-        Include the model in the optimization process
     run_name : str
         User specified name for the run, will be used as root folder
     """
@@ -53,6 +46,7 @@ class C1(Optimizer):
         store_unitaries=False,
         options={},
         run_name=None,
+        interactive=True
     ) -> None:
         super().__init__(
             pmap=pmap,
@@ -65,6 +59,7 @@ class C1(Optimizer):
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.interactive = interactive
         self.update_model = False
 
     def log_setup(self) -> None:
@@ -140,7 +135,10 @@ class C1(Optimizer):
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.get_gates()
-        goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        try:
+            goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
+        except TypeError:
+            goal = self.fid_func(self.exp, propagators, self.index, dims, self.evaluation + 1)
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
