@@ -15,7 +15,6 @@ from c3.libraries.estimators import (
     g_LL_prime_combined,
     g_LL_prime,
     neg_loglkh_multinom_norm,
-    rms_dist,
 )
 
 
@@ -96,7 +95,7 @@ class C3(Optimizer):
         self.logname = "model_learn.log"
         # shutil.copy2(self.__real_model_folder, self.logdir)
 
-    def read_data(self, datafiles: Dict[str]) -> None:
+    def read_data(self, datafiles: Dict[str, str]) -> None:
         """
         Open data files and read in experiment results.
 
@@ -445,14 +444,14 @@ class C3(Optimizer):
                     exp_values,
                     tf.stack(sim_values),
                     tf.Variable(exp_stds, dtype=tf.float64),
-                    tf.Variable(exp_shots, dtype=tf.float64)
+                    tf.Variable(exp_shots, dtype=tf.float64),
                 )
             else:
                 goal = g_LL_prime(
                     exp_values,
                     tf.stack(sim_values),
                     tf.Variable(exp_stds, dtype=tf.float64),
-                    tf.Variable(exp_shots, dtype=tf.float64)
+                    tf.Variable(exp_shots, dtype=tf.float64),
                 )
             grad = t.gradient(goal, current_params).numpy()
             goal = goal.numpy()

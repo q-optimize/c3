@@ -101,7 +101,7 @@ class C2(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
-            best_params = hjson.load(file)['optim_status']['params']
+            best_params = hjson.load(file)["optim_status"]["params"]
         self.pmap.set_parameters(best_params)
         self.end_log()
         measurements = []

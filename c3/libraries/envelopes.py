@@ -37,14 +37,23 @@ def pwc(t, params):
 def pwc_symmetric(t, params):
     """symmetic PWC pulse
     This works only for inphase component"""
-    t_bin_start = tf.cast(params['t_bin_end'].get_value(), dtype=tf.float64)
-    t_bin_end = tf.cast(params['t_bin_start'].get_value(), dtype=tf.float64)
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    inphase = tf.cast(params['inphase'].get_value(), dtype=tf.float64)
+    t_bin_start = tf.cast(params["t_bin_end"].get_value(), dtype=tf.float64)
+    t_bin_end = tf.cast(params["t_bin_start"].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    inphase = tf.cast(params["inphase"].get_value(), dtype=tf.float64)
 
-    t_interp = tf.where(tf.greater(t, t_final / 2),  - t + t_final , t)
+    t_interp = tf.where(tf.greater(t, t_final / 2), -t + t_final, t)
     shape = tf.reshape(
-        tfp.math.interp_regular_1d_grid(t_interp, t_bin_start, t_bin_end, inphase, fill_value_below=0, fill_value_above=0), [len(t)])
+        tfp.math.interp_regular_1d_grid(
+            t_interp,
+            t_bin_start,
+            t_bin_end,
+            inphase,
+            fill_value_below=0,
+            fill_value_above=0,
+        ),
+        [len(t)],
+    )
 
     return shape
 
@@ -63,21 +72,18 @@ def fourier_sin(t, params):
 
     """
     amps = tf.reshape(
-                tf.cast(params['amps'].get_value(), dtype=tf.float64),
-                [params['amps'].shape[0], 1]
-           )
+        tf.cast(params["amps"].get_value(), dtype=tf.float64),
+        [params["amps"].shape[0], 1],
+    )
     freqs = tf.reshape(
-                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
-                [params['freqs'].shape[0], 1]
-           )
+        tf.cast(params["freqs"].get_value(), dtype=tf.float64),
+        [params["freqs"].shape[0], 1],
+    )
     phases = tf.reshape(
-            tf.cast(params['phases'].get_value(), dtype=tf.float64),
-            [params['phases'].shape[0], 1]
-       )
-    t = tf.reshape(
-                tf.cast(t, dtype=tf.float64),
-                [1, t.shape[0]]
-           )
+        tf.cast(params["phases"].get_value(), dtype=tf.float64),
+        [params["phases"].shape[0], 1],
+    )
+    t = tf.reshape(tf.cast(t, dtype=tf.float64), [1, t.shape[0]])
     return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
 
 
@@ -95,17 +101,14 @@ def fourier_cos(t, params):
 
     """
     amps = tf.reshape(
-                tf.cast(params['amps'].get_value(), dtype=tf.float64),
-                [params['amps'].shape[0], 1]
-           )
+        tf.cast(params["amps"].get_value(), dtype=tf.float64),
+        [params["amps"].shape[0], 1],
+    )
     freqs = tf.reshape(
-                tf.cast(params['freqs'].get_value(), dtype=tf.float64),
-                [params['freqs'].shape[0], 1]
-           )
-    t = tf.reshape(
-                tf.cast(t, dtype=tf.float64),
-                [1, t.shape[0]]
-           )
+        tf.cast(params["freqs"].get_value(), dtype=tf.float64),
+        [params["freqs"].shape[0], 1],
+    )
+    t = tf.reshape(tf.cast(t, dtype=tf.float64), [1, t.shape[0]])
     return tf.reduce_sum(amps * tf.cos(freqs * t), 0)
 
 
@@ -127,12 +130,18 @@ def trapezoid(t, params):
         risefall : float
             Length of the slope
     """
-    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
 
     envelope = tf.ones_like(t, dtype=tf.float64)
-    envelope = tf.where(tf.less_equal(t, risefall * 2.5), t / (risefall * 2.5), envelope)
-    envelope = tf.where(tf.greater_equal(t, t_final - risefall * 2.5), (t_final - t) / (risefall * 2.5), envelope)
+    envelope = tf.where(
+        tf.less_equal(t, risefall * 2.5), t / (risefall * 2.5), envelope
+    )
+    envelope = tf.where(
+        tf.greater_equal(t, t_final - risefall * 2.5),
+        (t_final - t) / (risefall * 2.5),
+        envelope,
+    )
     return envelope
 
 
@@ -150,12 +159,16 @@ def flattop_risefall(t, params):
             with the start of the ramp-up and ends at the end of the ramp-down
 
     """
-    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
     t_up = risefall
     t_down = t_final - risefall
-    return (1 + tf.math.erf((t - t_up) / risefall)) / 2 * \
-           (1 + tf.math.erf((-t + t_down) / risefall)) / 2
+    return (
+        (1 + tf.math.erf((t - t_up) / risefall))
+        / 2
+        * (1 + tf.math.erf((-t + t_down) / risefall))
+        / 2
+    )
 
 
 @env_reg_deco
@@ -173,11 +186,15 @@ def flattop(t, params):
             Length of the ramps.
 
     """
-    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
-    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
-    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    return (1 + tf.math.erf((t - t_up) / (risefall))) / 2 * \
-           (1 + tf.math.erf((-t + t_down) / (risefall))) / 2
+    t_up = tf.cast(params["t_up"].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    return (
+        (1 + tf.math.erf((t - t_up) / (risefall)))
+        / 2
+        * (1 + tf.math.erf((-t + t_down) / (risefall)))
+        / 2
+    )
 
 
 @env_reg_deco
@@ -195,11 +212,13 @@ def flattop_cut(t, params):
             Length of the ramps.
 
     """
-    t_up = tf.cast(params['t_up'].get_value(), dtype=tf.float64)
-    t_down = tf.cast(params['t_down'].get_value(), dtype=tf.float64)
-    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
-    shape =  tf.math.erf((t - t_up) / (risefall)) * tf.math.erf((-t + t_down) / (risefall))
-    return tf.clip_by_value(shape,0,2)
+    t_up = tf.cast(params["t_up"].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    shape = tf.math.erf((t - t_up) / (risefall)) * tf.math.erf(
+        (-t + t_down) / (risefall)
+    )
+    return tf.clip_by_value(shape, 0, 2)
 
 
 @env_reg_deco
@@ -217,13 +236,13 @@ def flattop_cut_center(t, params):
             Length of the ramps.
 
     """
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
-    risefall = tf.cast(params['risefall'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    width = tf.cast(params["width"].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
     t_up = t_final / 2 - width / 2
     t_down = t_final / 2 + width / 2
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
-    shape = tf.clip_by_value(shape,0,2)
+    shape = tf.clip_by_value(shape, 0, 2)
     return shape
 
 
@@ -232,17 +251,19 @@ def slepian_fourier(t, params):
     """
     ----
     """
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    width = tf.cast(params['width'].get_value(), dtype=tf.float64)
-    fourier_coeffs = tf.cast(params['fourier_coeffs'].get_value(), dtype=tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    width = tf.cast(params["width"].get_value(), dtype=tf.float64)
+    fourier_coeffs = tf.cast(params["fourier_coeffs"].get_value(), dtype=tf.float64)
     offset = tf.cast(params["offset"].get_value(), dtype=tf.float64)
     amp = tf.cast(params["amp"].get_value(), dtype=tf.float64)
     shape = tf.zeros_like(t)
     for n, coeff in enumerate(fourier_coeffs):
-        shape += coeff * (1-tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width))
-    shape = tf.where(tf.abs(t_final/2 - t) > width / 2, tf.zeros_like(t), shape)
-    shape /= (2 * tf.reduce_sum(fourier_coeffs[::2]))
-    shape = shape * (1 - offset/amp) + offset/amp
+        shape += coeff * (
+            1 - tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width)
+        )
+    shape = tf.where(tf.abs(t_final / 2 - t) > width / 2, tf.zeros_like(t), shape)
+    shape /= 2 * tf.reduce_sum(fourier_coeffs[::2])
+    shape = shape * (1 - offset / amp) + offset / amp
     # plt.plot(t, shape)
     # plt.show()
     return shape
@@ -251,7 +272,7 @@ def slepian_fourier(t, params):
 @env_reg_deco
 def flattop_risefall_1ns(t, params):
     """Flattop gaussian with fixed width of 1ns."""
-    params['risefall'] = 1e-9
+    params["risefall"] = 1e-9
     return flattop_risefall(t, params)
 
 
@@ -269,13 +290,13 @@ def gaussian_sigma(t, params):
             Width of the Gaussian.
 
     """
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
-    gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
-    norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
-    offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params["sigma"].get_value(), dtype=tf.float64)
+    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+        t_final / (np.sqrt(8) * sigma)
+    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
     return (gauss - offset) / norm
 
 
@@ -291,11 +312,11 @@ def gaussian(t, params):
             Total length of the Gaussian.
     """
     DeprecationWarning("Using standard width. Better use gaussian_sigma.")
-    params['sigma'] = Qty(
-        value=params['t_final'].get_value()/6,
-        min_val=params['t_final'].get_value()/8,
-        max_val=params['t_final'].get_value()/4,
-        unit=params['t_final'].unit
+    params["sigma"] = Qty(
+        value=params["t_final"].get_value() / 6,
+        min_val=params["t_final"].get_value() / 8,
+        max_val=params["t_final"].get_value() / 4,
+        unit=params["t_final"].unit,
     )
     return gaussian_sigma(t, params)
 
@@ -315,45 +336,51 @@ def gaussian_nonorm(t, params):
 
     """
     # TODO Add zeroes for t>t_final
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = params['sigma'].get_value()
-    gauss = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = params["sigma"].get_value()
+    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
     return gauss
 
 
 @env_reg_deco
 def gaussian_der_nonorm(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
-    gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
-        (t - t_final / 2) / sigma ** 2
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params["sigma"].get_value(), dtype=tf.float64)
+    gauss_der = (
+        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+        * (t - t_final / 2)
+        / sigma ** 2
+    )
     return gauss_der
 
 
 @env_reg_deco
 def gaussian_der(t, params):
     """Derivative of the normalized gaussian (ifself not normalized)."""
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
-    gauss_der = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) * \
-        (t - t_final / 2) / sigma ** 2
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) \
-        * tf.math.erf(t_final / (tf.sqrt(8) * sigma)) \
-        - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2))
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params["sigma"].get_value(), dtype=tf.float64)
+    gauss_der = (
+        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+        * (t - t_final / 2)
+        / sigma ** 2
+    )
+    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+        t_final / (tf.sqrt(8) * sigma)
+    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
     return gauss_der / norm
 
 
 @env_reg_deco
 def drag_sigma(t, params):
     """Second order gaussian."""
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
-    drag = tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))
-    norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
-    offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params["sigma"].get_value(), dtype=tf.float64)
+    drag = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+        t_final / (np.sqrt(8) * sigma)
+    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
     return (drag - offset) ** 2 / norm
 
 
@@ -361,11 +388,11 @@ def drag_sigma(t, params):
 def drag(t, params):
     """Second order gaussian with fixed time/sigma ratio."""
     DeprecationWarning("Using standard width. Better use drag_sigma.")
-    params['sigma'] = Qty(
-        value=params['t_final'].get_value()/4,
-        min_val=params['t_final'].get_value()/8,
-        max_val=params['t_final'].get_value()/2,
-        unit=params['t_final'].unit
+    params["sigma"] = Qty(
+        value=params["t_final"].get_value() / 4,
+        min_val=params["t_final"].get_value() / 8,
+        max_val=params["t_final"].get_value() / 2,
+        unit=params["t_final"].unit,
     )
     return drag_sigma(t, params)
 
@@ -373,15 +400,20 @@ def drag(t, params):
 @env_reg_deco
 def drag_der(t, params):
     """Derivative of second order gaussian."""
-    t_final = tf.cast(params['t_final'].get_value(), dtype=tf.float64)
-    sigma = tf.cast(params['sigma'].get_value(), dtype=tf.float64)
-    norm = (tf.sqrt(2 * np.pi * sigma ** 2)
-            * tf.math.erf(t_final / (np.sqrt(8) * sigma))
-            - t_final * tf.exp(-t_final ** 2 / (8 * sigma ** 2)))
-    offset = tf.exp(-t_final ** 2 / (8 * sigma ** 2))
-    der = - 2 * (tf.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2)) - offset) \
-        * (np.exp(-(t - t_final / 2) ** 2 / (2 * sigma ** 2))) \
-        * (t - t_final / 2) / sigma ** 2 / norm
+    t_final = tf.cast(params["t_final"].get_value(), dtype=tf.float64)
+    sigma = tf.cast(params["sigma"].get_value(), dtype=tf.float64)
+    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+        t_final / (np.sqrt(8) * sigma)
+    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    der = (
+        -2
+        * (tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2)) - offset)
+        * (np.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2)))
+        * (t - t_final / 2)
+        / sigma ** 2
+        / norm
+    )
     return der
 
 
@@ -390,20 +422,20 @@ def flattop_variant(t, params):
     """
     Flattop variant.
     """
-    t_up = params['t_up']
-    t_down = params['t_down']
-    ramp = params['ramp']
+    t_up = params["t_up"]
+    t_down = params["t_down"]
+    ramp = params["ramp"]
     value = np.ones(len(t))
-    if ramp > (t_down-t_up)/2:
-        ramp = (t_down-t_up)/2
-    sigma = np.sqrt(2)*ramp*0.2
+    if ramp > (t_down - t_up) / 2:
+        ramp = (t_down - t_up) / 2
+    sigma = np.sqrt(2) * ramp * 0.2
     for i, e in enumerate(t):
-        if t_up <= e <= t_up+ramp:
-            value[i] = np.exp(-(e-t_up-ramp)**2/(2*sigma**2))
-        elif t_up+ramp < e < t_down-ramp:
+        if t_up <= e <= t_up + ramp:
+            value[i] = np.exp(-((e - t_up - ramp) ** 2) / (2 * sigma ** 2))
+        elif t_up + ramp < e < t_down - ramp:
             value[i] = 1
-        elif t_down >= e >= t_down-ramp:
-            value[i] = np.exp(-(e-t_down+ramp)**2/(2*sigma**2))
+        elif t_down >= e >= t_down - ramp:
+            value[i] = np.exp(-((e - t_down + ramp) ** 2) / (2 * sigma ** 2))
         else:
             value[i] = 0
     return value

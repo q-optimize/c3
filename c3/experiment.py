@@ -23,6 +23,7 @@ from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils import tf_utils
 
+
 class Experiment:
     """
     It models all of the behaviour of the physical experiment, serving as a
@@ -44,8 +45,8 @@ class Experiment:
     def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
-        self.unitaries = {}
-        self.dUs = {}
+        self.unitaries: dict = {}
+        self.dUs: dict = {}
         self.created_by = None
 
     def set_created_by(self, config):
@@ -382,7 +383,6 @@ class Experiment:
             os.makedirs(self.logdir + "unitaries/", exist_ok=exist_ok)
             self.store_unitaries_counter = 0
 
-
     def store_Udict(self, goal):
         """
         Save unitary as text and pickle.
@@ -407,7 +407,7 @@ class Experiment:
             pickle.dump(self.unitaries, file)
         for key, value in self.unitaries.items():
             # Windows is not able to parse ":" as file path
-            np.savetxt(folder + key.replace(':','.') + ".txt", value)
+            np.savetxt(folder + key.replace(":", ".") + ".txt", value)
 
     def populations(self, state, lindbladian):
         """
@@ -430,12 +430,12 @@ class Experiment:
             pops = tf.math.real(tf.linalg.diag_part(rho))
             return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
-            return tf.abs(state)**2
+            return tf.abs(state) ** 2
 
     def expect_oper(self, state, lindbladian, oper):
         if lindbladian:
             rho = tf_utils.tf_vec_to_dm(state)
         else:
             rho = tf_utils.tf_state_to_dm(state)
-        trace = np.trace(np.matmul(rho,oper))
-        return [[np.real(trace)]] #,[np.imag(trace)]]
+        trace = np.trace(np.matmul(rho, oper))
+        return [[np.real(trace)]]  # ,[np.imag(trace)]]

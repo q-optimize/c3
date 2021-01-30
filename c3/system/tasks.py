@@ -1,5 +1,4 @@
 from c3.c3objs import C3obj, Quantity
-import copy
 import tensorflow as tf
 import numpy as np
 import c3.libraries.constants as constants
