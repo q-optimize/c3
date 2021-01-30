@@ -1,8 +1,28 @@
 # Contributing to $C^3$ Development
 
+- [Contributing to $C^3$ Development](#contributing-to-c3-development)
+  - [Where to Start](#where-to-start)
+  - [Opening a New Issue](#opening-a-new-issue)
+  - [Forking and Cloning the Repository](#forking-and-cloning-the-repository)
+  - [Remotes and Branches](#remotes-and-branches)
+  - [Setting up the development environment](#setting-up-the-development-environment)
+    - [Using conda](#using-conda)
+    - [Using virtualenv](#using-virtualenv)
+  - [Coding Standards](#coding-standards)
+  - [Tests and Test Coverage](#tests-and-test-coverage)
+    - [Running Tests Locally](#running-tests-locally)
+  - [Type Annotations](#type-annotations)
+  - [Doc Strings & Documentation](#doc-strings--documentation)
+    - [Building and Viewing Documentation Locally](#building-and-viewing-documentation-locally)
+  - [Pull Requests](#pull-requests)
+  - [Continuous Integration Checks](#continuous-integration-checks)
+  - [Contributor Licence Agreement](#contributor-licence-agreement)
+  - [Git Flow Development Style](#git-flow-development-style)
+  - [Developer Tools and Tips](#developer-tools-and-tips)
+
 This guide assumes you have a working Python distribution (native or conda) and some basic understanding of Git and Github. 
 
-Check the instructions for [installing](https://docs.conda.io/en/latest/miniconda.html#linux-installers) and [using](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html) a Conda or for a [Native](https://realpython.com/installing-python/) Python distribution. If you are on Windows, we recommend a **non** Microsoft Store installation of a full native Python distribution. The [Atlassian Git tutorials](https://www.atlassian.com/git/tutorials) is a good resource for beginners along with the online [`Pro Git Book`](https://git-scm.com/book/en/v2).
+Check the instructions for [installing](https://docs.conda.io/en/latest/miniconda.html#linux-installers) and [using](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html) a Conda or a [Native](https://realpython.com/installing-python/) Python distribution. If you are on Windows, we recommend a **non** Microsoft Store installation of a full native Python distribution. The [Atlassian Git tutorials](https://www.atlassian.com/git/tutorials) is a good resource for beginners along with the online [Pro Git Book](https://git-scm.com/book/en/v2).
 
 ## Where to Start
 
