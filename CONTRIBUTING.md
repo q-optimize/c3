@@ -1,6 +1,6 @@
-# Contributing to $C^3$ Development
+# Contributing to C3 Development
 
-- [Contributing to $C^3$ Development](#contributing-to-c3-development)
+- [Contributing to C3 Development](#contributing-to-c3-development)
   - [Where to Start](#where-to-start)
   - [Opening a New Issue](#opening-a-new-issue)
   - [Forking and Cloning the Repository](#forking-and-cloning-the-repository)
@@ -26,15 +26,15 @@ Check the instructions for [installing](https://docs.conda.io/en/latest/minicond
 
 ## Where to Start
 
-As a first-time contributor to the $C^3$ project, the best place to explore for possible contributions is the [Issues](https://github.com/q-optimize/c3/issues) section. Please go through the existing open and closed issues before opening a new one. Issues that would allow a newcomer to contribute without facing too much friction are labelled [`good-first-issue`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). The documentation and examples are other places that could always use some extra help. Check the [`documentation`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation) label for suggestions on what needs work. We would also be very happy to review PRs that add tests for existing code, which happens to be a great way to understand and explore a new codebase.
+As a first-time contributor to the C3 project, the best place to explore for possible contributions is the [Issues](https://github.com/q-optimize/c3/issues) section. Please go through the existing open and closed issues before opening a new one. Issues that would allow a newcomer to contribute without facing too much friction are labelled [`good-first-issue`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). The documentation and examples are other places that could always use some extra help. Check the [`documentation`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation) label for suggestions on what needs work. We would also be very happy to review PRs that add tests for existing code, which happens to be a great way to understand and explore a new codebase.
 
 ## Opening a New Issue
 
-Any new feature or bug-fix that is added to the codebase must typically be first discussed in an Issue. If you run into a bug while working with $C^3$ or would like to suggest some new enhancement, please [file an issue](https://github.com/q-optimize/c3/issues/new/choose) for the same. Use a helpful title for the Issue and make sure your Issue description conforms to the template that is automatically provided when you open a new Bug report or Feature request. One of the core developers will either address the bug or discuss possible implementations for the enhancement.
+Any new feature or bug-fix that is added to the codebase must typically be first discussed in an Issue. If you run into a bug while working with C3 or would like to suggest some new enhancement, please [file an issue](https://github.com/q-optimize/c3/issues/new/choose) for the same. Use a helpful title for the Issue and make sure your Issue description conforms to the template that is automatically provided when you open a new Bug report or Feature request. One of the core developers will either address the bug or discuss possible implementations for the enhancement.
 
 ## Forking and Cloning the Repository
 
-In order to start contributing to $C^3$, you must fork and make your own copy of the repository. Click the fork icon in the top right of the repository page. Your fork is a copy of the main repo, on which you can make edits, which you can then propose as changes by making a pull request. Once forked, you should find a repo like `https://github.com/githubusername/c3`. The next step involves making a local copy of this forked repository using the following command:
+In order to start contributing to C3, you must fork and make your own copy of the repository. Click the fork icon in the top right of the repository page. Your fork is a copy of the main repo, on which you can make edits, which you can then propose as changes by making a pull request. Once forked, you should find a repo like `https://github.com/githubusername/c3`. The next step involves making a local copy of this forked repository using the following command:
 
 ```bash
 git clone https://github.com/githubusername/c3
@@ -44,7 +44,7 @@ git clone https://github.com/githubusername/c3
 
 Once you have cloned your repository, you want to set up [branches](https://www.atlassian.com/git/tutorials/using-branches) and [remotes](https://www.atlassian.com/git/tutorials/syncing).
 
-Remotes let you backup and sync your code with an online server. When you clone the repository, git automatically adds a `remote` called `origin` which is your fork of the $C^3$ repo. You typically also want to add a remote of the parent $C^3$ repository. The convention for naming the parent repository is `upstream` and you set this up with the commands below:
+Remotes let you backup and sync your code with an online server. When you clone the repository, git automatically adds a `remote` called `origin` which is your fork of the C3 repo. You typically also want to add a remote of the parent C3 repository. The convention for naming the parent repository is `upstream` and you set this up with the commands below:
 
 ```bash
 # navigate inside your local clone
@@ -62,7 +62,7 @@ upstream        https://github.com/q-optimize/c3 (fetch)
 upstream        https://github.com/q-optimize/c3 (push)
 ```
 
-Branches let you work on a new feature or bug-fix without affecting the `master` version of your code. You should **always** create a branch when you start working on something new. Branches in $C^3$ have the following stucture:
+Branches let you work on a new feature or bug-fix without affecting the `master` version of your code. You should **always** create a branch when you start working on something new. Branches in C3 have the following stucture:
 
 * `master` - The current stable release, source code of the `pip` package release
 * `dev` - Development branch for ongoing work, might contain bugs or breaking changes
@@ -92,7 +92,7 @@ Make frequest commits, write useful and sensible commit messages and keep your l
 
 ## Setting up the development environment
 
-We describe below the steps for setting up your development environment for locally building and testing $C^3$, using either `conda` or `virtualenv`.
+We describe below the steps for setting up your development environment for locally building and testing C3, using either `conda` or `virtualenv`.
 
 ### Using conda
 
@@ -112,11 +112,11 @@ source env/bin/activate
 pip install -e .
 ```
 
-This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, and `pytest-cov`. If you wish to use Qiskit with $C^3$, you must also install `qiskit==0.23`.
+This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit==0.23`.
 
 ## Coding Standards
 
-We use `pre-commit` hooks to enforce coding standards. $C^3$ uses `black` for code formatting, `mypy` for type checking and `flake8` as a linter for static checking. Pre-commit hooks provide a seamless way to integrate these three tools in your development workflow. Follow the steps below to set it up:
+We use `pre-commit` hooks to enforce coding standards. C3 uses `black` for code formatting, `mypy` for type checking and `flake8` as a linter for static checking. Pre-commit hooks provide a seamless way to integrate these three tools in your development workflow. Follow the steps below to set it up:
 
 ```bash
 conda activate c3-dev # or source env/bin/activate
@@ -145,12 +145,12 @@ git commit -m "made cool new hack"
 
 ## Tests and Test Coverage
 
-Untested code is bad code. There is a constant effort to increase the test coverage for the $C^3$ codebase. In this light, any new code being pushed must come with accompanying tests. If you are writing a new feature, make sure you add detailed tests that check that your code does what is expected of it by checking the output for known typical and edge cases. If you are fixing a bug, write regression tests to ensure the bug doesn't pop up again in a later release due to changes elsewhere in the code. Additionally, we actively welcome contributions that aren't a bug-fix/feature but include tests to increase the coverage of the current codebase.
+Untested code is bad code. There is a constant effort to increase the test coverage for the C3 codebase. In this light, any new code being pushed must come with accompanying tests. If you are writing a new feature, make sure you add detailed tests that check that your code does what is expected of it by checking the output for known typical and edge cases. If you are fixing a bug, write regression tests to ensure the bug doesn't pop up again in a later release due to changes elsewhere in the code. Additionally, we actively welcome contributions that aren't a bug-fix/feature but include tests to increase the coverage of the current codebase.
 
 Our test-suite is built using `pytest` and is stored inside `test/` in the root of the repository. Using `pytest`, writing tests is a straightforward task as outlined below:
 
 * Create a new file `test/test_some_c3_module.py`
-* Import the $C^3$ modules that you wish to test inside your new file
+* Import the C3 modules that you wish to test inside your new file
 * Write functions of the form `test_some_feature()`
 * These functions can either check some individual feature (unit test) or the interaction between a variety of features (integration test)
 * Testing is done using `assert` statements which check some output against a known value
@@ -161,7 +161,7 @@ For more inspiration, check some of the existing tests. We encourage you to acti
 
 As discussed later, we have automated testing on remote servers set up for our codebase on Github. Here we outline how to run the tests and check test coverage locally.
 
-At any moment, you can run the whole suit of tests from the root of the $C^3$ repository using the command below:
+At any moment, you can run the whole suit of tests from the root of the C3 repository using the command below:
 
 ```bash
 pytest -v --cov=c3 test/
@@ -178,7 +178,7 @@ Typically when developing, you do not want to run all the tests everytime (becau
 
 ## Type Annotations
 
-Python is a dynamically typed language which is great when you are solving a homework problem and your codebase is a single `.py` monolith but it breaks pretty soon when you start working in large distributed teams. Hence we use type annotations to make everyone's life easier when they are either contributing to the $C^3$ codebase or building code on top of it. Type annotations are also very easily integrated with IDEs (discussed later) and guide type checkers (such as `mypy`) to preemptively detect possible errors.
+Python is a dynamically typed language which is great when you are solving a homework problem and your codebase is a single `.py` monolith but it breaks pretty soon when you start working in large distributed teams. Hence we use type annotations to make everyone's life easier when they are either contributing to the C3 codebase or building code on top of it. Type annotations are also very easily integrated with IDEs (discussed later) and guide type checkers (such as `mypy`) to preemptively detect possible errors.
 
 Example type annotation:
 
