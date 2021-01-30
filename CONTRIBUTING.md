@@ -264,6 +264,19 @@ When you contribute to the C3 project with a new pull request, a bot will evalua
 
 ## Git Flow Development Style
 
+We follow the [`git-flow`](https://nvie.com/posts/a-successful-git-branching-model/) style development in C3. Along with [`semver`](https://semver.org/), this translates to the following branching and release structure for the repository:
+
+- We maintain a semantic versioning based release numbering.
+- Stable/Production ready code goes into `master`.
+- We build features by making branches off the `dev`, working on a feature and merging it back into `dev`.
+- When we are ready to make a release (maybe once every month), i.e, **release code** into `master` and `pip`, we create a new branch `release/x.y.z`  off `dev`, where we usually have a list of To-Do for pre-release tasks (called a release sprint/final run). We make all changes into this and then **release** by merging this `release/x.y.z`  into `master` with no `fast-forward`, so making a merge commit) and then merging `master` back into `dev` (`fast-forward` with no merge commit). This cycle continues for every release.
+- When we find a bug in the stable release and need to make a `hotfix`, we branch off `master`, as `hotfix/x.y.z+1`; make changes and merge (`--no-ff`) it into `master` and then merge (`--ff`) `master` into `dev`.
+
+This would ensure we have a clean release cycle, hotfixes are quick and well maintained and the master is always stable.
+
+Semantic versioning in short would mean the following -
+For version `x.y.z`, we don't change `x` unless the API is going to break in a backwards *incompatible* way. We change `y` for major releases with lots of new features and change `z` for bug hotfixes and minor releases.
+
 ## Developer Tools and Tips
 
 - [x] Finding Issues to Contribute
@@ -280,5 +293,5 @@ When you contribute to the C3 project with a new pull request, a bot will evalua
 - [x] Pull Request Best Practices
 - [x] CI Checks
 - [x] CLA Signing
-- [ ] Git flow development style for Releases
+- [x] Git flow development style for Releases
 - [ ] Developer FAQ - common gotchas, IDE development & extension philosophy
