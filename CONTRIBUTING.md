@@ -16,7 +16,7 @@
     - [Building and Viewing Documentation Locally](#building-and-viewing-documentation-locally)
   - [Pull Requests](#pull-requests)
   - [Continuous Integration Checks](#continuous-integration-checks)
-  - [Contributor Licence Agreement](#contributor-licence-agreement)
+  - [Contributor License Agreement](#contributor-license-agreement)
   - [Git Flow Development Style](#git-flow-development-style)
   - [Developer Tools and Tips](#developer-tools-and-tips)
 
@@ -256,7 +256,11 @@ You can keep your Pull Request as a Draft as long as you feel you still need to 
 
 As previously discussed, tests are an inherent part of good code. All Pull Requests made to the repository are automatically tested on Windows, MacOS and Ubuntu with Python 3.6, 3.7 and 3.8, which come up in the PR as `Checks`, notifying you whenever a particular check is failing on any platform. Except the `Code Complexity`, all checks should be passing for your PR to be ready for review/merge. The `Codecov` bot will also comment on the PR with a report on the change in the test coverage for that particular PR. If your PR reduces the overall test coverage of the codebase, it is not yet ready and you need to add more tests.
 
-## Contributor Licence Agreement
+## Contributor License Agreement
+
+Before you can submit any code, all contributors must sign a contributor license agreement (CLA). By signing a CLA, you’re attesting that you are the author of the contribution, and that you’re freely contributing it under the terms of the Apache-2.0 license. Additionally if you are contributing as part of your employment, you will need to state that you have obtained necessary permissions from your employer to contribute freely to the C3 project.
+
+When you contribute to the C3 project with a new pull request, a bot will evaluate whether you have signed the CLA. If required (typically for first time contributors), the bot will comment on the pull request, including a link to electronically accept and sign the agreement. The individual CLA document will be available for review as a PDF in the comment.
 
 ## Git Flow Development Style
 
@@ -275,6 +279,6 @@ As previously discussed, tests are an inherent part of good code. All Pull Reque
 - [x] Building and Viewing Documentation locally
 - [x] Pull Request Best Practices
 - [x] CI Checks
-- [ ] CLA Signing
+- [x] CLA Signing
 - [ ] Git flow development style for Releases
 - [ ] Developer FAQ - common gotchas, IDE development & extension philosophy
