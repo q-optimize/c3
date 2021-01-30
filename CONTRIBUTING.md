@@ -203,7 +203,7 @@ def func(arg1: float) -> int:
 
   Parameters
   -----------
-  arg1: int
+  arg1: float
       1st argument to the function
   
   Returns
@@ -218,7 +218,7 @@ def func(arg1: float) -> int:
   """
 ```
 
-Besides these module docstrings, we also include example documentation which is found inside the `docs/` directory. These are reStructured Text `.rst` files which are also parsed and rendered by Sphinx. You can find more details in the [relevant documentation](https://www.sphinx-doc.org/en/master/). The [Sphinx cheatsheet](https://docs.typo3.org/m/typo3/docs-how-to-document/master/en-us/WritingReST/CheatSheet.html) is handy when writing example documentations. Please contact one of the core developers or open an issue if you are planning to add example documentation and would need some help.
+Additionally, you can include a detailed note after `Raises` with an example code snippet showing the usage of specific module. Besides these module docstrings, we also include example documentation which is found inside the `docs/` directory. These are reStructured Text `.rst` files which are also parsed and rendered by Sphinx. You can find more details in the [relevant documentation](https://www.sphinx-doc.org/en/master/). The [Sphinx cheatsheet](https://docs.typo3.org/m/typo3/docs-how-to-document/master/en-us/WritingReST/CheatSheet.html) is handy when writing example documentations. Please contact one of the core developers or open an issue if you are planning to add example documentation and would need some help.
 
 ### Building and Viewing Documentation Locally
 
@@ -243,6 +243,12 @@ python -m http.server 4242
 You can now open `localhost:4242` in your browser and view the docs as they would be rendered online. For checking a live version of the online docs as rendered from the `master`, `dev` or `docs` branch, head over to [c3-toolset.rtfd.io](https://c3-toolset.rtfd.io).
 
 ## Pull Requests
+
+Once you feel your work is ready to be merged into the main codebase, open a Pull Request to merge your feature branch to the `dev` branch on `q-optimize/c3`. Please write a useful title and a detailed description for your Pull Request. Follow the *What, Why, How, Remarks* structure when writing the description of your Pull Request. In the remarks section, add comments to help the reviewer or explain possible quirks/issues with your implementation or aspects that might require extra attention. For new features, please add code snippets that demonstrate how this feature is to be used. Wherever possible, add screenshots and GIFs so that it's convenient to quickly review your PR. 
+
+Make sure you [allow maintainers to edit your branch](https://help.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) when you are creating a Pull Request from a fork. Then, anyone with Write access to the upstream repository will be able to add commits to your branch. This can make the review process easier for maintainers; sometimes it’s quicker for a maintainer to make a small change themselves instead of asking you to make the change.
+
+You can keep your Pull Request as a Draft as long as you feel you still need to make changes. It is often advisable to open a PR when you are maybe 85% done with the work, which gives maintainers enough time to check what's going on and guide you if something needs correction. When you are ready, request for review on your PR. Your PR must be approved by at least 2 core developers before it can be merged. The Code review might involve suggested changes, which you can incorporate by committing and pushing more code in the same feature. You **DO NOT** need to open a new PR or create a new branch if someone requests for changes on your Pull Request. If your PR is not reviewed by any of the core developers within 3 days, please request politely in the comments with a follow-up.
 
 ## Continuous Integration Checks
 
