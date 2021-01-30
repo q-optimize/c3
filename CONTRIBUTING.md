@@ -244,13 +244,17 @@ You can now open `localhost:4242` in your browser and view the docs as they woul
 
 ## Pull Requests
 
-Once you feel your work is ready to be merged into the main codebase, open a Pull Request to merge your feature branch to the `dev` branch on `q-optimize/c3`. Please write a useful title and a detailed description for your Pull Request. Follow the *What, Why, How, Remarks* structure when writing the description of your Pull Request. In the remarks section, add comments to help the reviewer or explain possible quirks/issues with your implementation or aspects that might require extra attention. For new features, please add code snippets that demonstrate how this feature is to be used. Wherever possible, add screenshots and GIFs so that it's convenient to quickly review your PR. 
+Once you feel your work is ready to be merged into the main codebase, open a Pull Request to merge your feature branch to the `dev` branch on `q-optimize/c3`. Please write a useful title and a detailed description for your Pull Request.
+
+Follow the *What, Why, How, Remarks* structure when writing the description of your Pull Request. In the remarks section, add comments to help the reviewer or explain possible quirks/issues with your implementation or aspects that might require extra attention. For new features, please add code snippets that demonstrate how this feature is to be used. Wherever possible, add screenshots and GIFs so that it's convenient to quickly review your PR.
 
 Make sure you [allow maintainers to edit your branch](https://help.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) when you are creating a Pull Request from a fork. Then, anyone with Write access to the upstream repository will be able to add commits to your branch. This can make the review process easier for maintainers; sometimes it’s quicker for a maintainer to make a small change themselves instead of asking you to make the change.
 
 You can keep your Pull Request as a Draft as long as you feel you still need to make changes. It is often advisable to open a PR when you are maybe 85% done with the work, which gives maintainers enough time to check what's going on and guide you if something needs correction. When you are ready, request for review on your PR. Your PR must be approved by at least 2 core developers before it can be merged. The Code review might involve suggested changes, which you can incorporate by committing and pushing more code in the same feature. You **DO NOT** need to open a new PR or create a new branch if someone requests for changes on your Pull Request. If your PR is not reviewed by any of the core developers within 3 days, please request politely in the comments with a follow-up.
 
 ## Continuous Integration Checks
+
+As previously discussed, tests are an inherent part of good code. All Pull Requests made to the repository are automatically tested on Windows, MacOS and Ubuntu with Python 3.6, 3.7 and 3.8, which come up in the PR as `Checks`, notifying you whenever a particular check is failing on any platform. Except the `Code Complexity`, all checks should be passing for your PR to be ready for review/merge. The `Codecov` bot will also comment on the PR with a report on the change in the test coverage for that particular PR. If your PR reduces the overall test coverage of the codebase, it is not yet ready and you need to add more tests.
 
 ## Contributor Licence Agreement
 
@@ -269,8 +273,8 @@ You can keep your Pull Request as a Draft as long as you feel you still need to 
 - [x] Type Annotations
 - [x] Doc Strings
 - [x] Building and Viewing Documentation locally
-- [ ] Pull Request Best Practices
-- [ ] CI Checks
+- [x] Pull Request Best Practices
+- [x] CI Checks
 - [ ] CLA Signing
 - [ ] Git flow development style for Releases
 - [ ] Developer FAQ - common gotchas, IDE development & extension philosophy
