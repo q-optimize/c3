@@ -20,13 +20,15 @@
   - [Git Flow Development Style](#git-flow-development-style)
   - [Developer Tools and Tips](#developer-tools-and-tips)
 
-This guide assumes you have a working Python distribution (native or conda) and some basic understanding of Git and Github. 
+This guide assumes you have a working Python distribution (native or conda) and some basic understanding of Git and Github.
 
 Check the instructions for [installing](https://docs.conda.io/en/latest/miniconda.html#linux-installers) and [using](https://docs.conda.io/projects/conda/en/latest/user-guide/getting-started.html) a Conda or a [Native](https://realpython.com/installing-python/) Python distribution. If you are on Windows, we recommend a **non** Microsoft Store installation of a full native Python distribution. The [Atlassian Git tutorials](https://www.atlassian.com/git/tutorials) is a good resource for beginners along with the online [Pro Git Book](https://git-scm.com/book/en/v2).
 
 ## Where to Start
 
 As a first-time contributor to the C3 project, the best place to explore for possible contributions is the [Issues](https://github.com/q-optimize/c3/issues) section. Please go through the existing open and closed issues before opening a new one. Issues that would allow a newcomer to contribute without facing too much friction are labelled [`good-first-issue`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22). The documentation and examples are other places that could always use some extra help. Check the [`documentation`](https://github.com/q-optimize/c3/issues?q=is%3Aissue+is%3Aopen+label%3Adocumentation) label for suggestions on what needs work. We would also be very happy to review PRs that add tests for existing code, which happens to be a great way to understand and explore a new codebase.
+
+If you are more adventurous and willing to dive deeper into the codebase, you will find several possible contribution opportunities annotated with a `TODO` comment and a short explanation of what needs to be done. Refer to the [API documentation](https://c3-toolset.readthedocs.io/en/latest/c3.html) for the relevant section and open an issue if you would like to tackle any of these `TODO`s.
 
 ## Opening a New Issue
 
@@ -64,10 +66,10 @@ upstream        https://github.com/q-optimize/c3 (push)
 
 Branches let you work on a new feature or bug-fix without affecting the `master` version of your code. You should **always** create a branch when you start working on something new. Branches in C3 have the following stucture:
 
-* `master` - The current stable release, source code of the `pip` package release
-* `dev` - Development branch for ongoing work, might contain bugs or breaking changes
-* `docs` - Everything related to adding docs, which is also rendered on [RTD](https://c3-toolset.rtfd.io)
-* `feature` - Personal branches to work on new features or bug fixes
+- `master` - The current stable release, source code of the `pip` package release
+- `dev` - Development branch for ongoing work, might contain bugs or breaking changes
+- `docs` - Everything related to adding docs, which is also rendered on [RTD](https://c3-toolset.rtfd.io)
+- `feature` - Personal branches to work on new features or bug fixes
 
 You should start your development by making a new `feature` branch off `dev`, as described below:
 
@@ -149,11 +151,11 @@ Untested code is bad code. There is a constant effort to increase the test cover
 
 Our test-suite is built using `pytest` and is stored inside `test/` in the root of the repository. Using `pytest`, writing tests is a straightforward task as outlined below:
 
-* Create a new file `test/test_some_c3_module.py`
-* Import the C3 modules that you wish to test inside your new file
-* Write functions of the form `test_some_feature()`
-* These functions can either check some individual feature (unit test) or the interaction between a variety of features (integration test)
-* Testing is done using `assert` statements which check some output against a known value
+- Import the C3 modules that you wish to test inside your new file
+- Write functions of the form `test_some_feature()`
+- Create a new file `test/test_some_c3_module.py`
+- These functions can either check some individual feature (unit test) or the interaction between a variety of features (integration test)
+- Testing is done using `assert` statements which check some output against a known value
 
 For more inspiration, check some of the existing tests. We encourage you to actively use pytest fixtures, parameters, and markers, to make testing efficient, readable and robust. Details on these features is beyond the scope of this document, so we ask you to refer [here](https://realpython.com/pytest-python-testing/).
 
@@ -169,12 +171,12 @@ pytest -v --cov=c3 test/
 
 The `-v` flag enables verbosity providing useful insights on why some tests failed. The `--cov=c3` flag will check the coverage of tests for our `c3/` codebase and generate a detailed report showing the coverage for individual files. By default, outputs to console from the code are disabled when running tests. You can use the `-s` flag to enable these outputs.
 
-Typically when developing, you do not want to run all the tests everytime (because it can be quite slow at times). This is where filtering tests is useful. 
+Typically when developing, you do not want to run all the tests everytime (because it can be quite slow at times). This is where filtering tests is useful.
 
-* **Name-based filtering**: You can limit pytest to running only those tests whose fully qualified names match a particular expression. You can do this with the `-k` parameter.
-* **Directory scoping**: By default, pytest will run only those tests that are in or under the current directory or any directory explicitly provided by you
-* **Test categorization**: pytest can include or exclude tests from particular categories that you define. You can do this with the `-m` parameter. Markers are listed in [`pytest.ini`](pytest.ini)
-* **Explicit filenames**: You can run only a single test file by explicitly mentioning the file name instead of a directory
+- **Name-based filtering**: You can limit pytest to running only those tests whose fully qualified names match a particular expression. You can do this with the `-k` parameter.
+- **Directory scoping**: By default, pytest will run only those tests that are in or under the current directory or any directory explicitly provided by you
+- **Test categorization**: pytest can include or exclude tests from particular categories that you define. You can do this with the `-m` parameter. Markers are listed in [`pytest.ini`](pytest.ini)
+- **Explicit filenames**: You can run only a single test file by explicitly mentioning the file name instead of a directory
 
 ## Type Annotations
 
@@ -269,7 +271,7 @@ We follow the [`git-flow`](https://nvie.com/posts/a-successful-git-branching-mod
 - We maintain a semantic versioning based release numbering.
 - Stable/Production ready code goes into `master`.
 - We build features by making branches off the `dev`, working on a feature and merging it back into `dev`.
-- When we are ready to make a release (maybe once every month), i.e, **release code** into `master` and `pip`, we create a new branch `release/x.y.z`  off `dev`, where we usually have a list of To-Do for pre-release tasks (called a release sprint/final run). We make all changes into this and then **release** by merging this `release/x.y.z`  into `master` with no `fast-forward`, so making a merge commit) and then merging `master` back into `dev` (`fast-forward` with no merge commit). This cycle continues for every release.
+- When we are ready to make a release (maybe once every month), i.e, **release code** into `master` and `pip`, we create a new branch `release/x.y.z`  off `dev`, where we usually have a list of To-Do for pre-release tasks (called a release sprint/final run). We make all changes into this and then **release** by merging this `release/x.y.z`  into `master` (with no `fast-forward`, so making a merge commit) and then merging `master` back into `dev` (`fast-forward` with no merge commit). This cycle continues for every release.
 - When we find a bug in the stable release and need to make a `hotfix`, we branch off `master`, as `hotfix/x.y.z+1`; make changes and merge (`--no-ff`) it into `master` and then merge (`--ff`) `master` into `dev`.
 
 This would ensure we have a clean release cycle, hotfixes are quick and well maintained and the master is always stable.
@@ -278,6 +280,22 @@ Semantic versioning in short would mean the following -
 For version `x.y.z`, we don't change `x` unless the API is going to break in a backwards *incompatible* way. We change `y` for major releases with lots of new features and change `z` for bug hotfixes and minor releases.
 
 ## Developer Tools and Tips
+
+The general philosophy of development for C3 is captured in the following points:
+
+- DRY (Do not Repeat Yourself) - Inherit and extend, Import and reuse.
+- TDD (Test Driven Development) - Add tests for everything.
+- Do one thing well - Write atomic code that only solves 1 problem at a time.
+- Open-Closed Principle - Open to extension, but Closed to modification.
+- Useful Docstrings - Include code snippets and technical summary.
+- Correct Physics - Ensure technical consistency and add ref paper & notes.
+
+It is useful to configure and use an IDE for your development purposes, since that greatly augments your experience and will often seamlessly integrate the various tools mentioned previously. We list the relevant tools for some of the common IDEs below:
+
+- VSCode - [Docstring](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring), [PyRight](https://github.com/microsoft/pyright), [Formatting](https://code.visualstudio.com/docs/python/editing#_formatting), [Linting](https://code.visualstudio.com/docs/python/linting), [Testing](https://code.visualstudio.com/docs/python/testing)
+- PyCharm - [Docstring](https://www.jetbrains.com/help/pycharm/creating-documentation-comments.html), [Type Hinting](https://www.jetbrains.com/help/pycharm/type-hinting-in-product.html#typeshed), [Formatting](https://www.jetbrains.com/pycharm/guide/tips/reformat-code/), [Testing](https://www.jetbrains.com/help/pycharm/pytest.html)
+- Atom - [Docstring](https://github.com/spadarian/docblock-python), [Type Hinting](https://github.com/MagicStack/MagicPython), [Type Checking](https://github.com/elarivie/linter-mypy), [Testing](https://github.com/pghilardi/atom-python-test)
+- Sublime Text - [Docstring](https://packagecontrol.io/packages/DocBlockr_Python), [Formatting, Type Hints &amp; Checking](https://packagecontrol.io/packages/Anaconda)
 
 - [x] Finding Issues to Contribute
 - [x] Opening and Discussing new Issues
@@ -294,4 +312,4 @@ For version `x.y.z`, we don't change `x` unless the API is going to break in a b
 - [x] CI Checks
 - [x] CLA Signing
 - [x] Git flow development style for Releases
-- [ ] Developer FAQ - common gotchas, IDE development & extension philosophy
+- [x] Developer FAQ - common gotchas, IDE development & extension philosophy
