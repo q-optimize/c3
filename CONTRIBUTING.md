@@ -195,7 +195,52 @@ Check [this resource](https://realpython.com/python-type-checking/#annotations) 
 
 ## Doc Strings & Documentation
 
+If untested code is bad code, undocumented code is unusable code. Besides striving for generous inline comments, mnenomic variable names and readable implementations, we extensively document C3 through docstrings. These docstrings follow the [numpydoc docstring](https://numpydoc.readthedocs.io/en/latest/format.html) format and are automatically picked up by our documentation building tool (Sphinx) to generate the API documentation. A sample docstring is shown below:
+
+```python
+def func(arg1: float) -> int:
+  """Short Note
+
+  Parameters
+  -----------
+  arg1: int
+      1st argument to the function
+  
+  Returns
+  -----------
+  int
+      Processed result
+  
+  Raises
+  -----------
+  ZeroDivisionError
+      Throws error when dividing by zero
+  """
+```
+
+Besides these module docstrings, we also include example documentation which is found inside the `docs/` directory. These are reStructured Text `.rst` files which are also parsed and rendered by Sphinx. You can find more details in the [relevant documentation](https://www.sphinx-doc.org/en/master/). The [Sphinx cheatsheet](https://docs.typo3.org/m/typo3/docs-how-to-document/master/en-us/WritingReST/CheatSheet.html) is handy when writing example documentations. Please contact one of the core developers or open an issue if you are planning to add example documentation and would need some help.
+
 ### Building and Viewing Documentation Locally
+
+In order to build and view the docs locally, you need to perform the following steps:
+
+```bash
+pip install sphinx sphinx-rtd-theme autoapi autodoc
+sudo apt install graphviz
+
+cd docs/
+make clean
+make html
+```
+
+This will render the documentation into html files (it can take a few minutes) which can then be viewed by launching a simple python server:
+
+```bash
+cd docs/_build/html
+python -m http.server 4242
+```
+
+You can now open `localhost:4242` in your browser and view the docs as they would be rendered online. For checking a live version of the online docs as rendered from the `master`, `dev` or `docs` branch, head over to [c3-toolset.rtfd.io](https://c3-toolset.rtfd.io).
 
 ## Pull Requests
 
@@ -216,8 +261,8 @@ Check [this resource](https://realpython.com/python-type-checking/#annotations) 
 - [x] Tests and Test Coverage
 - [x] Running Tests Locally
 - [x] Type Annotations
-- [ ] Doc Strings
-- [ ] Building and Viewing Documentation locally
+- [x] Doc Strings
+- [x] Building and Viewing Documentation locally
 - [ ] Pull Request Best Practices
 - [ ] CI Checks
 - [ ] CLA Signing
