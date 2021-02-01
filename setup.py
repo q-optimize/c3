@@ -29,7 +29,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Scientific/Engineering :: Physics"
+        "Topic :: Scientific/Engineering :: Physics",
     ],
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -39,7 +39,7 @@ setup(
         "cython",
         "ipython==7.15.0",
         "gast==0.3.3",
-	    "hjson==3.0.2",
+        "hjson==3.0.2",
         "rich==9.2.0",
         "numpy==1.18.5",
         "scipy==1.5.2",
@@ -47,5 +47,5 @@ setup(
         "tensorflow-estimator==2.3.0",
         "tensorflow-probability==0.11.1",
     ],
-    python_requires="~=3.6",    
+    python_requires="~=3.6",
 )

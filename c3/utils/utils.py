@@ -62,8 +62,8 @@ def eng_num(val: float) -> Tuple[float, str]:
     """Convert a number to engineering notation by returning number and prefix."""
     if np.isnan(val):
         return np.nan, "NaN"
-    big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
-    small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
+    big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
+    small_units = ["m", "µ", "n", "p", "f", "a", "z"]
     big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
     small_units = ["m", "µ", "n", "p", "f", "a", "z"]
     sign = 1
@@ -80,7 +80,7 @@ def eng_num(val: float) -> Tuple[float, str]:
         prefix = small_units[-(idx + 1)]
     else:
         if np.abs(idx) > len(big_units) - 1:
-            return val * (10 ** (- 3 * (len(big_units) - 1))), big_units[-1]
+            return val * (10 ** (-3 * (len(big_units) - 1))), big_units[-1]
         prefix = big_units[idx]
 
     return sign * (10 ** (tmp % 3)), prefix

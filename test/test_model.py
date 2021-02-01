@@ -121,7 +121,10 @@ def test_model_couplings() -> None:
     assert hks["d1"][3, 0] == 1
     assert hks["d2"][1, 0] == 1
 
+
 pytest.mark.unit
+
+
 def test_model_update_by_parametermap() -> None:
     pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
     hdrift_a, _ = model.get_Hamiltonians()

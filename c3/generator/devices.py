@@ -278,21 +278,24 @@ class FluxTuning(Device):
 
     def get_factor(self, phi):
         pi = tf.constant(np.pi, dtype=tf.float64)
-        phi_0 = tf.cast(self.params['phi_0'].get_value(), tf.float64)
+        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.float64)
 
         if "d" in self.params:
             d = self.params["d"].get_value()
-            factor = tf.sqrt(tf.sqrt(
-                tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
-            ))
+            factor = tf.sqrt(
+                tf.sqrt(
+                    tf.cos(pi * phi / phi_0) ** 2
+                    + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+                )
+            )
         else:
             factor = tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
         return factor
 
     def get_freq(self, phi):
         # TODO: Check how the time dependency affects the frequency. (Koch et al. , 2007)
-        omega_0 = self.params['omega_0'].get_value()
-        anhar = self.params['anhar'].get_value()
+        omega_0 = self.params["omega_0"].get_value()
+        anhar = self.params["anhar"].get_value()
         biased_freq = (omega_0 - anhar) * self.get_factor(phi) + anhar
         return biased_freq
 
@@ -656,17 +659,19 @@ class Additive_Noise(Device):
         noise_amp = self.params["noise_amp"].get_value()
         return noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
 
-    def process(self,  instr, chan, signal):
+    def process(self, instr, chan, signal):
         """Distort signal by adding noise."""
         noise_amp = self.params["noise_amp"].get_value()
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if k != 'ts' and not 'noise' in k:
+            if k != "ts" and "noise" not in k:
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
-                    noise = tf.constant(self.get_noise(sig), shape=sig.shape, dtype=tf.float64)
-                noise_key = 'noise' + ('-' + k if k != "values" else "")
+                    noise = tf.constant(
+                        self.get_noise(sig), shape=sig.shape, dtype=tf.float64
+                    )
+                noise_key = "noise" + ("-" + k if k != "values" else "")
                 out_signal[noise_key] = noise
 
                 out_signal[k] = sig + noise
@@ -677,9 +682,13 @@ class Additive_Noise(Device):
 @dev_reg_deco
 class DC_Noise(Additive_Noise):
     """Add a random constant offset to the signals"""
+
     def get_noise(self, sig):
         noise_amp = self.params["noise_amp"].get_value()
-        return tf.ones_like(sig) * tf.constant(noise_amp * np.random.normal(loc=0.0, scale=1.0))
+        return tf.ones_like(sig) * tf.constant(
+            noise_amp * np.random.normal(loc=0.0, scale=1.0)
+        )
+
 
 @dev_reg_deco
 class Pink_Noise(Additive_Noise):
@@ -687,8 +696,9 @@ class Pink_Noise(Additive_Noise):
 
     def __init__(self, **props):
         super().__init__(**props)
-        self.params["bfl_num"] = props.pop("bfl_num", Quantity(value=5, min_val=1, max_val=10))
-
+        self.params["bfl_num"] = props.pop(
+            "bfl_num", Quantity(value=5, min_val=1, max_val=10)
+        )
 
     def get_noise(self, sig):
         noise_amp = self.params["noise_amp"].get_value().numpy()
@@ -705,6 +715,7 @@ class Pink_Noise(Additive_Noise):
                     bfls[indx] = -bfls[indx]
             noise.append(np.sum(bfls) * noise_amp)
         return noise
+
 
 @dev_reg_deco
 class DC_Offset(Device):

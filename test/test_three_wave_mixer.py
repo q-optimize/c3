@@ -5,7 +5,7 @@ testing module for three wave mixing SNAIL class
 import pytest
 import numpy as np
 from c3.c3objs import Quantity
-from c3.system.chip import SNAIL, Coupling, Drive
+from c3.system.chip import SNAIL, Drive
 from c3.system.tasks import InitialiseGround, ConfusionMatrix
 from c3.system.model import Model
 import c3.libraries.hamiltonians as hamiltonians
@@ -69,18 +69,31 @@ model.set_dressed(False)
 
 hdrift, hks = model.get_Hamiltonians()
 
+
 @pytest.mark.unit
 def test_SNAIL_eigenfrequencies_1() -> None:
     "Eigenfrequency of SNAIL"
-    assert hdrift[1, 1] - hdrift[0, 0] == freq_S * 2 * np.pi  # for the 0.2dev version, comment out the 2 pi
+    assert (
+        hdrift[1, 1] - hdrift[0, 0] == freq_S * 2 * np.pi
+    )  # for the 0.2dev version, comment out the 2 pi
+
+
 # TODO: Check full hamiltonian
+
 
 @pytest.mark.unit
 def test_three_wave_mixer_properties() -> None:
     "Test if the values of the three wave mixer element are assigned correctly"
 
-    assert float(model.subsystems["Test"].params["freq"].get_value()) == freq_S * 2 * np.pi
-    assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S * 2 * np.pi
+    assert (
+        float(model.subsystems["Test"].params["freq"].get_value()) == freq_S * 2 * np.pi
+    )
+    assert (
+        float(model.subsystems["Test"].params["anhar"].get_value())
+        == anhar_S * 2 * np.pi
+    )
     assert float(model.subsystems["Test"].params["t1"].get_value()) == t1_S
-    assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S * 2 * np.pi
+    assert (
+        float(model.subsystems["Test"].params["beta"].get_value()) == beta_S * 2 * np.pi
+    )
     assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp

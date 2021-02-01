@@ -79,6 +79,7 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     result_sim = job_sim.result()
     assert result_sim.get_counts(qc) == get_result_qiskit
 
+
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.xfail(raises=C3QiskitError)

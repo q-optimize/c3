@@ -148,7 +148,7 @@ class ParameterMap:
             units.append(self.__pars[key].unit)
         return units
 
-    def get_parameter(self, par_id: Tuple[str]) -> Quantity:
+    def get_parameter(self, par_id: Tuple[str, ...]) -> Quantity:
         """
         Return one the current parameters.
 

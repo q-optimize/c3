@@ -34,6 +34,7 @@ def get_bell_circuit() -> QuantumCircuit:
     qc.measure([0, 1], [0, 1])
     return qc
 
+
 @pytest.fixture()
 def get_bad_circuit() -> QuantumCircuit:
     """fixture for Quantum Circuit with
@@ -42,7 +43,7 @@ def get_bad_circuit() -> QuantumCircuit:
     Returns
     -------
     QuantumCircuit
-        A circuit with a Conditional 
+        A circuit with a Conditional
     """
     q = QuantumRegister(1)
     c = ClassicalRegister(1)
@@ -50,6 +51,7 @@ def get_bad_circuit() -> QuantumCircuit:
     qc.x(q[0]).c_if(c, 0)
     qc.measure(q, c)
     return qc
+
 
 @pytest.fixture()
 def get_6_qubit_circuit() -> QuantumCircuit:

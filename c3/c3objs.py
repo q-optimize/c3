@@ -89,15 +89,14 @@ class Quantity:
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
-            self.__float__ == None
+            self.__float__ = None
         else:
-            self.shape = (1)
+            self.shape = (1,)
             self.length = 1
-            # self.__array__ = None
 
         self.set_value(np.array(value))
 
-    def asdict(self):
+    def asdict(self) -> dict:
         """
         Return a config-compatible dictionary representation.
         """
@@ -144,21 +143,23 @@ class Quantity:
         return self.numpy() % other
 
     def __array__(self):
-        print('array')
         return np.array(self.numpy())
 
     def __len__(self):
         return self.length
 
     def __getitem__(self, key):
-        print('get_item')
+        if self.length == 1 and key == 0:
+            return self.numpy()
         return self.numpy().__getitem__(key)
 
     def __float__(self):
+        if self.length > 1:
+            return NotImplemented
         return float(self.numpy())
 
     def __repr__(self):
-        return self.__str__()
+        return self.__str__()[:-1]
 
     def __str__(self):
         val = self.numpy()

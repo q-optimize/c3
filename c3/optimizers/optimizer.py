@@ -212,7 +212,9 @@ class Optimizer:
         if np.any(np.isnan(gradient)):
             # TODO: is simply a warning sufficient?
             Warning("NaN returned in gradient")
-            gradient[np.isnan(gradient)] = 1e-10  # Most probably at boundary of Quantity
+            gradient[
+                np.isnan(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
         return gradient
 
     def fct_to_min(
