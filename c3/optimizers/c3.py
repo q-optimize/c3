@@ -182,12 +182,7 @@ class C3(Optimizer):
         seqs_pp = self.seqs_per_point
         m = self.learn_from[ipar]
         gateset_params = m["params"]
-        m_vals = m["results"][:seqs_pp]
-        m_stds = np.array(m["result_stds"][:seqs_pp])
-        m_shots = m["shots"][:seqs_pp]
         sequences = m["seqs"][:seqs_pp]
-        if target == "all":
-            num_seqs = len(sequences) * 3
         self.pmap.set_parameters_scaled(current_params)
         self.pmap.str_parameters()
         self.pmap.model.update_model()
@@ -348,6 +343,16 @@ class C3(Optimizer):
 
                 count += 1
                 data_set = self.learn_from[ipar]
+
+                seqs_pp = self.seqs_per_point
+                m_vals = data_set["results"][:seqs_pp]
+                m_stds = np.array(data_set["result_stds"][:seqs_pp])
+                m_shots = data_set["shots"][:seqs_pp]
+                sequences = data_set["seqs"][:seqs_pp]
+                num_seqs = len(sequences)
+                if target == "all":
+                    num_seqs = len(sequences) * 3
+
                 with tf.GradientTape() as t:
                     t.watch(current_params)
                     sim_vals = self._one_par_sim_vals(
@@ -369,14 +374,6 @@ class C3(Optimizer):
                             tf.Variable(m_shots, dtype=tf.float64),
                         )
 
-                seqs_pp = self.seqs_per_point
-                m_vals = data_set["results"][:seqs_pp]
-                m_stds = np.array(data_set["result_stds"][:seqs_pp])
-                m_shots = data_set["shots"][:seqs_pp]
-                sequences = data_set["seqs"][:seqs_pp]
-                num_seqs = len(sequences)
-                if target == "all":
-                    num_seqs = len(sequences) * 3
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
                 seq_weigths.append(num_seqs)
