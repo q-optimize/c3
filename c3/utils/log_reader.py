@@ -2,7 +2,6 @@
 
 import argparse
 import hjson
-import numpy as np
 from c3.utils.utils import num3str
 from rich.console import Console
 from rich.table import Table
@@ -27,7 +26,9 @@ if log:
     params = optim_status["params"]
     grads = optim_status["gradient"]
 
-    print(f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n")
+    print(
+        f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n"
+    )
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Parameter")
     table.add_column("Value", justify="right")
@@ -40,7 +41,7 @@ if log:
         grad = num3str(grad)
         par_id = equiv_ids[0]
         nice_id = "-".join(par_id)
-        table.add_row(nice_id, par+units[ii], grad+units[ii])
+        table.add_row(nice_id, par + units[ii], grad + units[ii])
         if len(equiv_ids) > 1:
             for par_id in equiv_ids[1:]:
                 nice_id = "-".join(par_id)

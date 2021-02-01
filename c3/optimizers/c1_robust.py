@@ -1,4 +1,3 @@
-import os
 import time
 import hjson
 import tensorflow as tf
@@ -34,19 +33,19 @@ class C1_robust(C1):
     """
 
     def __init__(
-            self,
-            dir_path,
-            fid_func,
-            fid_subspace,
-            pmap,
-            noise_map,
-            callback_fids=[],
-            algorithm=None,
-            store_unitaries=False,
-            options={},
-            run_name=None,
-            interactive=True,
-            num_runs=1
+        self,
+        dir_path,
+        fid_func,
+        fid_subspace,
+        pmap,
+        noise_map,
+        callback_fids=[],
+        algorithm=None,
+        store_unitaries=False,
+        options={},
+        run_name=None,
+        interactive=True,
+        num_runs=1,
     ) -> None:
         super().__init__(
             dir_path=dir_path,
@@ -58,11 +57,10 @@ class C1_robust(C1):
             store_unitaries=store_unitaries,
             options=options,
             run_name=run_name,
-            interactive=interactive
+            interactive=interactive,
         )
         self.num_runs = num_runs
         self.noise_map = noise_map
-
 
     def goal_run_with_grad(self, current_params):
         goals = []
@@ -84,9 +82,11 @@ class C1_robust(C1):
 
         self.optim_status["goals_individual"] = [float(goal) for goal in goals]
         self.optim_status["goal_std"] = float(tf.math.reduce_std(goals))
-        self.optim_status["gradient_std"] = tf.math.reduce_std(grads, axis=0).numpy().tolist()
-        self.optim_status['goal'] = float(tf.reduce_mean(goals, axis=0))
-        self.optim_status['time'] = time.asctime()
+        self.optim_status["gradient_std"] = (
+            tf.math.reduce_std(grads, axis=0).numpy().tolist()
+        )
+        self.optim_status["goal"] = float(tf.reduce_mean(goals, axis=0))
+        self.optim_status["time"] = time.asctime()
         return tf.reduce_mean(goals, axis=0), tf.reduce_mean(grads, axis=0)
 
     def start_log(self):
@@ -95,7 +95,7 @@ class C1_robust(C1):
 
         """
         super().start_log()
-        with open(self.logdir + self.logname, 'a') as logfile:
+        with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("Robust values ")
             print(len(self.noise_map))
             logfile.write(hjson.dumps(jsonify_list(self.noise_map)))

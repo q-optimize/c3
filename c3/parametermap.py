@@ -309,7 +309,7 @@ class ParameterMap:
                 ret.append("\n")
         return "".join(ret)
 
-    def print_parameters(self, opt_map = None) -> None:
+    def print_parameters(self, opt_map=None) -> None:
         """
         Print current parameters to stdout.
         """
