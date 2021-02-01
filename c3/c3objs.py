@@ -80,8 +80,8 @@ class Quantity:
         self.pref = pref
         if min_val is None and max_val is None:
             minmax = [0.9 * value, 1.1 * value]
-            min_val = min(minmax)
-            max_val = max(minmax)
+            min_val = np.min(minmax, axis=0)
+            max_val = np.max(minmax, axis=0)
         self.offset = np.array(min_val) * pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit
@@ -89,9 +89,11 @@ class Quantity:
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
+            self.__float__ == None
         else:
-            self.shape = ()
+            self.shape = (1)
             self.length = 1
+            # self.__array__ = None
 
         self.set_value(np.array(value))
 
@@ -138,11 +140,34 @@ class Quantity:
     def __rtruediv__(self, other):
         return other / self.numpy()
 
+    def __mod__(self, other):
+        return self.numpy() % other
+
+    def __array__(self):
+        print('array')
+        return np.array(self.numpy())
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, key):
+        print('get_item')
+        return self.numpy().__getitem__(key)
+
+    def __float__(self):
+        return float(self.numpy())
+
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         val = self.numpy()
         ret = ""
         for entry in np.nditer(val):
-            ret += num3str(entry) + self.unit + " "
+            if self.unit != "undefined":
+                ret += num3str(entry) + self.unit + " "
+            else:
+                ret += num3str(entry, use_prefix=False) + " "
         return ret
 
     def numpy(self) -> np.ndarray:
