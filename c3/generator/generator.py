@@ -111,8 +111,10 @@ class Generator:
 
         """
         gen_signal = {}
+        gen_stacked_signals = {}
         for chan in instr.comps:
             signal_stack: List[tf.Variable] = []
+            gen_stacked_signals[chan] = []
             for dev_id in self.chains[chan]:
                 dev = self.devices[dev_id]
                 inputs = []
@@ -120,6 +122,8 @@ class Generator:
                     inputs.append(signal_stack.pop())
                 outputs = dev.process(instr, chan, *inputs)
                 signal_stack.append(outputs)
+                gen_stacked_signals[chan].append((dev_id, copy.deepcopy(outputs)))
             # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
+        self.gen_stacked_signals = gen_stacked_signals
         return gen_signal

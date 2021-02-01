@@ -62,17 +62,24 @@ class Optimizer:
         new_logdir
 
         """
-        old_logdir = self.logdir
+        try:
+            old_logdir = self.logdir
+        except AttributeError:
+            old_logdir = None
+            pass
         self.logdir = new_logdir
         try:
             os.remove(os.path.join(self.dir_path,'recent'))
         except FileNotFoundError:
             pass
+        except AttributeError as e:
+            Warning(e)
         #os.remove(self.dir_path + self.string)
-        try:
-            os.rmdir(old_logdir)
-        except OSError:
-            pass
+        if old_logdir:
+            try:
+                os.rmdir(old_logdir)
+            except OSError:
+                pass
 
     def set_exp(self, exp: Experiment) -> None:
         self.exp = exp
@@ -249,4 +256,9 @@ class Optimizer:
             Value of the gradient.
         """
         key = str(x)
-        return self.gradients.pop(key)
+        gradient = self.gradients.pop(key)
+        if np.any(np.isnan(gradient)):
+            # TODO: is simply a warning sufficient?
+            Warning("NaN returned in gradient")
+            gradient[np.isnan(gradient)] = 1e-10 # Most probably at boundary of Quantity
+        return gradient

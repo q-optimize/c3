@@ -23,7 +23,7 @@ S = SNAIL(
     desc="SNAIL",
     freq=Quantity(value=freq_S, min_val=4.995e9, max_val=5.005e9, unit="Hz 2pi"),
     anhar=Quantity(value=anhar_S, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
-    beta =Quantity(value=beta_S, min_val=250e6, max_val=350e6, unit="Hz 2pi"),
+    beta=Quantity(value=beta_S, min_val=250e6, max_val=350e6, unit="Hz 2pi"),
     hilbert_dim=qubit_lvls,
     t1=Quantity(value=t1_S, min_val=1e-6, max_val=90e-6, unit="s"),
     t2star=Quantity(value=t2star_S, min_val=10e-6, max_val=90e-3, unit="s"),
@@ -72,15 +72,15 @@ hdrift, hks = model.get_Hamiltonians()
 @pytest.mark.unit
 def test_SNAIL_eigenfrequencies_1() -> None:
     "Eigenfrequency of SNAIL"
-    assert hdrift[1,1] - hdrift[0,0] == freq_S * 2 * np.pi # for the 0.2dev version, comment out the 2 pi
-
+    assert hdrift[1, 1] - hdrift[0, 0] == freq_S * 2 * np.pi  # for the 0.2dev version, comment out the 2 pi
+# TODO: Check full hamiltonian
 
 @pytest.mark.unit
 def test_three_wave_mixer_properties() -> None:
     "Test if the values of the three wave mixer element are assigned correctly"
 
-    assert float(model.subsystems["Test"].params["freq"].get_value()) == freq_S* 2 * np.pi
-    assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S* 2 * np.pi
+    assert float(model.subsystems["Test"].params["freq"].get_value()) == freq_S * 2 * np.pi
+    assert float(model.subsystems["Test"].params["anhar"].get_value()) == anhar_S * 2 * np.pi
     assert float(model.subsystems["Test"].params["t1"].get_value()) == t1_S
-    assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S* 2 * np.pi
-    assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp 
+    assert float(model.subsystems["Test"].params["beta"].get_value()) == beta_S * 2 * np.pi
+    assert float(model.subsystems["Test"].params["temp"].get_value()) == S_temp

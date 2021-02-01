@@ -657,7 +657,7 @@ class Additive_Noise(Device):
         noise_amp = self.params["noise_amp"].get_value()
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if k != 'ts':
+            if k != 'ts' and not 'noise' in k:
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
@@ -943,7 +943,6 @@ class AWG(Device):
                     env = comp.get_shape_values(ts, t_before)
                     # TODO option to have t_before = 0
                     # env = comp.get_shape_values(ts, t_before)
-
                 denv = t.gradient(env, ts)
                 if denv is None:
                     denv = tf.zeros_like(ts, dtype=tf.float64)

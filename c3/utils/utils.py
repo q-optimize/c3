@@ -64,6 +64,8 @@ def replace_symlink(path: str, alias: str) -> None:
 # NICE PRINTING FUNCTIONS
 def eng_num(val: float) -> Tuple[float, str]:
     """Convert a number to engineering notation by returning number and prefix."""
+    if np.isnan(val):
+        return np.nan, "NaN"
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
     sign = 1
@@ -92,7 +94,7 @@ def num3str(val: float, use_prefix: bool = True) -> str:
         num, prefix = eng_num(val)
         formatted_string = f"{num:.3f} " + prefix
     else:
-        formatted_string = f"{val:.3f} "
+        formatted_string = f"{val:.3} "
     return formatted_string
 
 

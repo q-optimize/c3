@@ -56,7 +56,6 @@ q1q2 = Coupling(
     hamiltonian_func=hamiltonians.int_XX,
 )
 
-
 drive = Drive(
     name="d1",
     desc="Drive 1",
@@ -124,12 +123,11 @@ def test_model_couplings() -> None:
 
 pytest.mark.unit
 def test_model_update_by_parametermap() -> None:
-    pmap.set_parameters([freq_q1 * 0.9995], [[("Q1","freq")]])
+    pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
     hdrift_a, _ = model.get_Hamiltonians()
 
-    pmap.set_parameters([freq_q1 * 1.0005], [[("Q1","freq")]])
+    pmap.set_parameters([freq_q1 * 1.0005], [[("Q1", "freq")]])
     hdrift_b, _ = model.get_Hamiltonians()
 
     assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
     assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi
-
