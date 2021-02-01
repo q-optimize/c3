@@ -513,8 +513,8 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         noise = 0
 
-    if 'batch_noise' in options:
-        batch_noise = float(options.pop('batch_noise'))
+    if "batch_noise" in options:
+        batch_noise = float(options.pop("batch_noise"))
     else:
         batch_noise = 0
 

@@ -532,7 +532,7 @@ class HighpassFilter(Device):
             )
         return convolution
 
-    def process(self,  instr, chan, iq_signal):
+    def process(self, instr, chan, iq_signal):
         """
         Apply a highpass cutoff to an IQ signal.
 
@@ -577,7 +577,11 @@ class HighpassFilter(Device):
         h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
         inphase = self.convolve(iq_signal["inphase"], h)
         quadrature = self.convolve(iq_signal["quadrature"], h)
-        self.signal = {"inphase": inphase, "quadrature": quadrature, "ts": iq_signal["ts"]}
+        self.signal = {
+            "inphase": inphase,
+            "quadrature": quadrature,
+            "ts": iq_signal["ts"],
+        }
         return self.signal
 
 
@@ -626,7 +630,7 @@ class LONoise(Device):
         self.signal = None
         self.params["noise_perc"] = props.pop("noise_perc")
 
-    def process(self,  instr, chan, lo_signal):
+    def process(self, instr, chan, lo_signal):
         """Distort signal by adding noise."""
         noise_perc = self.params["noise_perc"].get_value()
         cos, sin = lo_signal["values"]
@@ -943,6 +947,7 @@ class AWG(Device):
                     env = comp.get_shape_values(ts, t_before)
                     # TODO option to have t_before = 0
                     # env = comp.get_shape_values(ts, t_before)
+
                 denv = t.gradient(env, ts)
                 if denv is None:
                     denv = tf.zeros_like(ts, dtype=tf.float64)

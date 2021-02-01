@@ -7,7 +7,7 @@ from typing import Tuple
 
 
 # SYSTEM AND SETUP
-def log_setup(data_path: str, run_name: str = 'run') -> str:
+def log_setup(data_path: str, run_name: str = "run") -> str:
     """
     Make sure the file path to save data exists. Create an appropriately named
     folder with date and time. Also creates a symlink "recent" to the folder.
@@ -29,22 +29,18 @@ def log_setup(data_path: str, run_name: str = 'run') -> str:
         os.makedirs(data_path)
 
     pwd = os.path.join(
-        data_path,
-        run_name,
-        time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
+        data_path, run_name, time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
     )
     while os.path.exists(pwd):
         time.sleep(1)
         pwd = os.path.join(
-            data_path,
-            run_name,
-            time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
+            data_path, run_name, time.strftime("%Y_%m_%d_T_%H_%M_%S", time.localtime())
         )
 
     os.makedirs(pwd)
-    recent = os.path.join(data_path, 'recent')
+    recent = os.path.join(data_path, "recent")
     replace_symlink(pwd, recent)
-    return os.path.join(pwd, '')
+    return os.path.join(pwd, "")
 
 
 def replace_symlink(path: str, alias: str) -> None:
@@ -68,6 +64,8 @@ def eng_num(val: float) -> Tuple[float, str]:
         return np.nan, "NaN"
     big_units = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']
     small_units = ['m', 'µ', 'n', 'p', 'f', 'a', 'z']
+    big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
+    small_units = ["m", "µ", "n", "p", "f", "a", "z"]
     sign = 1
     if val == 0:
         return 0, ""
@@ -103,21 +101,22 @@ def ask_yn() -> bool:
     """Ask for y/n user decision in the command line."""
     asking = True
     text = input("(y/n): ")
-    if text == 'y':
+    if text == "y":
         asking = False
         boolean = True
-    elif text == 'n':
+    elif text == "n":
         asking = False
         boolean = False
     while asking:
         text = input("Please write y or n and press enter: ")
-        if text == 'y':
+        if text == "y":
             asking = False
             boolean = True
-        elif text == 'n':
+        elif text == "n":
             asking = False
             boolean = False
     return boolean
+
 
 def jsonify_list(data):
     if isinstance(data, dict):

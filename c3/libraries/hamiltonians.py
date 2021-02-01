@@ -3,12 +3,15 @@
 import numpy as np
 
 hamiltonians = dict()
+
+
 def hamiltonian_reg_deco(func):
     """
     Decorator for making registry of functions
     """
     hamiltonians[str(func.__name__)] = func
     return func
+
 
 @hamiltonian_reg_deco
 def resonator(a):
@@ -29,6 +32,7 @@ def resonator(a):
     a_dag = a.T.conj()
     return np.matmul(a_dag, a)
 
+
 @hamiltonian_reg_deco
 def duffing(a):
     """
@@ -47,12 +51,13 @@ def duffing(a):
     """
     a_dag = a.T.conj()
     n = np.matmul(a_dag, a)
-    return 1/2 * np.matmul(n - np.eye(int(n.shape[0]), dtype=np.complex128), n)
+    return 1 / 2 * np.matmul(n - np.eye(int(n.shape[0]), dtype=np.complex128), n)
+
 
 @hamiltonian_reg_deco
 def third_order(a):
     """
-    
+
     Parameters
     ----------
     a : Tensor
@@ -61,14 +66,15 @@ def third_order(a):
     -------
     Tensor
         Number operator.
-    return literally the Hamiltonian a^\dag a a + a^\dag a^\dag a for the use in any Hamiltonian that uses more than 
+    return literally the Hamiltonian a_dag a a + a_dag a_dag a for the use in any Hamiltonian that uses more than
     just a resonator or Duffing part. A more general type of quantum element on a physical chip can have this type of interaction.
     One example is a three wave mixing element used in signal amplification called a Superconducting non-linear asymmetric inductive eLement
-    (SNAIL in short). The code is a simple modification of the Duffing function and written in the same style. 
+    (SNAIL in short). The code is a simple modification of the Duffing function and written in the same style.
     """
     a_dag = a.T.conj()
     n = np.matmul(a_dag, a)
-    return np.matmul(n,a)+np.matmul(a_dag,n)
+    return np.matmul(n, a) + np.matmul(a_dag, n)
+
 
 @hamiltonian_reg_deco
 def int_XX(anhs):
@@ -92,6 +98,7 @@ def int_XX(anhs):
     b_dag = b.T.conj()
     return np.matmul(a_dag + a, b_dag + b)
 
+
 @hamiltonian_reg_deco
 def int_YY(anhs):
     """
@@ -114,6 +121,7 @@ def int_YY(anhs):
     b_dag = b.T.conj()
     return -np.matmul(a_dag - a, b_dag - b)
 
+
 @hamiltonian_reg_deco
 def x_drive(a):
     """
@@ -133,6 +141,7 @@ def x_drive(a):
     a_dag = a.T.conj()
     return a_dag + a
 
+
 @hamiltonian_reg_deco
 def y_drive(a):
     """
@@ -151,6 +160,7 @@ def y_drive(a):
     """
     a_dag = a.T.conj()
     return 1.0j * (a_dag - a)
+
 
 @hamiltonian_reg_deco
 def z_drive(a):

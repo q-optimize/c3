@@ -35,6 +35,7 @@ import c3.libraries.envelopes as envelopes
 import c3.utils.qt_utils as qt_utils
 import c3.utils.tf_utils as tf_utils
 
+
 lindblad = False
 dressed = True
 q1_lvls = 3
@@ -62,11 +63,11 @@ t2star_q2 = 50e-6
 t2star_tc = 7e-6
 init_temp = 0.06
 v2hz = 1e9
-t_final = 10e-9  # Time for single qubit gates
+t_final = 10e-9 # Time for single qubit gates
 sim_res = 100e9
 awg_res = 2.4e9
 
-cphase_time = 100e-9  # Two qubit gate
+cphase_time = 100e-9 # Two qubit gate
 flux_freq = 829 * 1e6
 offset = 0 * 1e6
 fluxamp = 0.1 * phi_0_tc

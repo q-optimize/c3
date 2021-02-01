@@ -15,7 +15,7 @@ def sampling_reg_deco(func):
 
 
 @sampling_reg_deco
-def all(learn_from,  batch_size):
+def all(learn_from, batch_size):
     """
     Return all points.
 
@@ -38,7 +38,7 @@ def all(learn_from,  batch_size):
 
 
 @sampling_reg_deco
-def from_start(learn_from,  batch_size):
+def from_start(learn_from, batch_size):
     """
     Select from the beginning.
 
@@ -61,7 +61,7 @@ def from_start(learn_from,  batch_size):
 
 
 @sampling_reg_deco
-def from_end(learn_from,  batch_size):
+def from_end(learn_from, batch_size):
     """
     Select from the end.
 
@@ -84,7 +84,7 @@ def from_end(learn_from,  batch_size):
 
 
 @sampling_reg_deco
-def even(learn_from,  batch_size):
+def even(learn_from, batch_size):
     """
     Select evenly distanced samples across the set.
 
@@ -108,7 +108,7 @@ def even(learn_from,  batch_size):
 
 
 @sampling_reg_deco
-def random_sample(learn_from,  batch_size):
+def random_sample(learn_from, batch_size):
     """
     Select randomly.
 
@@ -131,7 +131,7 @@ def random_sample(learn_from,  batch_size):
 
 
 @sampling_reg_deco
-def high_std(learn_from,  batch_size):
+def high_std(learn_from, batch_size):
     """
     Select points that have a high ratio of standard deviation to mean. Sampling from ORBIT data, points with a high
     std have the most coherent error, thus might be suitable for model learning. This has yet to be confirmed beyond
@@ -152,12 +152,12 @@ def high_std(learn_from,  batch_size):
     """
     a_val = []
     for sample in learn_from:
-        a_val.append(np.std(sample['results'])/np.mean(sample['results']))
+        a_val.append(np.std(sample["results"]) / np.mean(sample["results"]))
     return np.argsort(np.array(a_val))[-batch_size:]
 
 
 @sampling_reg_deco
-def even_fid(learn_from,  batch_size):
+def even_fid(learn_from, batch_size):
     """
     Select evenly among reached fidelities.
 
@@ -177,6 +177,6 @@ def even_fid(learn_from,  batch_size):
     total_size = len(learn_from)
     res = []
     for sample in learn_from:
-        res.append(np.mean(sample['results']))
+        res.append(np.mean(sample["results"]))
     n = int(np.ceil(total_size / batch_size))
     return np.argsort(np.array(res))[::n]

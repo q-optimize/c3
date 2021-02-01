@@ -1,10 +1,10 @@
 """Object that deals with the closed loop optimal control."""
 
 import os
-import shutil
 import time
 import hjson
 import pickle
+import inspect
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 
@@ -76,9 +76,10 @@ class C2(Optimizer):
             run_name = self.eval_func.__name__ + self.algorithm.__name__
         self.logdir = log_setup(dir_path, run_name)
         self.logname = "calibration.log"
-        shutil.copy2(self.eval_func, self.logdir)
-        real_log = os.path.join(self.logdir, "real_model.hjson")
-        self.exp_right.pmap.model.write_config(real_log)
+
+        # We create a copy of the source code of the evaluation function in the log
+        with open(os.path.join(self.logdir, "eval_func.py"), "w") as eval_source:
+            eval_source.write(inspect.getsource(self.eval_func))
 
     def optimize_controls(self) -> None:
         """
@@ -99,8 +100,8 @@ class C2(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + "best_point_" + self.logname, "r") as file:
-            best_params = hjson.loads(file.readlines()[1])["params"]
+        with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
+            best_params = hjson.load(file)["optim_status"]["params"]
         self.pmap.set_parameters(best_params)
         self.end_log()
         measurements = []

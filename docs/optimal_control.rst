@@ -74,8 +74,14 @@ these functions are defined and how to supply your own, if necessary.
 
 .. code-block:: python
 
+    import os
+    import tempfile
+
+    # Create a temporary directory to store logfiles, modify as needed
+    log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
+
     opt = C1(
-        dir_path="/tmp/c3log/",
+        dir_path=log_dir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
         pmap=parameter_map,
@@ -102,19 +108,6 @@ Everything is in place to start the optimization.
 
 
 
-.. image:: output_84_1.png
-
-
-
-
-
-
-.. image:: output_84_3.png
-
-
-
-
-
 After a few steps we have improved the gate significantly, as we can
 check with
 
@@ -127,7 +120,7 @@ check with
 
 .. parsed-literal::
 
-    0.0038
+    0.00063
 
 
 
@@ -139,7 +132,7 @@ And by looking at the same sequences as before.
 
 
 
-.. image:: output_88_0.png
+.. image:: optim_X.png
 
 
 .. code-block:: python
@@ -148,7 +141,7 @@ And by looking at the same sequences as before.
 
 
 
-.. image:: output_89_0.png
+.. image:: optim_5X.png
 
 
 Compared to before the optimization.
