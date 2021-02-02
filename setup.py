@@ -13,6 +13,7 @@ setup(
         "c3/generator",
         "c3/libraries",
         "c3/optimizers",
+        "c3/qiskit",
         "c3/schemas",
         "c3/signal",
         "c3/system",
