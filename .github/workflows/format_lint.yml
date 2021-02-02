@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  format_lint_check:
 
     runs-on: ubuntu-latest
     strategy:
