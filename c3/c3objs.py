@@ -204,7 +204,9 @@ class Quantity:
             # TODO if we want we can extend bounds when force flag is given
         else:
             if isinstance(val, ops.EagerTensor):
-                self.value = tf.cast(2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64)
+                self.value = tf.cast(
+                    2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64
+                )
             else:
                 self.value = tf.constant(tmp, dtype=tf.float64)
 

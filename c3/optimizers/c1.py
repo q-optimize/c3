@@ -36,17 +36,17 @@ class C1(Optimizer):
     """
 
     def __init__(
-            self,
-            dir_path,
-            fid_func,
-            fid_subspace,
-            pmap,
-            callback_fids=[],
-            algorithm=None,
-            store_unitaries=False,
-            options={},
-            run_name=None,
-            interactive=True,
+        self,
+        dir_path,
+        fid_func,
+        fid_subspace,
+        pmap,
+        callback_fids=[],
+        algorithm=None,
+        store_unitaries=False,
+        options={},
+        run_name=None,
+        interactive=True,
     ) -> None:
         super().__init__(
             pmap=pmap,

@@ -42,7 +42,7 @@ class Generator:
             self.chains = chains
             self.__check_signal_chains()
         self.resolution = resolution
-        self.gen_stacked_signals = None
+        self.gen_stacked_signals: dict = None
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
@@ -128,5 +128,5 @@ class Generator:
                 gen_stacked_signals[chan].append((dev_id, copy.deepcopy(outputs)))
             # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
-        self.gen_stacked_signals: dict = gen_stacked_signals
+        self.gen_stacked_signals = gen_stacked_signals
         return gen_signal
