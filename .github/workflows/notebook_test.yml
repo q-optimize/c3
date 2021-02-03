@@ -1,4 +1,4 @@
-name: Code Formatting and Linting
+name: Notebook Test
 
 on:
   push:
@@ -8,15 +8,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  format_lint_check:
-
-    runs-on: ubuntu-latest
+  notebook_run_check:
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: [3.7]
+        os: [ubuntu-latest]
+        python-version: [3.8]
     env:
-      OS: 'ubuntu-latest'
-      PYTHON: '3.7'
+      OS: ${{ matrix.os }}
+      PYTHON: ${{ matrix.python-version }}
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -26,11 +26,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install black flake8
-    - name: Test Code Formatting with Black
+        pip install -r requirements.txt
+        pip install jupyter notebook ipykernel matplotlib
+        pip install .
+    - name: Test with nbconvert
       run: |
-        black --check c3/
-    - name: Code Linting with flake8
-      run: |
-        flake8 --count c3/
-
+        jupyter nbconvert --to notebook --inplace --execute examples/*.ipynb
