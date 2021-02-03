@@ -126,5 +126,5 @@ def test_qty_np_conversions() -> None:
 
     c = Quantity([0, 0.1])
     assert len(c) == 2
-    assert c.shape == [2]
+    assert c.shape == (2,)
 
