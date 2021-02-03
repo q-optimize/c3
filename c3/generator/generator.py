@@ -42,6 +42,7 @@ class Generator:
             self.chains = chains
             self.__check_signal_chains()
         self.resolution = resolution
+        self.gen_stacked_signals = None
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
@@ -111,9 +112,11 @@ class Generator:
 
         """
         gen_signal = {}
+        if self.gen_stacked_signals:
+            del self.gen_stacked_signals
         gen_stacked_signals: dict = dict()
         for chan in instr.comps:
-            signal_stack: List[tf.Variable] = []
+            signal_stack: List[tf.constant] = []
             gen_stacked_signals[chan] = []
             for dev_id in self.chains[chan]:
                 dev = self.devices[dev_id]

@@ -48,6 +48,7 @@ class Experiment:
         self.unitaries: dict = {}
         self.dUs: dict = {}
         self.created_by = None
+        self.logdir: str = None
 
     def set_created_by(self, config):
         """
@@ -278,7 +279,7 @@ class Experiment:
                         ctrls["carrier"].params["framechange"].get_value(),
                         tf.complex128,
                     )
-                t_final = tf.Variable(instr.t_end - instr.t_start, dtype=tf.complex128)
+                t_final = tf.constant(instr.t_end - instr.t_start, dtype=tf.complex128)
                 FR = model.get_Frame_Rotation(t_final, freqs, framechanges)
                 if model.lindbladian:
                     SFR = tf_utils.tf_super(FR)
@@ -295,7 +296,7 @@ class Experiment:
                     for line, ctrls in instr.comps.items():
                         amp, sum = generator.devices["awg"].get_average_amp()
                         amps[line] = tf.cast(amp, tf.complex128)
-                    t_final = tf.Variable(
+                    t_final = tf.constant(
                         instr.t_end - instr.t_start, dtype=tf.complex128
                     )
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
@@ -331,7 +332,7 @@ class Experiment:
             signals.append(signal[key]["values"])
             ts = signal[key]["ts"]
             hks.append(hctrls[key])
-        dt = tf.Variable(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()

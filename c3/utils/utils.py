@@ -123,6 +123,8 @@ def jsonify_list(data):
         return {k: jsonify_list(v) for k, v in data.items()}
     elif isinstance(data, list):
         return [jsonify_list(v) for v in data]
+    elif isinstance(data, tuple):
+        return tuple(jsonify_list(v) for v in data)
     elif isinstance(data, np.ndarray):
         return data.tolist()
     elif isinstance(data, ops.EagerTensor):

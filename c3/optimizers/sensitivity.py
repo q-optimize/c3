@@ -245,15 +245,15 @@ class SET(Optimizer):
                     goal = neg_loglkh_multinom_norm(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.Variable(m_stds, dtype=tf.float64),
-                        tf.Variable(m_shots, dtype=tf.float64),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 else:
                     goal = g_LL_prime(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.Variable(m_stds, dtype=tf.float64),
-                        tf.Variable(m_shots, dtype=tf.float64),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 goals.append(goal.numpy())
                 seq_weigths.append(num_seqs)

@@ -69,7 +69,7 @@ class InitialiseGround(Task):
             else:
                 raise Warning("C3:WARNING: We still need to do Von Neumann right.")
         else:
-            state = tf.Variable(
+            state = tf.constant(
                 qt_utils.basis(dim, 0), shape=[dim, 1], dtype=tf.complex128
             )
             if lindbladian:
@@ -107,7 +107,7 @@ class ConfusionMatrix(Task):
             Populations after misclassification.
 
         """
-        conf_matrix = tf.Variable([[1]], dtype=tf.float64)
+        conf_matrix = tf.constant([[1]], dtype=tf.float64)
         for conf_row in self.params.values():
             row1 = conf_row.get_value()
             row2 = tf.ones_like(row1) - row1

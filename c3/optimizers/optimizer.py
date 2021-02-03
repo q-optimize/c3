@@ -18,10 +18,6 @@ class Optimizer:
     ----------
     algorithm : callable
         From the algorithm library
-    plot_dynamics : boolean
-        Save plots of time-resolved dynamics in dir_path
-    plot_pulses : boolean
-        Save plots of control signals
     store_unitaries : boolean
         Store propagators as text and pickle
     """
@@ -42,7 +38,7 @@ class Optimizer:
         self.created_by = None
         self.logname = None
         self.options = None
-        self.dir_path = None
+        self.__dir_path = None
         self.logdir = None
         self.set_algorithm(algorithm)
 
@@ -62,24 +58,22 @@ class Optimizer:
         new_logdir
 
         """
-        try:
-            old_logdir = self.logdir
-        except AttributeError:
-            old_logdir = None
-            pass
+        old_logdir = self.logdir
         self.logdir = new_logdir
+
+        if old_logdir is None:
+            return
+
         try:
-            os.remove(os.path.join(self.dir_path, "recent"))
+            os.remove(os.path.join(self.__dir_path, "recent"))
         except FileNotFoundError:
             pass
-        except AttributeError as e:
-            Warning(e)
-        # os.remove(self.dir_path + self.string)
-        if old_logdir:
-            try:
-                os.rmdir(old_logdir)
-            except OSError:
-                pass
+        # os.remove(self.__dir_path + self.string)
+
+        try:
+            os.rmdir(old_logdir)
+        except OSError:
+            pass
 
     def set_exp(self, exp: Experiment) -> None:
         self.exp = exp
@@ -235,7 +229,7 @@ class Optimizer:
         """
 
         if isinstance(input_parameters, np.ndarray):
-            current_params = tf.Variable(input_parameters)
+            current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
             self.log_parameters()
             goal = float(goal)
@@ -261,7 +255,7 @@ class Optimizer:
          float
              Value of the goal function.
         """
-        current_params = tf.Variable(x)
+        current_params = tf.constant(x)
         goal, grad = self.goal_run_with_grad(current_params)
         if isinstance(grad, tf.Tensor):
             grad = grad.numpy()

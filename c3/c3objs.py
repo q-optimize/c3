@@ -4,6 +4,7 @@ import hjson
 import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
+from tensorflow.python.framework import ops
 
 
 class C3obj:
@@ -71,6 +72,7 @@ class Quantity:
     def __init__(
         self, value, min_val=None, max_val=None, unit="undefined", symbol=r"\alpha"
     ):
+        value = np.array(value)
         if "pi" in unit:
             pref = np.pi
         if "2pi" in unit:
@@ -89,7 +91,6 @@ class Quantity:
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
-            self.__float__ = None
         else:
             self.shape = (1,)
             self.length = 1
@@ -102,9 +103,9 @@ class Quantity:
         """
         pref = self.pref
         return {
-            "value": self.numpy(),
-            "min_val": self.offset / pref,
-            "max_val": (self.scale / pref + self.offset / pref),
+            "value": self.numpy().tolist(),
+            "min_val": (self.offset / pref).tolist(),
+            "max_val": (self.scale / pref + self.offset / pref).tolist(),
             "unit": self.unit,
             "symbol": self.symbol,
         }
@@ -202,7 +203,10 @@ class Quantity:
             )
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tf.Variable(tmp, dtype=tf.float64)
+            if isinstance(val, ops.EagerTensor):
+                self.value = tf.cast(2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64)
+            else:
+                self.value = tf.constant(tmp, dtype=tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""

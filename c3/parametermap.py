@@ -8,6 +8,7 @@ import tensorflow as tf
 from c3.c3objs import Quantity
 from c3.signal.gates import Instruction
 from c3.signal.pulse import components as comp_lib
+from typing import Union
 
 
 class ParameterMap:
@@ -250,7 +251,7 @@ class ParameterMap:
         # TODO is there a reason to not return a tensorflow array
         return np.concatenate(values, axis=0).flatten()
 
-    def set_parameters_scaled(self, values: tf.Variable) -> None:
+    def set_parameters_scaled(self, values: Union[tf.constant, tf.Variable]) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
         called by an optimizer. Are you an optimizer?
@@ -259,8 +260,6 @@ class ParameterMap:
         ----------
         values: list
             List of parameter values. Matrix valued parameters need to be flattened.
-        opt_map: list
-            Corresponding identifiers for the parameter values.
 
         """
         model_updated = False
