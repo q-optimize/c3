@@ -141,7 +141,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     while ii < len(hks):
         h += cflds_t[ii] * hks[ii]
         ii += 1
-    terms = int(1e12 * dt) + 2
+    # terms = int(1e12 * dt) + 2
     # dU = tf_expm(-1j * h * dt, terms)
     # TODO Make an option for the exponentation method
     dU = tf.linalg.expm(-1j * h * dt)
@@ -186,7 +186,7 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
         )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
     # terms = int(1e12 * dt) # Eyeball number of terms in expm
-#     print('terms in exponential: ', terms)
+    #     print('terms in exponential: ', terms)
     # dU = tf_expm(lind_op * dt, terms)
     # Built-in tensorflow exponential below
     dU = tf.linalg.expm(lind_op * dt)
@@ -343,14 +343,14 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     ----------
     U_dict : dict
         Dictionary of unitary representation of gates.
-    
+
     sequences : list
         List of keys from U_dict specifying a gate sequence.
         The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
             ... U2 * U1 * U0
-    
+
     Returns
     -------
     tf.tensor
@@ -365,7 +365,7 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     U = []
     for sequence in sequences:
         if len(sequence) == 0:
-            U.append(tf.linalg.eye(dim,dtype=dtype))
+            U.append(tf.linalg.eye(dim, dtype=dtype))
         else:
             Us = []
             for gate in sequence:
@@ -437,7 +437,7 @@ def tf_ave(x: list):
     return tf.add_n(x) / len(x)
 
 
-def tf_diff(l):
+def tf_diff(l):  # noqa
     """
     Running difference of the input list l. Equivalent to np.diff, except it
     returns the same shape by adding a 0 in the last entry.
@@ -673,8 +673,7 @@ def tf_average_fidelity(A, B, lvls=None):
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
     Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)),
-        B
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)), B
     )
     return tf_super_to_fid(tf_super(Lambda), lvls)
 

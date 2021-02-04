@@ -441,7 +441,7 @@ class SNAIL(PhysicalComponent):
         super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
         self.params["freq"] = freq
         self.params["beta"] = beta
-        if hilbert_dim > 2:
+        if anhar:
             self.params["anhar"] = anhar
         if t1:
             self.params["t1"] = t1

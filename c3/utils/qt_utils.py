@@ -233,7 +233,9 @@ def pad_matrix(matrix, dim, padding):
     return matrix
 
 
-def perfect_gate(gates_str: str, index=[0, 1], dims=[2, 2], proj: str = "wzeros"):
+def perfect_gate(  # noqa
+    gates_str: str, index=[0, 1], dims=[2, 2], proj: str = "wzeros"
+):
     """
     Construct an ideal single or two-qubit gate.
 

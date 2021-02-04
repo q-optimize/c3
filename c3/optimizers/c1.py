@@ -46,7 +46,7 @@ class C1(Optimizer):
         store_unitaries=False,
         options={},
         run_name=None,
-        interactive=True
+        interactive=True,
     ) -> None:
         super().__init__(
             pmap=pmap,
@@ -138,7 +138,9 @@ class C1(Optimizer):
         try:
             goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
         except TypeError:
-            goal = self.fid_func(self.exp, propagators, self.index, dims, self.evaluation + 1)
+            goal = self.fid_func(
+                self.exp, propagators, self.index, dims, self.evaluation + 1
+            )
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
