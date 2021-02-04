@@ -86,6 +86,9 @@ class ParameterMap:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read())
+        self.fromdict(cfg)
+
+    def fromdict(self, cfg: dict) -> None:
         for key, gate in cfg.items():
             if "mapto" in gate.keys():
                 instr = copy.deepcopy(self.instructions[gate["mapto"]])
@@ -309,7 +312,7 @@ class ParameterMap:
                 ret.append("\n")
         return "".join(ret)
 
-    def print_parameters(self, opt_map = None) -> None:
+    def print_parameters(self, opt_map=None) -> None:
         """
         Print current parameters to stdout.
         """
