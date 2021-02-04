@@ -203,11 +203,13 @@ class Optimizer:
         """
         key = str(x)
         gradient = self.gradients.pop(key)
-        if np.any(np.isnan(gradient)):
+        if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
             # TODO: is simply a warning sufficient?
-            Warning("NaN returned in gradient")
             gradient[
                 np.isnan(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
+            gradient[
+                np.isinf(gradient)
             ] = 1e-10  # Most probably at boundary of Quantity
         return gradient
 

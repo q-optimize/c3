@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Tuple
 import hjson
+import json
 import copy
 import numpy as np
 import tensorflow as tf
@@ -72,7 +73,9 @@ class ParameterMap:
 
         """
         with open(init_point) as init_file:
-            best = hjson.load(init_file)
+            best = json.load(
+                init_file
+            )  # no hjson: be compatible with optimizer logging
 
         best_opt_map = [[tuple(par) for par in pset] for pset in best["opt_map"]]
         init_p = best["optim_status"]["params"]

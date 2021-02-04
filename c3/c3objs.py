@@ -178,7 +178,7 @@ class Quantity:
         """
         return self.get_value().numpy() / self.pref
 
-    def get_value(self, val=None) -> tf.Tensor:
+    def get_value(self, val: tf.float64 = None) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 

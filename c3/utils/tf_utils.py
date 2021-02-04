@@ -710,3 +710,41 @@ def tf_project_to_comp(A, dims, to_super=False):
         proj = np.kron(proj_list.pop(), proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
+
+
+# @tf.function
+def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
+    """
+    Compute the convolution with a time response.
+
+    Parameters
+    ----------
+    sig : tf.Tensor
+        Signal which will be convoluted, shape: [N]
+    resp : tf.Tensor
+        Response function to be convoluted with signal, shape: [M]
+
+    Returns
+    -------
+    tf.Tensor
+        convoluted signal of shape [N]
+
+    """
+    sig = tf.cast(sig, dtype=tf.complex128)
+    resp = tf.cast(resp, dtype=tf.complex128)
+
+    sig_len = len(sig)
+    resp_len = len(resp)
+
+    signal_pad = tf.expand_dims(
+        tf.concat([sig, tf.zeros(resp_len, dtype=tf.complex128)], axis=0), 0
+    )
+    resp_pad = tf.expand_dims(
+        tf.concat([resp, tf.zeros(sig_len, dtype=tf.complex128)], axis=0), 0
+    )
+    sig_resp = tf.concat([signal_pad, resp_pad], axis=0)
+
+    fft_sig_resp = tf.signal.fft(sig_resp)
+    fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
+    convolution = tf.signal.ifft(fft_conv)
+    return convolution[:sig_len]

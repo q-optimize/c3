@@ -6,6 +6,7 @@ import numpy as np
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj
+from c3.utils.tf_utils import tf_convolve
 
 devices = dict()
 
@@ -102,6 +103,7 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -471,6 +473,70 @@ class Response(Device):
             "inphase": inphase,
             "quadrature": quadrature,
             "ts": self.create_ts(instr.t_start, instr.t_end, centered=True),
+        }
+        return self.signal
+
+
+@dev_reg_deco
+class ResponseFFT(Device):
+    """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
+
+    Parameters
+    ----------
+    rise_time : Quantity
+        Time constant for the gaussian convolution.
+    """
+
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
+
+    def process(self, instr, chan, iq_signal):
+        """
+        Apply a Gaussian shaped limiting function to an IQ signal.
+
+        Parameters
+        ----------
+        iq_signal : dict
+            I and Q components of an AWG signal.
+
+        Returns
+        -------
+        dict
+            Bandwidth limited IQ signal.
+
+        """
+        # print(tf.abs(1 / tf.math.reduce_mean(iq_signal['ts'][1] - iq_signal['ts'][0]) ),self.resolution)
+        assert (
+            tf.abs((iq_signal["ts"][1] - iq_signal["ts"][0]) - 1 / self.resolution)
+            < 1e-15
+        )
+        n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            self.params["rise_time"].get_value(),
+            tf.cast(n_ts, tf.int32),
+        )
+        cen = tf.cast(
+            (self.params["rise_time"].get_value() - 1 / self.resolution) / 2, tf.float64
+        )
+        sigma = self.params["rise_time"].get_value() / 4
+        gauss = tf.exp(-((ts - cen) ** 2) / (2 * sigma * sigma))
+        offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
+
+        risefun = gauss - offset
+        inphase = tf_convolve(iq_signal["inphase"], risefun / tf.reduce_sum(risefun))
+        quadrature = tf_convolve(
+            iq_signal["quadrature"], risefun / tf.reduce_sum(risefun)
+        )
+
+        inphase = tf.math.real(inphase)
+        quadrature = tf.math.real(quadrature)
+        self.signal = {
+            "inphase": inphase,
+            "quadrature": quadrature,
+            "ts": iq_signal["ts"],
         }
         return self.signal
 
