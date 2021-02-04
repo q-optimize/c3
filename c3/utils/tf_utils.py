@@ -193,6 +193,21 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
+@tf.function
+def tf_propagation_vectorized(h0, hks, cflds_t, dt):
+    dt = tf.cast(dt, dtype=tf.complex128)
+    cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
+    hks = tf.cast(hks, dtype=tf.complex128)
+    cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
+    hks = tf.expand_dims(hks, 1)
+    h0 = tf.expand_dims(h0, 0)
+    prod = cflds * hks
+    h = h0 + tf.reduce_sum(prod, axis=0)
+    dh = -1.0j * h * dt
+    dU = tf.linalg.expm(dh)
+    return dU
+
+
 def tf_propagation(h0, hks, cflds, dt):
     """
     Calculate the unitary time evolution of a system controlled by time-dependent
@@ -375,26 +390,52 @@ def evaluate_sequences(U_dict: dict, sequences: list):
     return U
 
 
-def tf_matmul_left(dUs):
+# def tf_matmul_left(dUs):
+#     """
+#     Multiplies a list of matrices from the left.
+#
+#     """
+#     U = dUs[0]
+#     for ii in range(1, len(dUs)):
+#         U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
+#     return U
+
+
+@tf.function
+def tf_matmul_left(dUs: tf.Tensor):
     """
+    Parameters:
+        dUs: tf.Tensor
+            Tensorlist of shape (N, n,m)
+            with number N matrices of size nxm
     Multiplies a list of matrices from the left.
 
     """
-    U = dUs[0]
-    for ii in range(1, len(dUs)):
-        U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
-    return U
+    return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
 
 
+# def tf_matmul_right(dUs):
+#     """
+#     Multiplies a list of matrices from the right.
+#
+#     """
+#     U = dUs[0]
+#     for ii in range(1, len(dUs)):
+#         U = tf.matmul(U, dUs[ii], name="timestep_" + str(ii))
+#     return U
+
+
+@tf.function
 def tf_matmul_right(dUs):
     """
+    Parameters:
+        dUs: tf.Tensor
+            Tensorlist of shape (N, n,m)
+            with number N matrices of size nxm
     Multiplies a list of matrices from the right.
 
     """
-    U = dUs[0]
-    for ii in range(1, len(dUs)):
-        U = tf.matmul(U, dUs[ii], name="timestep_" + str(ii))
-    return U
+    return tf.foldl(lambda a, x: tf.matmul(a, x), dUs)
 
 
 def tf_matmul_n(tensor_list):
