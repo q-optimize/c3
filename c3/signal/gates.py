@@ -83,10 +83,8 @@ class Instruction:
         env_params = {
             "t_final": Quantity(value=gate_time, unit="s"),
             "amp": Quantity(
-                value=pi_half_amp,
-                min_val=0.0,
-                max_val=3*pi_half_amp,
-                unit="V"),
+                value=pi_half_amp, min_val=0.0, max_val=3 * pi_half_amp, unit="V"
+            ),
         }
         carrier_freq = qubit_freq
         if sideband:
