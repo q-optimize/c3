@@ -209,9 +209,11 @@ gateset_opt_map = [
 
 pmap.set_opt_map(gateset_opt_map)
 
+
 @pytest.mark.slow
 @pytest.mark.optimizers
 @pytest.mark.integration
+@pytest.mark.skip(reason="Data needs to be updated")
 def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [('dc_offset', 'offset_amp')]]]
     opt = C1_robust(
