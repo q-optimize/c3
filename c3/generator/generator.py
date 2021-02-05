@@ -69,6 +69,9 @@ class Generator:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read())
+        self.fromdict(cfg)
+
+    def fromdict(self, cfg: dict) -> None:
         for name, props in cfg["Devices"].items():
             props["name"] = name
             dev_type = props.pop("c3type")

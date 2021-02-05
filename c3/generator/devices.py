@@ -37,7 +37,11 @@ class Device(C3obj):
         name = props.pop("name")
         desc = props.pop("desc", "")
         comment = props.pop("comment", "")
-        params = props
+
+        # Because of legacy usage, we might have parameters given withing props iself
+        # or in a "params" field. Here we combine them.
+        params = props.pop("params", {})
+        params.update(props)
         super().__init__(name, desc, comment, params)
         self.signal = {}
 

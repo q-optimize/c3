@@ -123,6 +123,26 @@ class Experiment:
 
         self.pmap = ParameterMap(instructions, generator=gen, model=model)
 
+    def read_config(self, filepath: str) -> None:
+        """
+        Load a file and parse it to create a Model object.
+
+        Parameters
+        ----------
+        filepath : str
+            Location of the configuration file
+
+        """
+        with open(filepath, "r") as cfg_file:
+            cfg = hjson.loads(cfg_file.read())
+        model = Model()
+        model.fromdict(cfg["model"])
+        generator = Generator()
+        generator.fromdict(cfg["generator"])
+        pmap = ParameterMap(model=model, generator=generator)
+        pmap.fromdict(cfg["instructions"])
+        self.pmap = pmap
+
     def write_config(self, filepath: str) -> None:
         """
         Write dictionary to a HJSON file.

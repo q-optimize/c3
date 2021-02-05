@@ -130,6 +130,18 @@ class Model:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read())
+        self.fromdict(cfg)
+
+    def fromdict(self, cfg: dict) -> None:
+        """
+        Load a file and parse it to create a Model object.
+
+        Parameters
+        ----------
+        filepath : str
+            Location of the configuration file
+
+        """
         for name, props in cfg["Qubits"].items():
             props.update({"name": name})
             dev_type = props.pop("c3type")

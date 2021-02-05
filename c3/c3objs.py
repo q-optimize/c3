@@ -34,7 +34,11 @@ class C3obj:
                 if isinstance(par, Quantity):
                     self.params[pname] = par
                 else:
-                    self.params[pname] = Quantity(**par)
+                    try:
+                        self.params[pname] = Quantity(**par)
+                    except Exception as exception:
+                        print(f"Error initializing {pname} with\n {par}")
+                        raise exception
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
@@ -70,7 +74,7 @@ class Quantity:
     """
 
     def __init__(
-        self, value, min_val=None, max_val=None, unit="undefined", symbol=r"\alpha"
+        self, value, unit="undefined", min_val=None, max_val=None, symbol=r"\alpha"
     ):
         value = np.array(value)
         if "pi" in unit:

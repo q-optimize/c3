@@ -253,38 +253,52 @@ class Transmon(PhysicalComponent):
     def __init__(
         self,
         name: str,
-        desc: str = " ",
-        comment: str = " ",
-        hilbert_dim: int = 2,
-        freq: np.float64 = 0.0,
-        phi: np.float64 = 0.0,
-        phi_0: np.float64 = 0.0,
+        desc: str = None,
+        comment: str = None,
+        hilbert_dim: int = None,
+        freq: np.float64 = None,
+        phi: np.float64 = None,
+        phi_0: np.float64 = None,
         gamma: np.float64 = None,
         d: np.float64 = None,
-        t1: np.float64 = 0.0,
-        t2star: np.float64 = 0.0,
-        temp: np.float64 = 0.0,
-        anhar: np.float64 = 0.0,
+        t1: np.float64 = None,
+        t2star: np.float64 = None,
+        temp: np.float64 = None,
+        anhar: np.float64 = None,
+        params=None,
     ):
-        super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
-        self.params["freq"] = freq
-        self.params["phi"] = phi
-        self.params["phi_0"] = phi_0
-
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim,
+            params=params,
+        )
+        if freq:
+            self.params["freq"] = freq
+        if phi:
+            self.params["phi"] = phi
+        if phi_0:
+            self.params["phi_0"] = phi_0
         if d:
             self.params["d"] = d
         elif gamma:
             self.params["gamma"] = gamma
-        else:
-            raise Warning("no gamma or d provided. setting d=0, i.e. symmetric case")
-        # Anharmonicity corresponding to the charging energy in the two-level case
-        self.params["anhar"] = anhar
+        if anhar:
+            # Anharmonicity corresponding to the charging energy in the two-level case
+            self.params["anhar"] = anhar
         if t1:
             self.params["t1"] = t1
         if t2star:
             self.params["t2star"] = t2star
         if temp:
             self.params["temp"] = temp
+        if "d" not in self.params.keys() and "gamma" not in self.params.keys():
+            print(
+                "C3:WANING: No junction asymmetry specified, setting symmetric SQUID"
+                " for tuning."
+            )
+            self.params["d"] = 0
 
     def get_factor(self):
         pi = tf.constant(np.pi, dtype=tf.float64)
@@ -418,17 +432,17 @@ class SNAIL(PhysicalComponent):
         desc: str = " ",
         comment: str = " ",
         hilbert_dim: int = 4,
-        freq: np.float64 = 0.0,
-        anhar: np.float64 = 0.0,
-        beta: np.float64 = 0.0,
-        t1: np.float64 = 0.0,
-        t2star: np.float64 = 0.0,
-        temp: np.float64 = 0.0,
+        freq: np.float64 = None,
+        anhar: np.float64 = None,
+        beta: np.float64 = None,
+        t1: np.float64 = None,
+        t2star: np.float64 = None,
+        temp: np.float64 = None,
     ):
         super().__init__(name=name, desc=desc, comment=comment, hilbert_dim=hilbert_dim)
         self.params["freq"] = freq
         self.params["beta"] = beta
-        if hilbert_dim > 2:
+        if anhar:
             self.params["anhar"] = anhar
         if t1:
             self.params["t1"] = t1
