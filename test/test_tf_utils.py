@@ -41,4 +41,4 @@ def test_convolution() -> None:
     sigA = data["sigA"]
     sigB = data["sigB"]
     out = tf_convolve(sigA, sigB)
-    assert tf.math.reduce_sum(tf.abs(out - data["out"])) < 1e-15
+    assert tf.math.reduce_sum(tf.abs(out - data["out"])) < 1e-9

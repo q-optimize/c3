@@ -64,8 +64,6 @@ def eng_num(val: float) -> Tuple[float, str]:
         return np.nan, "NaN"
     big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
     small_units = ["m", "µ", "n", "p", "f", "a", "z"]
-    big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
-    small_units = ["m", "µ", "n", "p", "f", "a", "z"]
     sign = 1
     if val == 0:
         return 0, ""
