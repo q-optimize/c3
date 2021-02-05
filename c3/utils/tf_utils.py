@@ -385,6 +385,8 @@ def evaluate_sequences(U_dict: dict, sequences: list):
             Us = []
             for gate in sequence:
                 Us.append(gates[gate])
+
+            Us = tf.cast(Us, tf.complex128)
             U.append(tf_matmul_left(Us))
             # ### WARNING WARNING ^^ look there, it says left WARNING
     return U

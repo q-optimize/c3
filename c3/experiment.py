@@ -361,6 +361,7 @@ class Experiment:
             dUs = tf_utils.tf_propagation_vectorized(h0, hks, signals, dt)
         self.dUs[gate] = dUs
         self.ts = ts
+        dUs = tf.cast(dUs, tf.complex128)
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U
