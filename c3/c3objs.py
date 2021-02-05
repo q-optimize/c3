@@ -33,7 +33,11 @@ class C3obj:
                 if isinstance(par, Quantity):
                     self.params[pname] = par
                 else:
-                    self.params[pname] = Quantity(**par)
+                    try:
+                        self.params[pname] = Quantity(**par)
+                    except Exception as exception:
+                        print(f"Error initializing {pname} with\n {par}")
+                        raise exception
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
