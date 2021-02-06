@@ -1,0 +1,16 @@
+name: Merge dev to nightly
+on:
+  push:
+    branches:
+      - dev
+jobs:
+  merge-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Merge dev -> nightly
+        uses: devmasx/merge-branch@v1.3.1
+        with:
+          type: now
+          target_branch: nightly
+          github_token: ${{ github.token }}
