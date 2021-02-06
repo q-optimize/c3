@@ -27,6 +27,7 @@ from c3.utils.qt_utils import (
     cliffords_decomp_xId,
     single_length_RB,
     cliffords_string,
+    projector
 )
 
 fidelities = dict()
@@ -239,12 +240,12 @@ def lindbladian_unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
         infids.append(infid)
     return tf.reduce_mean(infids)
 
-
 @fid_reg_deco
-def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
+def average_infid_CZ(U_dict: dict, index, dims, eval, proj=True):
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
     always 2x2 (per qubit) and the actual unitary needs to be projected down.
+    Variant for two-qubit gates.
 
     Parameters
     ----------
@@ -257,11 +258,51 @@ def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
     proj : boolean
         Project to computational subspace
     """
-    U = U_dict[gate]
-    U_ideal = tf.Variable(
-        perfect_gate(gate, index, dims=[2] * len(dims)), dtype=tf.complex128
+    proj = projector(dims, index)
+    U = proj@U_dict["Id:CZ"]@proj.T
+    subspace_dims = [dims[index[0]], dims[index[1]]]
+    U_ideal = tf.constant(
+        perfect_gate(
+            "CZ",
+            index=[0, 1],
+            dims=[2, 2]
+        )
     )
-    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=dims)
+    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=subspace_dims)
+    return infid
+
+
+@fid_reg_deco
+def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
+    """
+    Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
+    always 2x2 (per qubit) and the actual unitary needs to be projected down.
+    Variant for simultaneous single qubit gates.
+
+    Parameters
+    ----------
+    U_dict : dict
+        Contains unitary representations of the gates, identified by a key.
+    index : int
+        Index of the qubit(s) in the Hilbert space to be evaluated
+    dims : list
+        List of dimensions of qubits
+    proj : boolean
+        Project to computational subspace
+    """
+    proj = projector(dims, index)
+    U = proj@U_dict[gate]@proj.T
+    gate_split = gate.split(":")
+    two_qubit_gate = ":".join([gate_split[index[0]], gate_split[index[1]]])
+    subspace_dims = [dims[index[0]], dims[index[1]]]
+    U_ideal = tf.constant(
+        perfect_gate(
+            two_qubit_gate,
+            index=[0, 1],
+            dims=[2, 2]
+        )
+    )
+    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=subspace_dims)
     return infid
 
 
