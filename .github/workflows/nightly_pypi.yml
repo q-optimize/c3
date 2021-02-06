@@ -2,7 +2,7 @@ name: Nightly Release
 
 on:
   schedule:
-    - cron: '0 8 * * *'  # every day at 8 AM UTC
+    - cron: '0 9 * * *'  # every day at 9 AM UTC
 
 jobs:
   nightly_build-and-publish:
@@ -21,7 +21,7 @@ jobs:
         pip3 install wheel
     - name : Update Version numbers
       run : |
-        python .github/prepare-nightly_version.py
+        python .github/prepare-nightly.py
     - name: Build sdist and bdist_wheel
       run: python setup.py sdist bdist_wheel
     - name: Publish distribution 📦 to Test PyPI
