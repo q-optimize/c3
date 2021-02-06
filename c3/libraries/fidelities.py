@@ -27,7 +27,7 @@ from c3.utils.qt_utils import (
     cliffords_decomp_xId,
     single_length_RB,
     cliffords_string,
-    projector
+    projector,
 )
 
 fidelities = dict()
@@ -240,6 +240,7 @@ def lindbladian_unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
         infids.append(infid)
     return tf.reduce_mean(infids)
 
+
 @fid_reg_deco
 def average_infid_CZ(U_dict: dict, index, dims, eval, proj=True):
     """
@@ -259,15 +260,9 @@ def average_infid_CZ(U_dict: dict, index, dims, eval, proj=True):
         Project to computational subspace
     """
     proj = projector(dims, index)
-    U = proj@U_dict["Id:CZ"]@proj.T
+    U = proj @ U_dict["Id:CZ"] @ proj.T
     subspace_dims = [dims[index[0]], dims[index[1]]]
-    U_ideal = tf.constant(
-        perfect_gate(
-            "CZ",
-            index=[0, 1],
-            dims=[2, 2]
-        )
-    )
+    U_ideal = tf.constant(perfect_gate("CZ", index=[0, 1], dims=[2, 2]))
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=subspace_dims)
     return infid
 
@@ -291,17 +286,11 @@ def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
         Project to computational subspace
     """
     proj = projector(dims, index)
-    U = proj@U_dict[gate]@proj.T
+    U = proj @ U_dict[gate] @ proj.T
     gate_split = gate.split(":")
     two_qubit_gate = ":".join([gate_split[index[0]], gate_split[index[1]]])
     subspace_dims = [dims[index[0]], dims[index[1]]]
-    U_ideal = tf.constant(
-        perfect_gate(
-            two_qubit_gate,
-            index=[0, 1],
-            dims=[2, 2]
-        )
-    )
+    U_ideal = tf.constant(perfect_gate(two_qubit_gate, index=[0, 1], dims=[2, 2]))
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=subspace_dims)
     return infid
 
