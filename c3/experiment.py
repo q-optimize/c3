@@ -246,6 +246,9 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
+    def get_perfect_gates(self):
+        raise Exception("Not implemented yet")
+
     def get_gates(self):
         """
         Compute the unitary representation of operations. If no operations are

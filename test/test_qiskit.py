@@ -74,10 +74,12 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
+    received_backend.set_simulation_type("physics")
     qc = get_6_qubit_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
     assert result_sim.get_counts(qc) == get_result_qiskit
+
 
 @pytest.mark.unit
 @pytest.mark.qiskit
@@ -97,6 +99,7 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
+    received_backend.set_simulation_type("physics")
     qc = get_bad_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()

@@ -90,6 +90,16 @@ class C3QasmSimulator(Backend):
         """
         self._device_config = config_file
 
+    def set_simulation_type(self, simulation_type: str) -> None:
+        """Set the simulation type
+
+        Parameters
+        ----------
+        simulation_type : str
+            either `perfect` or `physics`
+        """
+        self._simulation_type = simulation_type
+
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
 
@@ -236,8 +246,14 @@ class C3QasmSimulator(Backend):
         # TODO resolve use of evaluate(), process() in Experiment, possibly extend
         # TODO implement get_perfect_gates() in Experiment
         # unitaries = exp.get_perfect_gates()
-        exp.get_gates()
-        dUs = exp.dUs
+        if self._simulation_type == "perfect":
+            exp.get_perfect_gates()
+            dUs = exp.dUs
+        elif self._simulation_type == "physics":
+            exp.get_gates()
+            dUs = exp.dUs
+        else:
+            raise C3QiskitError("simulation_type can only be perfect or physics")
 
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
