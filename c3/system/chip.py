@@ -118,10 +118,10 @@ class Qubit(PhysicalComponent):
 
         """
         resonator = hamiltonians["resonator"]
-        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        self.Hs["freq"] = tf.constant(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
             duffing = hamiltonians["duffing"]
-            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+            self.Hs["anhar"] = tf.constant(duffing(ann_oper), dtype=tf.complex128)
 
     def get_Hamiltonian(self):
         """
@@ -216,7 +216,7 @@ class Resonator(PhysicalComponent):
             Annihilation operator in the full Hilbert space.
 
         """
-        self.Hs["freq"] = tf.Variable(
+        self.Hs["freq"] = tf.constant(
             hamiltonians["resonator"](ann_oper), dtype=tf.complex128
         )
 
@@ -330,10 +330,10 @@ class Transmon(PhysicalComponent):
 
     def init_Hs(self, ann_oper):
         resonator = hamiltonians["resonator"]
-        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        self.Hs["freq"] = tf.constant(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
             duffing = hamiltonians["duffing"]
-            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+            self.Hs["anhar"] = tf.constant(duffing(ann_oper), dtype=tf.complex128)
 
     def init_Ls(self, ann_oper):
         """
@@ -459,12 +459,12 @@ class SNAIL(PhysicalComponent):
             Annihilation operator in the full Hilbert space
         """
         resonator = hamiltonians["resonator"]
-        self.Hs["freq"] = tf.Variable(resonator(ann_oper), dtype=tf.complex128)
+        self.Hs["freq"] = tf.constant(resonator(ann_oper), dtype=tf.complex128)
         if self.hilbert_dim > 2:
             duffing = hamiltonians["duffing"]
-            self.Hs["anhar"] = tf.Variable(duffing(ann_oper), dtype=tf.complex128)
+            self.Hs["anhar"] = tf.constant(duffing(ann_oper), dtype=tf.complex128)
         third = hamiltonians["third_order"]
-        self.Hs["beta"] = tf.Variable(third(ann_oper), dtype=tf.complex128)
+        self.Hs["beta"] = tf.constant(third(ann_oper), dtype=tf.complex128)
 
     def get_Hamiltonian(self):
         """
@@ -559,7 +559,7 @@ class Coupling(LineComponent):
             self.params["strength"] = strength
 
     def init_Hs(self, opers_list):
-        self.Hs["strength"] = tf.Variable(
+        self.Hs["strength"] = tf.constant(
             self.hamiltonian_func(opers_list), dtype=tf.complex128
         )
 
@@ -583,7 +583,7 @@ class Drive(LineComponent):
     def init_Hs(self, ann_opers: list):
         hs = []
         for a in ann_opers:
-            hs.append(tf.Variable(self.hamiltonian_func(a), dtype=tf.complex128))
+            hs.append(tf.constant(self.hamiltonian_func(a), dtype=tf.complex128))
         self.h = sum(hs)
 
     def get_Hamiltonian(self):

@@ -417,7 +417,7 @@ def tf_matmul_n(tensor_list):
 def tf_log10(x):
     """Tensorflow had no logarithm with base 10. This is ours."""
     numerator = tf.log(x)
-    denominator = tf.log(tf.Variable(10, dtype=numerator.dtype))
+    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
 
 
@@ -443,8 +443,8 @@ def tf_diff(l):  # noqa
     returns the same shape by adding a 0 in the last entry.
     """
     dim = l.shape[0] - 1
-    diagonal = tf.Variable([-1] * dim + [0], dtype=l.dtype)
-    offdiagonal = tf.Variable([1] * dim, dtype=l.dtype)
+    diagonal = tf.constant([-1] * dim + [0], dtype=l.dtype)
+    offdiagonal = tf.constant([1] * dim, dtype=l.dtype)
     proj = tf.linalg.diag(diagonal) + tf.linalg.diag(offdiagonal, k=1)
     return tf.linalg.matvec(proj, l)
 
@@ -501,7 +501,7 @@ def tf_expm_dynamic(A, acc=1e-4):
     A_powers = A
     r += A
 
-    ii = tf.Variable(2, dtype=tf.complex128)
+    ii = tf.constant(2, dtype=tf.complex128)
     while tf.reduce_max(tf.abs(A_powers)) > acc:
         A_powers = tf.matmul(A_powers, A) / ii
         ii += 1
@@ -564,7 +564,7 @@ def tf_choi_to_chi(U, dims=None):
     """
     if dims is None:
         dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.Variable(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
+    B = tf.constant(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
     return tf.linalg.adjoint(B) @ U @ B
 
 
@@ -708,5 +708,5 @@ def tf_project_to_comp(A, dims, to_super=False):
     proj = proj_list.pop()
     while not proj_list == []:
         proj = np.kron(proj_list.pop(), proj)
-    P = tf.Variable(proj, dtype=A.dtype)
+    P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)

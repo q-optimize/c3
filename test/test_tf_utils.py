@@ -5,6 +5,7 @@ from c3.utils.tf_utils import tf_unitary_overlap
 import pytest
 from typing import Tuple, List
 
+
 @pytest.mark.tensorflow
 @pytest.mark.unit
 @pytest.mark.parametrize(
@@ -23,8 +24,8 @@ def test_unitary_overlap(args: Tuple[List[int], List[int], List[int]]) -> None:
         Matrix A, Matrix B and Expected Overlap
     """
     x, x_noisy, over = args
-    pauli_x = tf.Variable(x)
-    pauli_x_noisy = tf.Variable(x_noisy)
+    pauli_x = tf.constant(x)
+    pauli_x_noisy = tf.constant(x_noisy)
 
     overlap = tf_unitary_overlap(pauli_x, pauli_x_noisy)
     assert overlap.numpy() > over

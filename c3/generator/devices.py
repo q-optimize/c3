@@ -104,8 +104,8 @@ class Device(C3obj):
         else:
             offset = 0
             num = self.slice_num + 1
-        t_start = tf.Variable(t_start + offset, dtype=tf.float64)
-        t_end = tf.Variable(t_end - offset, dtype=tf.float64)
+        t_start = tf.constant(t_start + offset, dtype=tf.float64)
+        t_end = tf.constant(t_end - offset, dtype=tf.float64)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -460,7 +460,7 @@ class Response(Device):
         """
         n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
-            tf.Variable(0.0, dtype=tf.float64),
+            tf.constant(0.0, dtype=tf.float64),
             self.params["rise_time"].get_value(),
             tf.cast(n_ts, tf.int32),
         )

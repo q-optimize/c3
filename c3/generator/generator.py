@@ -115,7 +115,7 @@ class Generator:
         """
         gen_signal = {}
         for chan in instr.comps:
-            signal_stack: List[tf.Variable] = []
+            signal_stack: List[tf.constant] = []
             for dev_id in self.chains[chan]:
                 dev = self.devices[dev_id]
                 inputs = []
