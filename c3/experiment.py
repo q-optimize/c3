@@ -281,15 +281,10 @@ class Experiment:
                 for line, ctrls in instr.comps.items():
                     # TODO calculate properly the average frequency that each qubit sees
                     offset = 0.0
-                    if "gauss" in ctrls:
-                        if ctrls["gauss"].params["amp"] != 0.0:
-                            offset = ctrls["gauss"].params["freq_offset"].get_value()
-                    if "flux" in ctrls:
-                        if ctrls["flux"].params["amp"] != 0.0:
-                            offset = ctrls["flux"].params["freq_offset"].get_value()
-                    if "pwc" in ctrls:
-                        offset = ctrls["pwc"].params["freq_offset"].get_value()
-                    # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
+                    for ctrl in ctrls.values():
+                        if "freq_offset" in ctrl.params.keys():
+                            if ctrl.params["amp"] != 0.0:
+                                offset = ctrl.params["freq_offset"].get_value()
                     freqs[line] = tf.cast(
                         ctrls["carrier"].params["freq"].get_value() + offset,
                         tf.complex128,

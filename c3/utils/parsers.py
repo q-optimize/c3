@@ -107,8 +107,6 @@ def create_c1_opt(optimizer_config, exp):
         pmap=parameter_map,
         callback_fids=callback_fids,
         algorithm=algorithm,
-        plot_dynamics=plot_dynamics,
-        plot_pulses=plot_pulses,
         store_unitaries=store_unitaries,
         options=options,
         run_name=run_name,
