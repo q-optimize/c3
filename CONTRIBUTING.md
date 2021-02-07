@@ -185,12 +185,12 @@ Python is a dynamically typed language which is great when you are solving a hom
 Example type annotation:
 
 ```python
-def func(x: tf.Variable) -> tf.Variable:
+def func(x: tf.constant) -> tf.constant:
   """
   Do cool TensorFlow Stuff
   """
   # fancy tensorflow GPU autodiff tensor operations
-  return tf.Variable(result)
+  return tf.constant(result)
 ```
 
 Check [this resource](https://realpython.com/python-type-checking/#annotations) for more details on Type Checking and Annotation.

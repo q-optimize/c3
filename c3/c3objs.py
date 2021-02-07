@@ -180,7 +180,7 @@ class Quantity:
             )
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tf.Variable(tmp, dtype=tf.float64)
+            self.value = tf.constant(tmp, dtype=tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""

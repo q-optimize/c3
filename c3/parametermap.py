@@ -245,7 +245,7 @@ class ParameterMap:
             values.append(par.get_opt_value())
         return np.array(values).flatten()
 
-    def set_parameters_scaled(self, values: tf.Variable) -> None:
+    def set_parameters_scaled(self, values: tf.constant) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
         called by an optimizer. Are you an optimizer?

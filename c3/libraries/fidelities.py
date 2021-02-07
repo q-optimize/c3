@@ -100,7 +100,7 @@ def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool
     projection = "fulluni"
     if proj:
         projection = "wzeros"
-    U_ideal = tf.Variable(
+    U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection), dtype=tf.complex128
     )
     psi_ideal = tf.matmul(U_ideal, psi_0)
@@ -139,7 +139,7 @@ def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
     if proj:
         projection = "wzeros"
         fid_lvls = 2 ** len(index)
-    U_ideal = tf.Variable(
+    U_ideal = tf.constant(
         perfect_gate(gate, index, dims, projection), dtype=tf.complex128
     )
     infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
@@ -207,7 +207,7 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
         projection = "wzeros"
         fid_lvls = 2 ** len(index)
     U_ideal = tf_super(
-        tf.Variable(perfect_gate(gate, index, dims, projection), dtype=tf.complex128)
+        tf.constant(perfect_gate(gate, index, dims, projection), dtype=tf.complex128)
     )
     infid = 1 - tf_superoper_unitary_overlap(U, U_ideal, lvls=fid_lvls)
     return infid
@@ -313,7 +313,7 @@ def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
         Project to computational subspace
     """
     U = U_dict[gate]
-    U_ideal = tf.Variable(
+    U_ideal = tf.constant(
         perfect_gate(gate, index, dims=[2] * len(dims)), dtype=tf.complex128
     )
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=dims)
@@ -393,7 +393,7 @@ def lindbladian_average_infid(U_dict: dict, gate: str, index, dims, proj=True):
         Project to computational subspace
     """
     U = U_dict[gate]
-    ideal = tf.Variable(
+    ideal = tf.constant(
         perfect_gate(gate, index, dims=[2] * len(dims)), dtype=tf.complex128
     )
     U_ideal = tf_super(ideal)
@@ -487,7 +487,7 @@ def populations(state, lindbladian):
 def population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
     lvls = U.shape[0]
-    psi_0 = tf.Variable(basis(lvls, 0), dtype=tf.complex128)
+    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
     psi_actual = tf.matmul(U, psi_0)
     return populations(psi_actual, lindbladian=False)[lvl]
 
@@ -495,7 +495,7 @@ def population(U_dict: dict, lvl: int, gate: str):
 def lindbladian_population(U_dict: dict, lvl: int, gate: str):
     U = U_dict[gate]
     lvls = int(np.sqrt(U.shape[0]))
-    psi_0 = tf.Variable(basis(lvls, 0), dtype=tf.complex128)
+    psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
     dv_0 = tf_dm_to_vec(tf_state_to_dm(psi_0))
     dv_actual = tf.matmul(U, dv_0)
     return populations(dv_actual, lindbladian=True)[lvl]
@@ -515,7 +515,7 @@ def RB(
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     dim = int(U.shape[0])
-    psi_init = tf.Variable(basis(dim, 0), dtype=tf.complex128)
+    psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
         lengths = np.rint(
             np.logspace(np.log10(min_length), np.log10(max_length), num=num_lengths)
@@ -609,7 +609,7 @@ def leakage_RB(
     gate = list(U_dict.keys())[0]
     U = U_dict[gate]
     dim = int(U.shape[0])
-    psi_init = tf.Variable(basis(dim, 0), dtype=tf.complex128)
+    psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
         lengths = np.rint(
             np.logspace(np.log10(min_length), np.log10(max_length), num=num_lengths)
@@ -756,7 +756,7 @@ def orbit_infid(
     infids = []
     for U in Us:
         dim = int(U.shape[0])
-        psi_init = tf.Variable(basis(dim, 0), dtype=tf.complex128)
+        psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
         psi_actual = tf.matmul(U, psi_init)
         pop0 = tf_abs(psi_actual[0]) ** 2
         p1 = 1 - pop0
