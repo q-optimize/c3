@@ -98,5 +98,8 @@ def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
     physics_counts = {"000000": 164, "010000": 799, "100000": 14}
     perfect_counts = {"000000": 250, "000001": 250, "000010": 250, "000011": 250}
 
-    counts_dict = {"perfect": perfect_counts, "physics": physics_counts}
+    counts_dict = {
+        "c3_qasm_perfect_simulator": perfect_counts,
+        "c3_qasm_physics_simulator": physics_counts,
+    }
     return counts_dict
