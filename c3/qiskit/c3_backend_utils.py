@@ -83,6 +83,17 @@ def get_sequence(instructions: List) -> List[str]:
                     )
                 )
 
+        # TODO scalable way to assign CZ gates and inverse control
+        elif instruction.name in ("CZ", "cz"):
+            if instruction.qubits == [0, 1]:
+                sequence.append("CZ")
+            else:
+                raise C3QiskitError(
+                    "Gate {0} on qubits {1} not possible".format(
+                        instruction.name, instruction.qubits
+                    )
+                )
+
         # id, u0 implemented internally
         elif instruction.name in ("id", "u0"):
             pass
@@ -96,6 +107,16 @@ def get_sequence(instructions: List) -> List[str]:
             raise C3QiskitError(
                 "Encountered unknown operation {}".format(instruction.name)
             )
+
+    # TODO implement padding
+    # TODO fix gate naming bugs
+    sequence = [
+        "X90p:Id:Id:Id:Id:Id",
+        "Id:X90p:Id:Id:Id:Id",
+        "CR90:Id:Id:Id:Id",
+        "X90p:X90p:Id:Id:Id:Id",
+        "X90p:Id:Id:Id:Id:Id",
+    ]
     return sequence
 
 
