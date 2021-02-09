@@ -303,15 +303,18 @@ def perfect_gate(  # noqa
         elif gate_str == "RZp":
             gate = RZp
         elif gate_str == "CNOT":
-            lvls2 = dims[gate_num + 1]
-            NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
-            C = perfect_gate("Id", index, [lvls2], proj)
-            gate = scipy_block_diag(C, NOT)
-            # We increase gate_num since CNOT is a two qubit gate
-            for ii in range(2, lvls):
-                gate = pad_matrix(gate, lvls2, proj)
-            gate_num += 1
-            do_pad_gate = False
+            raise NotImplementedError(
+                "A correct implementation of perfect CNOT is pending"
+            )
+            # lvls2 = dims[gate_num + 1]
+            # NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
+            # C = perfect_gate("Id", index, [lvls2], proj)
+            # gate = scipy_block_diag(C, NOT)
+            # # We increase gate_num since CNOT is a two qubit gate
+            # for ii in range(2, lvls):
+            #     gate = pad_matrix(gate, lvls2, proj)
+            # gate_num += 1
+            # do_pad_gate = False
         elif gate_str == "CRZp":
             lvls2 = dims[gate_num + 1]
             Z = 1j * perfect_gate("RZp", index, [lvls2], proj)
