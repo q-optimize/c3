@@ -326,13 +326,14 @@ def perfect_gate(  # noqa
             gate_num += 1
             do_pad_gate = False
         elif gate_str == "CR":
+            raise NotImplementedError("Current implementation has inconsistent naming")
             # TODO: Fix the ideal CNOT construction.
-            lvls2 = dims[gate_num + 1]
-            Z = 1j * perfect_gate("RZp", index, [lvls], proj)
-            X = perfect_gate("RXp", index, [lvls2], proj)
-            gate = np.kron(Z, X)
-            gate_num += 1
-            do_pad_gate = False
+            # lvls2 = dims[gate_num + 1]
+            # Z = 1j * perfect_gate("RZp", index, [lvls], proj)
+            # X = perfect_gate("RXp", index, [lvls2], proj)
+            # gate = np.kron(Z, X)
+            # gate_num += 1
+            # do_pad_gate = False
         elif gate_str == "CR90":
             lvls2 = dims[gate_num + 1]
             RXp = perfect_gate("RX90p", index, [lvls2], proj)
