@@ -9,6 +9,7 @@ states or populations.
 """
 
 import os
+import copy
 import pickle
 import itertools
 import hjson
@@ -21,7 +22,14 @@ from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
-from c3.utils import tf_utils
+from c3.utils.tf_utils import (
+    tf_propagation,
+    tf_propagation_lind,
+    tf_matmul_left,
+    tf_state_to_dm,
+    tf_super,
+    tf_vec_to_dm,
+)
 from c3.utils.qt_utils import perfect_gate
 
 
@@ -165,7 +173,7 @@ class Experiment:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def evaluate(self, seqs):
+    def evaluate(self, sequences):
         """
         Compute the population values for a given sequence of operations.
 
@@ -181,15 +189,18 @@ class Experiment:
 
         """
         model = self.pmap.model
-        Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
+        gates = self.unitaries
         psi_init = model.tasks["init_ground"].initialise(
             model.drift_H, model.lindbladian
         )
         self.psi_init = psi_init
         populations = []
-        for U in Us:
-            psi_final = tf.matmul(U, self.psi_init)
-            pops = self.populations(psi_final, model.lindbladian)
+        for sequence in sequences:
+            psi_t = copy.deepcopy(self.psi_init)
+            for gate in sequence:
+                psi_t = tf.matmul(gates[gate], psi_t)
+
+            pops = self.populations(psi_t, model.lindbladian)
             populations.append(pops)
         return populations
 
@@ -328,7 +339,7 @@ class Experiment:
                 t_final = tf.constant(instr.t_end - instr.t_start, dtype=tf.complex128)
                 FR = model.get_Frame_Rotation(t_final, freqs, framechanges)
                 if model.lindbladian:
-                    SFR = tf_utils.tf_super(FR)
+                    SFR = tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
                 else:
@@ -382,12 +393,12 @@ class Experiment:
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
-            dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
+            dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
-            dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
+            dUs = tf_propagation(h0, hks, signals, dt)
         self.dUs[gate] = dUs
         self.ts = ts
-        U = tf_utils.tf_matmul_left(dUs)
+        U = tf_matmul_left(dUs)
         self.U = U
         return U
 
@@ -473,7 +484,7 @@ class Experiment:
             Vector of populations.
         """
         if lindbladian:
-            rho = tf_utils.tf_vec_to_dm(state)
+            rho = tf_vec_to_dm(state)
             pops = tf.math.real(tf.linalg.diag_part(rho))
             return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
@@ -481,8 +492,8 @@ class Experiment:
 
     def expect_oper(self, state, lindbladian, oper):
         if lindbladian:
-            rho = tf_utils.tf_vec_to_dm(state)
+            rho = tf_vec_to_dm(state)
         else:
-            rho = tf_utils.tf_state_to_dm(state)
+            rho = tf_state_to_dm(state)
         trace = np.trace(np.matmul(rho, oper))
         return [[np.real(trace)]]  # ,[np.imag(trace)]]
