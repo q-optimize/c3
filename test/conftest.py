@@ -70,12 +70,13 @@ def get_6_qubit_circuit() -> QuantumCircuit:
 
 
 @pytest.fixture()
-def get_result_qiskit() -> Dict[str, Any]:
+def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
     """Fixture for returning sample experiment result
 
     Returns
     -------
-    Dict[str, Any]
+    Dict[str, Dict[str, Any]]
+            A dictionary of results for physics simulation and perfect gates
             A result dictionary which looks something like::
 
             {
@@ -94,5 +95,8 @@ def get_result_qiskit() -> Dict[str, Any]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    counts = {"000000": 164, "010000": 799, "100000": 14}
-    return counts
+    physics_counts = {"000000": 164, "010000": 799, "100000": 14}
+    perfect_counts = {"000000": 250, "000001": 250, "000010": 250, "000011": 250}
+
+    counts_dict = {"perfect": perfect_counts, "physics": physics_counts}
+    return counts_dict

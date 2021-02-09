@@ -49,6 +49,9 @@ if __name__ == "__main__":
             pmap = ParameterMap(model=model, generator=gen)
             pmap.read_config(cfg["instructions"])
             exp = Experiment(pmap)
+        if "exp_cfg" in cfg:
+            exp = Experiment()
+            exp.read_config(cfg["exp_cfg"])
         else:
             print("C3:STATUS: No instructions specified. Performing quick setup.")
             exp = Experiment()
@@ -56,7 +59,7 @@ if __name__ == "__main__":
 
         if optim_type == "C1":
             opt = parsers.create_c1_opt(opt_config, exp)
-            if cfg["include_model"]:
+            if cfg.pop("include_model", False):
                 opt.include_model()
         elif optim_type == "C2":
             eval_func = cfg["eval_func"]

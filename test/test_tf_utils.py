@@ -6,9 +6,9 @@ import pytest
 import pickle
 from typing import Tuple, List
 
+
 with open("test/test_tf_utils.pickle", "rb") as filename:
     data = pickle.load(filename)
-
 
 @pytest.mark.tensorflow
 @pytest.mark.unit

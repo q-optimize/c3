@@ -107,6 +107,7 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        # TODO: adjust the way we calculate the time slices for devices
         # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
         return ts
