@@ -146,28 +146,28 @@ def create_experiment():
         params=carrier_parameters,
     )
 
-    X90p = gates.Instruction(name="X90p", t_start=0.0, t_end=t_final, channels=["d1"])
+    RX90p = gates.Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
     QId = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
 
-    X90p.add_component(gauss_env_single, "d1")
-    X90p.add_component(carr, "d1")
+    RX90p.add_component(gauss_env_single, "d1")
+    RX90p.add_component(carr, "d1")
     QId.add_component(nodrive_env, "d1")
     QId.add_component(copy.deepcopy(carr), "d1")
     QId.comps["d1"]["carrier"].params["framechange"].set_value(
         (-sideband * t_final) % (2 * np.pi)
     )
-    Y90p = copy.deepcopy(X90p)
+    Y90p = copy.deepcopy(RX90p)
     Y90p.name = "Y90p"
-    X90m = copy.deepcopy(X90p)
+    X90m = copy.deepcopy(RX90p)
     X90m.name = "X90m"
-    Y90m = copy.deepcopy(X90p)
+    Y90m = copy.deepcopy(RX90p)
     Y90m.name = "Y90m"
     Y90p.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
     X90m.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
     Y90m.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
 
     parameter_map = PMap(
-        instructions=[QId, X90p, Y90p, X90m, Y90m], model=model, generator=generator
+        instructions=[QId, RX90p, Y90p, X90m, Y90m], model=model, generator=generator
     )
 
     # ### MAKE EXPERIMENT

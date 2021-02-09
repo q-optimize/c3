@@ -491,14 +491,14 @@ Then we add a carrier and envelope to each.
 
 .. code-block:: python
 
-    X90p_q1 = gates.Instruction(
-        name="X90p",
+    RX90p_q1 = gates.Instruction(
+        name="RX90p",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
     )
-    X90p_q2 = gates.Instruction(
-        name="X90p",
+    RX90p_q2 = gates.Instruction(
+        name="RX90p",
         t_start=0.0,
         t_end=t_final,
         channels=["d2"]
@@ -516,13 +516,13 @@ Then we add a carrier and envelope to each.
         channels=["d2"]
     )
 
-    X90p_q1.add_component(gauss_env_single, "d1")
-    X90p_q1.add_component(carr, "d1")
+    RX90p_q1.add_component(gauss_env_single, "d1")
+    RX90p_q1.add_component(carr, "d1")
     QId_q1.add_component(nodrive_env, "d1")
     QId_q1.add_component(copy.deepcopy(carr), "d1")
 
-    X90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
-    X90p_q2.add_component(carr_2, "d2")
+    RX90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
+    RX90p_q2.add_component(carr_2, "d2")
     QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
     QId_q2.add_component(copy.deepcopy(carr_2), "d2")
 
@@ -539,33 +539,33 @@ by adding a phase after each gate that realigns the frames.
         (-sideband * t_final * 2 * np.pi ) % (2*np.pi)
     )
 
-The remainder of the gates-set can be derived from the X90p gate by
+The remainder of the gates-set can be derived from the RX90p gate by
 shifting its phase by multiples of :math:`\pi/2`.
 
 .. code-block:: python
 
-    Y90p_q1 = copy.deepcopy(X90p_q1)
+    Y90p_q1 = copy.deepcopy(RX90p_q1)
     Y90p_q1.name = "Y90p"
-    X90m_q1 = copy.deepcopy(X90p_q1)
+    X90m_q1 = copy.deepcopy(RX90p_q1)
     X90m_q1.name = "X90m"
-    Y90m_q1 = copy.deepcopy(X90p_q1)
+    Y90m_q1 = copy.deepcopy(RX90p_q1)
     Y90m_q1.name = "Y90m"
     Y90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
     X90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q1_gates = [QId_q1, X90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
+    Q1_gates = [QId_q1, RX90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
 
 
-    Y90p_q2 = copy.deepcopy(X90p_q2)
+    Y90p_q2 = copy.deepcopy(RX90p_q2)
     Y90p_q2.name = "Y90p"
-    X90m_q2 = copy.deepcopy(X90p_q2)
+    X90m_q2 = copy.deepcopy(RX90p_q2)
     X90m_q2.name = "X90m"
-    Y90m_q2 = copy.deepcopy(X90p_q2)
+    Y90m_q2 = copy.deepcopy(RX90p_q2)
     Y90m_q2.name = "Y90m"
     Y90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
     X90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q2_gates = [QId_q2, X90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
+    Q2_gates = [QId_q2, RX90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
 
 With the single qubit gates in place, we can combine them to get all
 possible combinations of simultaneous gates on both qubits.
@@ -620,7 +620,7 @@ rotation on one qubit and the identity.
 
 .. code-block:: python
 
-    exp.set_opt_gates(['X90p:Id', 'Id:Id'])
+    exp.set_opt_gates(['RX90p:Id', 'Id:Id'])
 
 The actual numerical simulation is done by calling ``exp.get_gates()``.
 This is the most resource intensive part as it involves solving the
@@ -673,7 +673,7 @@ evaluate sequences. We start with just one gate
 
 .. code:: ipython3
 
-    barely_a_seq = ['X90p:Id']
+    barely_a_seq = ['RX90p:Id']
 
 and plot system dynamics.
 
@@ -742,16 +742,16 @@ of the same gate.
 
 .. parsed-literal::
 
-    ['X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id',
-     'X90p:Id']
+    ['RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id',
+     'RX90p:Id']
 
 
 
