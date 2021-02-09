@@ -34,7 +34,7 @@ def test_q6_freq() -> None:
 
 @pytest.mark.unit
 def test_instructions() -> None:
-    assert list(pmap.instructions.keys()) == ["RX90p", "Y90p", "X90m", "Y90m"]
+    assert list(pmap.instructions.keys()) == ["RX90p", "RY90p", "RX90m", "RY90m"]
 
 
 @pytest.mark.integration

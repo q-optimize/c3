@@ -545,11 +545,11 @@ shifting its phase by multiples of :math:`\pi/2`.
 .. code-block:: python
 
     Y90p_q1 = copy.deepcopy(RX90p_q1)
-    Y90p_q1.name = "Y90p"
+    Y90p_q1.name = "RY90p"
     X90m_q1 = copy.deepcopy(RX90p_q1)
-    X90m_q1.name = "X90m"
+    X90m_q1.name = "RX90m"
     Y90m_q1 = copy.deepcopy(RX90p_q1)
-    Y90m_q1.name = "Y90m"
+    Y90m_q1.name = "RY90m"
     Y90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
     X90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
@@ -557,11 +557,11 @@ shifting its phase by multiples of :math:`\pi/2`.
 
 
     Y90p_q2 = copy.deepcopy(RX90p_q2)
-    Y90p_q2.name = "Y90p"
+    Y90p_q2.name = "RY90p"
     X90m_q2 = copy.deepcopy(RX90p_q2)
-    X90m_q2.name = "X90m"
+    X90m_q2.name = "RX90m"
     Y90m_q2 = copy.deepcopy(RX90p_q2)
-    Y90m_q2.name = "Y90m"
+    Y90m_q2.name = "RY90m"
     Y90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
     X90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
     Y90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)

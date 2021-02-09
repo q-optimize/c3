@@ -58,22 +58,22 @@ helper ``qt_utils`` provides these sequences.
 .. parsed-literal::
 
     [['RX90p',
-      'Y90m',
+      'RY90m',
       'RX90p',
       'Id',
-      'Y90m',
+      'RY90m',
       'RX90p',
       'RX90p',
       'Id',
-      'Y90m',
+      'RY90m',
       'RX90p',
       'Id',
       'Id',
       'RX90p',
       'RX90p',
-      'Y90p',
-      'Y90p',
-      'Y90p',
+      'RY90p',
+      'RY90p',
+      'RY90p',
       'RX90p',
       'Id',
       'Id']]
@@ -191,21 +191,21 @@ is set in the definitions.
     gateset_opt_map =   [
         [
           ("RX90p", "d1", "gauss", "amp"),
-          ("Y90p", "d1", "gauss", "amp"),
-          ("X90m", "d1", "gauss", "amp"),
-          ("Y90m", "d1", "gauss", "amp")
+          ("RY90p", "d1", "gauss", "amp"),
+          ("RX90m", "d1", "gauss", "amp"),
+          ("RY90m", "d1", "gauss", "amp")
         ],
         [
           ("RX90p", "d1", "gauss", "delta"),
-          ("Y90p", "d1", "gauss", "delta"),
-          ("X90m", "d1", "gauss", "delta"),
-          ("Y90m", "d1", "gauss", "delta")
+          ("RY90p", "d1", "gauss", "delta"),
+          ("RX90m", "d1", "gauss", "delta"),
+          ("RY90m", "d1", "gauss", "delta")
         ],
         [
           ("RX90p", "d1", "gauss", "freq_offset"),
-          ("Y90p", "d1", "gauss", "freq_offset"),
-          ("X90m", "d1", "gauss", "freq_offset"),
-          ("Y90m", "d1", "gauss", "freq_offset")
+          ("RY90p", "d1", "gauss", "freq_offset"),
+          ("RX90m", "d1", "gauss", "freq_offset"),
+          ("RY90m", "d1", "gauss", "freq_offset")
         ],
         [
           ("Id", "d1", "carrier", "framechange")
@@ -324,17 +324,17 @@ the blackbox. We mirror the blackbox by creating an experiment in the
     QId.comps['d1']['carrier'].params['framechange'].set_value(
         (-sideband * t_final * 2 * np.pi) % (2*np.pi)
     )
-    Y90p = copy.deepcopy(RX90p)
-    Y90p.name = "Y90p"
-    X90m = copy.deepcopy(RX90p)
-    X90m.name = "X90m"
-    Y90m = copy.deepcopy(RX90p)
-    Y90m.name = "Y90m"
-    Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    RY90p = copy.deepcopy(RX90p)
+    RY90p.name = "RY90p"
+    RX90m = copy.deepcopy(RX90p)
+    RX90m.name = "RX90m"
+    RY90m = copy.deepcopy(RX90p)
+    RY90m.name = "RY90m"
+    RY90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    RX90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+    RY90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 
-    parameter_map = PMap(instructions=[QId, RX90p, Y90p, X90m, Y90m])
+    parameter_map = PMap(instructions=[QId, RX90p, RY90p, RX90m, RY90m])
 
     # ### MAKE EXPERIMENT
     exp = Exp(pmap=parameter_map)
@@ -353,21 +353,21 @@ is set in the definitions.
     gateset_opt_map =   [
         [
           ("RX90p", "d1", "gauss", "amp"),
-          ("Y90p", "d1", "gauss", "amp"),
-          ("X90m", "d1", "gauss", "amp"),
-          ("Y90m", "d1", "gauss", "amp")
+          ("RY90p", "d1", "gauss", "amp"),
+          ("RX90m", "d1", "gauss", "amp"),
+          ("RY90m", "d1", "gauss", "amp")
         ],
         [
           ("RX90p", "d1", "gauss", "delta"),
-          ("Y90p", "d1", "gauss", "delta"),
-          ("X90m", "d1", "gauss", "delta"),
-          ("Y90m", "d1", "gauss", "delta")
+          ("RY90p", "d1", "gauss", "delta"),
+          ("RX90m", "d1", "gauss", "delta"),
+          ("RY90m", "d1", "gauss", "delta")
         ],
         [
           ("RX90p", "d1", "gauss", "freq_offset"),
-          ("Y90p", "d1", "gauss", "freq_offset"),
-          ("X90m", "d1", "gauss", "freq_offset"),
-          ("Y90m", "d1", "gauss", "freq_offset")
+          ("RY90p", "d1", "gauss", "freq_offset"),
+          ("RX90m", "d1", "gauss", "freq_offset"),
+          ("RY90m", "d1", "gauss", "freq_offset")
         ],
         [
           ("Id", "d1", "carrier", "framechange")
@@ -387,19 +387,19 @@ value. This leaves 4 values to optimize.
 .. parsed-literal::
 
     RX90p-d1-gauss-amp                     : 450.000 mV
-    Y90p-d1-gauss-amp
-    X90m-d1-gauss-amp
-    Y90m-d1-gauss-amp
+    RY90p-d1-gauss-amp
+    RX90m-d1-gauss-amp
+    RY90m-d1-gauss-amp
 
     RX90p-d1-gauss-delta                   : -1.000
-    Y90p-d1-gauss-delta
-    X90m-d1-gauss-delta
-    Y90m-d1-gauss-delta
+    RY90p-d1-gauss-delta
+    RX90m-d1-gauss-delta
+    RY90m-d1-gauss-delta
 
     RX90p-d1-gauss-freq_offset             : -50.500 MHz 2pi
-    Y90p-d1-gauss-freq_offset
-    X90m-d1-gauss-freq_offset
-    Y90m-d1-gauss-freq_offset
+    RY90p-d1-gauss-freq_offset
+    RX90m-d1-gauss-freq_offset
+    RY90m-d1-gauss-freq_offset
 
     Id-d1-carrier-framechange             : 4.084 rad
 
