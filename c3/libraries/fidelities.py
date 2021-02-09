@@ -260,9 +260,9 @@ def average_infid_CZ(U_dict: dict, index, dims, eval, proj=True):
         Project to computational subspace
     """
     proj = projector(dims, index)
-    U = proj @ U_dict["Id:CZ"] @ proj.T
+    U = proj @ U_dict["Id:CRZp"] @ proj.T
     subspace_dims = [dims[index[0]], dims[index[1]]]
-    U_ideal = tf.constant(perfect_gate("CZ", index=[0, 1], dims=[2, 2]))
+    U_ideal = tf.constant(perfect_gate("CRZp", index=[0, 1], dims=[2, 2]))
     infid = 1 - tf_average_fidelity(U, U_ideal, lvls=subspace_dims)
     return infid
 
