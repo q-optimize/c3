@@ -150,7 +150,7 @@ def rotation(phase, xyz):
 
 RX90p = rotation(np.pi / 2, [1, 0, 0])  # Rx+
 X90m = rotation(-np.pi / 2, [1, 0, 0])  # Rx-
-Xp = rotation(np.pi, [1, 0, 0])
+RXp = rotation(np.pi, [1, 0, 0])
 Y90p = rotation(np.pi / 2, [0, 1, 0])  # Ry+
 Y90m = rotation(-np.pi / 2, [0, 1, 0])  # Ry-
 Yp = rotation(np.pi, [0, 1, 0])
@@ -288,8 +288,8 @@ def perfect_gate(  # noqa
             gate = RX90p
         elif gate_str == "X90m":
             gate = X90m
-        elif gate_str == "Xp":
-            gate = Xp
+        elif gate_str == "RXp":
+            gate = RXp
         elif gate_str == "Y90p":
             gate = Y90p
         elif gate_str == "Y90m":
@@ -304,7 +304,7 @@ def perfect_gate(  # noqa
             gate = Zp
         elif gate_str == "CNOT":
             lvls2 = dims[gate_num + 1]
-            NOT = 1j * perfect_gate("Xp", index, [lvls2], proj)
+            NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
             C = perfect_gate("Id", index, [lvls2], proj)
             gate = scipy_block_diag(C, NOT)
             # We increase gate_num since CNOT is a two qubit gate
@@ -326,7 +326,7 @@ def perfect_gate(  # noqa
             # TODO: Fix the ideal CNOT construction.
             lvls2 = dims[gate_num + 1]
             Z = 1j * perfect_gate("Zp", index, [lvls], proj)
-            X = perfect_gate("Xp", index, [lvls2], proj)
+            X = perfect_gate("RXp", index, [lvls2], proj)
             gate = np.kron(Z, X)
             gate_num += 1
             do_pad_gate = False
@@ -351,7 +351,7 @@ def perfect_gate(  # noqa
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print(
-                "'Id','RX90p','X90m','Xp','Y90p',",
+                "'Id','RX90p','X90m','RXp','Y90p',",
                 "'Y90m','Yp','Z90p','Z90m','Zp', 'CNOT'",
             )
             return None
@@ -817,10 +817,10 @@ cliffors_per_gate = sum / len(cliffords_decomp)
 #                    ['RX90p', 'X90m'],
 #                    ['Y90p', 'RX90p'],
 #                    ['X90m', 'Y90m'],
-#                    ['Y90p', 'Xp'],
+#                    ['Y90p', 'RXp'],
 #                    ['X90m'],
 #                    ['RX90p', 'Y90m', 'X90m'],
-#                    ['Xp'],
+#                    ['RXp'],
 #                    ['Y90m', 'X90m'],
 #                    ['RX90p', 'Y90m'],
 #                    ['Y90m'],
@@ -829,10 +829,10 @@ cliffors_per_gate = sum / len(cliffords_decomp)
 #                    ['Yp'],
 #                    ['Y90m', 'RX90p'],
 #                    ['RX90p', 'Y90p'],
-#                    ['Y90m', 'Xp'],
+#                    ['Y90m', 'RXp'],
 #                    ['RX90p', 'Yp'],
 #                    ['RX90p', 'Y90m', 'RX90p'],
-#                    ['Xp', 'Yp'],
+#                    ['RXp', 'Yp'],
 #                    ['Y90p', 'X90m'],
 #                    ['X90m', 'Y90p'],
 #                    ['Y90p'],
