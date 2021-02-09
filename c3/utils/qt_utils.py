@@ -289,7 +289,7 @@ def perfect_gate(  # noqa
         elif gate_str == "RX90m":
             gate = RX90m
         elif gate_str == "RXp":
-            gate = RXp
+            gate = RXp  # noqa
         elif gate_str == "RY90p":
             gate = RY90p
         elif gate_str == "RY90m":
