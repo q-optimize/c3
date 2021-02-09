@@ -268,13 +268,11 @@ class Experiment:
         """
         instructions = self.pmap.instructions
         gates = {}
-        n_qubits = len(self.pmap.model.subsystems)
-        indices = [i for i in range(n_qubits)]
         dims = self.pmap.model.dims
         if gate_keys is None:
             gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
-            gates[gate] = perfect_gate(gate, indices, dims)
+            gates[gate] = perfect_gate(gates_str=gate, dims=dims)
 
         # TODO parametric gates
 
