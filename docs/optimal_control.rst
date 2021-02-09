@@ -26,19 +26,19 @@ nested list of tuples that identifies each parameter.
 
 .. code-block:: python
 
-    opt_gates = ["RX90p:Id"]
+    opt_gates = ["X90p:Id"]
     gateset_opt_map=[
         [
-          ("RX90p:Id", "d1", "gauss", "amp"),
+          ("X90p:Id", "d1", "gauss", "amp"),
         ],
         [
-          ("RX90p:Id", "d1", "gauss", "freq_offset"),
+          ("X90p:Id", "d1", "gauss", "freq_offset"),
         ],
         [
-          ("RX90p:Id", "d1", "gauss", "xy_angle"),
+          ("X90p:Id", "d1", "gauss", "xy_angle"),
         ],
         [
-          ("RX90p:Id", "d1", "gauss", "delta"),
+          ("X90p:Id", "d1", "gauss", "delta"),
         ]
     ]
 
@@ -53,10 +53,10 @@ We can look at the parameter values this opt_map specified with
 
 .. parsed-literal::
 
-    RX90p:Id-d1-gauss-amp                  : 500.000 mV
-    RX90p:Id-d1-gauss-freq_offset          : -53.000 MHz 2pi
-    RX90p:Id-d1-gauss-xy_angle             : -444.089 arad
-    RX90p:Id-d1-gauss-delta                : -1.000
+    X90p:Id-d1-gauss-amp                  : 500.000 mV
+    X90p:Id-d1-gauss-freq_offset          : -53.000 MHz 2pi
+    X90p:Id-d1-gauss-xy_angle             : -444.089 arad
+    X90p:Id-d1-gauss-delta                : -1.000
 
 
 

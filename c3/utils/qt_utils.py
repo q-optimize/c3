@@ -148,15 +148,15 @@ def rotation(phase, xyz):
     return rot
 
 
-RX90p = rotation(np.pi / 2, [1, 0, 0])  # Rx+
-RX90m = rotation(-np.pi / 2, [1, 0, 0])  # Rx-
-RXp = rotation(np.pi, [1, 0, 0])
-RY90p = rotation(np.pi / 2, [0, 1, 0])  # Ry+
-RY90m = rotation(-np.pi / 2, [0, 1, 0])  # Ry-
-RYp = rotation(np.pi, [0, 1, 0])
-RZ90p = rotation(np.pi / 2, [0, 0, 1])  # Rz+
-RZ90m = rotation(-np.pi / 2, [0, 0, 1])  # Rz-
-RZp = rotation(np.pi, [0, 0, 1])
+X90p = rotation(np.pi / 2, [1, 0, 0])  # Rx+
+X90m = rotation(-np.pi / 2, [1, 0, 0])  # Rx-
+Xp = rotation(np.pi, [1, 0, 0])
+Y90p = rotation(np.pi / 2, [0, 1, 0])  # Ry+
+Y90m = rotation(-np.pi / 2, [0, 1, 0])  # Ry-
+Yp = rotation(np.pi, [0, 1, 0])
+Z90p = rotation(np.pi / 2, [0, 0, 1])  # Rz+
+Z90m = rotation(-np.pi / 2, [0, 0, 1])  # Rz-
+Zp = rotation(np.pi, [0, 0, 1])
 
 
 def basis(lvls: int, pop_lvl: int):
@@ -257,7 +257,7 @@ def perfect_gate(  # noqa
     Parameters
     ----------
     gates_str: str
-        Identifier of the gate, i.e. "RX90p".
+        Identifier of the gate, i.e. "X90p".
     index : list
         Indeces of the subspace(s) the gate acts on
     dims : list
@@ -284,60 +284,56 @@ def perfect_gate(  # noqa
         lvls = dims[gate_num]
         if gate_str == "Id":
             gate = Id
-        elif gate_str == "RX90p":
-            gate = RX90p
-        elif gate_str == "RX90m":
-            gate = RX90m
-        elif gate_str == "RXp":
-            gate = RXp  # noqa
-        elif gate_str == "RY90p":
-            gate = RY90p
-        elif gate_str == "RY90m":
-            gate = RY90m
-        elif gate_str == "RYp":
-            gate = RYp
-        elif gate_str == "RZ90p":
-            gate = RZ90p
-        elif gate_str == "RZ90m":
-            gate = RZ90m
-        elif gate_str == "RZp":
-            gate = RZp
+        elif gate_str == "X90p":
+            gate = X90p
+        elif gate_str == "X90m":
+            gate = X90m
+        elif gate_str == "Xp":
+            gate = Xp
+        elif gate_str == "Y90p":
+            gate = Y90p
+        elif gate_str == "Y90m":
+            gate = Y90m
+        elif gate_str == "Yp":
+            gate = Yp
+        elif gate_str == "Z90p":
+            gate = Z90p
+        elif gate_str == "Z90m":
+            gate = Z90m
+        elif gate_str == "Zp":
+            gate = Zp
         elif gate_str == "CNOT":
-            raise NotImplementedError(
-                "A correct implementation of perfect CNOT is pending"
-            )
-            # lvls2 = dims[gate_num + 1]
-            # NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
-            # C = perfect_gate("Id", index, [lvls2], proj)
-            # gate = scipy_block_diag(C, NOT)
-            # # We increase gate_num since CNOT is a two qubit gate
-            # for ii in range(2, lvls):
-            #     gate = pad_matrix(gate, lvls2, proj)
-            # gate_num += 1
-            # do_pad_gate = False
-        elif gate_str == "CRZp":
             lvls2 = dims[gate_num + 1]
-            Z = 1j * perfect_gate("RZp", index, [lvls2], proj)
+            NOT = 1j * perfect_gate("Xp", index, [lvls2], proj)
+            C = perfect_gate("Id", index, [lvls2], proj)
+            gate = scipy_block_diag(C, NOT)
+            # We increase gate_num since CNOT is a two qubit gate
+            for ii in range(2, lvls):
+                gate = pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == "CZ":
+            lvls2 = dims[gate_num + 1]
+            Z = 1j * perfect_gate("Zp", index, [lvls2], proj)
             C = perfect_gate("Id", index, [lvls2], proj)
             gate = scipy_block_diag(C, Z)
-            # We increase gate_num since CRZp is a two qubit gate
+            # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
             do_pad_gate = False
         elif gate_str == "CR":
-            raise NotImplementedError("Current implementation has inconsistent naming")
             # TODO: Fix the ideal CNOT construction.
-            # lvls2 = dims[gate_num + 1]
-            # Z = 1j * perfect_gate("RZp", index, [lvls], proj)
-            # X = perfect_gate("RXp", index, [lvls2], proj)
-            # gate = np.kron(Z, X)
-            # gate_num += 1
-            # do_pad_gate = False
+            lvls2 = dims[gate_num + 1]
+            Z = 1j * perfect_gate("Zp", index, [lvls], proj)
+            X = perfect_gate("Xp", index, [lvls2], proj)
+            gate = np.kron(Z, X)
+            gate_num += 1
+            do_pad_gate = False
         elif gate_str == "CR90":
             lvls2 = dims[gate_num + 1]
-            RXp = perfect_gate("RX90p", index, [lvls2], proj)
-            RXm = perfect_gate("RX90m", index, [lvls2], proj)
+            RXp = perfect_gate("X90p", index, [lvls2], proj)
+            RXm = perfect_gate("X90m", index, [lvls2], proj)
             gate = scipy_block_diag(RXp, RXm)
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
@@ -355,8 +351,8 @@ def perfect_gate(  # noqa
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
             print(
-                "'Id','RX90p','RX90m','RXp','RY90p',",
-                "'RY90m','RYp','RZ90p','RZ90m','RZp', 'CNOT'",
+                "'Id','X90p','X90m','Xp','Y90p',",
+                "'Y90m','Yp','Z90p','Z90m','Zp', 'CNOT'",
             )
             return None
         if do_pad_gate:
@@ -411,7 +407,7 @@ def two_qubit_gate_tomography(gate):
     Sequences to generate tomography for evaluating a two qubit gate.
     """
     # THE 4 GATES
-    base = [["Id", "Id"], ["RX90p", "Id"], ["RY90p", "Id"], ["RX90p", "RX90p"]]
+    base = [["Id", "Id"], ["X90p", "Id"], ["Y90p", "Id"], ["X90p", "X90p"]]
     base2 = []
     for x in base:
         for y in base:
@@ -452,9 +448,9 @@ def T1_sequence(length, target):
     """
     wait = ["Id:Id"]
     if target == "left":
-        prepare_1 = ["RX90p:Id", "RX90p:Id"]
+        prepare_1 = ["X90p:Id", "X90p:Id"]
     elif target == "right":
-        prepare_1 = ["Id:RX90p", "Id:RX90p"]
+        prepare_1 = ["Id:X90p", "Id:X90p"]
     S = []
     S.extend(prepare_1)
     S.extend(wait * length)
@@ -480,9 +476,9 @@ def ramsey_sequence(length, target):
     """
     wait = ["Id:Id"]
     if target == "left":
-        rotate_90 = ["RX90p:Id"]
+        rotate_90 = ["X90p:Id"]
     elif target == "right":
-        rotate_90 = ["Id:RX90p"]
+        rotate_90 = ["Id:X90p"]
     S = []
     S.extend(rotate_90)
     S.extend(wait * length)
@@ -511,11 +507,11 @@ def ramsey_echo_sequence(length, target):
     wait = ["Id:Id"]
     hlength = length // 2
     if target == "left":
-        rotate_90_p = ["RX90p:Id"]
-        rotate_90_m = ["RX90m:Id"]
+        rotate_90_p = ["X90p:Id"]
+        rotate_90_m = ["X90m:Id"]
     elif target == "right":
-        rotate_90_p = ["Id:RX90p"]
-        rotate_90_m = ["Id:RX90m"]
+        rotate_90_p = ["Id:X90p"]
+        rotate_90_m = ["Id:X90m"]
     S = []
     S.extend(rotate_90_p)
     S.extend(wait * hlength)
@@ -575,30 +571,30 @@ def inverseC(sequence):
             return i
 
 
-C1 = RX90m @ RX90p
-C2 = RX90p @ RY90p
-C3 = RY90m @ RX90m
-C4 = RX90p @ RX90p @ RY90p
-C5 = RX90m
-C6 = RX90m @ RY90m @ RX90p
-C7 = RX90p @ RX90p
-C8 = RX90m @ RY90m
-C9 = RY90m @ RX90p
-C10 = RY90m
-C11 = RX90p
-C12 = RX90p @ RY90p @ RX90p
-C13 = RY90p @ RY90p
-C14 = RX90p @ RY90m
-C15 = RY90p @ RX90p
-C16 = RX90p @ RX90p @ RY90m
-C17 = RY90p @ RY90p @ RX90p
-C18 = RX90p @ RY90m @ RX90p
-C19 = RY90p @ RY90p @ RX90p @ RX90p
-C20 = RX90m @ RY90p
-C21 = RY90p @ RX90m
-C22 = RY90p
-C23 = RY90p @ RY90p @ RX90m
-C24 = RX90m @ RY90p @ RX90p
+C1 = X90m @ X90p
+C2 = X90p @ Y90p
+C3 = Y90m @ X90m
+C4 = X90p @ X90p @ Y90p
+C5 = X90m
+C6 = X90m @ Y90m @ X90p
+C7 = X90p @ X90p
+C8 = X90m @ Y90m
+C9 = Y90m @ X90p
+C10 = Y90m
+C11 = X90p
+C12 = X90p @ Y90p @ X90p
+C13 = Y90p @ Y90p
+C14 = X90p @ Y90m
+C15 = Y90p @ X90p
+C16 = X90p @ X90p @ Y90m
+C17 = Y90p @ Y90p @ X90p
+C18 = X90p @ Y90m @ X90p
+C19 = Y90p @ Y90p @ X90p @ X90p
+C20 = X90m @ Y90p
+C21 = Y90p @ X90m
+C22 = Y90p
+C23 = Y90p @ Y90p @ X90m
+C24 = X90m @ Y90p @ X90p
 
 
 def perfect_cliffords(lvls: List[int], proj: str = "fulluni", num_gates: int = 1):
@@ -608,15 +604,15 @@ def perfect_cliffords(lvls: List[int], proj: str = "fulluni", num_gates: int = 1
     # TODO make perfect clifford more general by making it take a decomposition
 
     if num_gates == 1:
-        x90p = perfect_gate("RX90p", index=[0], dims=lvls, proj=proj)
-        y90p = perfect_gate("RY90p", index=[0], dims=lvls, proj=proj)
-        x90m = perfect_gate("RX90m", index=[0], dims=lvls, proj=proj)
-        y90m = perfect_gate("RY90m", index=[0], dims=lvls, proj=proj)
+        x90p = perfect_gate("X90p", index=[0], dims=lvls, proj=proj)
+        y90p = perfect_gate("Y90p", index=[0], dims=lvls, proj=proj)
+        x90m = perfect_gate("X90m", index=[0], dims=lvls, proj=proj)
+        y90m = perfect_gate("Y90m", index=[0], dims=lvls, proj=proj)
     elif num_gates == 2:
-        x90p = perfect_gate("RX90p", index=[0, 1], dims=lvls, proj=proj)
-        y90p = perfect_gate("RY90p", index=[0, 1], dims=lvls, proj=proj)
-        x90m = perfect_gate("RX90m", index=[0, 1], dims=lvls, proj=proj)
-        y90m = perfect_gate("RY90m", index=[0, 1], dims=lvls, proj=proj)
+        x90p = perfect_gate("X90p", index=[0, 1], dims=lvls, proj=proj)
+        y90p = perfect_gate("Y90p", index=[0, 1], dims=lvls, proj=proj)
+        x90m = perfect_gate("X90m", index=[0, 1], dims=lvls, proj=proj)
+        y90m = perfect_gate("Y90m", index=[0, 1], dims=lvls, proj=proj)
 
     C1 = x90m @ x90p
     C2 = x90p @ y90p
@@ -701,57 +697,57 @@ cliffords_string = [
 ]
 
 cliffords_decomp = [
-    ["RX90p", "RX90m"],
-    ["RY90p", "RX90p"],
-    ["RX90m", "RY90m"],
-    ["RY90p", "RX90p", "RX90p"],
-    ["RX90m"],
-    ["RX90p", "RY90m", "RX90m"],
-    ["RX90p", "RX90p"],
-    ["RY90m", "RX90m"],
-    ["RX90p", "RY90m"],
-    ["RY90m"],
-    ["RX90p"],
-    ["RX90p", "RY90p", "RX90p"],
-    ["RY90p", "RY90p"],
-    ["RY90m", "RX90p"],
-    ["RX90p", "RY90p"],
-    ["RY90m", "RX90p", "RX90p"],
-    ["RX90p", "RY90p", "RY90p"],
-    ["RX90p", "RY90m", "RX90p"],
-    ["RX90p", "RX90p", "RY90p", "RY90p"],
-    ["RY90p", "RX90m"],
-    ["RX90m", "RY90p"],
-    ["RY90p"],
-    ["RX90m", "RY90p", "RY90p"],
-    ["RX90p", "RY90p", "RX90m"],
+    ["X90p", "X90m"],
+    ["Y90p", "X90p"],
+    ["X90m", "Y90m"],
+    ["Y90p", "X90p", "X90p"],
+    ["X90m"],
+    ["X90p", "Y90m", "X90m"],
+    ["X90p", "X90p"],
+    ["Y90m", "X90m"],
+    ["X90p", "Y90m"],
+    ["Y90m"],
+    ["X90p"],
+    ["X90p", "Y90p", "X90p"],
+    ["Y90p", "Y90p"],
+    ["Y90m", "X90p"],
+    ["X90p", "Y90p"],
+    ["Y90m", "X90p", "X90p"],
+    ["X90p", "Y90p", "Y90p"],
+    ["X90p", "Y90m", "X90p"],
+    ["X90p", "X90p", "Y90p", "Y90p"],
+    ["Y90p", "X90m"],
+    ["X90m", "Y90p"],
+    ["Y90p"],
+    ["X90m", "Y90p", "Y90p"],
+    ["X90p", "Y90p", "X90m"],
 ]
 
 # cliffords_decomp = [
 #                     ['Id', 'Id', 'Id', 'Id'],
-#                     ['RY90p', 'RX90p', 'Id', 'Id'],
-#                     ['RX90m', 'RY90m', 'Id', 'Id'],
-#                     ['RY90p', 'RX90p', 'RX90p', 'Id'],
-#                     ['RX90m', 'Id', 'Id', 'Id'],
-#                     ['RX90p', 'RY90m', 'RX90m', 'Id'],
-#                     ['RX90p', 'RX90p', 'Id', 'Id'],
-#                     ['RY90m', 'RX90m', 'Id', 'Id'],
-#                     ['RX90p', 'RY90m', 'Id', 'Id'],
-#                     ['RY90m', 'Id', 'Id', 'Id'],
-#                     ['RX90p', 'Id', 'Id', 'Id'],
-#                     ['RX90p', 'RY90p', 'RX90p', 'Id'],
-#                     ['RY90p', 'RY90p', 'Id', 'Id'],
-#                     ['RY90m', 'RX90p', 'Id', 'Id'],
-#                     ['RX90p', 'RY90p', 'Id', 'Id'],
-#                     ['RY90m', 'RX90p', 'RX90p', 'Id'],
-#                     ['RX90p', 'RY90p', 'RY90p', 'Id'],
-#                     ['RX90p', 'RY90m', 'RX90p', 'Id'],
-#                     ['RX90p', 'RX90p', 'RY90p', 'RY90p'],
-#                     ['RY90p', 'RX90m', 'Id', 'Id'],
-#                     ['RX90m', 'RY90p', 'Id', 'Id'],
-#                     ['RY90p', 'Id', 'Id', 'Id'],
-#                     ['RX90m', 'RY90p', 'RY90p', 'Id'],
-#                     ['RX90p', 'RY90p', 'RX90m', 'Id']
+#                     ['Y90p', 'X90p', 'Id', 'Id'],
+#                     ['X90m', 'Y90m', 'Id', 'Id'],
+#                     ['Y90p', 'X90p', 'X90p', 'Id'],
+#                     ['X90m', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Y90m', 'X90m', 'Id'],
+#                     ['X90p', 'X90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90m', 'Id', 'Id'],
+#                     ['X90p', 'Y90m', 'Id', 'Id'],
+#                     ['Y90m', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Id', 'Id', 'Id'],
+#                     ['X90p', 'Y90p', 'X90p', 'Id'],
+#                     ['Y90p', 'Y90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90p', 'Id', 'Id'],
+#                     ['X90p', 'Y90p', 'Id', 'Id'],
+#                     ['Y90m', 'X90p', 'X90p', 'Id'],
+#                     ['X90p', 'Y90p', 'Y90p', 'Id'],
+#                     ['X90p', 'Y90m', 'X90p', 'Id'],
+#                     ['X90p', 'X90p', 'Y90p', 'Y90p'],
+#                     ['Y90p', 'X90m', 'Id', 'Id'],
+#                     ['X90m', 'Y90p', 'Id', 'Id'],
+#                     ['Y90p', 'Id', 'Id', 'Id'],
+#                     ['X90m', 'Y90p', 'Y90p', 'Id'],
+#                     ['X90p', 'Y90p', 'X90m', 'Id']
 #                     ]
 
 cliffords_decomp_xId = [[gate + ":Id" for gate in clif] for clif in cliffords_decomp]
@@ -764,82 +760,82 @@ for cd in cliffords_decomp:
 cliffors_per_gate = sum / len(cliffords_decomp)
 
 # cliffords_decomp = [
-#                    ['RX90p', 'RX90m'],
-#                    ['RX90p', 'RX90p'],
-#                    ['RY90p', 'RY90p'],
-#                    ['RZ90p', 'RZ90p'],
-#                    ['RX90p'],
-#                    ['RY90p'],
-#                    ['RZ90p'],
-#                    ['RX90m'],
-#                    ['RY90m'],
-#                    ['RZ90m'],
-#                    ['RZ90p', 'RX90p'],
-#                    ['RZ90p', 'RZ90p', 'RX90m'],
-#                    ['RZ90p', 'RX90p', 'RX90p'],
-#                    ['RZ90m', 'RX90p', 'RX90p'],
-#                    ['RZ90p', 'RX90p'],
-#                    ['RZ90p', 'RX90m'],
-#                    ['RX90p', 'RZ90m'],
-#                    ['RZ90p', 'RZ90p', 'RY90m'],
-#                    ['RZ90p', 'RY90m'],
-#                    ['RZ90m', 'RY90p'],
-#                    ['RZ90p', 'RZ90p', 'RY90p'],
-#                    ['RZ90m', 'RX90p'],
-#                    ['RZ90p', 'RY90p'],
-#                    ['RZ90m', 'RX90m']
+#                    ['X90p', 'X90m'],
+#                    ['X90p', 'X90p'],
+#                    ['Y90p', 'Y90p'],
+#                    ['Z90p', 'Z90p'],
+#                    ['X90p'],
+#                    ['Y90p'],
+#                    ['Z90p'],
+#                    ['X90m'],
+#                    ['Y90m'],
+#                    ['Z90m'],
+#                    ['Z90p', 'X90p'],
+#                    ['Z90p', 'Z90p', 'X90m'],
+#                    ['Z90p', 'X90p', 'X90p'],
+#                    ['Z90m', 'X90p', 'X90p'],
+#                    ['Z90p', 'X90p'],
+#                    ['Z90p', 'X90m'],
+#                    ['X90p', 'Z90m'],
+#                    ['Z90p', 'Z90p', 'Y90m'],
+#                    ['Z90p', 'Y90m'],
+#                    ['Z90m', 'Y90p'],
+#                    ['Z90p', 'Z90p', 'Y90p'],
+#                    ['Z90m', 'X90p'],
+#                    ['Z90p', 'Y90p'],
+#                    ['Z90m', 'X90m']
 #                ]
 #
 # cliffords_decomp = [
-#                    ['RX90p', 'RX90m'],
-#                    ['RX90p', 'RX90p'],
-#                    ['RY90p', 'RY90p'],
-#                    ['RY90p', 'RX90p', 'RX90p', 'RY90m'],
-#                    ['RX90p'],
-#                    ['RY90p'],
-#                    ['RY90p', 'RX90p', 'RY90m'],
-#                    ['RX90m'],
-#                    ['RY90m'],
-#                    ['RX90p', 'RY90p', 'RX90m'],
-#                    ['RY90p', 'RX90p', 'RY90m', 'RX90p'],
-#                    ['RY90p', 'RX90p', 'RX90p', 'RY90m', 'RX90m'],
-#                    ['RY90p', 'RX90p', 'RY90m', 'RX90p', 'RX90p'],
-#                    ['RX90p', 'RY90p', 'RX90m', 'RX90p', 'RX90p'],
-#                    ['RY90p', 'RX90p', 'RY90m', 'RX90p'],
-#                    ['RY90p', 'RX90p', 'RY90m', 'RX90m'],
-#                    ['RX90p', 'RX90p', 'RY90p', 'RX90m'],
-#                    ['RY90p', 'RX90p', 'RX90p', 'RY90m', 'RY90m'],
-#                    ['RY90p', 'RX90p', 'RY90m', 'RY90m'],
-#                    ['RX90p', 'RY90p', 'RX90m', 'RY90p'],
-#                    ['RY90p', 'RX90p', 'RX90p'],
-#                    ['RX90p', 'RY90p'],
-#                    ['RY90p', 'RX90p'],
-#                    ['RX90p', 'RY90p', 'RX90m', 'RX90m']
+#                    ['X90p', 'X90m'],
+#                    ['X90p', 'X90p'],
+#                    ['Y90p', 'Y90p'],
+#                    ['Y90p', 'X90p', 'X90p', 'Y90m'],
+#                    ['X90p'],
+#                    ['Y90p'],
+#                    ['Y90p', 'X90p', 'Y90m'],
+#                    ['X90m'],
+#                    ['Y90m'],
+#                    ['X90p', 'Y90p', 'X90m'],
+#                    ['Y90p', 'X90p', 'Y90m', 'X90p'],
+#                    ['Y90p', 'X90p', 'X90p', 'Y90m', 'X90m'],
+#                    ['Y90p', 'X90p', 'Y90m', 'X90p', 'X90p'],
+#                    ['X90p', 'Y90p', 'X90m', 'X90p', 'X90p'],
+#                    ['Y90p', 'X90p', 'Y90m', 'X90p'],
+#                    ['Y90p', 'X90p', 'Y90m', 'X90m'],
+#                    ['X90p', 'X90p', 'Y90p', 'X90m'],
+#                    ['Y90p', 'X90p', 'X90p', 'Y90m', 'Y90m'],
+#                    ['Y90p', 'X90p', 'Y90m', 'Y90m'],
+#                    ['X90p', 'Y90p', 'X90m', 'Y90p'],
+#                    ['Y90p', 'X90p', 'X90p'],
+#                    ['X90p', 'Y90p'],
+#                    ['Y90p', 'X90p'],
+#                    ['X90p', 'Y90p', 'X90m', 'X90m']
 #                ]
 #
 # cliffords_decomp = [
-#                    ['RX90p', 'RX90m'],
-#                    ['RY90p', 'RX90p'],
-#                    ['RX90m', 'RY90m'],
-#                    ['RY90p', 'RXp'],
-#                    ['RX90m'],
-#                    ['RX90p', 'RY90m', 'RX90m'],
-#                    ['RXp'],
-#                    ['RY90m', 'RX90m'],
-#                    ['RX90p', 'RY90m'],
-#                    ['RY90m'],
-#                    ['RX90p'],
-#                    ['RX90p', 'RY90p', 'RX90p'],
-#                    ['RYp'],
-#                    ['RY90m', 'RX90p'],
-#                    ['RX90p', 'RY90p'],
-#                    ['RY90m', 'RXp'],
-#                    ['RX90p', 'RYp'],
-#                    ['RX90p', 'RY90m', 'RX90p'],
-#                    ['RXp', 'RYp'],
-#                    ['RY90p', 'RX90m'],
-#                    ['RX90m', 'RY90p'],
-#                    ['RY90p'],
-#                    ['RX90m', 'RYp'],
-#                    ['RX90p', 'RY90p', 'RX90m']
+#                    ['X90p', 'X90m'],
+#                    ['Y90p', 'X90p'],
+#                    ['X90m', 'Y90m'],
+#                    ['Y90p', 'Xp'],
+#                    ['X90m'],
+#                    ['X90p', 'Y90m', 'X90m'],
+#                    ['Xp'],
+#                    ['Y90m', 'X90m'],
+#                    ['X90p', 'Y90m'],
+#                    ['Y90m'],
+#                    ['X90p'],
+#                    ['X90p', 'Y90p', 'X90p'],
+#                    ['Yp'],
+#                    ['Y90m', 'X90p'],
+#                    ['X90p', 'Y90p'],
+#                    ['Y90m', 'Xp'],
+#                    ['X90p', 'Yp'],
+#                    ['X90p', 'Y90m', 'X90p'],
+#                    ['Xp', 'Yp'],
+#                    ['Y90p', 'X90m'],
+#                    ['X90m', 'Y90p'],
+#                    ['Y90p'],
+#                    ['X90m', 'Yp'],
+#                    ['X90p', 'Y90p', 'X90m']
 #                    ]

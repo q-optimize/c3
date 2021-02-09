@@ -30,7 +30,7 @@ def get_sequence(instructions: List) -> List[str]:
     List[str]
         List of gates, for example::
 
-        sequence = ["RX90p:Id", "Id:RX90p", "CR90"]
+        sequence = ["X90p:Id", "Id:X90p", "CR90"]
 
     """
 
@@ -58,9 +58,9 @@ def get_sequence(instructions: List) -> List[str]:
         # TODO scalable way to name and assign X gate in multi qubit systems
         elif instruction.name == "x":
             if instruction.qubits[0] == 0:
-                sequence.append("RX90p:Id")
+                sequence.append("X90p:Id")
             elif instruction.qubits[0] == 1:
-                sequence.append("Id:RX90p")
+                sequence.append("Id:X90p")
             else:
                 raise C3QiskitError(
                     "Gate {0} on qubit {1} not possible".format(

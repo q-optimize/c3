@@ -9,8 +9,8 @@
   "single_qubit_gate_time" : 20e-9
   "single_qubit_gates":
   {
-    "RX90p:Id": {"target_qubit": "Q1"},
-    "Id:RX90p": {"target_qubit": "Q2"},
+    "X90p:Id": {"target_qubit": "Q1"},
+    "Id:X90p": {"target_qubit": "Q2"},
   }
   "two_qubit_gates":
   {
@@ -20,7 +20,7 @@
       qubit_2: Q2
       gate_time: 50e-9
     },
-    "RX90p:RX90p":
+    "X90p:X90p":
     {
       qubit_1: Q1
       qubit_2: Q2
