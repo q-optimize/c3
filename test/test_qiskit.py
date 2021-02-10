@@ -7,6 +7,7 @@ from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
 from qiskit import execute
+from qiskit.transpiler.exceptions import TranspilerError
 
 import pytest
 
@@ -22,7 +23,7 @@ def test_backends():
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_backend(backend):
     """Test get_backend() which returns the backend with matching name
 
@@ -38,9 +39,11 @@ def test_get_backend(backend):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.xfail(raises=TranspilerError)
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_transpile(get_test_circuit, backend):  # noqa
-    """Test the transpiling using our backends
+    """Test the transpiling using our backends.
+    Should throw error due to missing H gate
 
     Parameters
     ----------
@@ -60,11 +63,8 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.integration
 @pytest.mark.qiskit
 @pytest.mark.slow
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
-@pytest.mark.parametrize("simulation_type", ["perfect", "physics"])
-def test_get_result(
-    get_6_qubit_circuit, backend, simulation_type, get_result_qiskit
-):  # noqa
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
+def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     """Test the counts from running a 6 qubit Circuit
 
     Parameters
@@ -81,11 +81,10 @@ def test_get_result(
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
-    received_backend.set_simulation_type(simulation_type)
     qc = get_6_qubit_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
-    expected_counts = get_result_qiskit[simulation_type]
+    expected_counts = get_result_qiskit[backend]
     assert result_sim.get_counts(qc) == expected_counts
 
 
@@ -93,7 +92,7 @@ def test_get_result(
 @pytest.mark.qiskit
 @pytest.mark.xfail(raises=C3QiskitError)
 @pytest.mark.slow
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_exception(get_bad_circuit, backend):  # noqa
     """Test to check exceptions
 
@@ -107,7 +106,6 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
-    received_backend.set_simulation_type("perfect")
     qc = get_bad_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()

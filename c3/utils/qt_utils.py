@@ -289,7 +289,7 @@ def perfect_gate(  # noqa
         elif gate_str == "RX90m":
             gate = RX90m
         elif gate_str == "RXp":
-            gate = RXp  # noqa
+            gate = RXp
         elif gate_str == "RY90p":
             gate = RY90p
         elif gate_str == "RY90m":
@@ -304,17 +304,19 @@ def perfect_gate(  # noqa
             gate = RZp
         elif gate_str == "CNOT":
             raise NotImplementedError(
-                "A correct implementation of perfect CNOT is pending"
+                "A correct implementation of perfect CNOT is pending, use CRXp now"
             )
-            # lvls2 = dims[gate_num + 1]
-            # NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
-            # C = perfect_gate("Id", index, [lvls2], proj)
-            # gate = scipy_block_diag(C, NOT)
-            # # We increase gate_num since CNOT is a two qubit gate
-            # for ii in range(2, lvls):
-            #     gate = pad_matrix(gate, lvls2, proj)
-            # gate_num += 1
-            # do_pad_gate = False
+        elif gate_str == "CRXp":
+            # TODO Should this be CNOT?
+            lvls2 = dims[gate_num + 1]
+            NOT = 1j * perfect_gate("RXp", index, [lvls2], proj)
+            C = perfect_gate("Id", index, [lvls2], proj)
+            gate = scipy_block_diag(C, NOT)
+            # We increase gate_num since CNOT is a two qubit gate
+            for ii in range(2, lvls):
+                gate = pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
         elif gate_str == "CRZp":
             lvls2 = dims[gate_num + 1]
             Z = 1j * perfect_gate("RZp", index, [lvls2], proj)
@@ -326,19 +328,18 @@ def perfect_gate(  # noqa
             gate_num += 1
             do_pad_gate = False
         elif gate_str == "CR":
-            raise NotImplementedError("Current implementation has inconsistent naming")
             # TODO: Fix the ideal CNOT construction.
-            # lvls2 = dims[gate_num + 1]
-            # Z = 1j * perfect_gate("RZp", index, [lvls], proj)
-            # X = perfect_gate("RXp", index, [lvls2], proj)
-            # gate = np.kron(Z, X)
-            # gate_num += 1
-            # do_pad_gate = False
+            lvls2 = dims[gate_num + 1]
+            Z = 1j * perfect_gate("RZp", index, [lvls], proj)
+            X = perfect_gate("RXp", index, [lvls2], proj)
+            gate = np.kron(Z, X)
+            gate_num += 1
+            do_pad_gate = False
         elif gate_str == "CR90":
             lvls2 = dims[gate_num + 1]
-            RXp = perfect_gate("RX90p", index, [lvls2], proj)
-            RXm = perfect_gate("RX90m", index, [lvls2], proj)
-            gate = scipy_block_diag(RXp, RXm)
+            RXp_temp = perfect_gate("RX90p", index, [lvls2], proj)
+            RXm_temp = perfect_gate("RX90m", index, [lvls2], proj)
+            gate = scipy_block_diag(RXp_temp, RXm_temp)
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
@@ -353,12 +354,9 @@ def perfect_gate(  # noqa
             gate_num += 1
             do_pad_gate = False
         else:
-            print("gate_str must be one of the basic 90 or 180 degree gates.")
-            print(
-                "'Id','RX90p','RX90m','RXp','RY90p',",
-                "'RY90m','RYp','RZ90p','RZ90m','RZp', 'CNOT'",
+            raise KeyError(
+                "gate_str must be one of the basic 90 or 180 degree gates: 'Id','RX90p','RX90m','RXp','RY90p','RY90m','RYp','RZ90p','RZ90m','RZp', 'CNOT', CRXp, CRZp, CR, CR90, iSWAP"
             )
-            return None
         if do_pad_gate:
             if proj == "compsub":
                 pass
@@ -368,6 +366,8 @@ def perfect_gate(  # noqa
             elif proj == "fulluni":
                 identity = np.eye(lvls - 2)
                 gate = scipy_block_diag(gate, identity)
+            else:
+                raise KeyError("proj should be wzeros, compsub or fulluni")
         kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)

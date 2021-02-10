@@ -95,8 +95,9 @@ def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    physics_counts = {"000000": 164, "010000": 799, "100000": 14}
-    perfect_counts = {"000000": 250, "000001": 250, "000010": 250, "000011": 250}
+    perfect_counts = {"110000": 1000}
 
-    counts_dict = {"perfect": perfect_counts, "physics": physics_counts}
+    counts_dict = {
+        "c3_qasm_perfect_simulator": perfect_counts,
+    }
     return counts_dict
