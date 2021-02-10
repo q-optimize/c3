@@ -366,6 +366,8 @@ def perfect_gate(  # noqa
             elif proj == "fulluni":
                 identity = np.eye(lvls - 2)
                 gate = scipy_block_diag(gate, identity)
+            else:
+                raise KeyError("proj should be wzeros, compsub or fulluni")
         kron_list.append(gate)
         gate_num += 1
     return np_kron_n(kron_list)
