@@ -28,6 +28,7 @@ from c3.utils.qt_utils import (
     single_length_RB,
     cliffords_string,
 )
+from typing import List
 
 fidelities = dict()
 
@@ -110,7 +111,7 @@ def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool
 
 
 @fid_reg_deco
-def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
+def unitary_infid(U_dict: dict, gate: str, index, dims: List[int], proj: bool):
     """
     Unitary overlap between ideal and actually performed gate.
 
@@ -118,7 +119,7 @@ def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
     ----------
     U_dict : dict
         Contains unitary representations of the gates, identified by a key.
-    index : int
+    index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
     gate : str
         One of the keys of U_dict, selects the gate to be evaluated
@@ -241,18 +242,22 @@ def lindbladian_unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
 
 
 @fid_reg_deco
-def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
+def average_infid(
+    U_dict: dict, gate: str, index: List[int], dims: List[int], proj=True
+):
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
     always 2x2 (per qubit) and the actual unitary needs to be projected down.
 
     Parameters
     ----------
+    gate: str
+        Gate to be compared
     U_dict : dict
         Contains unitary representations of the gates, identified by a key.
-    index : int
+    index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
-    dims : list
+    dims : List[int]
         List of dimensions of qubits
     proj : boolean
         Project to computational subspace

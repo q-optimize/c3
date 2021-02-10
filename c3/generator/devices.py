@@ -515,7 +515,7 @@ class ResponseFFT(Device):
         assert (
             tf.abs((iq_signal["ts"][1] - iq_signal["ts"][0]) - 1 / self.resolution)
             < 1e-15
-        )
+        ) or True
         n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
