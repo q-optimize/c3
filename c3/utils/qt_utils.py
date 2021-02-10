@@ -289,7 +289,7 @@ def perfect_gate(  # noqa
         elif gate_str == "RX90m":
             gate = RX90m
         elif gate_str == "RXp":
-            gate = RXp  # noqa
+            gate = RXp
         elif gate_str == "RY90p":
             gate = RY90p
         elif gate_str == "RY90m":
@@ -336,9 +336,9 @@ def perfect_gate(  # noqa
             # do_pad_gate = False
         elif gate_str == "CR90":
             lvls2 = dims[gate_num + 1]
-            RXp = perfect_gate("RX90p", index, [lvls2], proj)
-            RXm = perfect_gate("RX90m", index, [lvls2], proj)
-            gate = scipy_block_diag(RXp, RXm)
+            RXp_temp = perfect_gate("RX90p", index, [lvls2], proj)
+            RXm_temp = perfect_gate("RX90m", index, [lvls2], proj)
+            gate = scipy_block_diag(RXp_temp, RXm_temp)
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
             gate_num += 1
