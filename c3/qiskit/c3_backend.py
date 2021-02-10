@@ -90,6 +90,16 @@ class C3QasmSimulator(Backend):
         """
         self._device_config = config_file
 
+    def set_simulation_type(self, simulation_type: str) -> None:
+        """Set the simulation type
+
+        Parameters
+        ----------
+        simulation_type : str
+            either `perfect` or `physics`
+        """
+        self._simulation_type = simulation_type
+
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
 
@@ -222,7 +232,7 @@ class C3QasmSimulator(Backend):
         self._number_of_qubits = experiment.config.n_qubits
         # TODO ensure number of quantum and classical bits is same
         shots = self._shots
-        # TODO get number of hilbert dimensions from device config
+        # TODO get Hilbert dimensions from device config
         self._number_of_levels = 2
 
         # Validate the dimension of initial statevector if set
@@ -232,28 +242,46 @@ class C3QasmSimulator(Backend):
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         seed_simulator = 2441129
 
-        # TODO check for user-defined perfect and physics based sim
-        # TODO resolve use of evaluate(), process() in Experiment, possibly extend
-        # TODO implement get_perfect_gates() in Experiment
-        # unitaries = exp.get_perfect_gates()
-        exp.get_gates()
-        dUs = exp.dUs
-
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
 
-        # TODO Implement extracting n_qubits and n_levels from device
-        # create initial state for qubits and levels
-        psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
-        psi_t = psi_init.numpy()
-        pop_t = exp.populations(psi_t, model.lindbladian)
+        # TODO extend evaluate() and process() for perfect gates and use here
+        if self._simulation_type == "perfect":
+            # TODO remove hardocded number of qubits and dimensions
+            self._number_of_levels = 2
+            self._number_of_qubits = 2
+            perfect_gates = exp.get_perfect_gates()
 
-        # simulate sequence
-        for gate in sequence:
-            for du in dUs[gate]:
-                psi_t = np.matmul(du.numpy(), psi_t)
-                pops = exp.populations(psi_t, model.lindbladian)
+            psi_init = get_init_ground_state(
+                self._number_of_qubits, self._number_of_levels
+            )
+            psi_t = psi_init.numpy()
+            pop_t = exp.populations(psi_t, False)
+
+            for gate in sequence:
+                psi_t = np.matmul(perfect_gates[gate], psi_t)
+                pops = exp.populations(psi_t, False)
                 pop_t = np.append(pop_t, pops, axis=1)
+
+        elif self._simulation_type == "physics":
+            exp.get_gates()
+            dUs = exp.dUs
+            # TODO Implement extracting n_qubits and n_levels from device
+            # create initial state for qubits and levels
+            psi_init = get_init_ground_state(
+                self._number_of_qubits, self._number_of_levels
+            )
+            psi_t = psi_init.numpy()
+            pop_t = exp.populations(psi_t, model.lindbladian)
+
+            # simulate sequence
+            for gate in sequence:
+                for du in dUs[gate]:
+                    psi_t = np.matmul(du.numpy(), psi_t)
+                    pops = exp.populations(psi_t, model.lindbladian)
+                    pop_t = np.append(pop_t, pops, axis=1)
+        else:
+            raise C3QiskitError("simulation_type can only be perfect or physics")
 
         # generate shots style readout with no SPAM
         # TODO a more sophisticated readout/measurement routine

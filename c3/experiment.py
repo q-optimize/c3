@@ -22,6 +22,7 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils import tf_utils
+from c3.utils.qt_utils import perfect_gate
 
 
 class Experiment:
@@ -247,6 +248,37 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
+    def get_perfect_gates(self) -> Dict[str, np.array]:
+        """Return a perfect gateset. If not operations are
+        specified in self.opt_gates, return complete gateset
+
+        Returns
+        -------
+        Dict[str, np.array]
+            A dictionary of gate names and np.array representation
+            of the corresponding unitary
+
+        Raises
+        ------
+        Exception
+            Raise general exception for undefined gate
+        """
+        instructions = self.pmap.instructions
+        gates = {}
+        gate_keys = self.opt_gates
+        if gate_keys is None:
+            gate_keys = instructions.keys()
+
+        for gate in gate_keys:
+            if gate not in instructions.keys():
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            gates[gate] = perfect_gate(gate)
+
+        return gates
+
     def get_gates(self):
         """
         Compute the unitary representation of operations. If no operations are
@@ -282,15 +314,10 @@ class Experiment:
                 for line, ctrls in instr.comps.items():
                     # TODO calculate properly the average frequency that each qubit sees
                     offset = 0.0
-                    if "gauss" in ctrls:
-                        if ctrls["gauss"].params["amp"] != 0.0:
-                            offset = ctrls["gauss"].params["freq_offset"].get_value()
-                    if "flux" in ctrls:
-                        if ctrls["flux"].params["amp"] != 0.0:
-                            offset = ctrls["flux"].params["freq_offset"].get_value()
-                    if "pwc" in ctrls:
-                        offset = ctrls["pwc"].params["freq_offset"].get_value()
-                    # print("gate: ", gate, "; line: ", line, "; offset: ", offset)
+                    for ctrl in ctrls.values():
+                        if "freq_offset" in ctrl.params.keys():
+                            if ctrl.params["amp"] != 0.0:
+                                offset = ctrl.params["freq_offset"].get_value()
                     freqs[line] = tf.cast(
                         ctrls["carrier"].params["freq"].get_value() + offset,
                         tf.complex128,

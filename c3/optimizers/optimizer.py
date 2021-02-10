@@ -173,8 +173,8 @@ class Optimizer:
             logfile.flush()
 
     def goal_run(
-        self, current_params: Union[np.ndarray, tf.Variable]
-    ) -> Union[np.ndarray, tf.Variable]:
+        self, current_params: Union[np.ndarray, tf.constant]
+    ) -> Union[np.ndarray, tf.constant]:
         """
         Placeholder for the goal function. To be implemented by inherited classes.
         """
@@ -214,20 +214,20 @@ class Optimizer:
         return gradient
 
     def fct_to_min(
-        self, input_parameters: Union[np.ndarray, tf.Variable]
-    ) -> Union[np.ndarray, tf.Variable]:
+        self, input_parameters: Union[np.ndarray, tf.constant]
+    ) -> Union[np.ndarray, tf.constant]:
         """
         Wrapper for the goal function.
 
         Parameters
         ----------
-        x : [np.array, tf.Variable]
+        x : [np.array, tf.constant]
             Vector of parameters in the optimizer friendly way.
 
         Returns
         -------
-        [float, tf.Variable]
-            Value of the goal function. Float if input is np.array else tf.Variable
+        [float, tf.constant]
+            Value of the goal function. Float if input is np.array else tf.constant
         """
 
         if isinstance(input_parameters, np.ndarray):

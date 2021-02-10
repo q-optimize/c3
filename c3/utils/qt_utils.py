@@ -218,6 +218,21 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
+def projector(dims, indices):
+    """
+    Computes the projector to cut down a matrix to the selected indices from dims.
+    """
+    ids = []
+    for index, dim in enumerate(dims):
+        if index in indices:
+            ids.append(np.eye(dim))
+        else:
+            mask = np.zeros(dim)
+            mask[0] = 1
+            ids.append(mask)
+    return np_kron_n(ids)
+
+
 def pad_matrix(matrix, dim, padding):
     """
     Fills matrix dimensions with zeros or identity.
