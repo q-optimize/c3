@@ -5,8 +5,58 @@ import tensorflow as tf
 import math
 from .c3_exceptions import C3QiskitError
 
+GATE_MAP = {
+    "X": "RXp",
+    "x": "RXp",
+    "Y": "RYp",
+    "y": "RYp",
+    "Z": "RZp",
+    "z": "RZp",
+    "CNOT": "CRXp",
+    "CX": "CRXp",
+    "cx": "CRXp",
+    "I": "Id",
+    "u0": "Id",
+    "id": "Id",
+    "RX90p": "RX90p",  # RX((np.pi)/2)
+    "RX90m": "RX90m",  # RX((-np.pi)/2)
+    "RY90p": "RY90p",  # RY((np.pi)/2)
+    "RY90m": "RY90m",  # RY(-(np.pi)/2)
+    "RZ90p": "RZ90p",  # RZ((np.pi)/2)
+    "RZ90m": "RZ90m",  # RZ(-(np.pi)/2)
+    "iSwap": "ISWAP",
+}
 
-def get_sequence(instructions: List) -> List[str]:
+
+def pad_gate_name(gate_name: str, qubits: List[int], n_qubits: int) -> str:
+    """Pad gate name with Identity gates in correct indices
+
+    Parameters
+    ----------
+    gate_name : str
+        A C3 compatible gate name
+    qubits : List[int]
+        Indices to apply gate
+    n_qubits : int
+        Total number of qubits in the device
+
+    Returns
+    -------
+    str
+        Identity padded gate name, eg ::
+
+            pad_gate_name("CCRX90p", [1, 2, 3], 5) -> 'Id:CCRX90p:Id'
+            pad_gate_name("RX90p", [0], 5) -> 'RX90p:Id:Id:Id:Id'
+    """
+
+    # TODO (check) Assumption control and action qubits next to each other
+    gate_names = ["Id"] * (n_qubits - (len(qubits) - 1))
+    gate_names[qubits[0]] = gate_name
+    padded_gate_str = ":".join(gate_names)
+    return padded_gate_str
+
+
+def get_sequence(instructions: List, n_qubits: int) -> List[str]:
     """Return a sequence of gates from instructions
 
     Parameters
@@ -25,6 +75,9 @@ def get_sequence(instructions: List) -> List[str]:
                 {"name": "u2", "qubits": [0], "params": [0.4,0.2], "conditional": 2}
             ]
 
+    n_qubits: int
+        Number of qubits in the device config
+
     Returns
     -------
     List[str]
@@ -38,85 +91,41 @@ def get_sequence(instructions: List) -> List[str]:
 
     for instruction in instructions:
 
+        # TODO Check if gate is possible from device_config
+        # TODO parametric gates
+
+        iname = instruction.name
         # Conditional operations are not supported
         conditional = getattr(instructions, "conditional", None)  # noqa
         if conditional is not None:
             raise C3QiskitError("C3 Simulator does not support conditional operations")
 
-        # reset is not supported
-        if instruction.name == "reset":
-            raise C3QiskitError("C3 Simulator does not support qubit reset")
-
-        # binary functions are not supported
-        elif instruction.name == "bfunc":
-            raise C3QiskitError("C3 Simulator does not support binary functions")
+        # reset, binary functions is not supported
+        elif iname in ["reset", "bfunc"]:
+            raise C3QiskitError("C3 Simulator does not support {}".format(iname))
 
         # barrier is implemented internally through Identity gates
-        elif instruction.name == "barrier":
+        elif iname == "barrier":
             pass
-
-        # TODO scalable way to name and assign X gate in multi qubit systems
-        elif instruction.name == "x":
-            if instruction.qubits[0] == 0:
-                sequence.append("RX90p:Id")
-            elif instruction.qubits[0] == 1:
-                sequence.append("Id:RX90p")
-            else:
-                raise C3QiskitError(
-                    "Gate {0} on qubit {1} not possible".format(
-                        instruction.name, instruction.qubits[0]
-                    )
-                )
 
         # TODO U, u3
-        elif instruction.name in ("U", "u3"):
-            raise C3QiskitError("U3 gates are not yet implemented in C3 Simulator")
-
-        # TODO scalable way to name and assign CX, cx gate in multi qubit systems
-        elif instruction.name in ("CX", "cx"):
-            if instruction.qubits == [0, 1]:
-                sequence.append("CR90")
-            else:
-                raise C3QiskitError(
-                    "Gate {0} on qubits {1} not possible".format(
-                        instruction.name, instruction.qubits
-                    )
-                )
-
-        # TODO scalable way to assign CZ gates and inverse control
-        elif instruction.name in ("CZ", "cz"):
-            if instruction.qubits == [0, 1]:
-                sequence.append("CZ")
-            else:
-                raise C3QiskitError(
-                    "Gate {0} on qubits {1} not possible".format(
-                        instruction.name, instruction.qubits
-                    )
-                )
-
-        # id, u0 implemented internally
-        elif instruction.name in ("id", "u0"):
-            pass
+        elif iname in ("U", "u3"):
+            raise C3QiskitError("U3 gates are not yet implemented")
 
         # measure implemented outside sequences
-        elif instruction.name == "measure":
+        elif iname == "measure":
             pass
+
+        elif iname in GATE_MAP.keys():
+            gate_name = GATE_MAP[iname]
+            qubits = instruction.qubits
+            padded_gate_str = pad_gate_name(gate_name, qubits, n_qubits)
+            sequence.append(padded_gate_str)
 
         # raise C3QiskitError if unknown instruction
         else:
-            raise C3QiskitError(
-                "Encountered unknown operation {}".format(instruction.name)
-            )
+            raise C3QiskitError("Encountered unknown operation {}".format(iname))
 
-    # TODO implement padding
-    # TODO fix gate naming bugs
-    sequence = [
-        "RX90p:Id:Id:Id:Id:Id",
-        "Id:RX90p:Id:Id:Id:Id",
-        "CR90:Id:Id:Id:Id",
-        "RX90p:RX90p:Id:Id:Id:Id",
-        "RX90p:Id:Id:Id:Id:Id",
-    ]
     return sequence
 
 
