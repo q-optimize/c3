@@ -256,7 +256,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments with perfect gates",
-        "basis_gates": ["u3", "cx", "id", "x"],
+        "basis_gates": ["cx", "cy", "cz", "iSwap", "id", "x", "y", "z"],
         "gates": [],
     }
 
@@ -344,20 +344,20 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         seed_simulator = 2441129
 
-        # TODO fix bugs in get_sequence(), pad gates with Id
         # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions)
+        sequence = get_sequence(experiment.instructions, self._number_of_qubits)
 
         # unique operations
         gate_keys = list(set(sequence))
 
-        # TODO extend evaluate() and process() for perfect gates and use here
         perfect_gates = exp.get_perfect_gates(gate_keys)
 
+        # initialise state
         psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
         psi_t = psi_init.numpy()
         pop_t = exp.populations(psi_t, False)
 
+        # compute final state
         for gate in sequence:
             psi_t = np.matmul(perfect_gates[gate], psi_t)
             pops = exp.populations(psi_t, False)
@@ -402,6 +402,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
 
 class C3QasmPhysicsSimulator(C3QasmSimulator):
+    # TODO Boilerplate code. This simulator is not yet implemented.
     """A C3-based perfect gates simulator for Qiskit
 
     Parameters
@@ -512,7 +513,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         seed_simulator = 2441129
 
         # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions)
+        sequence = get_sequence(experiment.instructions, self._number_of_qubits)
 
         # TODO extend evaluate() and process() for perfect gates and use here
         exp.get_gates()
