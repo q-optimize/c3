@@ -7,6 +7,7 @@ from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
 from qiskit import execute
+from qiskit.transpiler.exceptions import TranspilerError
 
 import pytest
 
@@ -38,9 +39,11 @@ def test_get_backend(backend):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
+@pytest.mark.xfail(raises=TranspilerError)
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_transpile(get_test_circuit, backend):  # noqa
-    """Test the transpiling using our backends
+    """Test the transpiling using our backends.
+    Should throw error due to missing H gate
 
     Parameters
     ----------
