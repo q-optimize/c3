@@ -354,12 +354,9 @@ def perfect_gate(  # noqa
             gate_num += 1
             do_pad_gate = False
         else:
-            print("gate_str must be one of the basic 90 or 180 degree gates.")
-            print(
-                "'Id','RX90p','RX90m','RXp','RY90p',",
-                "'RY90m','RYp','RZ90p','RZ90m','RZp', 'CNOT'",
+            raise KeyError(
+                "gate_str must be one of the basic 90 or 180 degree gates: 'Id','RX90p','RX90m','RXp','RY90p','RY90m','RYp','RZ90p','RZ90m','RZp', 'CNOT', CRXp, CRZp, CR, CR90, iSWAP"
             )
-            return None
         if do_pad_gate:
             if proj == "compsub":
                 pass
