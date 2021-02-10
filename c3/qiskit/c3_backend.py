@@ -370,7 +370,13 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         # generate state labels
         labels = [
             hex(i)
-            for i in range(0, pow(self._number_of_qubits, self._number_of_levels))
+            for i in range(
+                0,
+                pow(
+                    self._number_of_levels,
+                    self._number_of_qubits,
+                ),
+            )
         ]
 
         # create results dict
@@ -532,7 +538,13 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         # TODO use n_qubits and n_levels
         labels = [
             hex(i)
-            for i in range(0, pow(self._number_of_qubits, self._number_of_levels))
+            for i in range(
+                0,
+                pow(
+                    self._number_of_levels,
+                    self._number_of_qubits,
+                ),
+            )
         ]
 
         # create results dict
