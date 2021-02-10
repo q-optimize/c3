@@ -111,11 +111,11 @@ def get_sequence(instructions: List) -> List[str]:
     # TODO implement padding
     # TODO fix gate naming bugs
     sequence = [
-        "X90p:Id:Id:Id:Id:Id",
-        "Id:X90p:Id:Id:Id:Id",
+        "RX90p:Id:Id:Id:Id:Id",
+        "Id:RX90p:Id:Id:Id:Id",
         "CR90:Id:Id:Id:Id",
-        "X90p:X90p:Id:Id:Id:Id",
-        "X90p:Id:Id:Id:Id:Id",
+        "RX90p:RX90p:Id:Id:Id:Id",
+        "RX90p:Id:Id:Id:Id:Id",
     ]
     return sequence
 
