@@ -256,7 +256,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments with perfect gates",
-        "basis_gates": ["cx", "cy", "cz", "iSwap", "id", "x", "y", "z"],
+        "basis_gates": ["cx", "cz", "iSwap", "id", "x", "y", "z"],
         "gates": [],
     }
 
