@@ -19,7 +19,7 @@ from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 from abc import ABC, abstractclassmethod, abstractmethod
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,29 @@ class C3QasmSimulator(Backend, ABC):
             for all device parameters for simulation
         """
         self._device_config = config_file
+
+    def get_labels(self) -> List[str]:
+        """Return state labels for the system
+
+        Returns
+        -------
+        List[str]
+            A list of state labels in hex format ::
+
+                labels = ['0x1', ...]
+
+        """
+        labels = [
+            hex(i)
+            for i in range(
+                0,
+                pow(
+                    self._number_of_levels,
+                    self._number_of_qubits,
+                ),
+            )
+        ]
+        return labels
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
@@ -256,7 +279,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments with perfect gates",
-        "basis_gates": ["cx", "cy", "cz", "iSwap", "id", "x", "y", "z"],
+        "basis_gates": ["cx", "cz", "iSwap", "id", "x", "y", "z"],
         "gates": [],
     }
 
@@ -368,19 +391,10 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32")
 
         # generate state labels
-        labels = [
-            hex(i)
-            for i in range(
-                0,
-                pow(
-                    self._number_of_levels,
-                    self._number_of_qubits,
-                ),
-            )
-        ]
+        output_labels = self.get_labels()
 
         # create results dict
-        counts = dict(zip(labels, shots_data))
+        counts = dict(zip(output_labels, shots_data))
 
         # keep only non-zero states
         counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
@@ -425,7 +439,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A physics based c3 simulator for qasm experiments",
-        "basis_gates": ["u3", "cx", "id", "x"],
+        "basis_gates": [],  # TODO add basis gates
         "gates": [],
     }
 
@@ -495,15 +509,17 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         exp = Experiment()
         exp.quick_setup(self._device_config)
         pmap = exp.pmap
-        model = pmap.model
+        model = pmap.model  # noqa
 
         # initialise parameters
-        # TODO get n_qubits from device config and raise error if mismatch
-        self._number_of_qubits = experiment.config.n_qubits
-        # TODO ensure number of quantum and classical bits is same
-        shots = self._shots
-        # TODO get Hilbert dimensions from device config
-        self._number_of_levels = 2
+        self._number_of_qubits = len(pmap.model.subsystems)
+        if self._number_of_qubits != experiment.config.n_qubits:
+            raise C3QiskitError("Number of qubits in Circuit & Device dont match")
+
+        shots = self._shots  # noqa
+
+        # TODO (Check) Assume all qubits have same Hilbert dims
+        self._number_of_levels = pmap.model.dims[0]
 
         # Validate the dimension of initial statevector if set
         self._validate_initial_statevector()
@@ -513,46 +529,17 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         seed_simulator = 2441129
 
         # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions, self._number_of_qubits)
+        sequence = get_sequence(experiment.instructions, self._number_of_qubits)  # noqa
 
-        # TODO extend evaluate() and process() for perfect gates and use here
-        exp.get_gates()
-        dUs = exp.dUs
-        # TODO Implement extracting n_qubits and n_levels from device
-        # create initial state for qubits and levels
-        psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
-        psi_t = psi_init.numpy()
-        pop_t = exp.populations(psi_t, model.lindbladian)
-
-        # simulate sequence
-        for gate in sequence:
-            for du in dUs[gate]:
-                psi_t = np.matmul(du.numpy(), psi_t)
-                pops = exp.populations(psi_t, model.lindbladian)
-                pop_t = np.append(pop_t, pops, axis=1)
+        # TODO get_init_ground_state(), get_gates(), evaluate(), process()
 
         # generate shots style readout with no SPAM
-        # TODO a more sophisticated readout/measurement routine
-        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32")
+        # TODO a sophisticated readout/measurement routine
 
-        # generate state labels
-        # TODO use n_qubits and n_levels
-        labels = [
-            hex(i)
-            for i in range(
-                0,
-                pow(
-                    self._number_of_levels,
-                    self._number_of_qubits,
-                ),
-            )
-        ]
+        # TODO generate state labels using get_labels()
 
-        # create results dict
-        counts = dict(zip(labels, shots_data))
-
-        # keep only non-zero states
-        counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
+        # TODO create results dict and remove empty states
+        counts = {}  # type: ignore
 
         end = time.time()
 

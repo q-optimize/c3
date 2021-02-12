@@ -15,6 +15,8 @@ GATE_MAP = {
     "CNOT": "CRXp",
     "CX": "CRXp",
     "cx": "CRXp",
+    "CZ": "CRZp",
+    "cz": "CRZp",
     "I": "Id",
     "u0": "Id",
     "id": "Id",
