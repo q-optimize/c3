@@ -85,6 +85,10 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
     expected_counts = get_result_qiskit[backend]
+
+    # TODO C3: 110000 -> Qiskit: 000011
+    # qiskit_simulator = Aer.get_backend('qasm_simulator')
+    # expected_counts = execute(qc, qiskit_simulator, shots=1000).result().get_counts(qc)
     assert result_sim.get_counts(qc) == expected_counts
 
 
