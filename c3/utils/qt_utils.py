@@ -63,12 +63,9 @@ def pauli_basis(dims=[2]):
     size = np.prod(np.array(dims) ** 2)
     B = np.zeros((size, size), dtype=complex)
     for idx, op_tuple in enumerate(res_tuple):
-        if nq == 1:
-            op = op_tuple[0]
-        if nq == 2:
-            op = np.kron(op_tuple[0], op_tuple[1])
-        if nq == 3:
-            op = np.kron(np.kron(op_tuple[0], op_tuple[1]), op_tuple[2])
+        op = op_tuple[0]
+        for i in range(nq - 1):
+            op = np.kron(op, op_tuple[i + 1])
         vec = np.reshape(np.transpose(op), [-1, 1])
         B[:, idx] = vec.T.conj()
     return B
