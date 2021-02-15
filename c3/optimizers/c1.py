@@ -98,6 +98,8 @@ class C1(Optimizer):
         self.start_log()
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
+        if self.update_model:
+            print("C3:STATUS:Optimization includes model parameters.")
         index = []
         for name in self.fid_subspace:
             index.append(self.pmap.model.names.index(name))
