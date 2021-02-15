@@ -345,21 +345,22 @@ def cosine_flattop(t, params):
     Parameters
     ----------
     params : dict
-        t_final : float
-            Total length of the Gaussian.
+        t_rise : float
+            Length of the cosine-shaped ramps.
         sigma: float
             Width of the Gaussian.
 
     """
     t_rise = tf.cast(params["t_rise"].get_value(), tf.float64)
+    t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     dt = t[1] - t[0]
     n_rise = tf.cast(t_rise / dt, tf.int32)
-    n_flat = len(t) - 2 * n_rise
+    n_flat = tf.cast((t_final - 2 * t_rise) / dt, tf.int32)
     cos_flt = tf.concat(
         [
             0.5 * (1 - tf.cos(np.pi * t[:n_rise] / t_rise)),
             tf.ones(n_flat, dtype=tf.float64),
-            0.5 * (1 + tf.cos(np.pi * t[:n_rise] / t_rise)),
+            0.5 * (1 - tf.cos(np.pi * (t_final - t[n_flat + n_rise :]) / t_rise)),
         ],
         axis=0,
     )
