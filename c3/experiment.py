@@ -204,6 +204,9 @@ class Experiment:
             populations.append(pops)
         return populations
 
+    def lookup_gate(self, gate_name, target, params=None) -> tf.constant:
+        return self.unitaries[gate_name][target](params)
+
     def process(self, populations, labels=None):
         """
         Apply a readout procedure to a population vector. Very specialized
