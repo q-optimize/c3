@@ -13,16 +13,14 @@ parser.add_argument("log_file")
 parser.add_argument("-w", "--watch", action="store_true")
 args = parser.parse_args()
 
-log = None
-
-try:
-    with open(args.log_file) as file:
-        log = hjson.load(file)
-except FileNotFoundError:
-    print("Logfile not found.")
-
 
 def show_table():
+    log = None
+    try:
+        with open(args.log_file) as file:
+            log = hjson.load(file)
+    except FileNotFoundError:
+        print("Logfile not found.")
     if log:
         opt_map = log["opt_map"]
         optim_status = log["optim_status"]
