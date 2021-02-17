@@ -316,9 +316,13 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
-    def get_perfect_gates(self) -> Dict[str, np.array]:
-        """Return a perfect gateset. If not operations are
-        specified in self.opt_gates, return complete gateset
+    def get_perfect_gates(self, gate_keys: list = None) -> Dict[str, np.array]:
+        """Return a perfect gateset for the gate_keys.
+
+        Parameters
+        ----------
+        gate_keys: list
+            (Optional) List of gates to evaluate.
 
         Returns
         -------
@@ -333,17 +337,13 @@ class Experiment:
         """
         instructions = self.pmap.instructions
         gates = {}
-        gate_ids = self.opt_gates
-        if gate_ids is None:
-            gate_ids = instructions.keys()
+        dims = self.pmap.model.dims
+        if gate_keys is None:
+            gate_keys = instructions.keys()  # type: ignore
+        for gate in gate_keys:
+            gates[gate] = perfect_gate(gates_str=gate, dims=dims)
 
-        for gate in gate_ids:
-            if gate not in instructions.keys():
-                raise Exception(
-                    f"C3:Error: Gate '{gate}' is not defined."
-                    f" Available gates are:\n {list(instructions.keys())}."
-                )
-            gates[gate] = perfect_gate(gate)
+        # TODO parametric gates
 
         return gates
 
