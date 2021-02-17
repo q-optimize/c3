@@ -124,7 +124,7 @@ to wrap the blackbox by defining the target states and the ``opt_map``.
             exp.set_opt_gates_seq(seqs)
 
             # Simulating the gates #
-            U_dict = exp.get_gates()
+            U_dict = exp.compute_propagators()
 
             # Running the RB sequences and read-out the results #
             pops = exp.evaluate(seqs)

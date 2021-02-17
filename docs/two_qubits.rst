@@ -622,13 +622,13 @@ rotation on one qubit and the identity.
 
     exp.set_opt_gates(['RX90p:Id', 'Id:Id'])
 
-The actual numerical simulation is done by calling ``exp.get_gates()``.
+The actual numerical simulation is done by calling ``exp.compute_propagators()``.
 This is the most resource intensive part as it involves solving the
 equations of motion for the system.
 
 .. code-block:: python
 
-    unitaries = exp.get_gates()
+    unitaries = exp.compute_propagators()
 
 
 .. code-block:: python
@@ -695,7 +695,7 @@ and plot system dynamics.
                 If true, return a matplotlib figure instead of saving.
             """
             model = exp.pmap.model
-            dUs = exp.dUs
+            dUs = exp.partial_propagators
             psi_t = psi_init.numpy()
             pop_t = exp.populations(psi_t, model.lindbladian)
             for gate in seq:
