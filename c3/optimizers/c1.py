@@ -134,7 +134,7 @@ class C1(Optimizer):
         if self.update_model:
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
-        propagators = self.exp.get_gates()
+        propagators = self.exp.compute_propagators()
         try:
             goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
         except TypeError:

@@ -264,8 +264,8 @@ class C3QasmSimulator(Backend):
                 pop_t = np.append(pop_t, pops, axis=1)
 
         elif self._simulation_type == "physics":
-            exp.get_gates()
-            dUs = exp.dUs
+            exp.compute_propagators()
+            dUs = exp.partial_propagators
             # TODO Implement extracting n_qubits and n_levels from device
             # create initial state for qubits and levels
             psi_init = get_init_ground_state(
