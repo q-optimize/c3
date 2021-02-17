@@ -49,6 +49,11 @@ class Model:
         if tasks:
             self.set_tasks(tasks)
 
+    def get_ground_state(self) -> tf.constant:
+        gs = [[0] * self.tot_dim]
+        gs[0][0] = 1
+        return tf.transpose(tf.constant(gs, dtype=tf.complex128))
+
     def set_components(self, subsystems, couplings=None) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
