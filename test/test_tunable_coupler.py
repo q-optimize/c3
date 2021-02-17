@@ -363,11 +363,11 @@ def test_energy_levels() -> None:
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
     exp.set_opt_gates(["Id:CRZp"])
-    exp.get_gates()
+    exp.compute_propagators()
     dUs = []
-    for indx in range(len(exp.dUs["Id:CRZp"])):
+    for indx in range(len(exp.partial_propagators["Id:CRZp"])):
         if indx % 50 == 0:
-            dUs.append(exp.dUs["Id:CRZp"][indx].numpy())
+            dUs.append(exp.partial_propagators["Id:CRZp"][indx].numpy())
     dUs = np.array(dUs)
     assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
@@ -381,7 +381,7 @@ def test_dynamics_CPHASE() -> None:
 def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
-    U_dict = exp.get_gates()
+    U_dict = exp.compute_propagators()
     U_super = U_dict["Id:CRZp"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()

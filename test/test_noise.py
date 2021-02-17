@@ -260,9 +260,9 @@ def test_c1_robust():
 @pytest.mark.slow
 @pytest.mark.integration
 def test_noise_devices():
-    exp.get_gates()
+    exp.compute_propagators()
     fidelity0 = fidelities.average_infid_set(
-        exp.unitaries, [1], exp.pmap.model.dims, 0, proj=True
+        exp.propagators, [1], exp.pmap.model.dims, 0, proj=True
     )
 
     noise_map = [
@@ -277,17 +277,17 @@ def test_noise_devices():
 
         exp2.pmap.set_parameters(params, noise_map)
 
-        exp2.get_gates()
+        exp2.compute_propagators()
         fidelityA = fidelities.average_infid_set(
-            exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True
+            exp2.propagators, [1], exp2.pmap.model.dims, 0, proj=True
         )
         pink_noiseA = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseA = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
         awg_noiseA = exp2.pmap.generator.devices["AWGNoise"].signal["noise-inphase"]
 
-        exp2.get_gates()
+        exp2.compute_propagators()
         fidelityB = fidelities.average_infid_set(
-            exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True
+            exp2.propagators, [1], exp2.pmap.model.dims, 0, proj=True
         )
         pink_noiseB = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseB = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
