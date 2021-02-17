@@ -395,13 +395,46 @@ def perfect_parametric_gate(paulis_str, ang, dims):
     """
     ps = []
     p_list = paulis_str.split(":")
-    for idx in range(len(p_list)):
-        if p_list[idx] not in PAULIS:
+    for idx, key in enumerate(p_list):
+        if key not in PAULIS:
             raise KeyError(
-                f"Incorrect pauli matrix {p_list[idx]} in position {idx}.\
+                f"Incorrect pauli matrix {key} in position {idx}.\
                 Select from {PAULIS.keys()}."
             )
-        ps.append(pad_matrix(PAULIS[p_list[idx]], dims[idx] - 2, "wzeros"))
+        ps.append(pad_matrix(PAULIS[key], dims[idx] - 2, "wzeros"))
+    gen = np_kron_n(ps)
+    return expm(-1.0j / 2 * ang * gen)
+
+
+def perfect_single_q_parametric_gate(pauli_str, target, ang, dims):
+    """
+    Construct an ideal parametric gate.
+
+    Parameters
+    ----------
+    paulis_str : str
+        Name for the Pauli matrices that identify the rotation axis. Example:
+            - "X" for a single-qubit rotation about the X axis
+    ang : float
+        Angle of the rotation
+    dims : list
+        Dimensions of the subspaces.
+
+    Returns
+    -------
+    np.array
+        Ideal gate.
+    """
+    ps = []
+    p_list = ["Id"] * len(dims)
+    p_list[target] = pauli_str
+    for idx, key in enumerate(p_list):
+        if key not in PAULIS:
+            raise KeyError(
+                f"Incorrect pauli matrix {key} in position {idx}.\
+                Select from {PAULIS.keys()}."
+            )
+        ps.append(pad_matrix(PAULIS[key], dims[idx] - 2, "wzeros"))
     gen = np_kron_n(ps)
     return expm(-1.0j / 2 * ang * gen)
 

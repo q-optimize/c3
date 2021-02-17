@@ -30,7 +30,7 @@ from c3.utils.tf_utils import (
     tf_super,
     tf_vec_to_dm,
 )
-from c3.utils.qt_utils import perfect_gate
+from c3.utils.qt_utils import perfect_gate, perfect_single_q_parametric_gate
 
 
 class Experiment:
@@ -54,9 +54,16 @@ class Experiment:
     def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
-        self.unitaries: dict = {}
-        self.dUs: dict = {}
+        self.propagators: dict = {}
+        self.partial_propagators: dict = {}
         self.created_by = None
+        self.evaluate = self.evaluate_legacy
+
+    def enable_qasm(self) -> None:
+        """
+        Switch the sequencing format to QASM. Will become the default.
+        """
+        self.evaluate = self.evaluate_qasm
 
     def set_created_by(self, config):
         """
@@ -173,7 +180,7 @@ class Experiment:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def evaluate(self, sequences):
+    def evaluate_legacy(self, sequences):
         """
         Compute the population values for a given sequence of operations.
 
@@ -189,7 +196,6 @@ class Experiment:
 
         """
         model = self.pmap.model
-        gates = self.unitaries
         psi_init = model.tasks["init_ground"].initialise(
             model.drift_H, model.lindbladian
         )
@@ -198,14 +204,63 @@ class Experiment:
         for sequence in sequences:
             psi_t = copy.deepcopy(self.psi_init)
             for gate in sequence:
-                psi_t = tf.matmul(gates[gate], psi_t)
+                psi_t = tf.matmul(self.propagators[gate], psi_t)
 
             pops = self.populations(psi_t, model.lindbladian)
             populations.append(pops)
         return populations
 
-    def lookup_gate(self, gate_name, target, params=None) -> tf.constant:
-        return self.unitaries[gate_name][target](params)
+    def evaluate_qasm(self, sequences):
+        """
+        Compute the population values for a given sequence (in QASM format) of
+        operations.
+
+        Parameters
+        ----------
+        seqs: dict list
+            A list of control pulses/gates to perform on the device in QASM format.
+
+        Returns
+        -------
+        list
+            A list of populations
+
+        """
+        model = self.pmap.model
+        if "init_ground" in model.tasks:
+            psi_init = model.tasks["init_ground"].initialise(
+                model.drift_H, model.lindbladian
+            )
+        else:
+            psi_init = model.get_ground_state()
+        self.psi_init = psi_init
+        populations = []
+        for sequence in sequences:
+            psi_t = copy.deepcopy(self.psi_init)
+            for gate in sequence:
+                psi_t = tf.matmul(self.lookup_gate(**gate), psi_t)
+
+            pops = self.populations(psi_t, model.lindbladian)
+            populations.append(pops)
+        return populations
+
+    def lookup_gate(self, name, qubits, params=None) -> tf.constant:
+        """
+        Returns a fixed operation or a parametric virtual Z gate. To be extended to
+        general parametric gates.
+        """
+        if name == "VZ":
+            gate = tf.constant(self.get_VZ(qubits, params))
+        else:
+            gate = self.propagators[name]
+        return gate
+
+    def get_VZ(self, target, params):
+        """
+        Returns the appropriate Z-rotation.
+        """
+        dims = self.pmap.model.dims
+        return perfect_single_q_parametric_gate("Z", target[0], params[0], dims)
 
     def process(self, populations, labels=None):
         """
@@ -278,11 +333,11 @@ class Experiment:
         """
         instructions = self.pmap.instructions
         gates = {}
-        gate_keys = self.opt_gates
-        if gate_keys is None:
-            gate_keys = instructions.keys()
+        gate_ids = self.opt_gates
+        if gate_ids is None:
+            gate_ids = instructions.keys()
 
-        for gate in gate_keys:
+        for gate in gate_ids:
             if gate not in instructions.keys():
                 raise Exception(
                     f"C3:Error: Gate '{gate}' is not defined."
@@ -292,7 +347,7 @@ class Experiment:
 
         return gates
 
-    def get_gates(self):
+    def compute_propagators(self):
         """
         Compute the unitary representation of operations. If no operations are
         specified in self.opt_gates the complete gateset is computed.
@@ -306,11 +361,11 @@ class Experiment:
         generator = self.pmap.generator
         instructions = self.pmap.instructions
         gates = {}
-        gate_keys = self.opt_gates
-        if gate_keys is None:
-            gate_keys = instructions.keys()
+        gate_ids = self.opt_gates
+        if gate_ids is None:
+            gate_ids = instructions.keys()
 
-        for gate in gate_keys:
+        for gate in gate_ids:
             try:
                 instr = instructions[gate]
             except KeyError:
@@ -362,7 +417,7 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-            self.unitaries = gates
+            self.propagators = gates
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -399,7 +454,7 @@ class Experiment:
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation(h0, hks, signals, dt)
-        self.dUs[gate] = dUs
+        self.partial_propagators[gate] = dUs
         self.ts = ts
         U = tf_matmul_left(dUs)
         self.U = U
@@ -465,8 +520,8 @@ class Experiment:
         if not os.path.exists(folder):
             os.mkdir(folder)
         with open(folder + "Us.pickle", "wb+") as file:
-            pickle.dump(self.unitaries, file)
-        for key, value in self.unitaries.items():
+            pickle.dump(self.propagators, file)
+        for key, value in self.propagators.items():
             # Windows is not able to parse ":" as file path
             np.savetxt(folder + key.replace(":", ".") + ".txt", value)
 

@@ -38,17 +38,24 @@ class Instruction:
     def __init__(
         self,
         name: str = " ",
+        targets: list = None,
+        params: list = None,
         channels: list = [],
         t_start: np.float64 = 0.0,
         t_end: np.float64 = 0.0,
     ):
         self.name = name
+        self.targets = targets
+        self.params = params
         self.t_start = t_start
         self.t_end = t_end
         self.comps = {}  # type: ignore
         for chan in channels:
             self.comps[chan] = {}
         # TODO remove redundancy of channels in instruction
+
+    def as_openqasm(self) -> dict:
+        return {"name": self.name, "qubits": self.targets, "params": self.params}
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
