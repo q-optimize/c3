@@ -1,6 +1,6 @@
 """Convenience Module for creating different c3_backend
 """
-from typing import List
+from typing import Dict, List
 import tensorflow as tf
 import math
 from .c3_exceptions import C3QiskitError
@@ -155,3 +155,8 @@ def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:
     init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
 
     return init_state
+
+
+def flip_labels(counts: Dict[str, int]) -> Dict[str, int]:
+    labels_flipped = counts
+    return labels_flipped
