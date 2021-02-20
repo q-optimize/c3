@@ -6,7 +6,7 @@ from c3.qiskit.c3_exceptions import C3QiskitError
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import execute
+from qiskit import execute, Aer
 from qiskit.transpiler.exceptions import TranspilerError
 
 import pytest
@@ -84,12 +84,18 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     qc = get_6_qubit_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
-    expected_counts = get_result_qiskit[backend]
 
-    # TODO C3: 110000 -> Qiskit: 000011
-    # qiskit_simulator = Aer.get_backend('qasm_simulator')
-    # expected_counts = execute(qc, qiskit_simulator, shots=1000).result().get_counts(qc)
-    assert result_sim.get_counts(qc) == expected_counts
+    # Test results with qiskit style qubit indexing
+    qiskit_simulator = Aer.get_backend("qasm_simulator")
+    qiskit_counts = execute(qc, qiskit_simulator, shots=1000).result().get_counts(qc)
+    assert result_sim.get_counts(qc) == qiskit_counts
+
+    # Test results with original C3 style qubit indexing
+    received_backend.disable_flip_labels()
+    no_flip_counts = get_result_qiskit[backend]
+    job_sim = execute(qc, received_backend, shots=1000)
+    result_sim = job_sim.result()
+    assert result_sim.get_counts() == no_flip_counts
 
 
 @pytest.mark.unit
