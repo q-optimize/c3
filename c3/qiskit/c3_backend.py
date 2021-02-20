@@ -17,7 +17,7 @@ from c3.experiment import Experiment
 
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
-from .c3_backend_utils import get_init_ground_state, get_sequence
+from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
 
 from typing import Any, Dict, List
 from abc import ABC, abstractclassmethod, abstractmethod
@@ -81,6 +81,14 @@ class C3QasmSimulator(Backend, ABC):
             )
         ]
         return labels
+
+    def disable_flip_labels(self) -> None:
+        """Disable flipping of labels
+        State Labels are flipped before returning results
+        to match Qiskit style qubit indexing convention
+        This function allows disabling of the flip
+        """
+        self._flip_labels = False
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
@@ -306,6 +314,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         self._qobj_config = None
         # TEMP
         self._sample_measure = False
+        self._flip_labels = True
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -330,7 +339,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
             "shots": number of shots used in the simulation
             "data":
                 {
-                "counts": {'0x9: 5, ...},
+                "counts": {'0x9': 5, ...},
                 "memory": ['0x9', '0xF', '0x1D', ..., '0x9']
                 },
             "status": status string for the simulation
@@ -398,6 +407,11 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # keep only non-zero states
         counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
+
+        # flipping state labels to match qiskit style qubit indexing convention
+        # default is to flip labels to qiskit style, use disable_flip_labels()
+        if self._flip_labels:
+            counts = flip_labels(counts)
 
         end = time.time()
 
@@ -540,6 +554,11 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # TODO create results dict and remove empty states
         counts = {}  # type: ignore
+
+        # flipping state labels to match qiskit style qubit indexing convention
+        # default is to flip labels to qiskit style, use disable_flip_labels()
+        if self._flip_labels:
+            counts = flip_labels(counts)
 
         end = time.time()
 
