@@ -44,7 +44,7 @@ setup(
         "rich==9.2.0",
         "numpy==1.18.5",
         "scipy==1.5.2",
-        "tensorflow==2.3.1",
+        "tensorflow==2.4.0",
         "tensorflow-estimator==2.3.0",
         "tensorflow-probability==0.11.1",
     ],
