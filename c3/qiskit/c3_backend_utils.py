@@ -158,6 +158,34 @@ def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:
 
 
 def flip_labels(counts: Dict[str, int]) -> Dict[str, int]:
+    """Flip C3 qubit labels to match Qiskit qubit indexing
+
+    Parameters
+    ----------
+    counts : Dict[str, int]
+        OpenQasm 2.0 result counts with original C3 style
+        qubit indices
+
+    Returns
+    -------
+    Dict[str, int]
+        OpenQasm 2.0 result counts with Qiskit style labels
+
+    Note
+    ----
+    Basis vector ordering in Qiskit
+
+    Qiskit uses a slightly different ordering of the qubits compared to
+    what is seen in Physics textbooks. In qiskit, the qubits are represented from
+    the most significant bit (MSB) on the left to the least significant bit (LSB)
+    on the right (big-endian). This is similar to bitstring representation
+    on classical computers, and enables easy conversion from bitstrings to
+    integers after measurements are performed.
+
+    More details:
+    https://qiskit.org/documentation/tutorials/circuits/3_summary_of_quantum_operations.html#Basis-vector-ordering-in-Qiskit
+
+    """
     labels_flipped_counts = {}
     for key, value in counts.items():
         key_bin = bin(int(key, 0))
