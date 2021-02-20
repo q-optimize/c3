@@ -408,7 +408,8 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         # keep only non-zero states
         counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
 
-        # flipping state labels to match qiskit qubit indexing convention
+        # flipping state labels to match qiskit style qubit indexing convention
+        # default is to flip labels to qiskit style, use disable_flip_labels()
         if self._flip_labels:
             counts = flip_labels(counts)
 
@@ -553,6 +554,11 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # TODO create results dict and remove empty states
         counts = {}  # type: ignore
+
+        # flipping state labels to match qiskit style qubit indexing convention
+        # default is to flip labels to qiskit style, use disable_flip_labels()
+        if self._flip_labels:
+            counts = flip_labels(counts)
 
         end = time.time()
 
