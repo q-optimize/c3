@@ -158,5 +158,10 @@ def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:
 
 
 def flip_labels(counts: Dict[str, int]) -> Dict[str, int]:
-    labels_flipped = counts
-    return labels_flipped
+    labels_flipped_counts = {}
+    for key, value in counts.items():
+        key_bin = bin(int(key, 0))
+        key_bin_rev = "0b" + key_bin[:1:-1]
+        key_rev = hex(int(key_bin_rev, 0))
+        labels_flipped_counts[key_rev] = value
+    return labels_flipped_counts
