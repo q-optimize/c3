@@ -37,6 +37,7 @@ setup(
     install_requires=[
         "adaptive==0.11.1",
         "cma==3.0.3",
+        "gast==0.3.3",
         "hjson==3.0.2",
         "rich==9.2.0",
         "numpy==1.19.5",
