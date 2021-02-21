@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="c3-toolset",
-    version="1.2.1",
+    version="1.2.2",
     description="Toolset for control, calibration and characterization of physical systems",
     url="http://www.q-optimize.org",
     author="q-optimize",
@@ -37,6 +37,7 @@ setup(
     install_requires=[
         "adaptive==0.11.1",
         "cma==3.0.3",
+        "gast==0.3.3",
         "hjson==3.0.2",
         "rich==9.2.0",
         "numpy==1.19.5",

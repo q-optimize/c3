@@ -1,6 +1,7 @@
 adaptive==0.11.1
 cma==3.0.3
 docstr-coverage==1.2.0
+gast==0.3.3
 hjson==3.0.2
 numpy==1.19.5
 pre-commit==2.7.1
