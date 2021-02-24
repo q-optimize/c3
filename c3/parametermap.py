@@ -22,7 +22,7 @@ class ParameterMap:
         self.model = model
         self.generator = generator
         for instr in instructions:
-            self.instructions[instr.name] = instr
+            self.instructions[instr.name + str(instr.targets)] = instr
 
         # Collecting model components
         components = {}
@@ -50,7 +50,9 @@ class ParameterMap:
             for chan in instr.comps.keys():
                 for comp in instr.comps[chan]:
                     for par_name, par_value in instr.comps[chan][comp].params.items():
-                        par_id = "-".join([gate, chan, comp, par_name])
+                        par_id = "-".join(
+                            [instr.name + str(instr.targets), chan, comp, par_name]
+                        )
                         par_lens[par_id] = par_value.length
                         pars[par_id] = par_value
 

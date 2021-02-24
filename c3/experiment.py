@@ -30,7 +30,7 @@ from c3.utils.tf_utils import (
     tf_super,
     tf_vec_to_dm,
 )
-from c3.utils.qt_utils import perfect_gate, perfect_single_q_parametric_gate
+from c3.utils.qt_utils import perfect_single_q_parametric_gate, kron_ids
 
 
 class Experiment:
@@ -95,9 +95,10 @@ class Experiment:
         instructions = []
         sideband = cfg.pop("sideband", None)
         for gate_name, props in cfg["single_qubit_gates"].items():
-            target_qubit = model.subsystems[props["target_qubit"]]
+            target_qubit = model.subsystems[props["qubits"]]
             instr = Instruction(
-                name=gate_name,
+                name=props["name"],
+                targets=[model.names.index(props["qubits"])],
                 t_start=0.0,
                 t_end=single_gate_time,
                 channels=[target_qubit.drive_line],
@@ -116,6 +117,10 @@ class Experiment:
             qubit_2 = model.subsystems[props["qubit_2"]]
             instr = Instruction(
                 name=gate_name,
+                targets=[
+                    model.names.index(props["qubit_1"]),
+                    model.names.index(props["qubit_2"]),
+                ],
                 t_start=0.0,
                 t_end=props["gate_time"],
                 channels=[qubit_1.drive_line, qubit_2.drive_line],
@@ -252,7 +257,7 @@ class Experiment:
         if name == "VZ":
             gate = tf.constant(self.get_VZ(qubits, params))
         else:
-            gate = self.propagators[name]
+            gate = self.propagators[str((name, qubits))]
         return gate
 
     def get_VZ(self, target, params):
@@ -341,7 +346,9 @@ class Experiment:
         if gate_keys is None:
             gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
-            gates[gate] = perfect_gate(gates_str=gate, dims=dims)
+            gates[gate] = kron_ids(
+                dims, instructions[gate].targets, instructions[gate].ideal
+            )
 
         # TODO parametric gates
 

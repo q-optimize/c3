@@ -10,11 +10,11 @@ exp.quick_setup("test/quickstart.hjson")
 exp.enable_qasm()
 
 sequence = [
-    {"name": "RX90p:Id", "qubits": [0]},
+    {"name": "rx90p", "qubits": [0]},
     {"name": "VZ", "qubits": [0], "params": [0.123]},
     {"name": "VZ", "qubits": [1], "params": [2.31]},
 ]
-exp.set_opt_gates(["RX90p:Id"])
+exp.set_opt_gates([str(("rx90p", [0]))])
 exp.compute_propagators()
 
 
