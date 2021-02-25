@@ -205,7 +205,7 @@ class Crosstalk(Device):
         self.outputs = props.pop("outputs", 1)
         self.params["crosstalk_matrix"] = props.pop("crosstalk_matrix", None)
 
-    def process(self, instr: Instruction, chan: str, signal: dict) -> dict:
+    def process(self, signal: dict) -> dict:
         """
         Mix channels in the input signal according to a crosstalk matrix.
 
@@ -225,10 +225,10 @@ class Crosstalk(Device):
 
         """
         xtalk = self.params["crosstalk_matrix"]
-        signals = [signal[ch] for ch in self.crossed_channels]
+        signals = [signal[ch]["values"] for ch in self.crossed_channels]
         crossed_signals = xtalk.get_value() @ signals
         for indx, ch in enumerate(self.crossed_channels):
-            signal[ch] = crossed_signals[indx]
+            signal[ch]["values"] = crossed_signals[indx]
         return signal
 
 

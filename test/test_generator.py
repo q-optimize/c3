@@ -3,7 +3,15 @@
 import pickle
 import numpy as np
 import pytest
-from c3.generator.devices import LO, AWG, Mixer, Response, DigitalToAnalog, VoltsToHertz
+from c3.generator.devices import (
+    LO,
+    AWG,
+    Mixer,
+    Response,
+    DigitalToAnalog,
+    VoltsToHertz,
+    Crosstalk,
+)
 from c3.generator.generator import Generator
 from c3.signal.gates import Instruction
 from c3.signal.pulse import Envelope, Carrier
@@ -30,6 +38,14 @@ v_to_hz = VoltsToHertz(
     inputs=1,
     outputs=1,
 )
+xtalk = Crosstalk(
+    name="crosstalk",
+    channels=["d1", "d2"],
+    crosstalk_matrix=Quantity(
+        value=[[1, 0], [1, 0]], min_val=[[0, 0], [0, 0]], max_val=[[1, 1], [1, 1]]
+    ),
+)
+
 generator = Generator(
     devices={
         "LO": lo,
@@ -163,4 +179,57 @@ def test_full_signal_chain() -> None:
         full_signal["d1"]["values"].numpy()
         - data["full_signal"][0]["d1"]["values"].numpy()
         < 1
+    ).all()
+
+
+@pytest.mark.integration
+def test_crosstalk() -> None:
+    generator = Generator(
+        devices={
+            "LO": lo,
+            "AWG": awg,
+            "DigitalToAnalog": dac,
+            "Response": resp,
+            "Mixer": mixer,
+            "VoltsToHertz": v_to_hz,
+            "crosstalk": xtalk,
+        },
+        chains={
+            "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+            "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+        },
+    )
+    RX90p_q1 = Instruction(
+        name="RX90p", t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    )
+    RX90p_q1.add_component(gauss_env_single, "d1")
+    RX90p_q1.add_component(carr, "d1")
+
+    gauss_params_single_2 = {
+        "amp": Quantity(value=0, min_val=-0.4, max_val=0.6, unit="V"),
+        "t_final": Quantity(
+            value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"
+        ),
+        "sigma": Quantity(
+            value=t_final / 4, min_val=t_final / 8, max_val=t_final / 2, unit="s"
+        ),
+        "xy_angle": Quantity(
+            value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"
+        ),
+        "freq_offset": Quantity(
+            value=-sideband - 3e6, min_val=-56 * 1e6, max_val=-52 * 1e6, unit="Hz 2pi"
+        ),
+        "delta": Quantity(value=-1, min_val=-5, max_val=3, unit=""),
+    }
+    gauss_env_single_2 = Envelope(
+        name="gauss",
+        desc="Gaussian comp for single-qubit gates",
+        params=gauss_params_single_2,
+        shape=env_lib.gaussian_nonorm,
+    )
+    RX90p_q1.add_component(gauss_env_single_2, "d2")
+    RX90p_q1.add_component(carr, "d2")
+    full_signal = generator.generate_signals(RX90p_q1)
+    assert (
+        full_signal["d1"]["values"].numpy() == full_signal["d2"]["values"].numpy()
     ).all()
