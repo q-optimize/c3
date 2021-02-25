@@ -914,7 +914,7 @@ class LO(Device):
                 if amp_noise and freq_noise:
                     print("amp and freq noise")
                     phi = omega_lo * ts[0]
-                    for t in ts:
+                    for _ in ts:
                         A = np.random.normal(loc=1.0, scale=amp_noise)
                         cos.append(A * np.cos(phi))
                         sin.append(A * np.sin(phi))
@@ -941,7 +941,7 @@ class LO(Device):
                         sin.append(np.sin(omega_lo * t + phi))
                 elif freq_noise:
                     phi = omega_lo * ts[0]
-                    for t in ts:
+                    for _ in ts:
                         cos.append(np.cos(phi))
                         sin.append(np.sin(phi))
                         omega = omega_lo + np.random.normal(loc=0.0, scale=freq_noise)
