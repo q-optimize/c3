@@ -257,7 +257,7 @@ class Experiment:
         if name == "VZ":
             gate = tf.constant(self.get_VZ(qubits, params))
         else:
-            gate = self.propagators[str((name, qubits))]
+            gate = self.propagators[name + str(qubits)]
         return gate
 
     def get_VZ(self, target, params):

@@ -40,7 +40,7 @@ class Instruction:
     def __init__(
         self,
         name: str = " ",
-        targets: list = None,
+        targets: list = [0],
         params: list = None,
         ideal: np.array = None,
         channels: list = [],
@@ -69,6 +69,11 @@ class Instruction:
         return asdict
 
     def get_ideal_gate(self, dims):
+        if self.ideal is None:
+            raise Exception(
+                "C3:ERROR: No ideal representation definded for gate"
+                f" {self.name+str(self.targets)}"
+            )
         return kron_ids(
             [2] * len(dims),  # we compare to the computational basis
             self.targets,
