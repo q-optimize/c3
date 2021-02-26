@@ -5,10 +5,8 @@ integration testing module for C1 optimization through two-qubits example
 import copy
 import pickle
 import numpy as np
-from typing import List
 import pytest
 from numpy.testing import assert_array_almost_equal as almost_equal
-from numpy.testing import assert_array_less as assert_less
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -196,7 +194,6 @@ carrier_parameters = {
 carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
-carr.params["framechange"].set_value((-sideband * t_final) * 2 * np.pi % (2 * np.pi))
 
 lo_freq_q2 = 5.6e9 + sideband
 carr_2 = copy.deepcopy(carr)
@@ -219,11 +216,18 @@ rx90p_q1.add_component(gauss_env_single, "d1")
 rx90p_q1.add_component(carr, "d1")
 rx90p_q1.add_component(nodrive_env, "d2")
 rx90p_q1.add_component(copy.deepcopy(carr_2), "d2")
+rx90p_q1.comps["d2"]["carrier"].params["framechange"].set_value(
+    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
+)
 
 rx90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
 rx90p_q2.add_component(carr_2, "d2")
 rx90p_q2.add_component(nodrive_env, "d1")
 rx90p_q2.add_component(copy.deepcopy(carr), "d1")
+rx90p_q2.comps["d1"]["carrier"].params["framechange"].set_value(
+    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
+)
+
 
 QId_q1.add_component(nodrive_env, "d1")
 QId_q1.add_component(copy.deepcopy(carr), "d1")
@@ -319,15 +323,6 @@ def test_hamiltonians() -> None:
 
 def test_propagation() -> None:
     almost_equal(propagator, test_data["propagator"])
-
-
-def test_average_fidelity() -> None:
-    assert_less(
-        fidelities.average_infid_set(
-            {"rx90p[0]": propagator}, pmap.instructions, [0, 1], [3, 3]
-        ),
-        0.01,
-    )
 
 
 @pytest.mark.slow

@@ -87,24 +87,24 @@ def setup_pmap() -> ParameterMap:
 
     gateset_opt_map = [
         [
-            ("RX90p", "d1", "gauss", "amp"),
-            ("RY90p", "d1", "gauss", "amp"),
-            ("RX90m", "d1", "gauss", "amp"),
-            ("RY90m", "d1", "gauss", "amp"),
+            ("RX90p[0]", "d1", "gauss", "amp"),
+            ("RY90p[0]", "d1", "gauss", "amp"),
+            ("RX90m[0]", "d1", "gauss", "amp"),
+            ("RY90m[0]", "d1", "gauss", "amp"),
         ],
         [
-            ("RX90p", "d1", "gauss", "delta"),
-            ("RY90p", "d1", "gauss", "delta"),
-            ("RX90m", "d1", "gauss", "delta"),
-            ("RY90m", "d1", "gauss", "delta"),
+            ("RX90p[0]", "d1", "gauss", "delta"),
+            ("RY90p[0]", "d1", "gauss", "delta"),
+            ("RX90m[0]", "d1", "gauss", "delta"),
+            ("RY90m[0]", "d1", "gauss", "delta"),
         ],
         [
-            ("RX90p", "d1", "gauss", "freq_offset"),
-            ("RY90p", "d1", "gauss", "freq_offset"),
-            ("RX90m", "d1", "gauss", "freq_offset"),
-            ("RY90m", "d1", "gauss", "freq_offset"),
+            ("RX90p[0]", "d1", "gauss", "freq_offset"),
+            ("RY90p[0]", "d1", "gauss", "freq_offset"),
+            ("RX90m[0]", "d1", "gauss", "freq_offset"),
+            ("RY90m[0]", "d1", "gauss", "freq_offset"),
         ],
-        [("Id", "d1", "carrier", "framechange")],
+        [("Id[0]", "d1", "carrier", "framechange")],
     ]
 
     parameter_map.set_opt_map(gateset_opt_map)
@@ -144,7 +144,7 @@ def test_parameter_get_value() -> None:
     """
     Check that four parameters are set.
     """
-    assert str(pmap.get_parameter(("RX90p", "d1", "gauss", "amp"))) == "450.000 mV "
+    assert str(pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))) == "450.000 mV "
 
 
 @pytest.mark.unit
@@ -152,8 +152,8 @@ def test_parameter_equiv() -> None:
     """
     Check that two equivalent parameters do not point to the same memory address.
     """
-    amp1 = pmap.get_parameter(("RX90p", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RY90p", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("RY90p[0]", "d1", "gauss", "amp"))
     assert amp1 is not amp2
 
 
@@ -162,10 +162,10 @@ def test_parameter_set_equiv() -> None:
     """
     Check that setting equivalent parameters also sets the other one.
     """
-    amp_ids = [[("RX90p", "d1", "gauss", "amp"), ("RX90m", "d1", "gauss", "amp")]]
+    amp_ids = [[("RX90p[0]", "d1", "gauss", "amp"), ("RX90m[0]", "d1", "gauss", "amp")]]
     pmap.set_parameters([0.55], amp_ids)
-    amp1 = pmap.get_parameter(("RX90p", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RX90m", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp"))
     assert amp1.get_value() == amp2.get_value()
 
 
@@ -174,10 +174,13 @@ def test_parameter_set_indepentent() -> None:
     """
     Check that setting equivalent parameters also sets the other one.
     """
-    amp_ids = [[("RX90p", "d1", "gauss", "amp")], [("RX90m", "d1", "gauss", "amp")]]
+    amp_ids = [
+        [("RX90p[0]", "d1", "gauss", "amp")],
+        [("RX90m[0]", "d1", "gauss", "amp")],
+    ]
     pmap.set_parameters([0.55, 0.41], amp_ids)
-    amp1 = pmap.get_parameter(("RX90p", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RX90m", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp"))
     assert amp1.get_value() != amp2.get_value()
 
 
@@ -186,8 +189,11 @@ def test_parameter_set_opt() -> None:
     """
     Test the setting in optimizer format.
     """
-    amp_ids = [[("RX90p", "d1", "gauss", "amp")], [("RX90m", "d1", "gauss", "amp")]]
+    amp_ids = [
+        [("RX90p[0]", "d1", "gauss", "amp")],
+        [("RX90m[0]", "d1", "gauss", "amp")],
+    ]
     pmap.set_opt_map(amp_ids)
     pmap.set_parameters_scaled([-1.0, 1.0])  # -+1 correspond to min and max allowd
-    assert pmap.get_parameter(("RX90p", "d1", "gauss", "amp")).get_value() == 0.4
-    assert pmap.get_parameter(("RX90m", "d1", "gauss", "amp")).get_value() == 0.6
+    assert pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp")).get_value() == 0.4
+    assert pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp")).get_value() == 0.6

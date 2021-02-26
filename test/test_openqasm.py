@@ -14,7 +14,7 @@ sequence = [
     {"name": "VZ", "qubits": [0], "params": [0.123]},
     {"name": "VZ", "qubits": [1], "params": [2.31]},
 ]
-exp.set_opt_gates([str(("rx90p", [0]))])
+exp.set_opt_gates(["rx90p[0]"])
 exp.compute_propagators()
 
 

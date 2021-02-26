@@ -241,7 +241,11 @@ flux_env = pulse.Envelope(
     shape=envelopes.flattop,
 )
 CRZp = gates.Instruction(
-    name="Id:CRZp", t_start=0.0, t_end=cphase_time, channels=["Q1", "Q2", "TC"]
+    name="CRZp",
+    targets=[0, 1],
+    t_start=0.0,
+    t_end=cphase_time,
+    channels=["Q1", "Q2", "TC"],
 )
 CRZp.add_component(flux_env, "TC")
 CRZp.add_component(carr_tc, "TC")
@@ -362,12 +366,12 @@ def test_energy_levels() -> None:
 @pytest.mark.integration
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
-    exp.set_opt_gates(["Id:CRZp"])
+    exp.set_opt_gates(["CRZp[0, 1]"])
     exp.compute_propagators()
     dUs = []
-    for indx in range(len(exp.partial_propagators["Id:CRZp"])):
+    for indx in range(len(exp.partial_propagators["CRZp[0, 1]"])):
         if indx % 50 == 0:
-            dUs.append(exp.partial_propagators["Id:CRZp"][indx].numpy())
+            dUs.append(exp.partial_propagators["CRZp[0, 1]"][indx].numpy())
     dUs = np.array(dUs)
     assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
@@ -382,7 +386,7 @@ def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.compute_propagators()
-    U_super = U_dict["Id:CRZp"]
+    U_super = U_dict["CRZp[0, 1]"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
@@ -399,7 +403,7 @@ def test_separate_chains() -> None:
 @pytest.mark.slow
 @pytest.mark.integration
 def test_flux_signal() -> None:
-    instr = exp.pmap.instructions["Id:CRZp"]
+    instr = exp.pmap.instructions["CRZp[0, 1]"]
     signal = exp.pmap.generator.generate_signals(instr)
     awg = exp.pmap.generator.devices["awg"]
     channel = "TC"
