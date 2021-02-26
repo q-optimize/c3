@@ -177,12 +177,6 @@ gauss_env_single = pulse.Envelope(
     shape=envelopes.gaussian_nonorm,
 )
 
-lo_freq_q1 = 5e9 + sideband
-carrier_parameters = {
-    "freq": Qty(value=lo_freq_q1, min_val=4.5e9, max_val=6e9, unit="Hz 2pi"),
-    "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
-}
-
 nodrive_env = pulse.Envelope(
     name="no_drive",
     params={
@@ -198,6 +192,7 @@ carrier_parameters = {
     "freq": Qty(value=lo_freq_q1, min_val=4.5e9, max_val=6e9, unit="Hz 2pi"),
     "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
 }
+
 carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
@@ -223,7 +218,7 @@ QId_q2 = gates.Instruction(
 rx90p_q1.add_component(gauss_env_single, "d1")
 rx90p_q1.add_component(carr, "d1")
 rx90p_q1.add_component(nodrive_env, "d2")
-rx90p_q1.add_component(copy.deepcopy(carr), "d2")
+rx90p_q1.add_component(copy.deepcopy(carr_2), "d2")
 
 rx90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
 rx90p_q2.add_component(carr_2, "d2")
@@ -233,7 +228,7 @@ rx90p_q2.add_component(copy.deepcopy(carr), "d1")
 QId_q1.add_component(nodrive_env, "d1")
 QId_q1.add_component(copy.deepcopy(carr), "d1")
 QId_q1.add_component(nodrive_env, "d2")
-QId_q1.add_component(copy.deepcopy(carr), "d2")
+QId_q1.add_component(copy.deepcopy(carr_2), "d2")
 QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
 QId_q2.add_component(copy.deepcopy(carr_2), "d2")
 QId_q2.add_component(nodrive_env, "d1")
@@ -331,7 +326,7 @@ def test_average_fidelity() -> None:
         fidelities.average_infid_set(
             {"rx90p[0]": propagator}, pmap.instructions, [0, 1], [3, 3]
         ),
-        0.01
+        0.01,
     )
 
 
