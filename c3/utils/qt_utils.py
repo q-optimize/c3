@@ -1,6 +1,7 @@
 """Useful functions to get basis vectors and matrices of the right size."""
 
 import numpy as np
+from typing import List
 from scipy.linalg import block_diag as scipy_block_diag
 from scipy.linalg import expm
 from c3.libraries.constants import PAULIS, Id, X, Y, Z
@@ -522,76 +523,76 @@ def inverseC(sequence):
             return i
 
 
-# def perfect_cliffords(lvls: List[int], proj: str = "fulluni", num_gates: int = 1):
-#     """
-#     Returns a list of ideal matrix representation of Clifford gates.
-#     """
-#     # TODO make perfect clifford more general by making it take a decomposition
-#
-#     if num_gates == 1:
-#         x90p = perfect_gate("RX90p", index=[0], dims=lvls, proj=proj)
-#         y90p = perfect_gate("RY90p", index=[0], dims=lvls, proj=proj)
-#         x90m = perfect_gate("RX90m", index=[0], dims=lvls, proj=proj)
-#         y90m = perfect_gate("RY90m", index=[0], dims=lvls, proj=proj)
-#     elif num_gates == 2:
-#         x90p = perfect_gate("RX90p", index=[0, 1], dims=lvls, proj=proj)
-#         y90p = perfect_gate("RY90p", index=[0, 1], dims=lvls, proj=proj)
-#         x90m = perfect_gate("RX90m", index=[0, 1], dims=lvls, proj=proj)
-#         y90m = perfect_gate("RY90m", index=[0, 1], dims=lvls, proj=proj)
-#
-#     C1 = x90m @ x90p
-#     C2 = x90p @ y90p
-#     C3 = y90m @ x90m
-#     C4 = x90p @ x90p @ y90p
-#     C5 = x90m
-#     C6 = x90m @ y90m @ x90p
-#     C7 = x90p @ x90p
-#     C8 = x90m @ y90m
-#     C9 = y90m @ x90p
-#     C10 = y90m
-#     C11 = x90p
-#     C12 = x90p @ y90p @ x90p
-#     C13 = y90p @ y90p
-#     C14 = x90p @ y90m
-#     C15 = y90p @ x90p
-#     C16 = x90p @ x90p @ y90m
-#     C17 = y90p @ y90p @ x90p
-#     C18 = x90p @ y90m @ x90p
-#     C19 = y90p @ y90p @ x90p @ x90p
-#     C20 = x90m @ y90p
-#     C21 = y90p @ x90m
-#     C22 = y90p
-#     C23 = y90p @ y90p @ x90m
-#     C24 = x90m @ y90p @ x90p
-#
-#     cliffords = [
-#         C1,
-#         C2,
-#         C3,
-#         C4,
-#         C5,
-#         C6,
-#         C7,
-#         C8,
-#         C9,
-#         C10,
-#         C11,
-#         C12,
-#         C13,
-#         C14,
-#         C15,
-#         C16,
-#         C17,
-#         C18,
-#         C19,
-#         C20,
-#         C21,
-#         C22,
-#         C23,
-#         C24,
-#     ]
-#
-#     return cliffords
+def perfect_cliffords(lvls: List[int], proj: str = "fulluni", num_gates: int = 1):
+    """
+    Returns a list of ideal matrix representation of Clifford gates.
+    """
+    # TODO make perfect clifford more general by making it take a decomposition
+
+    if num_gates == 1:
+        x90p = perfect_gate("RX90p", index=[0], dims=lvls, proj=proj)
+        y90p = perfect_gate("RY90p", index=[0], dims=lvls, proj=proj)
+        x90m = perfect_gate("RX90m", index=[0], dims=lvls, proj=proj)
+        y90m = perfect_gate("RY90m", index=[0], dims=lvls, proj=proj)
+    elif num_gates == 2:
+        x90p = perfect_gate("RX90p", index=[0, 1], dims=lvls, proj=proj)
+        y90p = perfect_gate("RY90p", index=[0, 1], dims=lvls, proj=proj)
+        x90m = perfect_gate("RX90m", index=[0, 1], dims=lvls, proj=proj)
+        y90m = perfect_gate("RY90m", index=[0, 1], dims=lvls, proj=proj)
+
+    C1 = x90m @ x90p
+    C2 = x90p @ y90p
+    C3 = y90m @ x90m
+    C4 = x90p @ x90p @ y90p
+    C5 = x90m
+    C6 = x90m @ y90m @ x90p
+    C7 = x90p @ x90p
+    C8 = x90m @ y90m
+    C9 = y90m @ x90p
+    C10 = y90m
+    C11 = x90p
+    C12 = x90p @ y90p @ x90p
+    C13 = y90p @ y90p
+    C14 = x90p @ y90m
+    C15 = y90p @ x90p
+    C16 = x90p @ x90p @ y90m
+    C17 = y90p @ y90p @ x90p
+    C18 = x90p @ y90m @ x90p
+    C19 = y90p @ y90p @ x90p @ x90p
+    C20 = x90m @ y90p
+    C21 = y90p @ x90m
+    C22 = y90p
+    C23 = y90p @ y90p @ x90m
+    C24 = x90m @ y90p @ x90p
+
+    cliffords = [
+        C1,
+        C2,
+        C3,
+        C4,
+        C5,
+        C6,
+        C7,
+        C8,
+        C9,
+        C10,
+        C11,
+        C12,
+        C13,
+        C14,
+        C15,
+        C16,
+        C17,
+        C18,
+        C19,
+        C20,
+        C21,
+        C22,
+        C23,
+        C24,
+    ]
+
+    return cliffords
 
 
 cliffords_string = [

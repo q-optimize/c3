@@ -13,6 +13,7 @@ from c3.utils.tf_utils import (
     tf_ketket_fid,
     tf_superoper_unitary_overlap,
     tf_unitary_overlap,
+    tf_project_to_comp,
     tf_dm_to_vec,
     tf_average_fidelity,
     tf_superoper_average_fidelity,
@@ -21,7 +22,7 @@ from c3.utils.tf_utils import (
 )
 from c3.utils.qt_utils import (
     basis,
-    perfect_gate,
+    kron_ids,
     perfect_cliffords,
     cliffords_decomp,
     cliffords_decomp_xId,
@@ -111,57 +112,55 @@ def state_transfer_infid(U_dict: dict, gate: str, index, dims, psi_0, proj: bool
 
 
 @fid_reg_deco
-def unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
+def unitary_infid(
+    ideal: np.array, actual: tf.constant, index=[0], dims=[2]
+) -> tf.constant:
     """
     Unitary overlap between ideal and actually performed gate.
 
     Parameters
     ----------
-    U_dict : dict
-        Contains unitary representations of the gates, identified by a key.
+    ideal : np.array
+        Ideal or goal unitary representation of the gate.
+    actual : np.array
+        Actual, physical unitary representation of the gate.
     index : int
         Index of the qubit(s) in the Hilbert space to be evaluated
     gate : str
         One of the keys of U_dict, selects the gate to be evaluated
     dims : list
         List of dimensions of qubits
-    proj : boolean
-        Project to computational subspace
 
     Returns
     -------
     tf.float
         Unitary fidelity.
     """
-    U = U_dict[gate]
-    projection = "fulluni"
-    fid_lvls = np.prod([dims[i] for i in index])
-    if proj:
-        projection = "wzeros"
-        fid_lvls = 2 ** len(index)
-    U_ideal = tf.constant(
-        perfect_gate(gate, index, dims, projection), dtype=tf.complex128
-    )
-    infid = 1 - tf_unitary_overlap(U, U_ideal, lvls=fid_lvls)
+    actual_comp = tf_project_to_comp(actual, dims=dims, index=index)
+    fid_lvls = 2 ** len(index)
+    infid = 1 - tf_unitary_overlap(actual_comp, ideal, lvls=fid_lvls)
     return infid
 
 
 @fid_reg_deco
-def unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
+def unitary_infid_set(propagators: dict, instructions: dict, index, dims, eval=-1):
     """
     Mean unitary overlap between ideal and actually performed gate for the gates in
     U_dict.
 
     Parameters
     ----------
-    U_dict : dict
-        Contains unitary representations of the gates, identified by a key.
-    index : int
+    propagators : dict
+        Contains actual unitary representations of the gates, resulting from physical
+        simulation
+    instructions : dict
+        Contains the perfect unitary representations of the gates, identified by a key.
+    index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
     dims : list
         List of dimensions of qubits
-    proj : boolean
-        Project to computational subspace
+    eval : int
+        Number of evaluation
 
     Returns
     -------
@@ -169,14 +168,17 @@ def unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
         Unitary fidelity.
     """
     infids = []
-    for gate in U_dict.keys():
-        infid = unitary_infid(U_dict, gate, index, dims, proj)
+    for gate, propagator in propagators.items():
+        perfect_gate = kron_ids(dims, index, [instructions[gate].ideal])
+        infid = unitary_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
 
 
 @fid_reg_deco
-def lindbladian_unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
+def lindbladian_unitary_infid(
+    ideal: np.array, actual: tf.constant, index=[0], dims=[2]
+) -> tf.constant:
     """
     Variant of the unitary fidelity for the Lindbladian propagator.
 
@@ -198,18 +200,10 @@ def lindbladian_unitary_infid(U_dict: dict, gate: str, index, dims, proj: bool):
     tf.float
         Overlap fidelity for the Lindblad propagator.
     """
-    # Here we deal with the projected case differently because it's not easy
-    # to select the right section of the superoper
-    U = U_dict[gate]
-    projection = "fulluni"
-    fid_lvls = np.prod([dims[i] for i in index])
-    if proj:
-        projection = "wzeros"
-        fid_lvls = 2 ** len(index)
-    U_ideal = tf_super(
-        tf.constant(perfect_gate(gate, index, dims, projection), dtype=tf.complex128)
-    )
-    infid = 1 - tf_superoper_unitary_overlap(U, U_ideal, lvls=fid_lvls)
+    U_ideal = tf_super(ideal)
+    actual_comp = tf_project_to_comp(actual, dims=dims, index=index, to_super=True)
+    fid_lvls = 2 ** len(index)
+    infid = 1 - tf_superoper_unitary_overlap(actual_comp, U_ideal, lvls=fid_lvls)
     return infid
 
 
@@ -296,7 +290,9 @@ def average_infid_simult(U_dict: dict, gate: str, index, dims, proj=True):
 
 
 @fid_reg_deco
-def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
+def average_infid(
+    ideal: np.array, actual: tf.constant, index=[0], dims=[2]
+) -> tf.constant:
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
     always 2x2 (per qubit) and the actual unitary needs to be projected down.
@@ -312,16 +308,14 @@ def average_infid(U_dict: dict, gate: str, index, dims, proj=True):
     proj : boolean
         Project to computational subspace
     """
-    U = U_dict[gate]
-    U_ideal = tf.constant(
-        perfect_gate(gate, index, dims=[2] * len(dims)), dtype=tf.complex128
-    )
-    infid = 1 - tf_average_fidelity(U, U_ideal, lvls=dims)
+    actual_comp = tf_project_to_comp(actual, dims=dims, index=index)
+    fid_lvls = [2] * len(index)
+    infid = 1 - tf_average_fidelity(actual_comp, ideal, lvls=fid_lvls)
     return infid
 
 
 @fid_reg_deco
-def average_infid_set(U_dict: dict, index, dims, eval, proj=True):
+def average_infid_set(propagators: dict, instructions: dict, index, dims, eval=-1):
     """
     Mean average fidelity over all gates in U_dict.
 
@@ -342,8 +336,9 @@ def average_infid_set(U_dict: dict, index, dims, eval, proj=True):
         Mean average fidelity
     """
     infids = []
-    for gate in U_dict.keys():
-        infid = average_infid(U_dict, gate, index, dims, proj)
+    for gate, propagator in propagators.items():
+        perfect_gate = instructions[gate].get_ideal_gate(dims)
+        infid = average_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
 

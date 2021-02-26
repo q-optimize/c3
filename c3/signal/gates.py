@@ -3,6 +3,8 @@ import numpy as np
 from c3.c3objs import C3obj, Quantity
 from c3.signal.pulse import Envelope, Carrier
 from c3.libraries.envelopes import gaussian_nonorm
+from c3.libraries.constants import GATES
+from c3.utils.qt_utils import kron_ids
 
 
 class Instruction:
@@ -40,6 +42,7 @@ class Instruction:
         name: str = " ",
         targets: list = None,
         params: list = None,
+        ideal: np.array = None,
         channels: list = [],
         t_start: np.float64 = 0.0,
         t_end: np.float64 = 0.0,
@@ -50,12 +53,27 @@ class Instruction:
         self.t_start = t_start
         self.t_end = t_end
         self.comps = {}  # type: ignore
+        if ideal:
+            self.ideal = ideal
+        elif name in GATES.keys():
+            self.ideal = GATES[name]
+        else:
+            self.ideal = None
         for chan in channels:
             self.comps[chan] = {}
-        # TODO remove redundancy of channels in instruction
 
     def as_openqasm(self) -> dict:
-        return {"name": self.name, "qubits": self.targets, "params": self.params}
+        asdict = {"name": self.name, "qubits": self.targets, "params": self.params}
+        if self.ideal:
+            asdict["ideal"] = self.ideal
+        return asdict
+
+    def get_ideal_gate(self, dims):
+        return kron_ids(
+            [2] * len(dims),  # we compare to the computational basis
+            self.targets,
+            [self.ideal],
+        )
 
     def asdict(self) -> dict:
         components = {}  # type:ignore

@@ -7,6 +7,8 @@ import pickle
 import numpy as np
 from typing import List
 import pytest
+from numpy.testing import assert_array_almost_equal as almost_equal
+from numpy.testing import assert_array_less as assert_less
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -199,92 +201,87 @@ carrier_parameters = {
 carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
+carr.params["framechange"].set_value((-sideband * t_final) * 2 * np.pi % (2 * np.pi))
 
 lo_freq_q2 = 5.6e9 + sideband
 carr_2 = copy.deepcopy(carr)
 carr_2.params["freq"].set_value(lo_freq_q2)
 
-RX90p_q1 = gates.Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
-RX90p_q2 = gates.Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d2"])
-QId_q1 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
-QId_q2 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d2"])
+rx90p_q1 = gates.Instruction(
+    name="rx90p", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+)
+rx90p_q2 = gates.Instruction(
+    name="rx90p", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+)
+QId_q1 = gates.Instruction(
+    name="Id", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+)
+QId_q2 = gates.Instruction(
+    name="Id", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+)
 
-RX90p_q1.add_component(gauss_env_single, "d1")
-RX90p_q1.add_component(carr, "d1")
+rx90p_q1.add_component(gauss_env_single, "d1")
+rx90p_q1.add_component(carr, "d1")
+rx90p_q1.add_component(nodrive_env, "d2")
+rx90p_q1.add_component(copy.deepcopy(carr), "d2")
+
+rx90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
+rx90p_q2.add_component(carr_2, "d2")
+rx90p_q2.add_component(nodrive_env, "d1")
+rx90p_q2.add_component(copy.deepcopy(carr), "d1")
+
 QId_q1.add_component(nodrive_env, "d1")
 QId_q1.add_component(copy.deepcopy(carr), "d1")
-
-RX90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
-RX90p_q2.add_component(carr_2, "d2")
+QId_q1.add_component(nodrive_env, "d2")
+QId_q1.add_component(copy.deepcopy(carr), "d2")
 QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
 QId_q2.add_component(copy.deepcopy(carr_2), "d2")
+QId_q2.add_component(nodrive_env, "d1")
+QId_q2.add_component(copy.deepcopy(carr), "d1")
 
-QId_q1.comps["d1"]["carrier"].params["framechange"].set_value(
-    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
-)
-QId_q2.comps["d2"]["carrier"].params["framechange"].set_value(
-    (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
-)
-
-Y90p_q1 = copy.deepcopy(RX90p_q1)
-Y90p_q1.name = "RY90p"
-X90m_q1 = copy.deepcopy(RX90p_q1)
-X90m_q1.name = "RX90m"
-Y90m_q1 = copy.deepcopy(RX90p_q1)
-Y90m_q1.name = "RY90m"
+Y90p_q1 = copy.deepcopy(rx90p_q1)
+Y90p_q1.name = "ry90p"
+X90m_q1 = copy.deepcopy(rx90p_q1)
+X90m_q1.name = "rx90m"
+Y90m_q1 = copy.deepcopy(rx90p_q1)
+Y90m_q1.name = "ry90m"
 Y90p_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
 X90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
 Y90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
-Q1_gates = [QId_q1, RX90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
+single_q_gates = [QId_q1, rx90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
 
 
-Y90p_q2 = copy.deepcopy(RX90p_q2)
-Y90p_q2.name = "RY90p"
-X90m_q2 = copy.deepcopy(RX90p_q2)
-X90m_q2.name = "RX90m"
-Y90m_q2 = copy.deepcopy(RX90p_q2)
-Y90m_q2.name = "RY90m"
+Y90p_q2 = copy.deepcopy(rx90p_q2)
+Y90p_q2.name = "ry90p"
+X90m_q2 = copy.deepcopy(rx90p_q2)
+X90m_q2.name = "rx90m"
+Y90m_q2 = copy.deepcopy(rx90p_q2)
+Y90m_q2.name = "ry90m"
 Y90p_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
 X90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(np.pi)
 Y90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
-Q2_gates = [QId_q2, RX90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
+single_q_gates.extend([QId_q2, rx90p_q2, Y90p_q2, X90m_q2, Y90m_q2])
 
-all_1q_gates_comb = []
-for g1 in Q1_gates:
-    for g2 in Q2_gates:
-        g = gates.Instruction(name="NONE", t_start=0.0, t_end=t_final, channels=[])
-        g.name = g1.name + ":" + g2.name
-        channels: List[str] = []
-        channels.extend(g1.comps.keys())
-        channels.extend(g2.comps.keys())
-        for chan in channels:
-            g.comps[chan] = {}
-            if chan in g1.comps:
-                g.comps[chan].update(g1.comps[chan])
-            if chan in g2.comps:
-                g.comps[chan].update(g2.comps[chan])
-        all_1q_gates_comb.append(g)
-
-pmap = Pmap(all_1q_gates_comb, generator, model)
+pmap = Pmap(single_q_gates, generator, model)
 
 exp = Exp(pmap)
 
 generator.devices["AWG"].enable_drag_2()
 
-exp.set_opt_gates(["RX90p:Id"])
+exp.set_opt_gates(["rx90p[0]"])
 
 gateset_opt_map = [
     [
-        ("RX90p:Id", "d1", "gauss", "amp"),
+        ("rx90p[0]", "d1", "gauss", "amp"),
     ],
     [
-        ("RX90p:Id", "d1", "gauss", "freq_offset"),
+        ("rx90p[0]", "d1", "gauss", "freq_offset"),
     ],
     [
-        ("RX90p:Id", "d1", "gauss", "xy_angle"),
+        ("rx90p[0]", "d1", "gauss", "xy_angle"),
     ],
     [
-        ("RX90p:Id", "d1", "gauss", "delta"),
+        ("rx90p[0]", "d1", "gauss", "delta"),
     ],
 ]
 
@@ -305,10 +302,10 @@ opt.set_exp(exp)
 with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
 
-gen_signal = generator.generate_signals(pmap.instructions["RX90p:Id"])
+gen_signal = generator.generate_signals(pmap.instructions["rx90p[0]"])
 ts = gen_signal["d1"]["ts"]
 hdrift, hks = model.get_Hamiltonians()
-propagator = exp.propagation(gen_signal, "RX90p:Id")
+propagator = exp.propagation(gen_signal, "rx90p[0]")
 
 
 def test_signals() -> None:
@@ -322,11 +319,20 @@ def test_signals() -> None:
 def test_hamiltonians() -> None:
     assert (hdrift.numpy() - test_data["hdrift"].numpy() < 1).any()
     for key in hks:
-        assert (hks[key].numpy() - test_data["hks"][key].numpy() < 1).all()
+        almost_equal(hks[key], test_data["hks"][key])
 
 
 def test_propagation() -> None:
-    assert (propagator.numpy() - test_data["propagator"].numpy() < 1e-12).all()
+    almost_equal(propagator, test_data["propagator"])
+
+
+def test_average_fidelity() -> None:
+    assert_less(
+        fidelities.average_infid_set(
+            {"rx90p[0]": propagator}, pmap.instructions, [0, 1], [3, 3]
+        ),
+        0.01
+    )
 
 
 @pytest.mark.slow

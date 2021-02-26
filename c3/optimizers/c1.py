@@ -5,6 +5,7 @@ import shutil
 import time
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
+from c3.utils.qt_utils import projector
 from c3.utils.utils import log_setup
 
 
@@ -135,12 +136,10 @@ class C1(Optimizer):
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.compute_propagators()
-        try:
-            goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
-        except TypeError:
-            goal = self.fid_func(
-                self.exp, propagators, self.index, dims, self.evaluation + 1
-            )
+
+        goal = self.fid_func(
+            propagators, self.pmap.instructions, self.index, dims, self.evaluation + 1
+        )
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
