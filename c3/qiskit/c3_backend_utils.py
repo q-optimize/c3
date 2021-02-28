@@ -121,8 +121,8 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
         elif iname in GATE_MAP.keys():
             gate_name = GATE_MAP[iname]
             qubits = instruction.qubits
-            padded_gate_str = pad_gate_name(gate_name, qubits, n_qubits)
-            sequence.append(padded_gate_str)
+            gate_str = gate_name + str(qubits)
+            sequence.append(gate_str)
 
         # raise C3QiskitError if unknown instruction
         else:
