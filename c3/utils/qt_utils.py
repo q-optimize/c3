@@ -492,7 +492,7 @@ def single_length_RB(RB_number, RB_length, padding=""):
         List of RB sequences.
     """
     S = []
-    for seq_idx in range(RB_number):
+    for _ in range(RB_number):
         seq = np.random.choice(24, size=RB_length - 1) + 1
         seq = np.append(seq, inverseC(seq))
         seq_gates = []
@@ -676,7 +676,6 @@ cliffords_decomp = [
 #                     ['rx90p', 'ry90p', 'rx90m', 'Id']
 #                     ]
 
-cliffords_decomp_xId = [[gate + ":Id" for gate in clif] for clif in cliffords_decomp]
 
 cliffords_decomp_xId = [[gate + ":Id" for gate in clif] for clif in cliffords_decomp]
 
