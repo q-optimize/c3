@@ -395,10 +395,12 @@ class Model:
                 )
             )
             p = t_final * amp * self.dephasing_strength
-            print("dephasing stength: ", p)
             if p.numpy() > 1 or p.numpy() < 0:
-                raise ValueError("strengh of dephasing channels outside [0,1]")
-                print("dephasing stength: ", p)
+                raise ValueError(
+                    "Dephasing channel strength {strength} is outside [0,1] range".format(
+                        strength=p
+                    )
+                )
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch
