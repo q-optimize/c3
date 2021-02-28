@@ -63,6 +63,7 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.integration
 @pytest.mark.qiskit
 @pytest.mark.slow
+@pytest.mark.xfail(raises=C3QiskitError)
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     """Test the counts from running a 6 qubit Circuit
