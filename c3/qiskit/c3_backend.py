@@ -349,6 +349,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         exp = Experiment()
         exp.quick_setup(self._device_config)
         pmap = exp.pmap
+        instructions = pmap.instructions
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
@@ -372,6 +373,15 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # unique operations
         gate_keys = list(set(sequence))
+
+        # validate gates
+        for gate in gate_keys:
+            if gate not in instructions.keys():
+                raise C3QiskitError(
+                    "Gate {gate} not found in Device Instruction Set: {instructions}".format(
+                        gate=gate, instructions=list(instructions.keys())
+                    )
+                )
 
         perfect_gates = exp.get_perfect_gates(gate_keys)
 
