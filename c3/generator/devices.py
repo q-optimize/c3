@@ -1081,7 +1081,6 @@ class AWG(Device):
         inphase_comps = []
         quadrature_comps = []
 
-        amp_tot_sq = 0
         for comp in components[chan].values():
             if isinstance(comp, Envelope):
                 amp_tot_sq += 1

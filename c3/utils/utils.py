@@ -4,6 +4,7 @@ import os
 import numpy as np
 from tensorflow.python.framework import ops
 from typing import Tuple
+import warnings
 
 
 # SYSTEM AND SETUP
@@ -129,3 +130,36 @@ def jsonify_list(data):
         return data.numpy().tolist()
     else:
         return data
+
+
+def deprecated(message: str):
+    """Decorator for deprecating functions
+
+    Parameters
+    ----------
+    message : str
+        Message to display along with DeprecationWarning
+
+    Examples
+    --------
+    Add a :code:`@deprecated("message")` decorator to the function::
+
+        @deprecated("Using standard width. Better use gaussian_sigma.")
+        def gaussian(t, params):
+            ...
+
+    """
+
+    def deprecated_decorator(func):
+        def deprecated_func(*args, **kwargs):
+            warnings.warn(
+                "{} is a deprecated function. {}".format(func.__name__, message),
+                category=DeprecationWarning,
+                stacklevel=2,
+            )
+            warnings.simplefilter("default", DeprecationWarning)
+            return func(*args, **kwargs)
+
+        return deprecated_func
+
+    return deprecated_decorator

@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
+from c3.utils.utils import deprecated
 
 envelopes = dict()
 
@@ -296,6 +297,7 @@ def gaussian_sigma(t, params):
     return (gauss - offset) / norm
 
 
+@deprecated("Using standard width. Better use gaussian_sigma().")
 @env_reg_deco
 def gaussian(t, params):
     """
@@ -307,7 +309,6 @@ def gaussian(t, params):
         t_final : float
             Total length of the Gaussian.
     """
-    DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params["sigma"] = Qty(
         value=params["t_final"].get_value() / 6,
         min_val=params["t_final"].get_value() / 8,
@@ -429,10 +430,10 @@ def drag_sigma(t, params):
     return (drag - offset) ** 2 / norm
 
 
+@deprecated("Using standard width. Better use drag_sigma.")
 @env_reg_deco
 def drag(t, params):
     """Second order gaussian with fixed time/sigma ratio."""
-    DeprecationWarning("Using standard width. Better use drag_sigma.")
     params["sigma"] = Qty(
         value=params["t_final"].get_value() / 4,
         min_val=params["t_final"].get_value() / 8,
