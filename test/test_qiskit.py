@@ -98,7 +98,6 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     assert result_sim.get_counts() == no_flip_counts
 
 
-
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.xfail(raises=C3QiskitError)
