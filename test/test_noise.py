@@ -125,12 +125,12 @@ generator2 = Gnr(
         ),
         "AWGNoise": devices.Additive_Noise(
             name="awg_noise",
-            noise_amp=Qty(value=0, min_val=-0.01, max_val=1, unit="Phi0"),
+            noise_strength=Qty(value=0, min_val=-0.01, max_val=1, unit="Phi0"),
             resolution=sim_res,
         ),
         "DCNoise": devices.DC_Noise(
             name="dc_noise",
-            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
+            noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
             resolution=sim_res,
         ),
         "PinkNoise": devices.Pink_Noise(
@@ -266,8 +266,8 @@ def test_noise_devices():
 
     noise_map = [
         [("pink_noise", "noise_strength")],
-        [("dc_noise", "noise_amp")],
-        [("awg_noise", "noise_amp")],
+        [("dc_noise", "noise_strength")],
+        [("awg_noise", "noise_strength")],
     ]
     for i in range(len(noise_map) + 1):
         params = np.zeros(len(noise_map))
