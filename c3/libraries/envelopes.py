@@ -72,14 +72,16 @@ def fourier_sin(t, params):
 
     """
     amps = tf.reshape(
-        tf.cast(params["amps"].get_value(), tf.float64), [params["amps"].shape[0], 1]
+        tf.cast(params["amps"].get_value(), dtype=tf.float64),
+        [params["amps"].get_value().shape[0], 1],
     )
     freqs = tf.reshape(
-        tf.cast(params["freqs"].get_value(), tf.float64), [params["freqs"].shape[0], 1]
+        tf.cast(params["freqs"].get_value(), dtype=tf.float64),
+        [params["freqs"].get_value().shape[0], 1],
     )
     phases = tf.reshape(
-        tf.cast(params["phases"].get_value(), tf.float64),
-        [params["phases"].shape[0], 1],
+        tf.cast(params["phases"].get_value(), dtype=tf.float64),
+        [params["phases"].get_value().shape[0], 1],
     )
     t = tf.reshape(tf.cast(t, tf.float64), [1, t.shape[0]])
     return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
@@ -208,12 +210,10 @@ def flattop_cut(t, params):
             Length of the ramps.
 
     """
-    t_up = tf.cast(params["t_up"].get_value(), tf.float64)
-    t_down = tf.cast(params["t_down"].get_value(), tf.float64)
-    risefall = tf.cast(params["risefall"].get_value(), tf.float64)
-    shape = tf.math.erf((t - t_up) / (risefall)) * tf.math.erf(
-        (-t + t_down) / (risefall)
-    )
+    t_up = tf.cast(params["t_up"].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
     return tf.clip_by_value(shape, 0, 2)
 
 

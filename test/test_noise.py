@@ -1,5 +1,4 @@
 import pytest
-
 import pickle
 import numpy as np
 
@@ -136,7 +135,7 @@ generator2 = Gnr(
         ),
         "PinkNoise": devices.Pink_Noise(
             name="pink_noise",
-            noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
+            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
             bfl_num=Qty(value=15),
             resolution=sim_res,
         ),
@@ -266,7 +265,7 @@ def test_noise_devices():
     )
 
     noise_map = [
-        [("pink_noise", "noise_strength")],
+        [("pink_noise", "noise_amp")],
         [("dc_noise", "noise_amp")],
         [("awg_noise", "noise_amp")],
     ]
