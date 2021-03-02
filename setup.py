@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="c3-toolset",
-    version="1.2.1",
+    version="1.2.2",
     description="Toolset for control, calibration and characterization of physical systems",
     url="http://www.q-optimize.org",
     author="q-optimize",
@@ -37,16 +37,14 @@ setup(
     install_requires=[
         "adaptive==0.11.1",
         "cma==3.0.3",
-        "cython",
-        "ipython==7.15.0",
         "gast==0.3.3",
         "hjson==3.0.2",
         "rich==9.2.0",
-        "numpy==1.18.5",
+        "numpy==1.19.5",
         "scipy==1.5.2",
-        "tensorflow==2.3.1",
-        "tensorflow-estimator==2.3.0",
-        "tensorflow-probability==0.11.1",
+        "tensorflow==2.4.0",
+        "tensorflow-estimator==2.4.0",
+        "tensorflow-probability==0.12.1",
     ],
     python_requires="~=3.6",
 )

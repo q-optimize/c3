@@ -211,6 +211,7 @@ carr_q2.params["freq"].set_value(freq_q2)
 carr_tc = copy.deepcopy(carr_q1)
 carr_tc.params["freq"].set_value(flux_freq)
 
+
 flux_params = {
     "amp": Qty(value=fluxamp, min_val=0.0, max_val=5, unit="V"),
     "t_final": Qty(
@@ -241,20 +242,21 @@ flux_env = pulse.Envelope(
     params=flux_params,
     shape=envelopes.flattop,
 )
-CZ = gates.Instruction(
-    name="Id:CZ", t_start=0.0, t_end=cphase_time, channels=["Q1", "Q2", "TC"]
+CRZp = gates.Instruction(
+    name="Id:CRZp", t_start=0.0, t_end=cphase_time, channels=["Q1", "Q2", "TC"]
 )
-CZ.add_component(flux_env, "TC")
-CZ.add_component(carr_tc, "TC")
-CZ.add_component(nodrive_env, "Q1")
-CZ.add_component(carr_q1, "Q1")
-CZ.comps["Q1"]["carrier"].params["framechange"].set_value(framechange_q1)
-CZ.add_component(nodrive_env, "Q2")
-CZ.add_component(carr_q2, "Q2")
-CZ.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
+CRZp.add_component(flux_env, "TC")
+CRZp.add_component(carr_tc, "TC")
+CRZp.add_component(nodrive_env, "Q1")
+CRZp.add_component(carr_q1, "Q1")
+CRZp.comps["Q1"]["carrier"].params["framechange"].set_value(framechange_q1)
+CRZp.add_component(nodrive_env, "Q2")
+CRZp.add_component(carr_q2, "Q2")
+CRZp.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
+
 
 # ### MAKE EXPERIMENT
-parameter_map = PMap(instructions=[CZ], model=model, generator=generator)
+parameter_map = PMap(instructions=[CRZp], model=model, generator=generator)
 exp = Exp(pmap=parameter_map)
 
 ##### TESTING ######
@@ -361,12 +363,12 @@ def test_energy_levels() -> None:
 @pytest.mark.integration
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
-    exp.set_opt_gates(["Id:CZ"])
+    exp.set_opt_gates(["Id:CRZp"])
     exp.get_gates()
     dUs = []
-    for indx in range(len(exp.dUs["Id:CZ"])):
+    for indx in range(len(exp.dUs["Id:CRZp"])):
         if indx % 50 == 0:
-            dUs.append(exp.dUs["Id:CZ"][indx].numpy())
+            dUs.append(exp.dUs["Id:CRZp"][indx].numpy())
     dUs = np.array(dUs)
     assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
@@ -382,7 +384,7 @@ def test_dynamics_CPHASE_lindblad() -> None:
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.get_gates()
     # saved U_super currenlty likely to be wrong. Not recomputed in last dataset.
-    U_super = U_dict["Id:CZ"]
+    U_super = U_dict["Id:CRZp"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
@@ -399,7 +401,7 @@ def test_separate_chains() -> None:
 @pytest.mark.slow
 @pytest.mark.integration
 def test_flux_signal() -> None:
-    instr = exp.pmap.instructions["Id:CZ"]
+    instr = exp.pmap.instructions["Id:CRZp"]
     signal = exp.pmap.generator.generate_signals(instr)
     awg = exp.pmap.generator.devices["awg"]
     # mixer = exp.pmap.generator.devices["mixer"]

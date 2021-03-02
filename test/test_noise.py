@@ -135,7 +135,7 @@ generator2 = Gnr(
         ),
         "PinkNoise": devices.Pink_Noise(
             name="pink_noise",
-            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
+            noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
             bfl_num=Qty(value=15),
             resolution=sim_res,
         ),
@@ -194,29 +194,29 @@ carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
 
-X90p = gates.Instruction(name="X90p", t_start=0.0, t_end=t_final, channels=["d1"])
+RX90p = gates.Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
 
-X90p.add_component(gauss_env_single, "d1")
-X90p.add_component(carr, "d1")
+RX90p.add_component(gauss_env_single, "d1")
+RX90p.add_component(carr, "d1")
 
-pmap = Pmap([X90p], generator, model)
+pmap = Pmap([RX90p], generator, model)
 
 exp = Exp(pmap)
 
-pmap2 = Pmap([X90p], generator2, model)
+pmap2 = Pmap([RX90p], generator2, model)
 exp2 = Exp(pmap2)
 
-exp.set_opt_gates(["X90p"])
+exp.set_opt_gates(["RX90p"])
 
 gateset_opt_map = [
     [
-        ("X90p", "d1", "gauss", "amp"),
+        ("RX90p", "d1", "gauss", "amp"),
     ],
     [
-        ("X90p", "d1", "gauss", "freq_offset"),
+        ("RX90p", "d1", "gauss", "freq_offset"),
     ],
     [
-        ("X90p", "d1", "gauss", "xy_angle"),
+        ("RX90p", "d1", "gauss", "xy_angle"),
     ],
 ]
 
@@ -265,7 +265,7 @@ def test_noise_devices():
     )
 
     noise_map = [
-        [("pink_noise", "noise_amp")],
+        [("pink_noise", "noise_strength")],
         [("dc_noise", "noise_amp")],
         [("awg_noise", "noise_amp")],
     ]
