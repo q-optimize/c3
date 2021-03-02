@@ -124,6 +124,6 @@ def test_qty_np_conversions() -> None:
     b = Quantity(np.array([0.0000001, 0.00001]))
     np.array([b])
 
-    c = Quantity([0, 0.1])
+    c = Quantity([0, 0.1], min_val=0, max_val=1)
     assert len(c) == 2
     assert c.shape == (2,)
