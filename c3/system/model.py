@@ -229,10 +229,35 @@ class Model:
         return ids
 
     def get_Hamiltonians(self):
+        #TODO: Do a better check if timed_hamiltonian
+        for sub in self.subsystems.values():
+            if ("signal_h" in sub.__dict__):
+                return self.get_signal_hamiltonians()
+
         if self.dressed:
             return self.dressed_drift_H, self.dressed_control_Hs
         else:
             return self.drift_H, self.control_Hs
+
+    def get_signal_hamiltonians(self):
+        tot_dim = self.tot_dim
+        signal_drift_H = tf.expand_dims(tf.zeros([tot_dim, tot_dim], dtype=tf.complex128), 0)
+        for sub in self.subsystems.values():
+            if "signal_h" in sub.__dict__:
+                signal_drift_H += sub.signal_h
+            else:
+                signal_drift_H += tf.expand_dims(sub.get_Hamiltonian(), 0)
+        for key, line in self.couplings.items():
+            if isinstance(line, Coupling):
+                signal_drift_H += line.get_Hamiltonian()
+
+        if self.dressed:
+            dressed_signal_drift_H = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), signal_drift_H), self.transform
+            )
+            return dressed_signal_drift_H, self.dressed_control_Hs
+        else:
+            return signal_drift_H, self.control_Hs
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -355,6 +380,8 @@ class Model:
             )
             # TODO test dressing of FR
             exponent = exponent + 1.0j * num_oper * (freq * t_final + framechange)
+        if len(exponent.shape) == 0:
+            return tf.eye(self.tot_dim, dtype=tf.complex128)
         FR = tf.linalg.expm(exponent)
         return FR
 

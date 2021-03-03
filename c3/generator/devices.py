@@ -545,6 +545,88 @@ class ResponseFFT(Device):
         }
         return self.signal
 
+@dev_reg_deco
+class StepFuncFilter(Device):
+    """
+    Base class for filters that are based on the step response function
+    Step function has to be defined explicetly
+    """
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
+
+    def step_response_function(self, ts):
+        raise NotImplemented()
+
+    def process(self, instr, chan, signal_in):
+        ts = tf.identity(signal_in["ts"])
+        step_response = self.step_response_function(ts)
+        step_response = tf.concat([[0], step_response], axis=0)
+        impulse_response = step_response[1:] - step_response[:-1]
+        signal_out = dict()
+        for key, signal in signal_in.items():
+            if key == "ts":
+                continue
+            signal_out[key] = tf.cast(tf_convolve(signal, impulse_response), tf.float64)
+        signal_out["ts"] = signal_in["ts"]
+
+        return signal_out
+
+@dev_reg_deco
+class ExponentialIIR(StepFuncFilter):
+    """Implement IIR filter with step response of the form
+    s(t) = (1 + A * exp(-t / t_iir) )
+
+    Parameters
+    ----------
+    time_iir: Quantity
+        Time constant for the filtering.
+    amp: Quantity
+
+    """
+    def step_response_function(self, ts):
+        time_iir = self.params["time_iir"]
+        amp = self.params["amp"]
+        step_response = 1 + amp * tf.exp(-ts / time_iir)
+        return step_response
+
+
+
+@dev_reg_deco
+class HighpassExponential(StepFuncFilter):
+    """Implement Highpass filter based on exponential with step response of the form
+    s(t) = exp(-t / t_hp)
+
+    Parameters
+    ----------
+    time_iir: Quantity
+        Time constant for the filtering.
+    amp: Quantity
+
+    """
+    def step_response_function(self, ts):
+        time_hp = self.params["time_hp"]
+        return tf.exp(-ts / time_hp)
+
+
+@dev_reg_deco
+class SkinEffectResponse(StepFuncFilter):
+    """Implement Highpass filter based on exponential with step response of the form
+    s(t) = exp(-t / t_hp)
+
+    Parameters
+    ----------
+    time_iir: Quantity
+        Time constant for the filtering.
+    amp: Quantity
+
+    """
+
+    def step_response_function(self, ts):
+        alpha = self.params["alpha"]
+        return tf.math.erfc(alpha/21/tf.math.sqrt(np.abs(ts)))
+
 
 class HighpassFilter(Device):
     """Introduce a highpass filter
@@ -970,8 +1052,12 @@ class AWG(Device):
                 quadrature_comps.append(-amp * env * tf.sin(phase))
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-        inphase = tf.add_n(inphase_comps, name="inphase")
-        quadrature = tf.add_n(quadrature_comps, name="quadrature")
+        if len(inphase_comps) > 1:
+            inphase = tf.add_n(inphase_comps, name="inphase")
+            quadrature = tf.add_n(quadrature_comps, name="quadrature")
+        else:
+            inphase = inphase_comps[0]
+            quadrature = quadrature_comps[0]
 
         self.amp_tot = norm
         self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}

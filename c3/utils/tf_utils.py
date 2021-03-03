@@ -200,7 +200,8 @@ def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     hks = tf.cast(hks, dtype=tf.complex128)
     cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
     hks = tf.expand_dims(hks, 1)
-    h0 = tf.expand_dims(h0, 0)
+    if len(h0.shape) < 3:
+        h0 = tf.expand_dims(h0, 0)
     prod = cflds * hks
     h = h0 + tf.reduce_sum(prod, axis=0)
     dh = -1.0j * h * dt
@@ -552,6 +553,7 @@ def tf_expm_dynamic(A, acc=1e-4):
     return r
 
 
+@tf.function
 def Id_like(A):
     """Identity of the same size as A."""
     shape = tf.shape(A)
@@ -559,6 +561,7 @@ def Id_like(A):
     return tf.eye(dim, dtype=tf.complex128)
 
 
+@tf.function
 def tf_kron(A, B):
     """Kronecker product of 2 matrices."""
     # TODO make kronecker product general to different dimensions

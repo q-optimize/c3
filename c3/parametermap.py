@@ -224,12 +224,15 @@ class ParameterMap:
                 try:
                     par.set_value(values[val_indx])
                 except ValueError as ve:
-                    raise Exception(
-                        f"C3:ERROR:Trying to set {'-'.join(par_id)} "
-                        f"to value {values[val_indx]} "
-                        f"but has to be within {par.offset:.3} .."
-                        f" {(par.offset + par.scale):.3}."
-                    ) from ve
+                    try:
+                        raise Exception(
+                            f"C3:ERROR:Trying to set {'-'.join(par_id)} "
+                            f"to value {values[val_indx]} "
+                            f"but has to be within {par.offset} .."
+                            f" {(par.offset + par.scale)}."
+                        ) from ve
+                    except TypeError:
+                        raise ve
             val_indx += 1
         if model_updated:
             self.model.update_model()

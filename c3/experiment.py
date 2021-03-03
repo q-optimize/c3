@@ -12,6 +12,7 @@ import os
 import pickle
 import itertools
 import hjson
+import json
 import numpy as np
 import tensorflow as tf
 
@@ -149,7 +150,6 @@ class Experiment:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
 
     def asdict(self) -> dict:
         """
@@ -312,6 +312,8 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
+                    if line not in model.couplings:
+                        continue
                     # TODO calculate properly the average frequency that each qubit sees
                     offset = 0.0
                     for ctrl in ctrls.values():
@@ -376,9 +378,14 @@ class Experiment:
         signals = []
         hks = []
         for key in signal:
-            signals.append(signal[key]["values"])
             ts = signal[key]["ts"]
-            hks.append(hctrls[key])
+            if key not in hctrls:
+                signals.append(tf.zeros_like(ts))
+                hks.append(tf.zeros((h0.shape[-1], h0.shape[-1]), tf.complex128))
+            else:
+                signals.append(signal[key]["values"])
+                hks.append(hctrls[key])
+
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if model.lindbladian:

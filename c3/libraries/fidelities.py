@@ -326,7 +326,7 @@ def average_infid(
 
 
 @fid_reg_deco
-def average_infid_set(U_dict: dict, index, dims, eval, proj=True):
+def average_infid_set(U_dict: dict, index, dims, eval=None, proj=True):
     """
     Mean average fidelity over all gates in U_dict.
 
