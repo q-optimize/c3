@@ -9,6 +9,7 @@ from c3.system.chip import Qubit, Coupling, Drive
 from c3.system.tasks import InitialiseGround, ConfusionMatrix
 from c3.system.model import Model
 import c3.libraries.hamiltonians as hamiltonians
+from c3.parametermap import ParameterMap
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -55,7 +56,6 @@ q1q2 = Coupling(
     hamiltonian_func=hamiltonians.int_XX,
 )
 
-
 drive = Drive(
     name="d1",
     desc="Drive 1",
@@ -98,6 +98,7 @@ model = Model(
     [conf_matrix, init_ground],  # SPAM processing
 )
 
+pmap = ParameterMap(model=model)
 model.set_dressed(False)
 
 hdrift, hks = model.get_Hamiltonians()
@@ -119,3 +120,17 @@ def test_model_eigenfrequencies_2() -> None:
 def test_model_couplings() -> None:
     assert hks["d1"][3, 0] == 1
     assert hks["d2"][1, 0] == 1
+
+
+pytest.mark.unit
+
+
+def test_model_update_by_parametermap() -> None:
+    pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
+    hdrift_a, _ = model.get_Hamiltonians()
+
+    pmap.set_parameters([freq_q1 * 1.0005], [[("Q1", "freq")]])
+    hdrift_b, _ = model.get_Hamiltonians()
+
+    assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
+    assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi

@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
+from c3.utils.utils import deprecated
 
 envelopes = dict()
 
@@ -72,14 +73,16 @@ def fourier_sin(t, params):
 
     """
     amps = tf.reshape(
-        tf.cast(params["amps"].get_value(), tf.float64), [params["amps"].shape[0], 1]
+        tf.cast(params["amps"].get_value(), dtype=tf.float64),
+        [params["amps"].get_value().shape[0], 1],
     )
     freqs = tf.reshape(
-        tf.cast(params["freqs"].get_value(), tf.float64), [params["freqs"].shape[0], 1]
+        tf.cast(params["freqs"].get_value(), dtype=tf.float64),
+        [params["freqs"].get_value().shape[0], 1],
     )
     phases = tf.reshape(
-        tf.cast(params["phases"].get_value(), tf.float64),
-        [params["phases"].shape[0], 1],
+        tf.cast(params["phases"].get_value(), dtype=tf.float64),
+        [params["phases"].get_value().shape[0], 1],
     )
     t = tf.reshape(tf.cast(t, tf.float64), [1, t.shape[0]])
     return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
@@ -208,12 +211,10 @@ def flattop_cut(t, params):
             Length of the ramps.
 
     """
-    t_up = tf.cast(params["t_up"].get_value(), tf.float64)
-    t_down = tf.cast(params["t_down"].get_value(), tf.float64)
-    risefall = tf.cast(params["risefall"].get_value(), tf.float64)
-    shape = tf.math.erf((t - t_up) / (risefall)) * tf.math.erf(
-        (-t + t_down) / (risefall)
-    )
+    t_up = tf.cast(params["t_up"].get_value(), dtype=tf.float64)
+    t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
+    risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
+    shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
     return tf.clip_by_value(shape, 0, 2)
 
 
@@ -296,6 +297,7 @@ def gaussian_sigma(t, params):
     return (gauss - offset) / norm
 
 
+@deprecated("Using standard width. Better use gaussian_sigma().")
 @env_reg_deco
 def gaussian(t, params):
     """
@@ -307,7 +309,6 @@ def gaussian(t, params):
         t_final : float
             Total length of the Gaussian.
     """
-    DeprecationWarning("Using standard width. Better use gaussian_sigma.")
     params["sigma"] = Qty(
         value=params["t_final"].get_value() / 6,
         min_val=params["t_final"].get_value() / 8,
@@ -429,10 +430,10 @@ def drag_sigma(t, params):
     return (drag - offset) ** 2 / norm
 
 
+@deprecated("Using standard width. Better use drag_sigma.")
 @env_reg_deco
 def drag(t, params):
     """Second order gaussian with fixed time/sigma ratio."""
-    DeprecationWarning("Using standard width. Better use drag_sigma.")
     params["sigma"] = Qty(
         value=params["t_final"].get_value() / 4,
         min_val=params["t_final"].get_value() / 8,

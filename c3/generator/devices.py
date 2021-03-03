@@ -6,6 +6,7 @@ import numpy as np
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj
+from c3.utils.tf_utils import tf_convolve
 
 devices = dict()
 
@@ -106,6 +107,8 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
+        # TODO: adjust the way we calculate the time slices for devices
+        # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
         return ts
 
@@ -274,11 +277,34 @@ class FluxTuning(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
-        for par in ["phi_0", "phi", "omega_0"]:
+        for par in ["phi_0", "phi", "omega_0", "anhar"]:
             if par not in self.params:
                 raise Exception(
                     f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
                 )
+
+    def get_factor(self, phi):
+        pi = tf.constant(np.pi, dtype=tf.float64)
+        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.float64)
+
+        if "d" in self.params:
+            d = self.params["d"].get_value()
+            factor = tf.sqrt(
+                tf.sqrt(
+                    tf.cos(pi * phi / phi_0) ** 2
+                    + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+                )
+            )
+        else:
+            factor = tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
+        return factor
+
+    def get_freq(self, phi):
+        # TODO: Check how the time dependency affects the frequency. (Koch et al. , 2007)
+        omega_0 = self.params["omega_0"].get_value()
+        anhar = self.params["anhar"].get_value()
+        biased_freq = (omega_0 - anhar) * self.get_factor(phi) + anhar
+        return biased_freq
 
     def process(self, instr: Instruction, chan: str, signal_in):
         """
@@ -294,38 +320,10 @@ class FluxTuning(Device):
         tf.float64
             Qubit frequency.
         """
-        pi = tf.constant(np.pi, dtype=tf.float64)
         phi = self.params["phi"].get_value()
-        omega_0 = self.params["omega_0"].get_value()
-        phi_0 = self.params["phi_0"].get_value()
         signal = signal_in["values"]
         self.signal["ts"] = signal_in["ts"]
-
-        if "d" in self.params:
-            d = self.params["d"].get_value()
-            #             print('assuming asymmetric transmon with d=', d)
-            base_freq = omega_0 * tf.sqrt(
-                tf.sqrt(
-                    tf.cos(pi * phi / phi_0) ** 2
-                    + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
-                )
-            )
-            freq = (
-                omega_0
-                * tf.sqrt(
-                    tf.sqrt(
-                        tf.cos(pi * (phi + signal) / phi_0) ** 2
-                        + d ** 2 * tf.sin(pi * (phi + signal) / phi_0) ** 2
-                    )
-                )
-                - base_freq
-            )
-        else:
-            base_freq = omega_0 * tf.sqrt(tf.abs(tf.cos(pi * phi / phi_0)))
-            freq = (
-                omega_0 * tf.sqrt(tf.abs(tf.cos(pi * (phi + signal) / phi_0)))
-                - base_freq
-            )
+        freq = self.get_freq(phi + signal) - self.get_freq(phi)
         self.signal["values"] = freq
         return self.signal
 
@@ -480,6 +478,70 @@ class Response(Device):
             "inphase": inphase,
             "quadrature": quadrature,
             "ts": self.create_ts(instr.t_start, instr.t_end, centered=True),
+        }
+        return self.signal
+
+
+@dev_reg_deco
+class ResponseFFT(Device):
+    """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
+
+    Parameters
+    ----------
+    rise_time : Quantity
+        Time constant for the gaussian convolution.
+    """
+
+    def __init__(self, **props):
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
+
+    def process(self, instr, chan, iq_signal):
+        """
+        Apply a Gaussian shaped limiting function to an IQ signal.
+
+        Parameters
+        ----------
+        iq_signal : dict
+            I and Q components of an AWG signal.
+
+        Returns
+        -------
+        dict
+            Bandwidth limited IQ signal.
+
+        """
+        # print(tf.abs(1 / tf.math.reduce_mean(iq_signal['ts'][1] - iq_signal['ts'][0]) ),self.resolution)
+        assert (
+            tf.abs((iq_signal["ts"][1] - iq_signal["ts"][0]) - 1 / self.resolution)
+            < 1e-15
+        )
+        n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
+        ts = tf.linspace(
+            tf.constant(0.0, dtype=tf.float64),
+            self.params["rise_time"].get_value(),
+            tf.cast(n_ts, tf.int32),
+        )
+        cen = tf.cast(
+            (self.params["rise_time"].get_value() - 1 / self.resolution) / 2, tf.float64
+        )
+        sigma = self.params["rise_time"].get_value() / 4
+        gauss = tf.exp(-((ts - cen) ** 2) / (2 * sigma * sigma))
+        offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
+
+        risefun = gauss - offset
+        inphase = tf_convolve(iq_signal["inphase"], risefun / tf.reduce_sum(risefun))
+        quadrature = tf_convolve(
+            iq_signal["quadrature"], risefun / tf.reduce_sum(risefun)
+        )
+
+        inphase = tf.math.real(inphase)
+        quadrature = tf.math.real(quadrature)
+        self.signal = {
+            "inphase": inphase,
+            "quadrature": quadrature,
+            "ts": iq_signal["ts"],
         }
         return self.signal
 
@@ -664,18 +726,21 @@ class Additive_Noise(Device):
         self.signal = None
         self.params["noise_amp"] = props.pop("noise_amp")
 
+    def get_noise(self, sig):
+        noise_amp = self.params["noise_amp"].get_value()
+        return noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
+
     def process(self, instr, chan, signal):
         """Distort signal by adding noise."""
         noise_amp = self.params["noise_amp"].get_value()
         out_signal = {"ts": signal["ts"]}
         for k, sig in signal.items():
-            if k != "ts":
+            if k != "ts" and "noise" not in k:
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
                 else:
                     noise = tf.constant(
-                        noise_amp
-                        * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
+                        self.get_noise(sig), shape=sig.shape, dtype=tf.float64
                     )
                 noise_key = "noise" + ("-" + k if k != "values" else "")
                 out_signal[noise_key] = noise
@@ -686,33 +751,41 @@ class Additive_Noise(Device):
 
 
 @dev_reg_deco
-class DC_Noise(Device):
-    """Noise applied to a signal"""
+class DC_Noise(Additive_Noise):
+    """Add a random constant offset to the signals"""
+
+    def get_noise(self, sig):
+        noise_amp = self.params["noise_amp"].get_value()
+        return tf.ones_like(sig) * tf.constant(
+            noise_amp * np.random.normal(loc=0.0, scale=1.0)
+        )
+
+
+@dev_reg_deco
+class Pink_Noise(Additive_Noise):
+    """Device creating pink noise, i.e. 1/f noise."""
 
     def __init__(self, **props):
         super().__init__(**props)
-        self.inputs = props.pop("inputs", 1)
-        self.outputs = props.pop("outputs", 1)
-        self.signal = None
-        self.params["noise_amp"] = props.pop("noise_amp", 0)
+        self.params["bfl_num"] = props.pop(
+            "bfl_num", Quantity(value=5, min_val=1, max_val=10)
+        )
 
-    def process(self, instr, chan, signal):
-        """Distort signal by adding noise."""
-        noise_amp = self.params["noise_amp"].get_value()
-        out_signal = {"ts": signal["ts"]}
-        for k, sig in signal.items():
-            if k != "ts":
-                if noise_amp < 1e-17:
-                    noise = tf.zeros_like(sig)
-                else:
-                    noise = tf.ones_like(sig) * tf.constant(
-                        noise_amp * np.random.normal(loc=0.0, scale=1.0)
-                    )
-                noise_key = "noise" + ("-" + k if k != "values" else "")
-                out_signal[noise_key] = noise
-                out_signal[k] = sig + noise
-        self.signal = out_signal
-        return self.signal
+    def get_noise(self, sig):
+        noise_amp = self.params["noise_amp"].get_value().numpy()
+        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
+        noise = []
+        bfls = 2 * np.random.randint(2, size=bfl_num) - 1
+        num_steps = len(sig)
+        flip_rates = np.logspace(
+            0, np.log(num_steps), num=bfl_num + 1, endpoint=True, base=10.0
+        )
+        for step in range(num_steps):
+            for indx in range(bfl_num):
+                if np.floor(np.random.random() * flip_rates[indx + 1]) == 0:
+                    bfls[indx] = -bfls[indx]
+            noise.append(np.sum(bfls) * noise_amp)
+        return noise
 
 
 @dev_reg_deco
@@ -738,99 +811,6 @@ class DC_Offset(Device):
                 out_signal[k] = sig + offset_amp
         else:
             out_signal = signal + offset_amp
-        self.signal = out_signal
-        return self.signal
-
-
-# TODO: We should write out own function to calculate the Pink noise in a continuous fft fashion.
-# import colorednoise
-# @dev_reg_deco
-# class Pink_Noise_Cont(Device):
-#     """Noise applied to a signal"""
-#
-#     def __init__(
-#             self,
-#             name: str = "pink_noise",
-#             desc: str = " ",
-#             comment: str = " ",
-#             resolution: np.float64 = 0.0,
-#             noise_amp: Quantity = None
-#     ):
-#         super().__init__(
-#             name=name,
-#             desc=desc,
-#             comment=comment,
-#             resolution=resolution
-#         )
-#         self.signal = None
-#         self.params['noise_amp'] = noise_amp
-#
-#     def distort(self, signal):
-#         """Distort signal by adding noise."""
-#         noise_amp = self.params['noise_amp'].get_value()
-#         if noise_amp < 1e-17:
-#             self.signal = signal
-#             return signal
-#         out_signal = {}
-#         # print(signal)
-#         if type(signal) is dict:
-#             for k, sig in signal.items():
-#                 out_signal[k] = sig + tf.constant(noise_amp * colorednoise.powerlaw_psd_gaussian(1,))
-#         else:
-#             out_signal = signal + tf.constant(noise_amp * np.random.normal(size=tf.shape(signal), loc=0.0, scale=1.0))
-#         self.signal = out_signal
-#         return self.signal
-
-
-@dev_reg_deco
-class Pink_Noise(Device):
-    """Device creating pink noise, i.e. 1/f noise."""
-
-    def __init__(self, **props):
-        super().__init__(**props)
-        self.inputs = props.pop("inputs", 1)
-        self.outputs = props.pop("outputs", 1)
-        self.signal = None
-        self.params["noise_strength"] = props.pop("noise_strength")
-        self.params["bfl_num"] = props.pop(
-            "bfl_num", Quantity(value=5, min_val=1, max_val=10)
-        )
-        self.ts = None
-        self.signal = None
-
-    def get_noise(self, sig, noise_strength, bfl_num):
-        noise = []
-        bfls = 2 * np.random.randint(2, size=bfl_num) - 1
-        num_steps = len(sig)
-        flip_rates = np.logspace(
-            0, np.log(num_steps), num=bfl_num + 1, endpoint=True, base=10.0
-        )
-        for step in range(num_steps):
-            for indx in range(bfl_num):
-                if np.floor(np.random.random() * flip_rates[indx + 1]) == 0:
-                    bfls[indx] = -bfls[indx]
-            noise.append(np.sum(bfls) * noise_strength)
-        return noise
-
-    def process(self, intr, chan, signal):
-        noise_strength = self.params["noise_strength"].get_value().numpy()
-        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
-
-        out_signal = {"ts": signal["ts"]}
-        for k, sig in signal.items():
-            if k != "ts":
-                if noise_strength < 1e-17:
-                    noise = tf.zeros_like(sig)
-                else:
-                    noise = tf.constant(
-                        self.get_noise(sig, noise_strength, bfl_num),
-                        shape=sig.shape,
-                        dtype=tf.float64,
-                    )
-                noise_key = "noise" + ("-" + k if k != "values" else "")
-                out_signal[noise_key] = noise
-
-                out_signal[k] = sig + noise
         self.signal = out_signal
         return self.signal
 
@@ -1101,7 +1081,6 @@ class AWG(Device):
         inphase_comps = []
         quadrature_comps = []
 
-        amp_tot_sq = 0
         for comp in components[chan].values():
             if isinstance(comp, Envelope):
                 amp_tot_sq += 1

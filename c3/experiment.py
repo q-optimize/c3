@@ -23,7 +23,7 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils.tf_utils import (
-    tf_propagation,
+    tf_propagation_vectorized,
     tf_propagation_lind,
     tf_matmul_left,
     tf_state_to_dm,
@@ -57,6 +57,7 @@ class Experiment:
         self.propagators: dict = {}
         self.partial_propagators: dict = {}
         self.created_by = None
+        self.logdir: str = None
         self.evaluate = self.evaluate_legacy
 
     def enable_qasm(self) -> None:
@@ -460,9 +461,10 @@ class Experiment:
             col_ops = model.get_Lindbladians()
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
-            dUs = tf_propagation(h0, hks, signals, dt)
+            dUs = tf_propagation_vectorized(h0, hks, signals, dt)
         self.partial_propagators[gate] = dUs
         self.ts = ts
+        dUs = tf.cast(dUs, tf.complex128)
         U = tf_matmul_left(dUs)
         self.U = U
         return U

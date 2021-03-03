@@ -280,7 +280,13 @@ class Model:
         # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
-            reorder_matrix = tf.round(tf.abs(v) ** 2)
+            reorder_matrix = tf.cast(
+                (
+                    tf.expand_dims(tf.reduce_max(tf.abs(v) ** 2, axis=1), 1)
+                    == tf.abs(v) ** 2
+                ),
+                tf.float64,
+            )
             signed_rm = tf.cast(
                 # TODO determine if the changing of sign is needed
                 # (by looking at TC_eneregies_bases I see no difference)

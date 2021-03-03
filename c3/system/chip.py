@@ -285,6 +285,7 @@ class Transmon(PhysicalComponent):
         elif gamma:
             self.params["gamma"] = gamma
         if anhar:
+            # Anharmonicity corresponding to the charging energy in the two-level case
             self.params["anhar"] = anhar
         if t1:
             self.params["t1"] = t1

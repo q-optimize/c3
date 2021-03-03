@@ -85,7 +85,6 @@ def test_signal_generation() -> None:
     )
 
     RX90p_q1 = Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
-
     RX90p_q1.add_component(gauss_env_single, "d1")
     RX90p_q1.add_component(carr, "d1")
 
