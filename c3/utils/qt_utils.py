@@ -209,83 +209,8 @@ def pad_matrix(matrix, dim, padding):
     return matrix
 
 
-# def perfect_gate(  # noqa
-#     gate_str: str, index=[0, 1], dims=[2, 2], proj: str = "wzeros"
-# ):
-#     """
-#     Construct an ideal single or two-qubit gate.
-#
-#     Parameters
-#     ----------
-#     gate_str: str
-#         Identifier of the gate, i.e. "rx90p".
-#     index : list
-#         Indeces of the subspace(s) the gate acts on
-#     dims : list
-#         Dimension of the subspace(s)
-#     proj : str
-#         Option for projection in the case of more than two-level qubits.
-#
-#     Returns
-#     -------
-#     np.array
-#         Ideal representation of the gate.
-#
-#     """
-#     do_pad_gate = True
-#     kron_list = []
-#     for dim in dims:
-#         kron_list.append(np.eye(dim))
-#     lvls = dims[index[0]]
-#     if gate_str in GATES.keys():
-#         gate = GATES[gate_str]
-#     elif gate_str == "CNOT":
-#         raise NotImplementedError(
-#             "A correct implementation of perfect CNOT is pending, use Crxp now"
-#         )
-#     elif gate_str == "CR":
-#         # TODO: Fix the ideal CNOT construction.
-#         lvls2 = dims[gate_num + 1]
-#         Z = 1j * perfect_gate("RZp", index, [lvls], proj)
-#         X = perfect_gate("rxp", index, [lvls2], proj)
-#         gate = np.kron(Z, X)
-#         gate_num += 1
-#         do_pad_gate = False
-#     elif gate_str == "CR90":
-#         lvls2 = dims[gate_num + 1]
-#         rxp_temp = perfect_gate("rx90p", index, [lvls2], proj)
-#         rxm_temp = perfect_gate("rx90m", index, [lvls2], proj)
-#         gate = scipy_block_diag(rxp_temp, rxm_temp)
-#         for ii in range(2, lvls):
-#             gate = pad_matrix(gate, lvls2, proj)
-#         gate_num += 1
-#         do_pad_gate = False
-#     elif gate_str == "iSWAP":
-#         # TODO make construction of iSWAP work with superoperator too
-#         lvls2 = dims[gate_num + 1]
-#         if lvls == 2 and lvls2 == 2:
-#             gate = ISWAP
-#         elif lvls == 3 and lvls2 == 3:
-#             gate = ISWAP3
-#         gate_num += 1
-#         do_pad_gate = False
-#     else:
-#         raise KeyError(
-#             "gate_str must be one of the basic 90 or 180 degree gates: 'Id','rx90p','rx90m','rxp','ry90p','ry90m','ryp','RZ90p','RZ90m','RZp', 'CNOT', Crxp, CRZp, CR, CR90, iSWAP"
-#         )
-#     if do_pad_gate:
-#         if proj == "compsub":
-#             pass
-#         elif proj == "wzeros":
-#             zeros = np.zeros([lvls - 2, lvls - 2])
-#             gate = scipy_block_diag(gate, zeros)
-#         elif proj == "fulluni":
-#             identity = np.eye(lvls - 2)
-#             gate = scipy_block_diag(gate, identity)
-#         else:
-#             raise KeyError("proj should be wzeros, compsub or fulluni")
-#     kron_list[index[0]] = gate
-#     return np_kron_n(kron_list)
+# NOTE: Removed perfect_gate() as in commit 0f7cba3, replaced by explicit constants in
+# c3/libraries/constants.py
 
 
 def perfect_parametric_gate(paulis_str, ang, dims):
@@ -649,6 +574,7 @@ cliffords_decomp = [
     ["rx90p", "ry90p", "rx90m"],
 ]
 
+# TODO: Deal with different decompositions
 # cliffords_decomp = [
 #                     ['Id', 'Id', 'Id', 'Id'],
 #                     ['ry90p', 'rx90p', 'Id', 'Id'],
@@ -684,6 +610,7 @@ for cd in cliffords_decomp:
     sum = sum + len(cd)
 cliffors_per_gate = sum / len(cliffords_decomp)
 
+# TODO: Deal with different decompositions
 # cliffords_decomp = [
 #                    ['rx90p', 'rx90m'],
 #                    ['rx90p', 'rx90p'],
