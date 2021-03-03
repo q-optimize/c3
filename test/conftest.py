@@ -1,5 +1,14 @@
+import numpy as np
+import tensorflow as tf
 from typing import Any, Dict
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
+from c3.utils.tf_utils import (
+    tf_super,
+    tf_choi_to_chi,
+    tf_abs,
+    super_to_choi,
+    tf_project_to_comp,
+)
 import pytest
 
 
@@ -101,3 +110,57 @@ def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
         "c3_qasm_perfect_simulator": perfect_counts,
     }
     return counts_dict
+
+
+@pytest.fixture
+def get_error_process():
+    """Fixture for a constant unitary
+
+    Returns
+    -------
+    np.array
+        Unitary on a large Hilbert space that needs to be projected down correctly and
+        compared to an ideal representation in the computational space.
+    """
+    U_actual = (
+        1
+        / np.sqrt(2)
+        * np.array(
+            [
+                [1, 0, 0, -1.0j, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, -1.0j, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [-1.0j, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, -1.0j, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 45, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ]
+        )
+    )
+
+    lvls = [3, 3]
+    U_ideal = (
+        1
+        / np.sqrt(2)
+        * np.array(
+            [[1, 0, -1.0j, 0], [0, 1, 0, -1.0j], [-1.0j, 0, 1, 0], [0, -1.0j, 0, 1]]
+        )
+    )
+    Lambda = tf.matmul(
+        tf.linalg.adjoint(tf_project_to_comp(U_actual, lvls, to_super=False)), U_ideal
+    )
+    return Lambda
+
+
+@pytest.fixture
+def get_average_fidelitiy(get_error_process):
+    lvls = [3, 3]
+    Lambda = get_error_process
+    d = 4
+    err = tf_super(Lambda)
+    choi = super_to_choi(err)
+    chi = tf_choi_to_chi(choi, dims=lvls)
+    fid = tf_abs((chi[0, 0] / d + 1) / (d + 1))
+    return fid
