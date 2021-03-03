@@ -30,7 +30,7 @@ jobs:
         pip install .
     - name: Test with pytest
       run: |
-        pytest -v --cov=c3 --cov-report=xml test/
+        pytest -v --cov=c3 --cov-report=xml test/ -n=auto
     - name: Upload build stats to Codecov
       uses: codecov/codecov-action@v1
       with:

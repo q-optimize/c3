@@ -4,6 +4,7 @@ import hjson
 import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
+from tensorflow.python.framework import ops
 
 
 class C3obj:
@@ -75,6 +76,7 @@ class Quantity:
     def __init__(
         self, value, unit="undefined", min_val=None, max_val=None, symbol=r"\alpha"
     ):
+        value = np.array(value)
         if "pi" in unit:
             pref = np.pi
         if "2pi" in unit:
@@ -84,8 +86,8 @@ class Quantity:
         self.pref = pref
         if min_val is None and max_val is None:
             minmax = [0.9 * value, 1.1 * value]
-            min_val = min(minmax)
-            max_val = max(minmax)
+            min_val = np.min(minmax, axis=0)
+            max_val = np.max(minmax, axis=0)
         self.offset = np.array(min_val) * pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit
@@ -94,20 +96,20 @@ class Quantity:
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
         else:
-            self.shape = ()
+            self.shape = (1,)
             self.length = 1
 
         self.set_value(np.array(value))
 
-    def asdict(self):
+    def asdict(self) -> dict:
         """
         Return a config-compatible dictionary representation.
         """
         pref = self.pref
         return {
-            "value": self.numpy(),
-            "min_val": self.offset / pref,
-            "max_val": (self.scale / pref + self.offset / pref),
+            "value": self.numpy().tolist(),
+            "min_val": (self.offset / pref).tolist(),
+            "max_val": (self.scale / pref + self.offset / pref).tolist(),
             "unit": self.unit,
             "symbol": self.symbol,
         }
@@ -142,11 +144,36 @@ class Quantity:
     def __rtruediv__(self, other):
         return other / self.numpy()
 
+    def __mod__(self, other):
+        return self.numpy() % other
+
+    def __array__(self):
+        return np.array(self.numpy())
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, key):
+        if self.length == 1 and key == 0:
+            return self.numpy()
+        return self.numpy().__getitem__(key)
+
+    def __float__(self):
+        if self.length > 1:
+            return NotImplemented
+        return float(self.numpy())
+
+    def __repr__(self):
+        return self.__str__()[:-1]
+
     def __str__(self):
         val = self.numpy()
         ret = ""
         for entry in np.nditer(val):
-            ret += num3str(entry) + self.unit + " "
+            if self.unit != "undefined":
+                ret += num3str(entry) + self.unit + " "
+            else:
+                ret += num3str(entry, use_prefix=False) + " "
         return ret
 
     def numpy(self) -> np.ndarray:
@@ -155,7 +182,7 @@ class Quantity:
         """
         return self.get_value().numpy() / self.pref
 
-    def get_value(self, val=None) -> tf.Tensor:
+    def get_value(self, val: tf.float64 = None) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 
@@ -180,7 +207,12 @@ class Quantity:
             )
             # TODO if we want we can extend bounds when force flag is given
         else:
-            self.value = tf.constant(tmp, dtype=tf.float64)
+            if isinstance(val, ops.EagerTensor):
+                self.value = tf.cast(
+                    2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64
+                )
+            else:
+                self.value = tf.constant(tmp, dtype=tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""

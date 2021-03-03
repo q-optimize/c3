@@ -49,6 +49,7 @@ class Experiment:
         self.unitaries: dict = {}
         self.dUs: dict = {}
         self.created_by = None
+        self.logdir: str = None
 
     def set_created_by(self, config):
         """
@@ -384,9 +385,10 @@ class Experiment:
             col_ops = model.get_Lindbladians()
             dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
-            dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
+            dUs = tf_utils.tf_propagation_vectorized(h0, hks, signals, dt)
         self.dUs[gate] = dUs
         self.ts = ts
+        dUs = tf.cast(dUs, tf.complex128)
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U

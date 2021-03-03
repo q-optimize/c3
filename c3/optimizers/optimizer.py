@@ -3,11 +3,11 @@
 import os
 import time
 from typing import Callable, Union
-
 import numpy as np
 import tensorflow as tf
 import json
 import c3.libraries.algorithms as algorithms
+from c3.experiment import Experiment
 
 
 class Optimizer:
@@ -18,10 +18,6 @@ class Optimizer:
     ----------
     algorithm : callable
         From the algorithm library
-    plot_dynamics : boolean
-        Save plots of time-resolved dynamics in dir_path
-    plot_pulses : boolean
-        Save plots of control signals
     store_unitaries : boolean
         Store propagators as text and pickle
     """
@@ -42,7 +38,7 @@ class Optimizer:
         self.created_by = None
         self.logname = None
         self.options = None
-        self.dir_path = None
+        self.__dir_path = None
         self.logdir = None
         self.set_algorithm(algorithm)
 
@@ -64,17 +60,22 @@ class Optimizer:
         """
         old_logdir = self.logdir
         self.logdir = new_logdir
+
+        if old_logdir is None:
+            return
+
         try:
-            os.remove(os.path.join(self.dir_path, "recent"))
+            os.remove(os.path.join(self.__dir_path, "recent"))
         except FileNotFoundError:
             pass
-        # os.remove(self.dir_path + self.string)
+        # os.remove(self.__dir_path + self.string)
+
         try:
             os.rmdir(old_logdir)
         except OSError:
             pass
 
-    def set_exp(self, exp) -> None:
+    def set_exp(self, exp: Experiment) -> None:
         self.exp = exp
 
     def set_created_by(self, config) -> None:
@@ -201,7 +202,16 @@ class Optimizer:
             Value of the gradient.
         """
         key = str(x)
-        return self.gradients.pop(key)
+        gradient = self.gradients.pop(key)
+        if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
+            # TODO: is simply a warning sufficient?
+            gradient[
+                np.isnan(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
+            gradient[
+                np.isinf(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
+        return gradient
 
     def fct_to_min(
         self, input_parameters: Union[np.ndarray, tf.constant]

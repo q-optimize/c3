@@ -26,6 +26,7 @@ import c3.signal.pulse as pulse
 import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.envelopes as envelopes
 
+
 lindblad = False
 dressed = True
 q1_lvls = 3
@@ -178,6 +179,7 @@ fluxbias = devices.FluxTuning(
         value=freq_tc, min_val=0.9 * freq_tc, max_val=1.1 * freq_tc, unit="Hz 2pi"
     ),
     d=Qty(value=d, min_val=d * 0.9, max_val=d * 1.1, unit=""),
+    anhar=Qty(value=anhar_q1, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
 )
 v_to_hz = devices.VoltsToHertz(
     name="v2hz",
@@ -251,6 +253,7 @@ CRZp.comps["Q1"]["carrier"].params["framechange"].set_value(framechange_q1)
 CRZp.add_component(nodrive_env, "Q2")
 CRZp.add_component(carr_q2, "Q2")
 CRZp.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
+
 
 # ### MAKE EXPERIMENT
 parameter_map = PMap(instructions=[CRZp], model=model, generator=generator)
@@ -352,9 +355,7 @@ def test_energy_levels() -> None:
     assert (np.abs(product_basis - data["product_basis"]) < 1).all()
     assert (np.abs(ordered_basis - data["ordered_basis"]) < 1).all()
     # Dressed basis might change at avoided crossings depending on how we
-    # decide to deal with it. Atm now error is given and the energy levels
-    # are mapped to the lowest level.
-    # This happens when an eigenvalue doesn't have any overlap larger than 50%
+    # decide to deal with it. Atm no state with largest probability is chosen.
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
 
 
@@ -382,6 +383,7 @@ def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
     U_dict = exp.get_gates()
+    # saved U_super currenlty likely to be wrong. Not recomputed in last dataset.
     U_super = U_dict["Id:CRZp"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
@@ -402,6 +404,7 @@ def test_flux_signal() -> None:
     instr = exp.pmap.instructions["Id:CRZp"]
     signal = exp.pmap.generator.generate_signals(instr)
     awg = exp.pmap.generator.devices["awg"]
+    # mixer = exp.pmap.generator.devices["mixer"]
     channel = "TC"
     tc_signal = signal[channel]["values"].numpy()
     tc_ts = signal[channel]["ts"].numpy()
@@ -418,3 +421,46 @@ def test_flux_signal() -> None:
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs((tc_awg_ts - data["tc_awg_ts"]) / np.max(data["tc_awg_ts"]))
     assert (rel_diff < 1e-12).all()
+
+
+@pytest.mark.unit
+def test_FluxTuning():
+    flux_tune = devices.FluxTuning(
+        name="flux_tune",
+        phi_0=Qty(phi_0_tc),
+        phi=Qty(value=0, min_val=-phi_0_tc, max_val=phi_0_tc),
+        omega_0=Qty(freq_tc),
+        anhar=Qty(anhar_TC),
+        d=Qty(d),
+    )
+
+    transmon = chip.Transmon(
+        name="transmon",
+        hilbert_dim=3,
+        freq=Qty(freq_tc),
+        phi=Qty(value=0, min_val=-1.5 * phi_0_tc, max_val=1.5 * phi_0_tc),
+        phi_0=Qty(phi_0_tc),
+        d=Qty(d),
+        anhar=Qty(anhar_TC),
+    )
+
+    bias_phis = [0, 0.2]
+    phis = np.linspace(-1, 1, 10) * phi_0_tc
+
+    for bias_phi in bias_phis:
+        flux_tune.params["phi"].set_value(bias_phi)
+        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal_out = flux_tune.process(None, None, signal)
+        flux_tune_frequencies = signal_out["values"].numpy()
+
+        transmon_frequencies = []
+        transmon.params["phi"].set_value(bias_phi)
+        bias_freq = transmon.get_freq()
+        for phi in phis + bias_phi:
+            transmon.params["phi"].set_value(phi)
+            transmon_frequencies.append(transmon.get_freq())
+        transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
+
+        assert (
+            np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
+        )
