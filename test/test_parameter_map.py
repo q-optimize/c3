@@ -63,46 +63,46 @@ def setup_pmap() -> ParameterMap:
         params=carrier_parameters,
     )
 
-    RX90p = Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
+    rx90p = Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
     QId = Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
 
-    RX90p.add_component(gauss_env_single, "d1")
-    RX90p.add_component(carr, "d1")
+    rx90p.add_component(gauss_env_single, "d1")
+    rx90p.add_component(carr, "d1")
     QId.add_component(nodrive_env, "d1")
     QId.add_component(copy.deepcopy(carr), "d1")
     QId.comps["d1"]["carrier"].params["framechange"].set_value(
         (-sideband * t_final) % (2 * np.pi)
     )
-    RY90p = copy.deepcopy(RX90p)
-    RY90p.name = "RY90p"
-    RX90m = copy.deepcopy(RX90p)
-    RX90m.name = "RX90m"
-    RY90m = copy.deepcopy(RX90p)
-    RY90m.name = "RY90m"
-    RY90p.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
-    RX90m.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
-    RY90m.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
+    ry90p = copy.deepcopy(rx90p)
+    ry90p.name = "ry90p"
+    rx90m = copy.deepcopy(rx90p)
+    rx90m.name = "rx90m"
+    ry90m = copy.deepcopy(rx90p)
+    ry90m.name = "ry90m"
+    ry90p.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
+    rx90m.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
+    ry90m.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
 
-    parameter_map = ParameterMap(instructions=[QId, RX90p, RY90p, RX90m, RY90m])
+    parameter_map = ParameterMap(instructions=[QId, rx90p, ry90p, rx90m, ry90m])
 
     gateset_opt_map = [
         [
-            ("RX90p[0]", "d1", "gauss", "amp"),
-            ("RY90p[0]", "d1", "gauss", "amp"),
-            ("RX90m[0]", "d1", "gauss", "amp"),
-            ("RY90m[0]", "d1", "gauss", "amp"),
+            ("rx90p[0]", "d1", "gauss", "amp"),
+            ("ry90p[0]", "d1", "gauss", "amp"),
+            ("rx90m[0]", "d1", "gauss", "amp"),
+            ("ry90m[0]", "d1", "gauss", "amp"),
         ],
         [
-            ("RX90p[0]", "d1", "gauss", "delta"),
-            ("RY90p[0]", "d1", "gauss", "delta"),
-            ("RX90m[0]", "d1", "gauss", "delta"),
-            ("RY90m[0]", "d1", "gauss", "delta"),
+            ("rx90p[0]", "d1", "gauss", "delta"),
+            ("ry90p[0]", "d1", "gauss", "delta"),
+            ("rx90m[0]", "d1", "gauss", "delta"),
+            ("ry90m[0]", "d1", "gauss", "delta"),
         ],
         [
-            ("RX90p[0]", "d1", "gauss", "freq_offset"),
-            ("RY90p[0]", "d1", "gauss", "freq_offset"),
-            ("RX90m[0]", "d1", "gauss", "freq_offset"),
-            ("RY90m[0]", "d1", "gauss", "freq_offset"),
+            ("rx90p[0]", "d1", "gauss", "freq_offset"),
+            ("ry90p[0]", "d1", "gauss", "freq_offset"),
+            ("rx90m[0]", "d1", "gauss", "freq_offset"),
+            ("ry90m[0]", "d1", "gauss", "freq_offset"),
         ],
         [("Id[0]", "d1", "carrier", "framechange")],
     ]
@@ -144,7 +144,7 @@ def test_parameter_get_value() -> None:
     """
     Check that four parameters are set.
     """
-    assert str(pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))) == "450.000 mV "
+    assert str(pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))) == "450.000 mV "
 
 
 @pytest.mark.unit
@@ -152,8 +152,8 @@ def test_parameter_equiv() -> None:
     """
     Check that two equivalent parameters do not point to the same memory address.
     """
-    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RY90p[0]", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("ry90p[0]", "d1", "gauss", "amp"))
     assert amp1 is not amp2
 
 
@@ -162,10 +162,10 @@ def test_parameter_set_equiv() -> None:
     """
     Check that setting equivalent parameters also sets the other one.
     """
-    amp_ids = [[("RX90p[0]", "d1", "gauss", "amp"), ("RX90m[0]", "d1", "gauss", "amp")]]
+    amp_ids = [[("rx90p[0]", "d1", "gauss", "amp"), ("rx90m[0]", "d1", "gauss", "amp")]]
     pmap.set_parameters([0.55], amp_ids)
-    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("rx90m[0]", "d1", "gauss", "amp"))
     assert amp1.get_value() == amp2.get_value()
 
 
@@ -175,12 +175,12 @@ def test_parameter_set_indepentent() -> None:
     Check that setting equivalent parameters also sets the other one.
     """
     amp_ids = [
-        [("RX90p[0]", "d1", "gauss", "amp")],
-        [("RX90m[0]", "d1", "gauss", "amp")],
+        [("rx90p[0]", "d1", "gauss", "amp")],
+        [("rx90m[0]", "d1", "gauss", "amp")],
     ]
     pmap.set_parameters([0.55, 0.41], amp_ids)
-    amp1 = pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp"))
-    amp2 = pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp"))
+    amp1 = pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))
+    amp2 = pmap.get_parameter(("rx90m[0]", "d1", "gauss", "amp"))
     assert amp1.get_value() != amp2.get_value()
 
 
@@ -190,10 +190,10 @@ def test_parameter_set_opt() -> None:
     Test the setting in optimizer format.
     """
     amp_ids = [
-        [("RX90p[0]", "d1", "gauss", "amp")],
-        [("RX90m[0]", "d1", "gauss", "amp")],
+        [("rx90p[0]", "d1", "gauss", "amp")],
+        [("rx90m[0]", "d1", "gauss", "amp")],
     ]
     pmap.set_opt_map(amp_ids)
     pmap.set_parameters_scaled([-1.0, 1.0])  # -+1 correspond to min and max allowd
-    assert pmap.get_parameter(("RX90p[0]", "d1", "gauss", "amp")).get_value() == 0.4
-    assert pmap.get_parameter(("RX90m[0]", "d1", "gauss", "amp")).get_value() == 0.6
+    assert pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp")).get_value() == 0.4
+    assert pmap.get_parameter(("rx90m[0]", "d1", "gauss", "amp")).get_value() == 0.6
