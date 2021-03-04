@@ -206,10 +206,10 @@ rx90p_q2 = gates.Instruction(
     name="rx90p", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
 )
 QId_q1 = gates.Instruction(
-    name="Id", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
 )
 QId_q2 = gates.Instruction(
-    name="Id", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
 )
 
 rx90p_q1.add_component(gauss_env_single, "d1")

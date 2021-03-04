@@ -64,7 +64,7 @@ def setup_pmap() -> ParameterMap:
     )
 
     rx90p = Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
-    QId = Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
+    QId = Instruction(name="id", t_start=0.0, t_end=t_final, channels=["d1"])
 
     rx90p.add_component(gauss_env_single, "d1")
     rx90p.add_component(carr, "d1")
@@ -104,7 +104,7 @@ def setup_pmap() -> ParameterMap:
             ("rx90m[0]", "d1", "gauss", "freq_offset"),
             ("ry90m[0]", "d1", "gauss", "freq_offset"),
         ],
-        [("Id[0]", "d1", "carrier", "framechange")],
+        [("id[0]", "d1", "carrier", "framechange")],
     ]
 
     parameter_map.set_opt_map(gateset_opt_map)

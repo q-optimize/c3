@@ -9,18 +9,19 @@
   "single_qubit_gate_time" : 20e-9
   "single_qubit_gates":
   {
-    "RX90pQ1": {name: "rx90p", "qubits": "Q1"},
-    "RX90pQ2": {name: "rx90p", "qubits": "Q2"},
+    "rx90pQ1": {name: "rx90p", "qubits": "Q1"},
+    "rx90pQ2": {name: "rx90p", "qubits": "Q2"},
   }
   "two_qubit_gates":
   {
-    CR90:
+    cr90:
     {
+      name: "cr90"
       qubit_1: Q1
       qubit_2: Q2
       gate_time: 50e-9
     },
-    "RX90pQ1Q2":
+    "rx90pQ1Q2":
     {
       name: "rx90p"
       qubit_1: Q1
@@ -34,7 +35,7 @@
   "fid_subspace" : ["Q1", "Q2"],
   "opt_gates" :
   [
-    "CR90"
+    "cr90[0, 1]"
   ],
   "gateset_opt_map" :
   [
@@ -48,28 +49,28 @@
       ["Q1-Q2", "strength"]
     ],
     [
-      ["CR90", "d1", "gauss", "amp"]
+      ["cr90[0, 1]", "d1", "gauss", "amp"]
     ],
     [
-      ["CR90", "d1", "gauss", "freq_offset"]
+      ["cr90[0, 1]", "d1", "gauss", "freq_offset"]
     ],
     [
-      ["CR90", "d1", "gauss", "xy_angle"]
+      ["cr90[0, 1]", "d1", "gauss", "xy_angle"]
     ],
     [
-      ["CR90", "d1", "carrier", "framechange"]
+      ["cr90[0, 1]", "d1", "carrier", "framechange"]
     ],
     [
-      ["CR90", "d2", "gauss", "amp"]
+      ["cr90[0, 1]", "d2", "gauss", "amp"]
     ],
     [
-      ["CR90", "d2", "gauss", "freq_offset"]
+      ["cr90[0, 1]", "d2", "gauss", "freq_offset"]
     ],
     [
-      ["CR90", "d2", "gauss", "xy_angle"]
+      ["cr90[0, 1]", "d2", "gauss", "xy_angle"]
     ],
     [
-      ["CR90", "d2", "carrier", "framechange"]
+      ["cr90[0, 1]", "d2", "carrier", "framechange"]
     ]
   ]
 }

@@ -34,7 +34,7 @@ def test_q6_freq() -> None:
 
 @pytest.mark.unit
 def test_instructions() -> None:
-    assert list(pmap.instructions.keys()) == ["RX90p", "RY90p", "RX90m", "RY90m"]
+    assert list(pmap.instructions.keys()) == ["rx90p", "ry90p", "rx90m", "ry90m"]
 
 
 @pytest.mark.integration
@@ -84,11 +84,11 @@ def test_signal_generation() -> None:
         params=carrier_parameters,
     )
 
-    RX90p_q1 = Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
-    RX90p_q1.add_component(gauss_env_single, "d1")
-    RX90p_q1.add_component(carr, "d1")
+    rx90p_q1 = Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
+    rx90p_q1.add_component(gauss_env_single, "d1")
+    rx90p_q1.add_component(carr, "d1")
 
-    gen.generate_signals(RX90p_q1)
+    gen.generate_signals(rx90p_q1)
 
 
 @pytest.mark.unit
@@ -96,7 +96,7 @@ def test_signal_generation_from_config() -> None:
     """
     Check that signal generation works.
     """
-    gen.generate_signals(pmap.instructions["RX90p"])
+    gen.generate_signals(pmap.instructions["rx90p"])
 
 
 @pytest.mark.integration
