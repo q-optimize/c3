@@ -286,7 +286,7 @@ pulse shape.
     )
 
 In simulation, we translate between AWG resolution and simulation (or
-“analog”) resolultion by including an up-sampling device.
+“analog”) resolution by including an up-sampling device.
 
 .. code-block:: python
 
@@ -368,7 +368,7 @@ It remains to write down what kind of operations we want to perform on
 the device. For a gate based quantum computing chip, we define a
 gate-set.
 
-We choose a gate time of 7ns and a gaussian envelope shape with a list
+We choose a gate time of 7ns and a Gaussian envelope shape with a list
 of parameters.
 
 .. code-block:: python
@@ -491,40 +491,20 @@ Then we add a carrier and envelope to each.
 
 .. code-block:: python
 
-    RX90p_q1 = gates.Instruction(
-        name="RX90p",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d1"]
+    rx90p_q1 = gates.Instruction(
+        name="rx90p", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
     )
-    RX90p_q2 = gates.Instruction(
-        name="RX90p",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
-    )
-    QId_q1 = gates.Instruction(
-        name="Id",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d1"]
-    )
-    QId_q2 = gates.Instruction(
-        name="Id",
-        t_start=0.0,
-        t_end=t_final,
-        channels=["d2"]
+    rx90p_q2 = gates.Instruction(
+        name="rx90p", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
     )
 
-    RX90p_q1.add_component(gauss_env_single, "d1")
-    RX90p_q1.add_component(carr, "d1")
-    QId_q1.add_component(nodrive_env, "d1")
-    QId_q1.add_component(copy.deepcopy(carr), "d1")
+    rx90p_q1.add_component(gauss_env_single, "d1")
+    rx90p_q1.add_component(carr, "d1")
 
-    RX90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
-    RX90p_q2.add_component(carr_2, "d2")
-    QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
-    QId_q2.add_component(copy.deepcopy(carr_2), "d2")
+
+    rx90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
+    rx90p_q2.add_component(carr_2, "d2")
+
 
 When later compiling gates into sequences, we have to take care of the
 relative rotating frames of the qubits and local oscillators. We do this
@@ -532,11 +512,16 @@ by adding a phase after each gate that realigns the frames.
 
 .. code-block:: python
 
-    QId_q1.comps['d1']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final * 2 * np.pi ) % (2*np.pi)
+    rx90p_q1.add_component(nodrive_env, "d2")
+    rx90p_q1.add_component(copy.deepcopy(carr_2), "d2")
+    rx90p_q1.comps["d2"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
     )
-    QId_q2.comps['d2']['carrier'].params['framechange'].set_value(
-        (-sideband * t_final * 2 * np.pi ) % (2*np.pi)
+
+    rx90p_q2.add_component(nodrive_env, "d1")
+    rx90p_q2.add_component(copy.deepcopy(carr), "d1")
+    rx90p_q2.comps["d1"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
     )
 
 The remainder of the gates-set can be derived from the RX90p gate by
@@ -544,54 +529,28 @@ shifting its phase by multiples of :math:`\pi/2`.
 
 .. code-block:: python
 
-    Y90p_q1 = copy.deepcopy(RX90p_q1)
-    Y90p_q1.name = "RY90p"
-    X90m_q1 = copy.deepcopy(RX90p_q1)
-    X90m_q1.name = "RX90m"
-    Y90m_q1 = copy.deepcopy(RX90p_q1)
-    Y90m_q1.name = "RY90m"
-    Y90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q1_gates = [QId_q1, RX90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
+    ry90p_q1 = copy.deepcopy(rx90p_q1)
+    ry90p_q1.name = "ry90p"
+    rx90m_q1 = copy.deepcopy(rx90p_q1)
+    rx90m_q1.name = "rx90m"
+    ry90m_q1 = copy.deepcopy(rx90p_q1)
+    ry90m_q1.name = "ry90m"
+    ry90p_q1.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    rx90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+    ry90m_q1.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    single_q_gates = [rx90p_q1, ry90p_q1, rx90m_q1, ry90m_q1]
 
 
-    Y90p_q2 = copy.deepcopy(RX90p_q2)
-    Y90p_q2.name = "RY90p"
-    X90m_q2 = copy.deepcopy(RX90p_q2)
-    X90m_q2.name = "RX90m"
-    Y90m_q2 = copy.deepcopy(RX90p_q2)
-    Y90m_q2.name = "RY90m"
-    Y90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
-    Q2_gates = [QId_q2, RX90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
-
-With the single qubit gates in place, we can combine them to get all
-possible combinations of simultaneous gates on both qubits.
-
-.. code-block:: python
-
-    all_1q_gates_comb = []
-    for g1 in Q1_gates:
-        for g2 in Q2_gates:
-            g = gates.Instruction(
-                name="NONE",
-                t_start=0.0,
-                t_end=t_final,
-                channels=[]
-            )
-            g.name = g1.name + ":" + g2.name
-            channels = []
-            channels.extend(g1.comps.keys())
-            channels.extend(g2.comps.keys())
-            for chan in channels:
-                g.comps[chan] = {}
-                if chan in g1.comps:
-                    g.comps[chan].update(g1.comps[chan])
-                if chan in g2.comps:
-                    g.comps[chan].update(g2.comps[chan])
-            all_1q_gates_comb.append(g)
+    ry90p_q2 = copy.deepcopy(rx90p_q2)
+    ry90p_q2.name = "ry90p"
+    rx90m_q2 = copy.deepcopy(rx90p_q2)
+    rx90m_q2.name = "rx90m"
+    ry90m_q2 = copy.deepcopy(rx90p_q2)
+    ry90m_q2.name = "ry90m"
+    ry90p_q2.comps['d2']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    rx90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(np.pi)
+    ry90m_q2.comps['d2']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    single_q_gates.extend([rx90p_q2, ry90p_q2, rx90m_q2, ry90m_q2])
 
 With every component defined, we collect them in the parameter map, our
 object that holds information and methods to manipulate and examine
@@ -673,7 +632,7 @@ evaluate sequences. We start with just one gate
 
 .. code:: ipython3
 
-    barely_a_seq = ['RX90p:Id']
+    barely_a_seq = ['rx90p[0]']
 
 and plot system dynamics.
 
@@ -742,16 +701,16 @@ of the same gate.
 
 .. parsed-literal::
 
-    ['RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id',
-     'RX90p:Id']
+    ['rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]',
+     'rx90p[0]']
 
 
 
