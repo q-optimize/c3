@@ -76,3 +76,35 @@ GATES = {
         [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=np.complex128
     ),
 }
+
+x90p = GATES["rx90p"]
+y90p = GATES["ry90p"]
+x90m = GATES["rx90m"]
+y90m = GATES["ry90m"]
+
+CLIFFORDS = {
+    "C1": x90m @ x90p,
+    "C2": x90p @ y90p,
+    "C3": y90m @ x90m,
+    "C4": x90p @ x90p @ y90p,
+    "C5": x90m,
+    "C6": x90m @ y90m @ x90p,
+    "C7": x90p @ x90p,
+    "C8": x90m @ y90m,
+    "C9": y90m @ x90p,
+    "C10": y90m,
+    "C11": x90p,
+    "C12": x90p @ y90p @ x90p,
+    "C13": y90p @ y90p,
+    "C14": x90p @ y90m,
+    "C15": y90p @ x90p,
+    "C16": x90p @ x90p @ y90m,
+    "C17": y90p @ y90p @ x90p,
+    "C18": x90p @ y90m @ x90p,
+    "C19": y90p @ y90p @ x90p @ x90p,
+    "C20": x90m @ y90p,
+    "C21": y90p @ x90m,
+    "C22": y90p,
+    "C23": y90p @ y90p @ x90m,
+    "C24": x90m @ y90p @ x90p,
+}

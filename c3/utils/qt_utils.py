@@ -4,7 +4,7 @@ import numpy as np
 from typing import List
 from scipy.linalg import block_diag as scipy_block_diag
 from scipy.linalg import expm
-from c3.libraries.constants import Id, X, Y, Z, PAULIS, GATES
+from c3.libraries.constants import Id, X, Y, Z, PAULIS, CLIFFORDS
 
 
 def pauli_basis(dims=[2]):
@@ -314,8 +314,8 @@ def T1_sequence(length, target):
     ----------
     length : int
         Number of Identity gates.
-    target : str
-        Which qubit is measured. Options: "left" or "right"
+    target : int
+        Which qubit is measured.
 
     Returns
     -------
@@ -323,11 +323,8 @@ def T1_sequence(length, target):
         Relaxation sequence.
 
     """
-    wait = ["Id:Id"]
-    if target == "left":
-        prepare_1 = ["rx90p:Id", "rx90p:Id"]
-    elif target == "right":
-        prepare_1 = ["Id:rx90p", "Id:rx90p"]
+    wait = ["Id"]
+    prepare_1 = [f"rx90p[{str(target)}]"] * 2
     S = []
     S.extend(prepare_1)
     S.extend(wait * length)
@@ -351,11 +348,8 @@ def ramsey_sequence(length, target):
         Dephasing sequence.
 
     """
-    wait = ["Id:Id"]
-    if target == "left":
-        rotate_90 = ["rx90p:Id"]
-    elif target == "right":
-        rotate_90 = ["Id:rx90p"]
+    wait = ["id"]
+    rotate_90 = [f"rx90p[{str(target)}]"]
     S = []
     S.extend(rotate_90)
     S.extend(wait * length)
@@ -365,7 +359,8 @@ def ramsey_sequence(length, target):
 
 def ramsey_echo_sequence(length, target):
     """
-    Generate a gate sequence to measure dephasing time in a two-qubit chip including a flip in the middle.
+    Generate a gate sequence to measure dephasing time in a two-qubit chip including a
+    flip in the middle.
     This echo reduce effects detrimental to the dephasing measurement.
 
     Parameters
@@ -381,14 +376,10 @@ def ramsey_echo_sequence(length, target):
         Dephasing sequence.
 
     """
-    wait = ["Id:Id"]
+    wait = ["id"]
     hlength = length // 2
-    if target == "left":
-        rotate_90_p = ["rx90p:Id"]
-        rotate_90_m = ["rx90m:Id"]
-    elif target == "right":
-        rotate_90_p = ["Id:rx90p"]
-        rotate_90_m = ["Id:rx90m"]
+    rotate_90_p = [f"rx90p[{str(target)}]"]
+    rotate_90_m = [f"rx90m[{str(target)}]"]
     S = []
     S.extend(rotate_90_p)
     S.extend(wait * hlength)
@@ -399,8 +390,11 @@ def ramsey_echo_sequence(length, target):
     return S
 
 
-def single_length_RB(RB_number, RB_length, padding=""):
-    """Given a length and number of repetitions it compiles Randomized Benchmarking sequences.
+def single_length_RB(
+    RB_number: int, RB_length: int, target: int = 0
+) -> List[List[str]]:
+    """Given a length and number of repetitions it compiles Randomized Benchmarking
+    sequences.
 
     Parameters
     ----------
@@ -408,8 +402,8 @@ def single_length_RB(RB_number, RB_length, padding=""):
         The number of sequences to construct.
     RB_length : int
         The number of Cliffords in each individual sequence.
-    padding : str
-        Option of "left" or "right" in a two-qubit chip.
+    target : int
+        Index of the target qubit
 
     Returns
     -------
@@ -422,13 +416,7 @@ def single_length_RB(RB_number, RB_length, padding=""):
         seq = np.append(seq, inverseC(seq))
         seq_gates = []
         for cliff_num in seq:
-            # TODO: General padding for n qubits
-            if padding == "right":
-                g = ["Id:" + c for c in cliffords_decomp[cliff_num - 1]]
-            elif padding == "left":
-                g = [c + ":Id" for c in cliffords_decomp[cliff_num - 1]]
-            else:
-                g = cliffords_decomp[cliff_num - 1]
+            g = [f"{c}[{target}]" for c in cliffords_decomp[cliff_num - 1]]
             seq_gates.extend(g)
         S.append(seq_gates)
     return S
@@ -439,10 +427,10 @@ def inverseC(sequence):
     operation = Id
     for cliff in sequence:
         gate_str = "C" + str(cliff)
-        gate = eval(gate_str)
+        gate = CLIFFORDS[gate_str]
         operation = gate @ operation
     for i in range(1, 25):
-        inv = eval("C" + str(i))
+        inv = CLIFFORDS["C" + str(i)]
         trace = np.trace(inv @ operation)
         if abs(2 - abs(trace)) < 0.0001:
             return i
@@ -450,74 +438,9 @@ def inverseC(sequence):
 
 def perfect_cliffords(lvls: List[int], proj: str = "fulluni", num_gates: int = 1):
     """
-    Returns a list of ideal matrix representation of Clifford gates.
+    Legacy function to compute the clifford gates.
     """
-    # TODO make perfect clifford more general by making it take a decomposition
-
-    if num_gates == 1:
-        x90p = GATES["rx90p"]
-        y90p = GATES["ry90p"]
-        x90m = GATES["rx90m"]
-        y90m = GATES["ry90m"]
-    elif num_gates == 2:
-        x90p = GATES["rx90p"]
-        y90p = GATES["ry90p"]
-        x90m = GATES["rx90m"]
-        y90m = GATES["ry90m"]
-
-    C1 = x90m @ x90p
-    C2 = x90p @ y90p
-    C3 = y90m @ x90m
-    C4 = x90p @ x90p @ y90p
-    C5 = x90m
-    C6 = x90m @ y90m @ x90p
-    C7 = x90p @ x90p
-    C8 = x90m @ y90m
-    C9 = y90m @ x90p
-    C10 = y90m
-    C11 = x90p
-    C12 = x90p @ y90p @ x90p
-    C13 = y90p @ y90p
-    C14 = x90p @ y90m
-    C15 = y90p @ x90p
-    C16 = x90p @ x90p @ y90m
-    C17 = y90p @ y90p @ x90p
-    C18 = x90p @ y90m @ x90p
-    C19 = y90p @ y90p @ x90p @ x90p
-    C20 = x90m @ y90p
-    C21 = y90p @ x90m
-    C22 = y90p
-    C23 = y90p @ y90p @ x90m
-    C24 = x90m @ y90p @ x90p
-
-    cliffords = [
-        C1,
-        C2,
-        C3,
-        C4,
-        C5,
-        C6,
-        C7,
-        C8,
-        C9,
-        C10,
-        C11,
-        C12,
-        C13,
-        C14,
-        C15,
-        C16,
-        C17,
-        C18,
-        C19,
-        C20,
-        C21,
-        C22,
-        C23,
-        C24,
-    ]
-
-    return cliffords
+    return CLIFFORDS
 
 
 cliffords_string = [
