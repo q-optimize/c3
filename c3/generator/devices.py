@@ -1,7 +1,7 @@
 import os
 import tempfile
 import hjson
-from typing import Callable
+from typing import Callable, Dict, Any
 import tensorflow as tf
 import numpy as np
 from c3.signal.pulse import Envelope, Carrier
@@ -53,7 +53,7 @@ class Device(C3obj):
         with open(filepath, "w") as cfg_file:
             hjson.dump(self.asdict(), cfg_file)
 
-    def asdict(self) -> dict:
+    def asdict(self) -> Dict[str, Any]:
         params = {}
         for key, item in self.params.items():
             params[key] = item.asdict()
@@ -169,7 +169,9 @@ class VoltsToHertz(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
 
-    def process(self, instr: Instruction, chan: str, mixed_signal: dict) -> dict:
+    def process(
+        self, instr: Instruction, chan: str, mixed_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Transform signal from value of V to Hz.
 
         Parameters
@@ -208,7 +210,7 @@ class Crosstalk(Device):
         self.outputs = props.pop("outputs", 1)
         self.params["crosstalk_matrix"] = props.pop("crosstalk_matrix", None)
 
-    def process(self, signal: dict) -> dict:
+    def process(self, signal: Dict[str, Any]) -> Dict[str, Any]:
         """
         Mix channels in the input signal according to a crosstalk matrix.
 
@@ -246,7 +248,9 @@ class DigitalToAnalog(Device):
         self.ts = None
         self.sampling_method = props.pop("sampling_method", "nearest")
 
-    def process(self, instr: Instruction, chan: str, awg_signal: dict) -> dict:
+    def process(
+        self, instr: Instruction, chan: str, awg_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Resample the awg values to higher resolution.
 
         Parameters
@@ -304,7 +308,9 @@ class Filter(Device):
         self.filter_function: Callable = props["filter_function"]
         super().__init__(**props)
 
-    def process(self, instr: Instruction, chan: str, Hz_signal: dict) -> dict:
+    def process(
+        self, instr: Instruction, chan: str, Hz_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Apply a filter function to the signal."""
         self.signal = self.filter_function(Hz_signal)
         return self.signal
