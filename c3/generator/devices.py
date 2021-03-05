@@ -200,6 +200,24 @@ class Crosstalk(Device):
     ----------
 
     crosstalk_matrix: tf.constant
+        Matrix description of how to mix drive channels.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        xtalk = Crosstalk(
+            name="crosstalk",
+            channels=["TC1", "TC2"],
+            crosstalk_matrix=Quantity(
+                value=[[1, 0], [0, 1]],
+                min_val=[[0, 0], [0, 0]],
+                max_val=[[1, 1], [1, 1]],
+                unit="",
+            ),
+        )
+
+
 
     """
 
@@ -216,17 +234,21 @@ class Crosstalk(Device):
 
         Parameters
         ----------
-        instr: Instruction
-            The logical instruction or qubit operation for which the signal is
-            generated.
-        chan: str
-            Specifies which channel is being processed if needed.
-        signal: dict
-            Dictionary of several signals identified by their channel as dict keys.
+        signal: Dict[str, Any]
+            Dictionary of several signals identified by their channel as dict keys, e.g.
+
+            .. code-block:: python
+
+                signal = {
+                    "TC1": {"values": [0, 0.5, 1, 1, ...]},
+                    "TC2": {"values": [1, 1, 1, 1, ...],
+                }
+
+
 
         Returns
         -------
-        tf.Tensor
+        signal: Dict[str, Any]
 
         """
         xtalk = self.params["crosstalk_matrix"]
@@ -253,8 +275,6 @@ class DigitalToAnalog(Device):
     ) -> Dict[str, Any]:
         """Resample the awg values to higher resolution.
 
-        Parameters
-        ----------
         Parameters
         ----------
         instr: Instruction
