@@ -200,50 +200,50 @@ def create_experiment():
     carr_2 = copy.deepcopy(carr)
     carr_2.params["freq"].set_value(lo_freq_q2)
 
-    X90p_q1 = gates.Instruction(
-        name="X90p", t_start=0.0, t_end=t_final, channels=["d1"]
+    RX90p_q1 = gates.Instruction(
+        name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"]
     )
-    X90p_q2 = gates.Instruction(
-        name="X90p", t_start=0.0, t_end=t_final, channels=["d2"]
+    RX90p_q2 = gates.Instruction(
+        name="RX90p", t_start=0.0, t_end=t_final, channels=["d2"]
     )
     QId_q1 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
     QId_q2 = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d2"])
 
-    X90p_q1.add_component(gauss_env_single, "d1")
-    X90p_q1.add_component(carr, "d1")
+    RX90p_q1.add_component(gauss_env_single, "d1")
+    RX90p_q1.add_component(carr, "d1")
     QId_q1.add_component(nodrive_env, "d1")
     QId_q1.add_component(copy.deepcopy(carr), "d1")
     QId_q1.comps["d1"]["carrier"].params["framechange"].set_value(
         (-sideband * t_final) % (2 * np.pi)
     )
-    Y90p_q1 = copy.deepcopy(X90p_q1)
-    Y90p_q1.name = "Y90p"
-    X90m_q1 = copy.deepcopy(X90p_q1)
-    X90m_q1.name = "X90m"
-    Y90m_q1 = copy.deepcopy(X90p_q1)
-    Y90m_q1.name = "Y90m"
+    Y90p_q1 = copy.deepcopy(RX90p_q1)
+    Y90p_q1.name = "RY90p"
+    X90m_q1 = copy.deepcopy(RX90p_q1)
+    X90m_q1.name = "RX90m"
+    Y90m_q1 = copy.deepcopy(RX90p_q1)
+    Y90m_q1.name = "RY90m"
     Y90p_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
     X90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
     Y90m_q1.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
-    Q1_gates = [QId_q1, X90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
+    Q1_gates = [QId_q1, RX90p_q1, Y90p_q1, X90m_q1, Y90m_q1]
 
-    X90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
-    X90p_q2.add_component(carr_2, "d2")
+    RX90p_q2.add_component(copy.deepcopy(gauss_env_single), "d2")
+    RX90p_q2.add_component(carr_2, "d2")
     QId_q2.add_component(copy.deepcopy(nodrive_env), "d2")
     QId_q2.add_component(copy.deepcopy(carr_2), "d2")
     QId_q2.comps["d2"]["carrier"].params["framechange"].set_value(
         (-sideband * t_final) % (2 * np.pi)
     )
-    Y90p_q2 = copy.deepcopy(X90p_q2)
-    Y90p_q2.name = "Y90p"
-    X90m_q2 = copy.deepcopy(X90p_q2)
-    X90m_q2.name = "X90m"
-    Y90m_q2 = copy.deepcopy(X90p_q2)
-    Y90m_q2.name = "Y90m"
+    Y90p_q2 = copy.deepcopy(RX90p_q2)
+    Y90p_q2.name = "RY90p"
+    X90m_q2 = copy.deepcopy(RX90p_q2)
+    X90m_q2.name = "RX90m"
+    Y90m_q2 = copy.deepcopy(RX90p_q2)
+    Y90m_q2.name = "RY90m"
     Y90p_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
     X90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(np.pi)
     Y90m_q2.comps["d2"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
-    Q2_gates = [QId_q2, X90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
+    Q2_gates = [QId_q2, RX90p_q2, Y90p_q2, X90m_q2, Y90m_q2]
 
     all_1q_gates_comb = []
     for g1 in Q1_gates:

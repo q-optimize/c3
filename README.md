@@ -15,6 +15,14 @@ The C3 package is intended to close the loop between open-loop control optimizat
 pip install c3-toolset
 ```
 
+If you want to try out the bleeding edge (possibly buggy) version under development:
+
+```bash
+pip install c3-toolset-nightly
+```
+
+## Usage
+
 C3  provides a simple Python API through which it may integrate with virtually any experimental setup.
 Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
 

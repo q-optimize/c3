@@ -2,12 +2,14 @@
 
 from typing import List, Dict, Tuple
 import hjson
+import json
 import copy
 import numpy as np
 import tensorflow as tf
 from c3.c3objs import Quantity
 from c3.signal.gates import Instruction
 from c3.signal.pulse import components as comp_lib
+from typing import Union
 
 
 class ParameterMap:
@@ -38,11 +40,13 @@ class ParameterMap:
     def __initialize_parameters(self) -> None:
         par_lens = {}
         pars = {}
+        par_ids_model = []
         for comp in self.__components.values():
             for par_name, par_value in comp.params.items():
                 par_id = "-".join([comp.name, par_name])
                 par_lens[par_id] = par_value.length
                 pars[par_id] = par_value
+                par_ids_model.append(par_id)
 
         # Initializing control parameters
         for gate in self.instructions:
@@ -56,6 +60,7 @@ class ParameterMap:
 
         self.__par_lens = par_lens
         self.__pars = pars
+        self.__par_ids_model = par_ids_model
 
     def load_values(self, init_point):
         """
@@ -68,7 +73,9 @@ class ParameterMap:
 
         """
         with open(init_point) as init_file:
-            best = hjson.load(init_file)
+            best = json.load(
+                init_file
+            )  # no hjson: be compatible with optimizer logging
 
         best_opt_map = [[tuple(par) for par in pset] for pset in best["opt_map"]]
         init_p = best["optim_status"]["params"]
@@ -148,7 +155,7 @@ class ParameterMap:
             units.append(self.__pars[key].unit)
         return units
 
-    def get_parameter(self, par_id: Tuple[str]) -> Quantity:
+    def get_parameter(self, par_id: Tuple[str, ...]) -> Quantity:
         """
         Return one the current parameters.
 
@@ -202,12 +209,14 @@ class ParameterMap:
             Corresponding identifiers for the parameter values.
 
         """
+        model_updated = False
         val_indx = 0
         if opt_map is None:
             opt_map = self.opt_map
         for equiv_ids in opt_map:
             for par_id in equiv_ids:
                 key = "-".join(par_id)
+                model_updated = True if key in self.__par_ids_model else model_updated
                 try:
                     par = self.__pars[key]
                 except ValueError as ve:
@@ -222,6 +231,8 @@ class ParameterMap:
                         f" {(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
+        if model_updated:
+            self.model.update_model()
 
     def get_parameters_scaled(self) -> np.ndarray:
         """
@@ -243,9 +254,10 @@ class ParameterMap:
             key = "-".join(equiv_ids[0])
             par = self.__pars[key]
             values.append(par.get_opt_value())
-        return np.array(values).flatten()
+        # TODO is there a reason to not return a tensorflow array
+        return np.concatenate(values, axis=0).flatten()
 
-    def set_parameters_scaled(self, values: tf.constant) -> None:
+    def set_parameters_scaled(self, values: Union[tf.constant, tf.Variable]) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
         called by an optimizer. Are you an optimizer?
@@ -254,19 +266,21 @@ class ParameterMap:
         ----------
         values: list
             List of parameter values. Matrix valued parameters need to be flattened.
-        opt_map: list
-            Corresponding identifiers for the parameter values.
 
         """
+        model_updated = False
         val_indx = 0
         for equiv_ids in self.opt_map:
             key = "-".join(equiv_ids[0])
             par_len = self.__pars[key].length
             for par_id in equiv_ids:
                 key = "-".join(par_id)
+                model_updated = True if key in self.__par_ids_model else model_updated
                 par = self.__pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
+        if model_updated:
+            self.model.update_model()
 
     def set_opt_map(self, opt_map) -> None:
         """

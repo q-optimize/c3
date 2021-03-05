@@ -6,7 +6,8 @@ from c3.qiskit.c3_exceptions import C3QiskitError
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import execute
+from qiskit import execute, Aer
+from qiskit.transpiler.exceptions import TranspilerError
 
 import pytest
 
@@ -22,7 +23,7 @@ def test_backends():
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_backend(backend):
     """Test get_backend() which returns the backend with matching name
 
@@ -38,9 +39,11 @@ def test_get_backend(backend):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.xfail(raises=TranspilerError)
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_transpile(get_test_circuit, backend):  # noqa
-    """Test the transpiling using our backends
+    """Test the transpiling using our backends.
+    Should throw error due to missing H gate
 
     Parameters
     ----------
@@ -60,9 +63,9 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.integration
 @pytest.mark.qiskit
 @pytest.mark.slow
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
-    """Test the counts from running a Bell Circuit
+    """Test the counts from running a 6 qubit Circuit
 
     Parameters
     ----------
@@ -70,6 +73,10 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
         pytest fixture for a 6 qubit circuit
     backend : str
         name of the backend which is to be tested
+    simulation_type: str
+        physics based or perfect gates simulation
+    get_result_qiskit: callable
+        pytest fixture for experiment results
     """
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
@@ -77,13 +84,25 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     qc = get_6_qubit_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
-    assert result_sim.get_counts(qc) == get_result_qiskit
+
+    # Test results with qiskit style qubit indexing
+    qiskit_simulator = Aer.get_backend("qasm_simulator")
+    qiskit_counts = execute(qc, qiskit_simulator, shots=1000).result().get_counts(qc)
+    assert result_sim.get_counts(qc) == qiskit_counts
+
+    # Test results with original C3 style qubit indexing
+    received_backend.disable_flip_labels()
+    no_flip_counts = get_result_qiskit[backend]
+    job_sim = execute(qc, received_backend, shots=1000)
+    result_sim = job_sim.result()
+    assert result_sim.get_counts() == no_flip_counts
+
 
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.xfail(raises=C3QiskitError)
 @pytest.mark.slow
-@pytest.mark.parametrize("backend", ["c3_qasm_simulator"])
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_exception(get_bad_circuit, backend):  # noqa
     """Test to check exceptions
 

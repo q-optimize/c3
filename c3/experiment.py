@@ -22,6 +22,7 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils import tf_utils
+from c3.utils.qt_utils import perfect_gate
 
 
 class Experiment:
@@ -48,6 +49,7 @@ class Experiment:
         self.unitaries: dict = {}
         self.dUs: dict = {}
         self.created_by = None
+        self.logdir: str = None
 
     def set_created_by(self, config):
         """
@@ -248,6 +250,37 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
+    def get_perfect_gates(self, gate_keys: list = None) -> Dict[str, np.array]:
+        """Return a perfect gateset for the gate_keys.
+
+        Parameters
+        ----------
+        gate_keys: list
+            (Optional) List of gates to evaluate.
+
+        Returns
+        -------
+        Dict[str, np.array]
+            A dictionary of gate names and np.array representation
+            of the corresponding unitary
+
+        Raises
+        ------
+        Exception
+            Raise general exception for undefined gate
+        """
+        instructions = self.pmap.instructions
+        gates = {}
+        dims = self.pmap.model.dims
+        if gate_keys is None:
+            gate_keys = instructions.keys()  # type: ignore
+        for gate in gate_keys:
+            gates[gate] = perfect_gate(gates_str=gate, dims=dims)
+
+        # TODO parametric gates
+
+        return gates
+
     def get_gates(self):
         """
         Compute the unitary representation of operations. If no operations are
@@ -354,9 +387,10 @@ class Experiment:
             col_ops = model.get_Lindbladians()
             dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
-            dUs = tf_utils.tf_propagation(h0, hks, signals, dt)
+            dUs = tf_utils.tf_propagation_vectorized(h0, hks, signals, dt)
         self.dUs[gate] = dUs
         self.ts = ts
+        dUs = tf.cast(dUs, tf.complex128)
         U = tf_utils.tf_matmul_left(dUs)
         self.U = U
         return U

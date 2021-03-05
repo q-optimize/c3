@@ -34,6 +34,7 @@ def get_bell_circuit() -> QuantumCircuit:
     qc.measure([0, 1], [0, 1])
     return qc
 
+
 @pytest.fixture()
 def get_bad_circuit() -> QuantumCircuit:
     """fixture for Quantum Circuit with
@@ -42,7 +43,7 @@ def get_bad_circuit() -> QuantumCircuit:
     Returns
     -------
     QuantumCircuit
-        A circuit with a Conditional 
+        A circuit with a Conditional
     """
     q = QuantumRegister(1)
     c = ClassicalRegister(1)
@@ -50,6 +51,7 @@ def get_bad_circuit() -> QuantumCircuit:
     qc.x(q[0]).c_if(c, 0)
     qc.measure(q, c)
     return qc
+
 
 @pytest.fixture()
 def get_6_qubit_circuit() -> QuantumCircuit:
@@ -63,17 +65,18 @@ def get_6_qubit_circuit() -> QuantumCircuit:
     qc = QuantumCircuit(6, 6)
     qc.x(0)
     qc.cx(0, 1)
-    qc.measure([0], [0])
+    qc.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
     return qc
 
 
 @pytest.fixture()
-def get_result_qiskit() -> Dict[str, Any]:
+def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
     """Fixture for returning sample experiment result
 
     Returns
     -------
-    Dict[str, Any]
+    Dict[str, Dict[str, Any]]
+            A dictionary of results for physics simulation and perfect gates
             A result dictionary which looks something like::
 
             {
@@ -92,5 +95,9 @@ def get_result_qiskit() -> Dict[str, Any]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    counts = {"000000": 164, "010000": 799, "100000": 14}
-    return counts
+    perfect_counts = {"110000": 1000}
+
+    counts_dict = {
+        "c3_qasm_perfect_simulator": perfect_counts,
+    }
+    return counts_dict
