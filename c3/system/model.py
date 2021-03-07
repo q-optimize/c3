@@ -3,10 +3,11 @@
 import numpy as np
 import hjson
 import itertools
+import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
-from c3.system.chip import device_lib, Coupling, Drive
+from c3.system.chip import device_lib
 
 
 class Model:
@@ -41,19 +42,25 @@ class Model:
         self.use_FR = True
         self.dephasing_strength = 0.0
         self.params = {}
-        self.subsystems = {}
-        self.couplings = {}
-        self.tasks = {}
+        self.subsystems = dict()
+        self.couplings = dict()
+        self.tasks = dict()
         if subsystems:
             self.set_components(subsystems, couplings)
         if tasks:
             self.set_tasks(tasks)
+        self.drift_H = None
+        self.dressed_drift_H = None
+        self.__hamiltonians = None
+        self.__dressed_hamiltonians = None
 
     def set_components(self, subsystems, couplings=None) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
+        if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
+            raise Exception("Do not use same name for multiple devices")
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -228,36 +235,34 @@ class Model:
             ids.append(("Model", key))
         return ids
 
-    def get_Hamiltonians(self):
-        #TODO: Do a better check if timed_hamiltonian
-        for sub in self.subsystems.values():
-            if ("signal_h" in sub.__dict__):
-                return self.get_signal_hamiltonians()
-
-        if self.dressed:
-            return self.dressed_drift_H, self.dressed_control_Hs
-        else:
-            return self.drift_H, self.control_Hs
-
-    def get_signal_hamiltonians(self):
-        tot_dim = self.tot_dim
-        signal_drift_H = tf.expand_dims(tf.zeros([tot_dim, tot_dim], dtype=tf.complex128), 0)
-        for sub in self.subsystems.values():
-            if "signal_h" in sub.__dict__:
-                signal_drift_H += sub.signal_h
+    def get_Hamiltonian(self, signal=None):
+        if signal is None:
+            if self.dressed:
+                return self.dressed_drift_H
             else:
-                signal_drift_H += tf.expand_dims(sub.get_Hamiltonian(), 0)
-        for key, line in self.couplings.items():
-            if isinstance(line, Coupling):
-                signal_drift_H += line.get_Hamiltonian()
+                return self.drift_H
 
         if self.dressed:
-            dressed_signal_drift_H = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), signal_drift_H), self.transform
-            )
-            return dressed_signal_drift_H, self.dressed_control_Hs
+            hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
+            transform = self.transform
         else:
-            return signal_drift_H, self.control_Hs
+            hamiltonians = copy.deepcopy(self.__hamiltonians)
+            transform = None
+
+        for key, sig in signal.items():
+            if key in self.subsystems:
+                hamiltonians[key] = self.subsystems[key].get_Hamiltonian(sig, transform)
+            elif key in self.couplings:
+                hamiltonians[key] = self.couplings[key].get_Hamiltonian(sig, transform)
+            else:
+                raise Exception(f"Signal channel {key} not in model systems")
+        signal_hamiltonian = sum(
+            [
+                tf.expand_dims(h, 0) if len(h.shape) == 2 else h
+                for h in hamiltonians.values()
+            ]
+        )
+        return signal_hamiltonian
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -274,18 +279,13 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_Hs = {}
-        tot_dim = self.tot_dim
-        drift_H = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
-        for sub in self.subsystems.values():
-            drift_H += sub.get_Hamiltonian()
+        hamiltonians = dict()
+        for key, sub in self.subsystems.items():
+            hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
-            if isinstance(line, Coupling):
-                drift_H += line.get_Hamiltonian()
-            elif isinstance(line, Drive):
-                control_Hs[key] = line.get_Hamiltonian()
-        self.drift_H = drift_H
-        self.control_Hs = control_Hs
+            hamiltonians[key] = line.get_Hamiltonian()
+        self.drift_H = sum(hamiltonians.values())
+        self.__hamiltonians = hamiltonians
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -326,18 +326,15 @@ class Model:
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
         self.update_drift_eigen(ordered=ordered)
-        dressed_control_Hs = {}
         dressed_col_ops = []
-        dressed_drift_H = tf.matmul(
-            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_H), self.transform
-        )
-        for key in self.control_Hs:
-            dressed_control_Hs[key] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), self.control_Hs[key]),
-                self.transform,
+        dressed_hamiltonians = dict()
+        for k, h in self.__hamiltonians.items():
+            dressed_hamiltonians[k] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
             )
+        dressed_drift_H = sum(dressed_hamiltonians.values())
         self.dressed_drift_H = dressed_drift_H
-        self.dressed_control_Hs = dressed_control_Hs
+        self.__dressed_hamiltonians = dressed_hamiltonians
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(

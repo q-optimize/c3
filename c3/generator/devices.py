@@ -545,19 +545,21 @@ class ResponseFFT(Device):
         }
         return self.signal
 
+
 @dev_reg_deco
 class StepFuncFilter(Device):
     """
     Base class for filters that are based on the step response function
     Step function has to be defined explicetly
     """
+
     def __init__(self, **props):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
 
     def step_response_function(self, ts):
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def process(self, instr, chan, signal_in):
         ts = tf.identity(signal_in["ts"])
@@ -573,6 +575,7 @@ class StepFuncFilter(Device):
 
         return signal_out
 
+
 @dev_reg_deco
 class ExponentialIIR(StepFuncFilter):
     """Implement IIR filter with step response of the form
@@ -585,12 +588,12 @@ class ExponentialIIR(StepFuncFilter):
     amp: Quantity
 
     """
+
     def step_response_function(self, ts):
         time_iir = self.params["time_iir"]
         amp = self.params["amp"]
         step_response = 1 + amp * tf.exp(-ts / time_iir)
         return step_response
-
 
 
 @dev_reg_deco
@@ -605,6 +608,7 @@ class HighpassExponential(StepFuncFilter):
     amp: Quantity
 
     """
+
     def step_response_function(self, ts):
         time_hp = self.params["time_hp"]
         return tf.exp(-ts / time_hp)
@@ -625,7 +629,7 @@ class SkinEffectResponse(StepFuncFilter):
 
     def step_response_function(self, ts):
         alpha = self.params["alpha"]
-        return tf.math.erfc(alpha/21/tf.math.sqrt(np.abs(ts)))
+        return tf.math.erfc(alpha / 21 / tf.math.sqrt(np.abs(ts)))
 
 
 class HighpassFilter(Device):

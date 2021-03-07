@@ -148,8 +148,8 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     return dU
 
 
-# @tf.function
-def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
+@tf.function
+def tf_dU_of_t_lind(h, col_ops, dt):
     """
     Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
 
@@ -172,38 +172,95 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
         dU = exp(L(t) dt)
 
     """
-    h = h0
-    for ii in range(len(hks)):
-        h += cflds_t[ii] * hks[ii]
-    lind_op = -1j * (tf_spre(h) - tf_spost(h))
+    Id = Id_like(col_ops[0])
+    lind_op = -1j * (tf_kron(h, Id) - tf_kron(Id, tf.transpose(h)))
+
     for col_op in col_ops:
-        super_clp = tf.matmul(tf_spre(col_op), tf_spost(tf.linalg.adjoint(col_op)))
-        anticomm_L_clp = 0.5 * tf.matmul(
-            tf_spre(tf.linalg.adjoint(col_op)), tf_spre(col_op)
-        )
-        anticomm_R_clp = 0.5 * tf.matmul(
-            tf_spost(col_op), tf_spost(tf.linalg.adjoint(col_op))
-        )
+        left = tf_kron(col_op, Id)
+        right = tf_kron(Id, tf.transpose(col_op))
+        super_clp = tf.matmul(left, right, adjoint_b=True)
+        anticomm_L_clp = 0.5 * tf.matmul(left, left, adjoint_a=True)
+        anticomm_R_clp = 0.5 * tf.matmul(right, right, adjoint_b=True)
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    # terms = int(1e12 * dt) # Eyeball number of terms in expm
-    #     print('terms in exponential: ', terms)
-    # dU = tf_expm(lind_op * dt, terms)
-    # Built-in tensorflow exponential below
+    lind_expmatrix = lind_op * dt
+    dU = tf.linalg.expm(lind_expmatrix)
+    return dU
+
+
+@tf.function
+def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
+    col_ops = tf.cast(col_ops, dtype=tf.complex128)
+    dt = tf.cast(dt, dtype=tf.complex128)
+    if hks is not None and cflds_t is not None:
+        cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
+        hks = tf.cast(hks, dtype=tf.complex128)
+        cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
+        hks = tf.expand_dims(hks, 1)
+        h0 = tf.expand_dims(h0, 0)
+        prod = cflds * hks
+        h = h0 + tf.reduce_sum(prod, axis=0)
+    else:
+        h = h0
+
+    h_id = tf.eye(h.shape[-1], batch_shape=[h.shape[0]], dtype=tf.complex128)
+    l_s = tf_kron_batch(h, h_id)
+    r_s = tf_kron_batch(h_id, tf.linalg.matrix_transpose(h))
+    lind_op = -1j * (l_s - r_s)
+
+    col_ops_id = tf.eye(
+        col_ops.shape[-1], batch_shape=[col_ops.shape[0]], dtype=tf.complex128
+    )
+    l_col_ops = tf_kron_batch(col_ops, col_ops_id)
+    r_col_ops = tf_kron_batch(col_ops_id, tf.linalg.matrix_transpose(col_ops))
+
+    super_clp = tf.matmul(l_col_ops, r_col_ops, adjoint_b=True)
+    anticom_L_clp = 0.5 * tf.matmul(l_col_ops, l_col_ops, adjoint_a=True)
+    anticom_R_clp = 0.5 * tf.matmul(r_col_ops, r_col_ops, adjoint_b=True)
+    clp = tf.expand_dims(
+        tf.reduce_sum(super_clp - anticom_L_clp - anticom_R_clp, axis=0), 0
+    )
+    lind_op += clp
+
     dU = tf.linalg.expm(lind_op * dt)
     return dU
+
+
+# def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
+#     with tf.name_scope("Propagation"):
+#         dUs = []
+#         num = len(cflds[0]) if cflds else len(h0)
+#         dt = tf.cast(dt, tf.complex128)
+#         if cflds is not None and hks is not None:
+#             cflds = tf.cast(cflds, tf.complex128)
+#             hks = tf.cast(hks, tf.complex128)
+#         for ii in range(num):
+#             if cflds is not None and hks is not None:
+#                 cf_t = []
+#                 h_i = h0
+#                 for jj in range(len(cflds)):
+#                     h_i += cflds[jj, ii] * hks[jj]
+#             else:
+#                 cf_t = None
+#                 h_i = h0[ii]
+#
+#             dUs.append(tf_dU_of_t_lind(h_i, col_ops, dt))
+#         return dUs
 
 
 @tf.function
 def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     dt = tf.cast(dt, dtype=tf.complex128)
-    cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
-    hks = tf.cast(hks, dtype=tf.complex128)
-    cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
-    hks = tf.expand_dims(hks, 1)
-    if len(h0.shape) < 3:
-        h0 = tf.expand_dims(h0, 0)
-    prod = cflds * hks
-    h = h0 + tf.reduce_sum(prod, axis=0)
+    if hks is not None and cflds_t is not None:
+        cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
+        hks = tf.cast(hks, dtype=tf.complex128)
+        cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
+        hks = tf.expand_dims(hks, 1)
+        if len(h0.shape) < 3:
+            h0 = tf.expand_dims(h0, 0)
+        prod = cflds * hks
+        h = h0 + tf.reduce_sum(prod, axis=0)
+    else:
+        h = tf.cast(h0, tf.complex128)
     dh = -1.0j * h * dt
     dU = tf.linalg.expm(dh)
     return dU
@@ -314,7 +371,7 @@ def tf_propagation(h0, hks, cflds, dt):
 #     return dUs
 
 
-def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
+def tf_propagation_lind_old(h0, hks, col_ops, cflds, dt, history=False):
     """
     Calculate the time evolution of an open system controlled by time-dependent
     fields.
@@ -496,6 +553,11 @@ def tf_diff(l):  # noqa
 # MATRIX FUNCTIONS
 
 
+@tf.function
+def tf_expm_func(A):
+    return tf.linalg.expm(A)
+
+
 def tf_expm(A, terms):
     """
     Matrix exponential by the series method.
@@ -556,8 +618,7 @@ def tf_expm_dynamic(A, acc=1e-4):
 @tf.function
 def Id_like(A):
     """Identity of the same size as A."""
-    shape = tf.shape(A)
-    dim = shape[0]
+    dim = list(A.shape)[-1]
     return tf.eye(dim, dtype=tf.complex128)
 
 
@@ -569,6 +630,17 @@ def tf_kron(A, B):
     tensordot = tf.tensordot(A, B, axes=0)
     reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
     return reshaped
+
+
+@tf.function
+def tf_kron_batch(A, B):
+    """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
+    dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
+    res = tf.expand_dims(tf.expand_dims(A, -1), -3) * tf.expand_dims(
+        tf.expand_dims(B, -2), -4
+    )
+    dims = res.shape[:-4] + dims
+    return tf.reshape(res, dims)
 
 
 # SUPEROPER FUNCTIONS
@@ -758,7 +830,7 @@ def tf_project_to_comp(A, dims, to_super=False):
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
 
 
-# @tf.function
+@tf.function
 def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     """
     Compute the convolution with a time response.

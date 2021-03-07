@@ -49,11 +49,15 @@ def replace_symlink(path: str, alias: str) -> None:
         os.remove(alias)
     except FileNotFoundError:
         pass
+    except PermissionError:
+        Warning("Could not remove symlink")
     try:
         os.symlink(path, alias)
     except FileExistsError:
         pass
     except OSError:
+        Warning("OSError encountered while creating symlink")
+    except PermissionError:
         Warning("OSError encountered while creating symlink")
 
 

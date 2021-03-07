@@ -150,6 +150,7 @@ class Experiment:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
+            json.dump(self.asdict(), cfg_file)
 
     def asdict(self) -> dict:
         """
@@ -374,25 +375,20 @@ class Experiment:
             Matrix representation of the gate.
         """
         model = self.pmap.model
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            ts = signal[key]["ts"]
-            if key not in hctrls:
-                signals.append(tf.zeros_like(ts))
-                hks.append(tf.zeros((h0.shape[-1], h0.shape[-1]), tf.complex128))
-            else:
-                signals.append(signal[key]["values"])
-                hks.append(hctrls[key])
+        hamiltonian = model.get_Hamiltonian(signal)
 
-        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+        ts_list = [sig["ts"][1:] for sig in signal.values()]
+        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+
+        dt = ts[1] - ts[0]  # We should check whether the spacing is always constant.
+        assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * dt)
+        assert np.all(tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * dt)
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
-            dUs = tf_utils.tf_propagation_lind(h0, hks, col_ops, signals, dt)
+            dUs = tf_utils.tf_propagation_lind(hamiltonian, None, col_ops, None, dt)
         else:
-            dUs = tf_utils.tf_propagation_vectorized(h0, hks, signals, dt)
+            dUs = tf_utils.tf_propagation_vectorized(hamiltonian, None, None, dt)
         self.dUs[gate] = dUs
         self.ts = ts
         dUs = tf.cast(dUs, tf.complex128)

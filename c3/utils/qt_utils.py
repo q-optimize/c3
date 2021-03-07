@@ -28,6 +28,21 @@ iswap3 = np.array(
     dtype=np.complex128,
 )
 
+CCZ_3dim = np.array(
+    [
+        [1, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    dtype=np.complex128,
+)
+
 # TODO Combine the above Pauli definitions with this dict. Move to constants.
 PAULIS = {"X": X, "Y": Y, "Z": Z, "Id": Id}
 
@@ -320,6 +335,17 @@ def perfect_gate(  # noqa
             # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
+            gate_num += 1
+            do_pad_gate = False
+        elif gate_str == "CCZ":
+            # TODO to be tested and generalized
+            U_CZ = perfect_gate("CZ", index=[0], dims=dims[1:], proj="wzeros")
+            C = np.abs(U_CZ)
+            print(C.shape, U_CZ.shape)
+            gate = scipy_block_diag(C, U_CZ)
+            # We increase gate_num since CZ is a two qubit gate
+            for ii in range(2, lvls):
+                gate = pad_matrix(gate, U_CZ.shape[0], proj)
             gate_num += 1
             do_pad_gate = False
         elif gate_str == "CR":

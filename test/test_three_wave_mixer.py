@@ -67,7 +67,7 @@ model = Model(
 
 model.set_dressed(False)
 
-hdrift, hks = model.get_Hamiltonians()
+hdrift = model.get_Hamiltonian()
 
 
 @pytest.mark.unit

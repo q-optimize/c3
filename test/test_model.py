@@ -101,7 +101,7 @@ model = Model(
 pmap = ParameterMap(model=model)
 model.set_dressed(False)
 
-hdrift, hks = model.get_Hamiltonians()
+hdrift = model.get_Hamiltonian()
 
 
 @pytest.mark.unit
@@ -116,10 +116,11 @@ def test_model_eigenfrequencies_2() -> None:
     assert hdrift[1, 1] - hdrift[0, 0] == freq_q2 * 2 * np.pi
 
 
-@pytest.mark.unit
-def test_model_couplings() -> None:
-    assert hks["d1"][3, 0] == 1
-    assert hks["d2"][1, 0] == 1
+# TODO Write New Test
+# @pytest.mark.unit
+# def test_model_couplings() -> None:
+#     assert hks["d1"][3, 0] == 1
+#     assert hks["d2"][1, 0] == 1
 
 
 pytest.mark.unit
@@ -127,10 +128,10 @@ pytest.mark.unit
 
 def test_model_update_by_parametermap() -> None:
     pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
-    hdrift_a, _ = model.get_Hamiltonians()
+    hdrift_a = model.get_Hamiltonian()
 
     pmap.set_parameters([freq_q1 * 1.0005], [[("Q1", "freq")]])
-    hdrift_b, _ = model.get_Hamiltonians()
+    hdrift_b = model.get_Hamiltonian()
 
     assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
     assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi

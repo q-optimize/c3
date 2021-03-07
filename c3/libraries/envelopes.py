@@ -32,10 +32,11 @@ def pwc(t, params):
     # TODO make pwc return actual values like other envelopes
     return params
 
+
 def pwc_shape(t, params):
     t_bin_start = tf.cast(params["t_bin_end"].get_value(), tf.float64)
     t_bin_end = tf.cast(params["t_bin_start"].get_value(), tf.float64)
-    t_final = tf.cast(params["t_final"].get_value(), tf.float64)
+    # t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     inphase = tf.cast(params["inphase"].get_value(), tf.float64)
 
     t_interp = t
@@ -77,13 +78,18 @@ def pwc_symmetric(t, params):
     )
     return shape
 
-env_reg_deco
+
+@env_reg_deco
 def delta_pulse(t, params):
     "Pulse shape which gives an output only at a given time bin"
     t_sig = tf.cast(params["t_sig"].get_value(), tf.float64)
     shape = tf.zeros_like(t)
     for t_s in t_sig:
-        shape = tf.where(tf.reduce_min((t - t_s - 1e-9)**2) == (t - t_s-1e-9)**2,np.ones_like(t), shape)
+        shape = tf.where(
+            tf.reduce_min((t - t_s - 1e-9) ** 2) == (t - t_s - 1e-9) ** 2,
+            np.ones_like(t),
+            shape,
+        )
     return shape
 
 
