@@ -6,27 +6,15 @@ import math
 from .c3_exceptions import C3QiskitError
 
 GATE_MAP = {
-    "X": "RXp",
-    "x": "RXp",
-    "Y": "RYp",
-    "y": "RYp",
-    "Z": "RZp",
-    "z": "RZp",
-    "CNOT": "CRXp",
-    "CX": "CRXp",
-    "cx": "CRXp",
-    "CZ": "CRZp",
-    "cz": "CRZp",
-    "I": "Id",
-    "u0": "Id",
-    "id": "Id",
-    "RX90p": "RX90p",  # RX((np.pi)/2)
-    "RX90m": "RX90m",  # RX((-np.pi)/2)
-    "RY90p": "RY90p",  # RY((np.pi)/2)
-    "RY90m": "RY90m",  # RY(-(np.pi)/2)
-    "RZ90p": "RZ90p",  # RZ((np.pi)/2)
-    "RZ90m": "RZ90m",  # RZ(-(np.pi)/2)
-    "iSwap": "ISWAP",
+    "x": "rxp",
+    "y": "ryp",
+    "z": "rzp",
+    "cx": "crxp",
+    "cz": "crzp",
+    "I": "id",
+    "u0": "id",
+    "id": "id",
+    "iSwap": "iswap",
 }
 
 
@@ -116,6 +104,9 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
 
         # measure implemented outside sequences
         elif iname == "measure":
+            pass
+
+        elif iname in ["rx", "ry", "rz", "rzx"]:
             pass
 
         elif iname in GATE_MAP.keys():
