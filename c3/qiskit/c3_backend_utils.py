@@ -18,12 +18,8 @@ GATE_MAP = {
     "iSwap": "iswap",
 }
 
-PARAMETER_MAP = {
-    np.pi/2: "90p",
-    np.pi: "p",
-    -np.pi/2: "90m",
-    -np.pi: "m"
-}
+PARAMETER_MAP = {np.pi / 2: "90p", np.pi: "p", -np.pi / 2: "90m", -np.pi: "m"}
+
 
 def pad_gate_name(gate_name: str, qubits: List[int], n_qubits: int) -> str:
     """Pad gate name with Identity gates in correct indices
@@ -106,15 +102,19 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
 
         elif iname in ["rx", "ry", "rz"]:
             param = instruction.params[0]
-            suffix = [PARAMETER_MAP[i] for i in PARAMETER_MAP.keys() if np.isclose(param, i, rtol=1e-2)]
+            suffix = [
+                PARAMETER_MAP[i]
+                for i in PARAMETER_MAP.keys()
+                if np.isclose(param, i, rtol=1e-2)
+            ]
             if len(suffix) == 0:
                 raise C3QiskitError("Only pi and pi/2 rotation gates are available")
             gate_name = iname + suffix[0]
             sequence.append(make_gate_str(instruction, gate_name))
-        
+
         elif iname == "rzx":
             param = instruction.params[0]
-            if np.isclose(param, (np.pi/2), rtol=1e-2):
+            if np.isclose(param, (np.pi / 2), rtol=1e-2):
                 gate_name = "cr90"
                 sequence.append(make_gate_str(instruction, gate_name))
             elif np.isclose(param, (np.pi), rtol=1e-2):
@@ -132,6 +132,7 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
             raise C3QiskitError("Encountered unknown operation {}".format(iname))
 
     return sequence
+
 
 def make_gate_str(instruction: Dict[str, Any], gate_name: str) -> str:
     """Make C3 style gate name string
@@ -155,6 +156,7 @@ def make_gate_str(instruction: Dict[str, Any], gate_name: str) -> str:
     qubits = instruction.qubits
     gate_str = gate_name + str(qubits)
     return gate_str
+
 
 def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:
     """Return a perfect ground state
