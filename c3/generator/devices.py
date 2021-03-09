@@ -1,6 +1,7 @@
 import os
-import hjson
 import tempfile
+import hjson
+from typing import Callable, Dict, Any
 import tensorflow as tf
 import numpy as np
 from c3.signal.pulse import Envelope, Carrier
@@ -11,7 +12,7 @@ from c3.utils.tf_utils import tf_convolve
 devices = dict()
 
 
-def dev_reg_deco(func):
+def dev_reg_deco(func: Callable) -> Callable:
     """
     Decorator for making registry of functions
     """
@@ -52,7 +53,7 @@ class Device(C3obj):
         with open(filepath, "w") as cfg_file:
             hjson.dump(self.asdict(), cfg_file)
 
-    def asdict(self) -> dict:
+    def asdict(self) -> Dict[str, Any]:
         params = {}
         for key, item in self.params.items():
             params[key] = item.asdict()
@@ -67,7 +68,7 @@ class Device(C3obj):
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def calc_slice_num(self, t_start: np.float64, t_end: np.float64):
+    def calc_slice_num(self, t_start: np.float64, t_end: np.float64) -> None:
         """
         Effective number of time slices given start, end and resolution.
 
@@ -82,7 +83,9 @@ class Device(C3obj):
         self.slice_num = int(np.abs(t_start - t_end) * res)
         # return self.slice_num
 
-    def create_ts(self, t_start: np.float64, t_end: np.float64, centered: bool = True):
+    def create_ts(
+        self, t_start: np.float64, t_end: np.float64, centered: bool = True
+    ) -> tf.constant:
         """
         Compute time samples.
 
@@ -166,7 +169,9 @@ class VoltsToHertz(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
 
-    def process(self, instr, chan, mixed_signal):
+    def process(
+        self, instr: Instruction, chan: str, mixed_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Transform signal from value of V to Hz.
 
         Parameters
@@ -186,6 +191,75 @@ class VoltsToHertz(Device):
 
 
 @dev_reg_deco
+class Crosstalk(Device):
+    """
+    Device to phenomenologically include crosstalk in the model by explicitly mixing
+    drive lines.
+
+    Parameters
+    ----------
+
+    crosstalk_matrix: tf.constant
+        Matrix description of how to mix drive channels.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        xtalk = Crosstalk(
+            name="crosstalk",
+            channels=["TC1", "TC2"],
+            crosstalk_matrix=Quantity(
+                value=[[1, 0], [0, 1]],
+                min_val=[[0, 0], [0, 0]],
+                max_val=[[1, 1], [1, 1]],
+                unit="",
+            ),
+        )
+
+
+
+    """
+
+    def __init__(self, **props):
+        self.crossed_channels = props.pop("channels", None)
+        super().__init__(**props)
+        self.inputs = props.pop("inputs", 1)
+        self.outputs = props.pop("outputs", 1)
+        self.params["crosstalk_matrix"] = props.pop("crosstalk_matrix", None)
+
+    def process(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Mix channels in the input signal according to a crosstalk matrix.
+
+        Parameters
+        ----------
+        signal: Dict[str, Any]
+            Dictionary of several signals identified by their channel as dict keys, e.g.
+
+            .. code-block:: python
+
+                signal = {
+                    "TC1": {"values": [0, 0.5, 1, 1, ...]},
+                    "TC2": {"values": [1, 1, 1, 1, ...],
+                }
+
+
+
+        Returns
+        -------
+        signal: Dict[str, Any]
+
+        """
+        xtalk = self.params["crosstalk_matrix"]
+        signals = [signal[ch]["values"] for ch in self.crossed_channels]
+        crossed_signals = xtalk.get_value() @ signals
+        for indx, ch in enumerate(self.crossed_channels):
+            signal[ch]["values"] = crossed_signals[indx]
+        return signal
+
+
+@dev_reg_deco
 class DigitalToAnalog(Device):
     """Take the values at the awg resolution to the simulation resolution."""
 
@@ -196,17 +270,20 @@ class DigitalToAnalog(Device):
         self.ts = None
         self.sampling_method = props.pop("sampling_method", "nearest")
 
-    def process(self, instr, chan, awg_signal):
+    def process(
+        self, instr: Instruction, chan: str, awg_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Resample the awg values to higher resolution.
 
         Parameters
         ----------
-        awg_signal: tf.Tensor
-            Bandwith-limited, low-resolution AWG signal.
-        t_start: np.float64
-            Beginning of the signal.
-        t_end: np.float64
-            End of the signal.
+        instr: Instruction
+            The logical instruction or qubit operation for which the signal is
+            generated.
+        chan: str
+            Specifies which channel is being processed if needed.
+        awg_signal: dict
+            Dictionary of several signals identified by their channel as dict keys.
 
         Returns
         -------
@@ -225,7 +302,7 @@ class DigitalToAnalog(Device):
             ),
             shape=[new_dim],
         )
-        inphase = tf.cast(inphase, dtype=tf.float64)
+        inphase = tf.cast(inphase, tf.float64)
         quadrature = tf.reshape(
             tf.image.resize(
                 tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]),
@@ -234,7 +311,7 @@ class DigitalToAnalog(Device):
             ),
             shape=[new_dim],
         )
-        quadrature = tf.cast(quadrature, dtype=tf.float64)
+        quadrature = tf.cast(quadrature, tf.float64)
         self.signal["ts"] = ts
         self.signal["inphase"] = inphase
         self.signal["quadrature"] = quadrature
@@ -248,10 +325,12 @@ class Filter(Device):
 
     def __init__(self, **props):
         raise Exception("C3:ERROR Not yet implemented.")
-        self.filter_function = props["filter_function"]
+        self.filter_function: Callable = props["filter_function"]
         super().__init__(**props)
 
-    def process(self, instr, chan, Hz_signal):
+    def process(
+        self, instr: Instruction, chan: str, Hz_signal: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Apply a filter function to the signal."""
         self.signal = self.filter_function(Hz_signal)
         return self.signal
@@ -352,7 +431,7 @@ class FluxTuningLinear(Device):
                 )
         self.freq = None
 
-    def frequency(self, signal):
+    def frequency(self, signal: tf.float64) -> tf.constant:
         """
         Compute the qubit frequency resulting from an applied flux.
 
@@ -631,24 +710,24 @@ class HighpassFilter(Device):
         # fc = 1e7 / self.resolution
         # tb = fc / 2
 
-        N_ts = tf.cast(tf.math.ceil(4 / tb), dtype=tf.int32)
+        N_ts = tf.cast(tf.math.ceil(4 / tb), tf.int32)
         N_ts += 1 - tf.math.mod(N_ts, 2)  # make n_ts odd
         if N_ts > len(iq_signal["inphase"] * 100):
             self.signal = iq_signal
             return self.signal
 
-        pi = tf.cast(np.pi, dtype=tf.double)
+        pi = tf.cast(np.pi, tf.double)
 
-        n = tf.cast(tf.range(N_ts), dtype=tf.double)
+        n = tf.cast(tf.range(N_ts), tf.double)
 
         x = 2 * fc * (n - (N_ts - 1) / 2)
         h = tf.sin(pi * x) / (pi * x)
         h = tf.where(tf.math.is_nan(h), tf.ones_like(h), h)
         w = tf.signal.hamming_window(N_ts)
-        w = tf.cast(w, dtype=tf.double)
+        w = tf.cast(w, tf.double)
         h *= w
         h /= -tf.reduce_sum(h)
-        h = tf.where(tf.cast(n, dtype=tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
+        h = tf.where(tf.cast(n, tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
         inphase = self.convolve(iq_signal["inphase"], h)
         quadrature = self.convolve(iq_signal["quadrature"], h)
         self.signal = {
@@ -841,7 +920,7 @@ class LO(Device):
                 if amp_noise and freq_noise:
                     print("amp and freq noise")
                     phi = omega_lo * ts[0]
-                    for t in ts:
+                    for _ in ts:
                         A = np.random.normal(loc=1.0, scale=amp_noise)
                         cos.append(A * np.cos(phi))
                         sin.append(A * np.sin(phi))
@@ -868,7 +947,7 @@ class LO(Device):
                         sin.append(np.sin(omega_lo * t + phi))
                 elif freq_noise:
                     phi = omega_lo * ts[0]
-                    for t in ts:
+                    for _ in ts:
                         cos.append(np.cos(phi))
                         sin.append(np.sin(phi))
                         omega = omega_lo + np.random.normal(loc=0.0, scale=freq_noise)
