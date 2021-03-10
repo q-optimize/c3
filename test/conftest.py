@@ -9,6 +9,10 @@ from c3.utils.tf_utils import (
     super_to_choi,
     tf_project_to_comp,
 )
+from c3.parametermap import ParameterMap
+from c3.generator.generator import Generator
+from c3.generator.devices import Crosstalk
+from c3.c3objs import Quantity
 import pytest
 
 
@@ -165,3 +169,30 @@ def get_average_fidelitiy(get_error_process):
     chi = tf_choi_to_chi(choi, dims=lvls)
     fid = tf_abs((chi[0, 0] / d + 1) / (d + 1))
     return fid
+
+
+@pytest.fixture()
+def get_xtalk_pmap() -> ParameterMap:
+    xtalk = Crosstalk(
+        name="crosstalk",
+        channels=["TC1", "TC2"],
+        crosstalk_matrix=Quantity(
+            value=[[1, 0], [0, 1]],
+            min_val=[[0, 0], [0, 0]],
+            max_val=[[1, 1], [1, 1]],
+            unit="",
+        ),
+    )
+
+    gen = Generator(devices={"crosstalk": xtalk})
+    pmap = ParameterMap(generator=gen)
+    pmap.set_opt_map([[["crosstalk", "crosstalk_matrix"]]])
+    return pmap
+
+
+@pytest.fixture()
+def get_test_signal() -> Dict:
+    return {
+        "TC1": {"values": tf.linspace(0, 100, 101)},
+        "TC2": {"values": tf.linspace(100, 200, 101)},
+    }

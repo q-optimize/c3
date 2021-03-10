@@ -218,7 +218,8 @@ class ParameterMap:
         for equiv_ids in opt_map:
             for par_id in equiv_ids:
                 key = "-".join(par_id)
-                model_updated = True if key in self.__par_ids_model else model_updated
+                # We check if a model parameter has changed
+                model_updated = key in self.__par_ids_model or model_updated
                 try:
                     par = self.__pars[key]
                 except ValueError as ve:
@@ -233,7 +234,9 @@ class ParameterMap:
                         f" {(par.offset + par.scale):.3}."
                     ) from ve
             val_indx += 1
-        if model_updated:
+
+        # TODO: This check is too simple. Not every model parameter requires an update.
+        if model_updated and self.model:
             self.model.update_model()
 
     def get_parameters_scaled(self) -> np.ndarray:
