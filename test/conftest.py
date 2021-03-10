@@ -72,8 +72,9 @@ def get_6_qubit_circuit() -> QuantumCircuit:
         A circuit with an X on qubit 1
     """
     qc = QuantumCircuit(6, 6)
-    qc.x(0)
-    qc.cx(0, 1)
+    qc.rx(np.pi/2, 0)
+    qc.rx(np.pi/2, 1)
+    qc.rzx(np.pi/2, 0, 1)
     qc.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
     return qc
 
