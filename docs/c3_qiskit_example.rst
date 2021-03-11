@@ -7,29 +7,23 @@ must additionally install qiskit and matplotlib to run this example.
 
 .. code:: ipython3
 
-    #!pip install qiskit==0.23.2 matplotlib==3.3.4
+    !pip install -q qiskit==0.23.6 matplotlib==3.3.4
 
 .. code:: ipython3
 
+    import numpy as np
     from c3.qiskit import C3Provider
     from qiskit import transpile, execute, QuantumCircuit, Aer
-    from qiskit.tools.visualization import plot_histogram, plot_state_city
+    from qiskit.tools.visualization import plot_histogram
 
 Define a basic Quantum circuit
--------------------------------------------
+------------------------------
 
 .. code:: ipython3
 
     qc = QuantumCircuit(6, 6)
-    qc.x(0)
-    qc.z(0)
-    qc.cx(0,1)
-    qc.x(0)
-    qc.z(2)
-    qc.x(2)
-    qc.y(3)
-    qc.cx(3, 4)
-    qc.cx(4, 5)
+    qc.rx(np.pi/2, 0)
+    qc.rx(np.pi/2, 1)
     qc.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
 
 
@@ -37,7 +31,7 @@ Define a basic Quantum circuit
 
 .. parsed-literal::
 
-    <qiskit.circuit.instructionset.InstructionSet at 0x7f2ad02675b0>
+    <qiskit.circuit.instructionset.InstructionSet at 0x7f08b3621280>
 
 
 
@@ -50,21 +44,21 @@ Define a basic Quantum circuit
 
 .. raw:: html
 
-    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌───┐┌───┐     ┌───┐            ┌─┐
-    q_0: ┤ X ├┤ Z ├──■──┤ X ├────────────┤M├
-         └───┘└───┘┌─┴─┐└───┘   ┌─┐      └╥┘
-    q_1: ──────────┤ X ├────────┤M├───────╫─
-         ┌───┐┌───┐└───┘ ┌─┐    └╥┘       ║ 
-    q_2: ┤ Z ├┤ X ├──────┤M├─────╫────────╫─
-         ├───┤└───┘      └╥┘ ┌─┐ ║        ║ 
-    q_3: ┤ Y ├──■─────────╫──┤M├─╫────────╫─
-         └───┘┌─┴─┐       ║  └╥┘ ║ ┌─┐    ║ 
-    q_4: ─────┤ X ├──■────╫───╫──╫─┤M├────╫─
-              └───┘┌─┴─┐  ║   ║  ║ └╥┘┌─┐ ║ 
-    q_5: ──────────┤ X ├──╫───╫──╫──╫─┤M├─╫─
-                   └───┘  ║   ║  ║  ║ └╥┘ ║ 
-    c: 6/═════════════════╩═══╩══╩══╩══╩══╩═
-                          2   3  1  4  5  0 </pre>
+    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌─────────┐         ┌─┐   
+    q_0: ┤ RX(π/2) ├─────────┤M├───
+         ├─────────┤         └╥┘┌─┐
+    q_1: ┤ RX(π/2) ├──────────╫─┤M├
+         └───┬─┬───┘          ║ └╥┘
+    q_2: ────┤M├──────────────╫──╫─
+             └╥┘    ┌─┐       ║  ║ 
+    q_3: ─────╫─────┤M├───────╫──╫─
+              ║     └╥┘┌─┐    ║  ║ 
+    q_4: ─────╫──────╫─┤M├────╫──╫─
+              ║      ║ └╥┘┌─┐ ║  ║ 
+    q_5: ─────╫──────╫──╫─┤M├─╫──╫─
+              ║      ║  ║ └╥┘ ║  ║ 
+    c: 6/═════╩══════╩══╩══╩══╩══╩═
+              2      3  4  5  0  1 </pre>
 
 
 
@@ -93,10 +87,10 @@ Get the C3 Provider and Backend
     Version: 0.1
     Max Qubits: 20
     OpenPulse Support: False
-    Basis Gates: ['cx', 'cy', 'cz', 'iSwap', 'id', 'x', 'y', 'z']
+    Basis Gates: ['cx', 'cz', 'iSwap', 'id', 'x', 'y', 'z', 'rx', 'ry', 'rz', 'rzx']
 
 
-Let's view how the Qiskit Transpiler will convert the circuit
+Let’s view how the Qiskit Transpiler will convert the circuit
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: ipython3
@@ -112,21 +106,21 @@ Let's view how the Qiskit Transpiler will convert the circuit
 
 .. raw:: html
 
-    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌───┐┌───┐     ┌───┐            ┌─┐
-    q_0: ┤ X ├┤ Z ├──■──┤ X ├────────────┤M├
-         └───┘└───┘┌─┴─┐└───┘   ┌─┐      └╥┘
-    q_1: ──────────┤ X ├────────┤M├───────╫─
-         ┌───┐┌───┐└───┘ ┌─┐    └╥┘       ║ 
-    q_2: ┤ Z ├┤ X ├──────┤M├─────╫────────╫─
-         ├───┤└───┘      └╥┘ ┌─┐ ║        ║ 
-    q_3: ┤ Y ├──■─────────╫──┤M├─╫────────╫─
-         └───┘┌─┴─┐       ║  └╥┘ ║ ┌─┐    ║ 
-    q_4: ─────┤ X ├──■────╫───╫──╫─┤M├────╫─
-              └───┘┌─┴─┐  ║   ║  ║ └╥┘┌─┐ ║ 
-    q_5: ──────────┤ X ├──╫───╫──╫──╫─┤M├─╫─
-                   └───┘  ║   ║  ║  ║ └╥┘ ║ 
-    c: 6/═════════════════╩═══╩══╩══╩══╩══╩═
-                          2   3  1  4  5  0 </pre>
+    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌─────────┐         ┌─┐   
+    q_0: ┤ RX(π/2) ├─────────┤M├───
+         ├─────────┤         └╥┘┌─┐
+    q_1: ┤ RX(π/2) ├──────────╫─┤M├
+         └───┬─┬───┘          ║ └╥┘
+    q_2: ────┤M├──────────────╫──╫─
+             └╥┘    ┌─┐       ║  ║ 
+    q_3: ─────╫─────┤M├───────╫──╫─
+              ║     └╥┘┌─┐    ║  ║ 
+    q_4: ─────╫──────╫─┤M├────╫──╫─
+              ║      ║ └╥┘┌─┐ ║  ║ 
+    q_5: ─────╫──────╫──╫─┤M├─╫──╫─
+              ║      ║  ║ └╥┘ ║  ║ 
+    c: 6/═════╩══════╩══╩══╩══╩══╩═
+              2      3  4  5  0  1 </pre>
 
 
 
@@ -136,6 +130,7 @@ Run an ideal device simulation using C3
 .. code:: ipython3
 
     c3_backend.set_device_config("quickstart.hjson")
+    c3_backend.disable_flip_labels()
     c3_job = execute(qc, c3_backend, shots=1000)
     result = c3_job.result()
 
@@ -147,7 +142,7 @@ Run an ideal device simulation using C3
 
 .. parsed-literal::
 
-    {'011111': 1000}
+    {'000000': 250, '010000': 250, '100000': 250, '110000': 250}
 
 
 .. code:: ipython3
