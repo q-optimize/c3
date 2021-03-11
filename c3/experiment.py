@@ -348,7 +348,7 @@ class Experiment:
             gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
             gates[gate] = kron_ids(
-                dims, instructions[gate].targets, instructions[gate].ideal
+                dims, instructions[gate].targets, [instructions[gate].ideal]
             )
 
         # TODO parametric gates
