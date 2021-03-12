@@ -3,6 +3,7 @@
 [![codecov](https://codecov.io/gh/q-optimize/c3/branch/master/graph/badge.svg)](https://codecov.io/gh/q-optimize/c3)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/q-optimize/c3.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/q-optimize/c3/context:python)
 [![Documentation Status](https://readthedocs.org/projects/c3-toolset/badge/?version=latest)](https://c3-toolset.readthedocs.io/en/latest/?badge=latest)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![PyPI version fury.io](https://badge.fury.io/py/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
 [![PyPI license](https://img.shields.io/pypi/l/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
