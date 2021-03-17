@@ -151,6 +151,9 @@ class Qubit(PhysicalComponent):
             Annihilation operator in the full Hilbert space
 
         """
+        # Form of the operators from p. 71 in https://ocw.mit.edu/courses/
+        # nuclear-engineering/22-51-quantum-theory-of-radiation-interactions-fall-2012/
+        # lecture-notes/MIT22_51F12_Ch8.pdf
         self.collapse_ops["t1"] = ann_oper
         self.collapse_ops["temp"] = ann_oper.T.conj()
         self.collapse_ops["t2star"] = 2 * tf.matmul(ann_oper.T.conj(), ann_oper)
@@ -166,6 +169,9 @@ class Qubit(PhysicalComponent):
             Hamiltonian
 
         """
+        # Form of the operators from p. 71 in https://ocw.mit.edu/courses/
+        # nuclear-engineering/22-51-quantum-theory-of-radiation-interactions-fall-2012/
+        # lecture-notes/MIT22_51F12_Ch8.pdf
         Ls = []
         if "t1" in self.params:
             t1 = self.params["t1"].get_value()
