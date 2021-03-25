@@ -21,36 +21,8 @@ GATE_MAP = {
 PARAMETER_MAP = {np.pi / 2: "90p", np.pi: "p", -np.pi / 2: "90m", -np.pi: "m"}
 
 
-def pad_gate_name(gate_name: str, qubits: List[int], n_qubits: int) -> str:
-    """Pad gate name with Identity gates in correct indices
-
-    Parameters
-    ----------
-    gate_name : str
-        A C3 compatible gate name
-    qubits : List[int]
-        Indices to apply gate
-    n_qubits : int
-        Total number of qubits in the device
-
-    Returns
-    -------
-    str
-        Identity padded gate name, eg ::
-
-            pad_gate_name("CCRX90p", [1, 2, 3], 5) -> 'Id:CCRX90p:Id'
-            pad_gate_name("RX90p", [0], 5) -> 'RX90p:Id:Id:Id:Id'
-    """
-
-    # TODO (check) Assumption control and action qubits next to each other
-    gate_names = ["Id"] * (n_qubits - (len(qubits) - 1))
-    gate_names[qubits[0]] = gate_name
-    padded_gate_str = ":".join(gate_names)
-    return padded_gate_str
-
-
-def get_sequence(instructions: List, n_qubits: int) -> List[str]:
-    """Return a sequence of gates from instructions
+def get_sequence(instructions: List) -> List[str]:
+    """Return a sequence of c3 gates from Qasm instructions
 
     Parameters
     ----------
@@ -68,15 +40,12 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
                 {"name": "u2", "qubits": [0], "params": [0.4,0.2], "conditional": 2}
             ]
 
-    n_qubits: int
-        Number of qubits in the device config
-
     Returns
     -------
     List[str]
         List of gates, for example::
 
-        sequence = ["RX90p:Id", "Id:RX90p", "CR90"]
+        sequence = ["rx90p[1]", "cr90[0,1]", "rx90p[0]"]
 
     """
 
@@ -213,6 +182,8 @@ def flip_labels(counts: Dict[str, int]) -> Dict[str, int]:
     https://qiskit.org/documentation/tutorials/circuits/3_summary_of_quantum_operations.html#Basis-vector-ordering-in-Qiskit
 
     """
+
+    # TODO: https://github.com/q-optimize/c3/issues/58
     labels_flipped_counts = {}
     for key, value in counts.items():
         key_bin = bin(int(key, 0))
