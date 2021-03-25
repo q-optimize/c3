@@ -424,7 +424,10 @@ class Experiment:
                     )
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
-            gates[gate] = U
+            if model.max_excitations:
+                gates[gate] = model.ex_cutter.T @ U @ model.ex_cutter
+            else:
+                gates[gate] = U
             self.propagators = gates
         return gates
 

@@ -39,7 +39,7 @@ class Model:
         self.dressed = True
         self.lindbladian = False
         self.use_FR = True
-        self.max_excitations = 0
+        self.max_excitations = max_excitations
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems = {}
@@ -108,8 +108,9 @@ class Model:
                     line[ii] = 1
                     proj.append(line)
                 ii += 1
-            self.labels = cut_labels
+            self.state_labels = cut_labels
             excitation_cutter = np.array(proj)
+            self.ex_cutter = excitation_cutter
             ann_opers = [
                 excitation_cutter @ op @ excitation_cutter.T for op in ann_opers
             ]
