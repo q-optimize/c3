@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-from c3.utils import qt_utils
+from c3.utils.qt_utils import pauli_basis, projector
 
 
 def tf_setup():
@@ -600,29 +600,6 @@ def tf_super(A):
     return superA
 
 
-def tf_choi_to_chi(U, dims=None):
-    """
-    Convert the choi representation of a process to chi representation.
-
-    """
-    if dims is None:
-        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.constant(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
-    return tf.linalg.adjoint(B) @ U @ B
-
-
-def super_to_choi(A):
-    """
-    Convert a super operator to choi representation.
-
-    """
-    sqrt_shape = int(np.sqrt(A.shape[0]))
-    A_choi = tf.reshape(
-        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
-    )
-    return A_choi
-
-
 def tf_state_to_dm(psi_ket):
     """Make a state vector into a density matrix."""
     psi_ket = tf.reshape(psi_ket, [psi_ket.shape[0], 1])
@@ -714,10 +691,8 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
 def tf_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)), B
-    )
+        lvls = [tf.cast(B.shape[0], B.dtype)]
+    Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
@@ -737,20 +712,36 @@ def tf_super_to_fid(err, lvls):
     return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
 
 
-def tf_project_to_comp(A, dims, to_super=False):
+def tf_choi_to_chi(U, dims=None):
+    """
+    Convert the choi representation of a process to chi representation.
+
+    """
+    if dims is None:
+        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
+    B = tf.constant(pauli_basis([2] * len(dims)), dtype=tf.complex128)
+    return tf.linalg.adjoint(B) @ U @ B
+
+
+def super_to_choi(A):
+    """
+    Convert a super operator to choi representation.
+
+    """
+    sqrt_shape = int(np.sqrt(A.shape[0]))
+    A_choi = tf.reshape(
+        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
+    )
+    return A_choi
+
+
+def tf_project_to_comp(A, dims, index=None, to_super=False):
     """Project an operator onto the computational subspace."""
-    # TODO projection to computational subspace can be done more efficiently than this
-    proj_list = []
-    for dim in dims:
-        p = np.zeros([dim, 2])
-        p[0, 0] = 1
-        p[1, 1] = 1
-        if to_super:
-            p = np.kron(p, p)
-        proj_list.append(p)
-    proj = proj_list.pop()
-    while not proj_list == []:
-        proj = np.kron(proj_list.pop(), proj)
+    if not index:
+        index = list(range(len(dims)))
+    proj = projector(dims, index)
+    if to_super:
+        proj = np.kron(proj, proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
 

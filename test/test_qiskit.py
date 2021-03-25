@@ -39,7 +39,6 @@ def test_get_backend(backend):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.xfail(raises=TranspilerError)
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_transpile(get_test_circuit, backend):  # noqa
     """Test the transpiling using our backends.

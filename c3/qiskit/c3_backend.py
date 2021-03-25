@@ -287,7 +287,19 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A c3 simulator for qasm experiments with perfect gates",
-        "basis_gates": ["cx", "cz", "iSwap", "id", "x", "y", "z"],
+        "basis_gates": [
+            "cx",
+            "cz",
+            "iSwap",
+            "id",
+            "x",
+            "y",
+            "z",
+            "rx",
+            "ry",
+            "rz",
+            "rzx",
+        ],
         "gates": [],
     }
 
@@ -358,11 +370,12 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         exp = Experiment()
         exp.quick_setup(self._device_config)
         pmap = exp.pmap
+        instructions = pmap.instructions
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
         if self._number_of_qubits != experiment.config.n_qubits:
-            raise C3QiskitError("Number of qubits in Circuit & Device dont match")
+            raise C3QiskitError("Number of qubits in Circuit & Device don't match")
 
         shots = self._shots
 
@@ -381,6 +394,15 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # unique operations
         gate_keys = list(set(sequence))
+
+        # validate gates
+        for gate in gate_keys:
+            if gate not in instructions.keys():
+                raise C3QiskitError(
+                    "Gate {gate} not found in Device Instruction Set: {instructions}".format(
+                        gate=gate, instructions=list(instructions.keys())
+                    )
+                )
 
         perfect_gates = exp.get_perfect_gates(gate_keys)
 
