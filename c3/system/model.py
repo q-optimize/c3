@@ -186,7 +186,7 @@ class Model:
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
-        self.__create_annihilators(cfg["max_exictations"])
+        self.__create_annihilators(cfg["max_excitations"])
         self.__create_matrix_representations()
 
     def write_config(self, filepath: str) -> None:
