@@ -262,8 +262,57 @@ def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     else:
         h = tf.cast(h0, tf.complex128)
     dh = -1.0j * h * dt
-    dU = tf.linalg.expm(dh)
-    return dU
+    return tf.linalg.expm(dh)
+
+
+def batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+    """
+    Propagate signal in batches
+    Parameters
+    ----------
+    hamiltonian: tf.tensor
+        Drift Hamiltonian
+    hks: Union[tf.tensor, List[tf.tensor]]
+        List of control hamiltonians
+    signals: Union[tf.tensor, List[tf.tensor]]
+        List of control signals, one per control hamiltonian
+    dt: float
+        Length of one time slice
+    batch_size: int
+        Number of elements in one batch
+
+    Returns
+    -------
+
+    """
+    if signals is not None:
+        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
+        batch_array = tf.TensorArray(
+            signals.dtype, size=batches, dynamic_size=False, infer_shape=False
+        )
+        for i in range(batches):
+            batch_array = batch_array.write(
+                i, signals[i * batch_size : i * batch_size + batch_size]
+            )
+    else:
+        batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
+        batch_array = tf.TensorArray(
+            hamiltonian.dtype, size=batches, dynamic_size=False, infer_shape=False
+        )
+        for i in range(batches):
+            batch_array = batch_array.write(
+                i, hamiltonian[i * batch_size : i * batch_size + batch_size]
+            )
+
+    dUs_array = tf.TensorArray(tf.complex128, size=batches, infer_shape=False)
+    for i in range(batches):
+        x = batch_array.read(i)
+        if signals is not None:
+            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
+        else:
+            result = tf_propagation_vectorized(x, None, None, dt)
+        dUs_array = dUs_array.write(i, result)
+    return dUs_array.concat()
 
 
 def tf_propagation(h0, hks, cflds, dt):
@@ -462,6 +511,7 @@ def evaluate_sequences(U_dict: dict, sequences: list):
 
 
 @tf.function
+# @tf.custom_gradient
 def tf_matmul_left(dUs: tf.Tensor):
     """
     Parameters:
@@ -472,6 +522,34 @@ def tf_matmul_left(dUs: tf.Tensor):
 
     """
     return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
+    # out_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
+    # dUs_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
+    # dUs_array = dUs_array.unstack(dUs)
+    # out = tf.eye(dUs_array.element_shape[0], dtype=tf.complex128)
+    #
+    # def func(i, U):
+    #     x = dUs_array.read(i)
+    #     out = tf.matmul(x, U)
+    #     return [i + 1, out]
+    #
+    # i, out = tf.while_loop(
+    #     lambda ii, U: ii < dUs.shape[0],
+    #     func,
+    #     [tf.constant(0), out]
+    # )
+    # for i in range(dUs.shape[0]):
+
+    # # @tf.function
+    # def grad(z):
+    #     grad_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
+    #     back_out = tf.eye(dUs_array.element_shape[0], dtype=tf.complex128)
+    #     for ii in range(dUs.shape[0]):
+    #         grad_array.write(ii, z * back_out)
+    #         grad_x = dUs_array.read(ii)
+    #         back_out = tf.matmul(back_out, grad_x)
+    #     return grad_array.stack()
+
+    # return out
 
 
 # def tf_matmul_right(dUs):
@@ -575,7 +653,7 @@ def tf_expm(A, terms):
         expm(A)
 
     """
-    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
+    r = tf.eye(int(A.shape[-1]), batch_shape=A.shape[:-2], dtype=A.dtype)
     A_powers = A
     r += A
 
@@ -866,3 +944,75 @@ def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
     convolution = tf.signal.ifft(fft_conv)
     return convolution[:sig_len]
+
+
+@tf.function
+def batch_matrix_gather(a, indeces, num_inner_dims=2):
+    if len(a.shape) == num_inner_dims:
+        return tf.gather_nd(a, indeces)
+    elif len(a.shape) == num_inner_dims + 1:
+        b_arr = tf.TensorArray(a.dtype, size=a.shape[0])
+        ii, b_arr = tf.while_loop(
+            lambda ii, b_arr: ii < a.shape[0],
+            lambda ii, b_arr: (ii + 1, b_arr.write(ii, tf.gather_nd(a[ii], indeces))),
+            [tf.constant(0), b_arr],
+        )
+        b = b_arr.stack()
+        return b
+    else:
+        raise NotImplementedError("multiple batch dimensions not supported")
+
+
+@tf.function
+def batch_matrix_scatter(b, indeces, out_dim, num_inner_dims=2):
+    if len(b.shape) == num_inner_dims:
+        out_shape = [out_dim] * num_inner_dims
+        a = tf.tensor_scatter_nd_add(
+            tf.zeros(out_shape, b.dtype), indices=indeces, updates=b
+        )
+    elif len(b.shape) == num_inner_dims + 1:
+        a_arr = tf.TensorArray(b.dtype, size=b.shape[0])
+        zeros_tensor = tf.zeros([out_dim] * num_inner_dims, b.dtype)
+        ii, a_arr = tf.while_loop(
+            lambda ii, a_arr: ii < b.shape[0],
+            lambda ii, a_arr: (
+                ii + 1,
+                a_arr.write(
+                    ii,
+                    tf.tensor_scatter_nd_add(
+                        zeros_tensor, indices=indeces, updates=b[ii]
+                    ),
+                ),
+            ),
+            [tf.constant(0), a_arr],
+        )
+        a = a_arr.stack()
+    else:
+        raise NotImplementedError("multiple batch dimensions not supported")
+    return a
+
+
+@tf.custom_gradient
+def cut_hilbert_matrix(a, indeces, num_inner_dims=2):
+    b = batch_matrix_gather(a, indeces, num_inner_dims=num_inner_dims)
+
+    # TODO double check that gradient is passed correctly
+    def grad(z):
+        g = batch_matrix_scatter(
+            z, indeces, tf.shape(a)[-1], num_inner_dims=num_inner_dims
+        )
+        return g, None
+
+    return b, grad
+
+
+@tf.custom_gradient
+def uncut_hilbert_matrix(b, indeces, out_shape, num_inner_dims=2):
+    a = batch_matrix_scatter(b, indeces, out_shape, num_inner_dims=num_inner_dims)
+
+    # TODO double check that gradient is passed correctly
+    def grad(z):
+        g = batch_matrix_gather(z, indeces, num_inner_dims=num_inner_dims)
+        return g, None, None
+
+    return a, grad

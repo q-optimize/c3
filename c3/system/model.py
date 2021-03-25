@@ -7,7 +7,8 @@ import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
-from c3.system.chip import device_lib
+from c3.system.chip import device_lib, Drive
+from typing import List, Tuple
 
 
 class Model:
@@ -42,17 +43,18 @@ class Model:
         self.use_FR = True
         self.dephasing_strength = 0.0
         self.params = {}
-        self.subsystems = dict()
-        self.couplings = dict()
-        self.tasks = dict()
-        if subsystems:
-            self.set_components(subsystems, couplings)
-        if tasks:
-            self.set_tasks(tasks)
+        self.subsystems: dict = dict()
+        self.couplings: dict = dict()
+        self.tasks: dict = dict()
+        self.cut_excitations = 0
         self.drift_H = None
         self.dressed_drift_H = None
         self.__hamiltonians = None
         self.__dressed_hamiltonians = None
+        if subsystems:
+            self.set_components(subsystems, couplings)
+        if tasks:
+            self.set_tasks(tasks)
 
     def set_components(self, subsystems, couplings=None) -> None:
         for comp in subsystems:
@@ -226,6 +228,19 @@ class Model:
         """
         self.use_FR = use_FR
 
+    def set_cut_excitations(self, n_cut):
+        """
+        Set if the outputed hamiltonians should be cut to states only with summed excitations up to n_cut
+        Parameters
+        ----------
+        n_cut: number of maximum excitations in system. 0 corresponds to no additional cutting of the hilbert space.
+
+        Returns
+        -------
+
+        """
+        self.cut_excitations = n_cut
+
     def set_dephasing_strength(self, dephasing_strength):
         self.dephasing_strength = dephasing_strength
 
@@ -235,20 +250,27 @@ class Model:
             ids.append(("Model", key))
         return ids
 
+    def get_Hamiltonians(self):
+        if self.dressed:
+            return self.dressed_drift_H, self.dressed_control_Hs
+        else:
+            return self.drift_H, self.control_Hs
+
+    @tf.function
     def get_Hamiltonian(self, signal=None):
+        """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
+        Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
         if signal is None:
             if self.dressed:
                 return self.dressed_drift_H
             else:
                 return self.drift_H
-
         if self.dressed:
             hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
             transform = self.transform
         else:
             hamiltonians = copy.deepcopy(self.__hamiltonians)
             transform = None
-
         for key, sig in signal.items():
             if key in self.subsystems:
                 hamiltonians[key] = self.subsystems[key].get_Hamiltonian(sig, transform)
@@ -263,6 +285,19 @@ class Model:
             ]
         )
         return signal_hamiltonian
+
+    def get_reduced_indices(self, num_inner_dims=2):
+        if self.cut_excitations > 0:
+            idxs = np.argwhere(
+                np.array([sum(s) for s in self.state_labels]) <= self.cut_excitations
+            )
+        else:
+            return None, self.tot_dim
+        out_shape = [len(idxs)] * num_inner_dims + [num_inner_dims]
+        reduced_indices = tf.constant(
+            np.reshape(list(itertools.product(idxs, repeat=num_inner_dims)), out_shape)
+        )
+        return reduced_indices, self.tot_dim
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -279,12 +314,17 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
+        control_Hs = dict()
         hamiltonians = dict()
         for key, sub in self.subsystems.items():
             hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
             hamiltonians[key] = line.get_Hamiltonian()
+            if isinstance(line, Drive):
+                control_Hs[key] = line.get_Hamiltonian(True)
+
         self.drift_H = sum(hamiltonians.values())
+        self.control_Hs = control_Hs
         self.__hamiltonians = hamiltonians
 
     def update_Lindbladians(self):
@@ -382,9 +422,24 @@ class Model:
         FR = tf.linalg.expm(exponent)
         return FR
 
-    def get_qubit_freqs(self):
+    def get_qubit_freqs(self) -> List[float]:
         # TODO figure how to get the correct dressed frequencies
         pass
+        es = tf.math.real(tf.linalg.diag_part(self.dressed_drift_H))
+        frequencies = []
+        for i in range(len(self.dims)):
+            state = [0] * len(self.dims)
+            state[i] = 1
+            idx = self.state_labels.index(tuple(state))
+            freq = float(es[idx] - es[0]) / 2 / np.pi
+            frequencies.append(freq)
+        return frequencies
+
+    def get_state_index(self, state: Tuple) -> int:
+        return self.state_labels.index(tuple(state))
+
+    def get_state_indeces(self, states: List[Tuple]) -> List[int]:
+        return [self.get_state_index(s) for s in states]
 
     def get_dephasing_channel(self, t_final, amps):
         """

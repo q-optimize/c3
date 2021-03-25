@@ -51,6 +51,9 @@ class Experiment:
         self.dUs: dict = {}
         self.created_by = None
         self.logdir: str = None
+        self.propagate_batch_size = None
+        self.use_control_fields = True
+        self.overwrite_unitaries = True
 
     def set_created_by(self, config):
         """
@@ -276,7 +279,11 @@ class Experiment:
                     f"C3:Error: Gate '{gate}' is not defined."
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
-            gates[gate] = perfect_gate(gate)
+            gates[gate] = perfect_gate(
+                gate,
+                index=list(range(len(self.pmap.model.dims))),
+                dims=self.pmap.model.dims,
+            )
 
         return gates
 
@@ -313,8 +320,6 @@ class Experiment:
                 freqs = {}
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
-                    if line not in model.couplings:
-                        continue
                     # TODO calculate properly the average frequency that each qubit sees
                     offset = 0.0
                     for ctrl in ctrls.values():
@@ -352,9 +357,59 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-            self.unitaries = gates
+            if self.overwrite_unitaries:
+                self.unitaries = gates
+            else:
+                self.unitaries[gate] = U
         return gates
 
+    # @tf.function #(autograph=True)
+    # def batch_propagate(self, hamiltonian, dt, batch_size):
+    #     dUs = None
+    #
+    #     batches = hamiltonian.shape[0] // batch_size
+    #
+    #     strategy = tf.distribute.get_strategy()
+    #     batch_array = tf.cast([hamiltonian[i * batch_size:i* batch_size+batch_size] for i in range(batches)], tf.complex128)
+    #     orig_hamiltonian_shape = hamiltonian.shape
+    #     batch_array = tf.reshape(hamiltonian, [batches, hamiltonian.shape[0] // batches] + hamiltonian.shape[-2:])
+    #     # print(batch_array.shape)
+    #     # @tf.function
+    #     # def map_func(ham):
+    #     #     print(type(ham), ham.shape)
+    #     #     return tf_utils.tf_propagation_vectorized(ham, None, None, dt)
+    #     # out = tf.map_fn(map_func, batch_array, swap_memory=True)
+    #     # print(out.shape)
+    #     # dUs = tf.reshape(out, orig_hamiltonian_shape)
+    #     # print(dUs.shape)
+    #     # assert False
+    #     for i in range(batches):
+    #         # tf.autograph.experimental.set_loop_options(swap_memory=True)
+    #         idx = i * batch_size
+    #         if self.pmap.model.lindbladian:
+    #             col_ops = model.get_Lindbladians()
+    #             dUs_list.append(tf_utils.tf_propagation_lind(tf.cast(hamiltonian[idx:idx+batch_size], tf.complex128), None, col_ops, None, dt))
+    #         else:
+    #             # strategy.
+    #             # print(strategy)
+    #             # print(i)
+    #             # print(idx+batch_size)
+    #             x = hamiltonian[idx:idx+batch_size]
+    #             # print(x.shape)
+    #             out = tf_utils.tf_propagation_vectorized(x, None, None, dt)
+    #             # with tf.device("/device:GPU:1"):
+    #                 # strategy = tf.distribute.get_strategy()
+    #             result = strategy.run(tf_utils.tf_propagation_vectorized, args=(x, None, None, dt))
+    #                 # result = tf_utils.tf_propagation_vectorized(x, None, None, dt)
+    #             # print(type(result))
+    #             if tf.distribute.has_strategy():
+    #                 result = result.values[0]
+    #             # dUs_list.write(i, result)
+    #             if dUs is not None:
+    #                 dUs = tf.concat([dUs, result], axis=0)
+    #             else:
+    #                 dUs = result
+    #     return dUs
     def propagation(self, signal: dict, gate):
         """
         Solve the equation of motion (Lindblad or Schrödinger) for a given control
@@ -375,25 +430,103 @@ class Experiment:
             Matrix representation of the gate.
         """
         model = self.pmap.model
-        hamiltonian = model.get_Hamiltonian(signal)
 
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+        mask_ids, full_hilbert_dim = model.get_reduced_indices()
+        if mask_ids is not None:
+            mask_ids = tf.cast(mask_ids, tf.int32)
+        if self.use_control_fields:
+            hamiltonian, hctrls = model.get_Hamiltonians()
+            signals = []
+            hks = []
+            for key in signal:
+                signals.append(signal[key]["values"])
+                ts = signal[key]["ts"]
+                hks.append(hctrls[key])
+            signals = tf.cast(signals, tf.complex128)
+            hks = tf.cast(hks, tf.complex128)
+        else:
+            with tf.profiler.experimental.Trace("Get Hamiltonian"):
+                hamiltonian = model.get_Hamiltonian(signal)
+            ts_list = [sig["ts"][1:] for sig in signal.values()]
+            ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+            signals = None
+            hks = None
+            assert np.all(
+                tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
+            )
+            assert np.all(
+                tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
+            )
 
-        dt = ts[1] - ts[0]  # We should check whether the spacing is always constant.
-        assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * dt)
-        assert np.all(tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * dt)
+        if mask_ids is not None:
+            hamiltonian = tf_utils.cut_hilbert_matrix(hamiltonian, mask_ids)
+            if hks is not None:
+                hks = tf_utils.cut_hilbert_matrix(hks, mask_ids)
 
+        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+        # # print(strategy)
+        # def distribute_propagation(dataset):
+        #     # def replica_fn(input):
+        #     #     result = tf_utils.tf_propagation_vectorized(input, None, None, dt)
+        #     #     return result
+        #
+        #     for x in dataset.batch(self.propagate_batch_size, drop_remainder=False):
+        #         # print(x.shape)
+        #         dUs_list.append(strategy.run(tf_utils.tf_propagation_vectorized, args=(x, None, None, dt)).values[0])
+        #     # dUs_list = strategy.gather(dUs_list, axis=0)
+        #     # print(type(dUs_list))
+        #     # print(dUs_list[-1].values)
+        #     return dUs_list
+        # dUs_list = []
+        # dataset = tf.data.Dataset.from_tensor_slices(hamiltonian)
+        # print(dataset, len(dataset))
+        # dist_data = strategy.experimental_distribute_dataset(dataset)
+        #
+        # dUs_list = distribute_propagation(dataset)
+        # # for x in dataset:
+        # #     dUs_list.append(
+        # #         strategy.run(tf_utils.tf_propagation_vectorized, args=((tf.cast(hamiltonian[idx:idx + batch_size], tf.complex128), None,
+        # #                                            None, tf.cast(dt, tf.complex128)))
+
+        # print(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128).shape)
+        # print(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128)[0])
+        # batch_propagate(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128)*1e-10)
+        # # print(add_slices)
+        # print("hamshape_bef", hamiltonian.shape)
+        # print("hamshape", hamiltonian.shape)
+        # # with tf.distribute.experimental.CentralStorageStrategy().scope():
+        # print("Batch Propagate")
+        # print(dUs.shape)
+        # dUs = tf.concat(dUs_list, axis=0)
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
-            dUs = tf_utils.tf_propagation_lind(hamiltonian, None, col_ops, None, dt)
+            dUs = tf_utils.tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
         else:
-            dUs = tf_utils.tf_propagation_vectorized(hamiltonian, None, None, dt)
-        self.dUs[gate] = dUs
-        self.ts = ts
+            batch_size = (
+                self.propagate_batch_size
+                if self.propagate_batch_size
+                else len(hamiltonian)
+            )
+            batch_size = (
+                len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
+            )
+            batch_size = tf.constant(batch_size, tf.int32)
+            dUs = tf_utils.batch_propagate(
+                hamiltonian, hks, signals, dt, batch_size=batch_size
+            )
+        if mask_ids is None:
+            self.dUs[gate] = dUs
+        else:
+            # TODO check if gradient would be necessary for some operations
+            self.dUs[gate] = tf.stop_gradient(
+                tf_utils.uncut_hilbert_matrix(dUs, mask_ids, full_hilbert_dim)
+            )
         dUs = tf.cast(dUs, tf.complex128)
+        self.ts = ts
         U = tf_utils.tf_matmul_left(dUs)
-        self.U = U
+        if mask_ids is not None:
+            U = tf_utils.uncut_hilbert_matrix(U, mask_ids, full_hilbert_dim)
         return U
 
     def set_opt_gates(self, gates):
