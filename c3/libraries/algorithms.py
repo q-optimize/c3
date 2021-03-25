@@ -327,13 +327,12 @@ def tf_adam(
         SciPy OptimizeResult type object with final parameters
     """
     iters = options["maxfun"]
-
     var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
 
-    opt_adam = tf.keras.optimizers.Adam(learning_rate=1, epsilon=0.1)
+    opt_adam = tf.keras.optimizers.Adam(learning_rate=0.001, epsilon=0.1)
 
     for step in range(iters):
         step_count = opt_adam.minimize(tf_fun, [var])
@@ -468,6 +467,36 @@ def lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return minimize(
         fun_grad, x_init, jac=grad_lookup, method="L-BFGS-B", options=options
     )
+
+
+@algo_reg_deco
+def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Wrapper for the scipy.optimize.minimize implementation of LBFG-S.
+    We are let the algorithm determine the gradient by its own.
+     See also:
+
+    https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html
+
+    Parameters
+    ----------
+    x_init : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options of scipy.optimize.minimize
+
+    Returns
+    -------
+    Result
+        Scipy result object.
+    """
+    return minimize(fun=fun, x0=x_init, options=options)
 
 
 @algo_reg_deco
