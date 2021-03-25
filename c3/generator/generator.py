@@ -15,7 +15,6 @@ import hjson
 import numpy as np
 import tensorflow as tf
 from c3.signal.gates import Instruction
-from c3.system.chip import PhysicalComponent
 from c3.generator.devices import devices as dev_lib
 
 
@@ -47,14 +46,11 @@ class Generator:
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
-            final_signals = 1
             signals = 0
             for device_id in chain:
                 signals -= self.devices[device_id].inputs
                 signals += self.devices[device_id].outputs
-                if isinstance(self.devices[device_id], PhysicalComponent):
-                    final_signals = 0
-            if signals != final_signals:
+            if signals != 1:
                 raise Exception(
                     "C3:ERROR: Signal chain for channel '"
                     + channel

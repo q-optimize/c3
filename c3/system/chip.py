@@ -9,6 +9,9 @@ from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
 from scipy.optimize import fmin
 import tensorflow_probability as tfp
+import copy
+from typing import Union, List
+import scipy.optimize
 
 device_lib = dict()
 
@@ -39,6 +42,7 @@ class PhysicalComponent(C3obj):
         self.Hs = {}
         self.collapse_ops = {}
         self.drive_line = None
+        self.index = None
 
     def set_subspace_index(self, index):
         self.index = index
@@ -61,15 +65,15 @@ class Qubit(PhysicalComponent):
 
     Parameters
     ----------
-    freq: np.float64
+    freq: Quantity
         frequency of the qubit
-    anhar: np.float64
+    anhar: Quantity
         anharmonicity of the qubit. defined as w01 - w12
-    t1: np.float64
+    t1:Quantity
         t1, the time decay of the qubit due to dissipation
-    t2star: np.float64
+    t2star: Quantity
         t2star, the time decay of the qubit due to pure dephasing
-    temp: np.float64
+    temp: Quantity
         temperature of the qubit, used to determine the Boltzmann distribution
         of energy level populations
 
@@ -81,11 +85,11 @@ class Qubit(PhysicalComponent):
         hilbert_dim,
         desc=None,
         comment=None,
-        freq=None,
-        anhar=None,
-        t1=None,
-        t2star=None,
-        temp=None,
+        freq: Quantity = None,
+        anhar: Quantity = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
         params=None,
     ):
         # TODO Cleanup params passing and check for conflicting information
@@ -265,15 +269,15 @@ class Transmon(PhysicalComponent):
         desc: str = None,
         comment: str = None,
         hilbert_dim: int = None,
-        freq: np.float64 = None,
-        phi: np.float64 = None,
-        phi_0: np.float64 = None,
-        gamma: np.float64 = None,
-        d: np.float64 = None,
-        t1: np.float64 = None,
-        t2star: np.float64 = None,
-        temp: np.float64 = None,
-        anhar: np.float64 = None,
+        freq: Quantity = None,
+        phi: Quantity = None,
+        phi_0: Quantity = None,
+        gamma: Quantity = None,
+        d: Quantity = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
+        anhar: Quantity = None,
         params=None,
     ):
         super().__init__(
@@ -310,14 +314,14 @@ class Transmon(PhysicalComponent):
             self.params["d"] = 0
 
     def get_factor(self, phi_sig=0):
-        pi = tf.constant(np.pi, dtype=tf.float64)
-        phi = tf.cast(self.params["phi"].get_value(), tf.float64)
-        phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.float64)
-        phi = phi + phi_sig
+        pi = tf.constant(np.pi, tf.float64)
+        phi = self.params["phi"].get_value()
+        phi += phi_sig
+        phi_0 = self.params["phi_0"].get_value()
         if "d" in self.params:
-            d = tf.cast(self.params["d"].get_value(), tf.float64)
+            d = self.params["d"].get_value()
         elif "gamma" in self.params:
-            gamma = tf.cast(self.params["gamma"].get_value(), tf.complex128)
+            gamma = self.params["gamma"].get_value()
             d = (gamma - 1) / (gamma + 1)
         else:
             d = 0
@@ -326,7 +330,6 @@ class Transmon(PhysicalComponent):
                 tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
             )
         )
-        factor = tf.cast(factor, tf.complex128)
         return factor
 
     def get_anhar(self):
@@ -335,10 +338,10 @@ class Transmon(PhysicalComponent):
 
     def get_freq(self, phi_sig=0):
         # TODO: Check how the time dependency affects the frequency. (Koch et al. , 2007)
-        freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
-        anhar = tf.cast(self.params["anhar"].get_value(), tf.complex128)
+        freq = self.params["freq"].get_value()
+        anhar = self.params["anhar"].get_value()
         biased_freq = (freq - anhar) * self.get_factor(phi_sig) + anhar
-        return biased_freq
+        return tf.cast(biased_freq, tf.complex128)
 
     def init_Hs(self, ann_oper):
         resonator = hamiltonians["resonator"]
@@ -367,7 +370,7 @@ class Transmon(PhysicalComponent):
                 tf.matmul(transform, self.Hs["freq"], adjoint_a=True), transform
             )
             H_anhar = tf.matmul(
-                tf.matmul(transform, self.Hs["freq"], adjoint_a=True), transform
+                tf.matmul(transform, self.Hs["anhar"], adjoint_a=True), transform
             )
         else:
             H_freq = self.Hs["freq"]
@@ -426,9 +429,88 @@ class Transmon(PhysicalComponent):
             gamma = (0.5 / self.params["t2star"].get_value()) ** 0.5
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
-        if Ls == []:
+        if len(Ls) == 0:
             raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
+
+
+class TransmonExpanded(Transmon):
+    def init_Hs(self, ann_oper):
+        ann_oper = tf.constant(ann_oper, tf.complex128)
+        ann_oper_dag = tf.linalg.matrix_transpose(ann_oper, conjugate=True)
+        adag_plus_a = ann_oper_dag + ann_oper
+        sq_adag_plus_a = tf.linalg.matmul(adag_plus_a, adag_plus_a)
+        quartic_adag_plus_a = tf.linalg.matmul(sq_adag_plus_a, sq_adag_plus_a)
+        sextic_adag_plus_a = tf.linalg.matmul(quartic_adag_plus_a, sq_adag_plus_a)
+
+        self.Hs["quadratic"] = tf.linalg.matmul(ann_oper_dag, ann_oper)  # + 1 / 2
+        self.Hs["quartic"] = quartic_adag_plus_a
+        self.Hs["sextic"] = sextic_adag_plus_a
+        if "EC" not in self.params:
+            self.energies_from_frequencies()
+
+    def get_prefactors(self, sig):
+        EC = self.params["EC"].get_value()
+        EJ = self.params["EJ"].get_value() * self.get_factor(sig) ** 2
+        prefactors = dict()
+        prefactors["quadratic"] = tf.math.sqrt(8 * EC * EJ)
+        prefactors["quartic"] = -EC / 12
+        prefactors["sextic"] = EJ / 720 * (2 * EC / EJ) ** (3 / 2)
+        return prefactors
+
+    def energies_from_frequencies(self):
+        freq = self.params["freq"].get_value()
+        anhar = self.params["anhar"].get_value()
+        phi = self.params["phi"].get_value()
+        EC_guess = -anhar
+        EJ_guess = (freq + EC_guess) ** 2 / (8 * EC_guess)
+        self.params["EC"] = Quantity(
+            EC_guess, min_val=0.0 * EC_guess, max_val=2 * EC_guess
+        )
+        self.params["EJ"] = Quantity(
+            EJ_guess, min_val=0.0 * EJ_guess, max_val=2 * EJ_guess
+        )
+
+        def eval_func(x):
+            EC, EJ = x
+            self.params["EC"].set_opt_value(EC)
+            self.params["EJ"].set_opt_value(EJ)
+            prefactors = self.get_prefactors(-phi)
+            h = tf.zeros_like(self.Hs["quadratic"])
+            for k in prefactors:
+                h += self.Hs[k] * tf.cast(prefactors[k], tf.complex128)
+            es = tf.linalg.eigvalsh(h)
+            es -= es[0]
+            freq_diff = tf.math.abs(tf.math.real(es[1] - es[0]) - freq)
+            anhar_diff = tf.math.abs(tf.math.real(es[2] - es[1]) - (freq + anhar))
+            return freq_diff + anhar_diff
+
+        scipy.optimize.fmin(
+            eval_func,
+            x0=[self.params["EC"].get_opt_value(), self.params["EJ"].get_opt_value()],
+        )
+        print(
+            (float(EC_guess), float(EJ_guess)),
+            (float(self.params["EC"]), float(self.params["EJ"])),
+        )
+
+    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+        Hs = copy.deepcopy(self.Hs)
+        if transform is not None:
+            for k in Hs:
+                Hs[k] = tf.matmul(
+                    tf.matmul(transform, Hs[k], adjoint_a=True), transform
+                )
+
+        if signal:
+            sig = signal["values"]
+        else:
+            sig = 0
+        prefactors = self.get_prefactors(sig)
+        h = tf.zeros_like(Hs["quadratic"])
+        for k in prefactors:
+            h += Hs[k] * tf.cast(prefactors[k], tf.complex128)
+        return h
 
 
 # @dev_reg_deco
@@ -543,7 +625,7 @@ class CShuntFluxQubitCos(Qubit):
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim,
-            freq=0,  # tf.math.sqrt(8 * EC * EL),
+            freq=None,
             anhar=None,
             t1=t1,
             t2star=t2star,
@@ -651,9 +733,9 @@ class CShuntFluxQubit(Qubit):
         phi_0: Quantity = None,
         gamma: Quantity = None,
         d: Quantity = None,
-        t1: np.float64 = None,
-        t2star: np.float64 = None,
-        temp: np.float64 = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
         anhar: np.float64 = None,
         params=dict(),
         resolution=None,
@@ -663,7 +745,7 @@ class CShuntFluxQubit(Qubit):
             desc=desc,
             comment=comment,
             hilbert_dim=hilbert_dim,
-            freq=0,  # tf.math.sqrt(8 * EC * EL),
+            freq=None,
             anhar=None,
             t1=t1,
             t2star=t2star,
@@ -1127,7 +1209,7 @@ class Coupling(LineComponent):
 
     Parameters
     ----------
-    strength: np.float64
+    strength: Quantity
         coupling strength
     connected: list
         all physical components coupled via this specific coupling
@@ -1139,8 +1221,8 @@ class Coupling(LineComponent):
         name,
         desc=None,
         comment=None,
-        strength=None,
-        connected=None,
+        strength: Quantity = None,
+        connected: List[str] = None,
         params=None,
         hamiltonian_func=None,
     ):
@@ -1185,19 +1267,21 @@ class Drive(LineComponent):
         hs = []
         for a in ann_opers:
             hs.append(tf.constant(self.hamiltonian_func(a), dtype=tf.complex128))
-        self.h: tf.Tensor = sum(hs)
+        self.h: tf.Tensor = tf.cast(sum(hs), tf.complex128)
 
     def get_Hamiltonian(
-        self, signal: dict = None, transform: tf.Tensor = None
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
     ) -> tf.Tensor:
-        if transform is None:
-            transform = tf.eye(self.h.shape[0])
-        if signal:
+        if signal is None:
+            return tf.zeros_like(self.h)
+        h = self.h
+        if transform is not None:
+            transform = tf.cast(transform, tf.complex128)
+            h = tf.matmul(tf.matmul(transform, h, adjoint_a=True), transform)
+
+        if signal is True:
+            return h
+        elif signal:
             sig = tf.cast(signal["values"], tf.complex128)
             sig = tf.reshape(sig, [sig.shape[0], 1, 1])
-            h_transform = tf.matmul(
-                tf.matmul(transform, self.h, adjoint_a=True), transform
-            )
-            return tf.expand_dims(h_transform, 0) * sig
-        else:
-            return tf.zeros_like(self.h)
+            return tf.expand_dims(h, 0) * sig

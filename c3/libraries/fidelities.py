@@ -5,7 +5,6 @@ import numpy as np
 import tensorflow as tf
 from typing import List
 
-# import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from c3.utils.tf_utils import (
     tf_ave,
@@ -148,7 +147,7 @@ def unitary_infid(U_dict: dict, gate: str, index, dims: List[int], proj: bool):
 
 
 @fid_reg_deco
-def unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
+def unitary_infid_set(U_dict: dict, index, dims, eval=0, proj=True):
     """
     Mean unitary overlap between ideal and actually performed gate for the gates in
     U_dict.
@@ -161,6 +160,8 @@ def unitary_infid_set(U_dict: dict, index, dims, eval, proj=True):
         Index of the qubit(s) in the Hilbert space to be evaluated
     dims : list
         List of dimensions of qubits
+    eval : int
+        Number of evaluation (Currently not used)
     proj : boolean
         Project to computational subspace
 

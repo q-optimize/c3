@@ -379,14 +379,23 @@ class Model:
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
         self.update_drift_eigen(ordered=ordered)
+        dressed_control_Hs = {}
         dressed_col_ops = []
         dressed_hamiltonians = dict()
         for k, h in self.__hamiltonians.items():
             dressed_hamiltonians[k] = tf.matmul(
                 tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
             )
-        dressed_drift_H = sum(dressed_hamiltonians.values())
+        dressed_drift_H = tf.matmul(
+            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_H), self.transform
+        )
+        for key in self.control_Hs:
+            dressed_control_Hs[key] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), self.control_Hs[key]),
+                self.transform,
+            )
         self.dressed_drift_H = dressed_drift_H
+        self.dressed_control_Hs = dressed_control_Hs
         self.__dressed_hamiltonians = dressed_hamiltonians
         if self.lindbladian:
             for col_op in self.col_ops:
