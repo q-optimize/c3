@@ -35,27 +35,28 @@ class Model:
 
     """
 
-    def __init__(self, subsystems=None, couplings=None, tasks=None):
+    def __init__(self, subsystems=None, couplings=None, tasks=None, max_excitations=0):
         self.dressed = True
         self.lindbladian = False
         self.use_FR = True
+        self.max_excitations = 0
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems = {}
         self.couplings = {}
         self.tasks = {}
         if subsystems:
-            self.set_components(subsystems, couplings)
+            self.set_components(subsystems, couplings, max_excitations)
         if tasks:
             self.set_tasks(tasks)
 
-    def set_components(self, subsystems, couplings=None) -> None:
+    def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
         self.__create_labels()
-        self.__create_annihilators()
+        self.__create_annihilators(max_excitations)
         self.__create_matrix_representations()
 
     def set_tasks(self, tasks) -> None:
@@ -76,13 +77,12 @@ class Model:
             # TODO user defined labels
             state_labels.append(list(range(subs.hilbert_dim)))
             comp_state_labels.append([0, 1])
-        self.tot_dim = np.prod(dims)
         self.names = names
         self.dims = dims
         self.state_labels = list(itertools.product(*state_labels))
         self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
-    def __create_annihilators(self) -> None:
+    def __create_annihilators(self, max_excitations) -> None:
         """
         Construct the annihilation operators for the full system via Kronecker product.
         """
@@ -91,6 +91,24 @@ class Model:
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
             ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
+        if max_excitations:
+            labels = self.state_labels
+            cut_labels = []
+            proj = []
+            ii = 0
+            for li in labels:
+                if sum(li) < max_excitations:
+                    cut_labels.append(li)
+                    line = [0] * len(labels)
+                    line[ii] = 1
+                    proj.append(line)
+                ii += 1
+            self.labels = cut_labels
+            excitation_cutter = np.array(proj)
+            ann_opers = [
+                excitation_cutter @ op @ excitation_cutter.T for op in ann_opers
+            ]
+            self.tot_dim = ann_opers[0].shape[0]
         self.ann_opers = ann_opers
 
     def __create_matrix_representations(self) -> None:
@@ -162,7 +180,7 @@ class Model:
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
-        self.__create_annihilators()
+        self.__create_annihilators(cfg["max_exictations"])
         self.__create_matrix_representations()
 
     def write_config(self, filepath: str) -> None:
