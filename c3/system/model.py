@@ -337,16 +337,27 @@ class Model:
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
-        # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
-            reorder_matrix = tf.cast(
-                (
-                    tf.expand_dims(tf.reduce_max(tf.abs(v) ** 2, axis=1), 1)
-                    == tf.abs(v) ** 2
-                ),
-                tf.float64,
-            )
+            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
+
+            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
+            if tf.math.reduce_min(max_probabilities) > 0.5:
+                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
+            else:
+                failed_states = np.sum(max_probabilities < 0.5)
+                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
+                print(
+                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
+                )
+                vc = v_sq.numpy()
+                reorder_matrix = np.zeros_like(vc)
+                for i in range(self.tot_dim):
+                    idx = np.unravel_index(np.argmax(vc), vc.shape)
+                    vc[idx[0], :] = 0
+                    vc[:, idx[1]] = 0
+                    reorder_matrix[idx] = 1
+                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
             signed_rm = tf.cast(
                 # TODO determine if the changing of sign is needed
                 # (by looking at TC_eneregies_bases I see no difference)
@@ -357,10 +368,12 @@ class Model:
             eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
             transform = tf.matmul(v, tf.transpose(signed_rm))
         else:
+            reorder_matrix = tf.eye(self.tot_dim)
             eigenframe = tf.math.real(e)
             transform = v
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
+        self.reorder_matrix = reorder_matrix
 
     def update_dressed(self, ordered=True):
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
