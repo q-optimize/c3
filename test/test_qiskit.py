@@ -89,7 +89,6 @@ def test_get_result(
     assert result_sim.get_counts(qc) == expected_counts
 
 
-
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.xfail(raises=C3QiskitError)

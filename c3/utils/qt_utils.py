@@ -10,6 +10,7 @@ Id = np.array([[1, 0], [0, 1]], dtype=np.complex128)
 X = np.array([[0, 1], [1, 0]], dtype=np.complex128)
 Y = np.array([[0, -1j], [1j, 0]], dtype=np.complex128)
 Z = np.array([[1, 0], [0, -1]], dtype=np.complex128)
+groundstate = np.array([[1, 0], [0, 0]], dtype=np.complex128)
 iswap = np.array(
     [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=np.complex128
 )
@@ -61,11 +62,20 @@ def pauli_basis(dims=[2]):
     np.array
         A square matrix containing the Pauli basis of the product space
     """
-    nq = len(dims)
+
+    def expand_dims(op, dim):
+        """
+        pad operator with zeros to be of dimension dim
+        Attention! Not related to the TensorFlow function
+        """
+        op_out = np.zeros([dim, dim], dtype=op.dtype)
+        op_out[: op.shape[0], : op.shape[1]] = op
+        return op_out
+
     _SINGLE_QUBIT_PAULI_BASIS = (Id, X, Y, Z)
     paulis = []
     for dim in dims:
-        paulis.append([P for P in _SINGLE_QUBIT_PAULI_BASIS])
+        paulis.append([expand_dims(P, dim) for P in _SINGLE_QUBIT_PAULI_BASIS])
     result = [[]]
     res_tuple = []
     # TAKEN FROM ITERTOOLS
@@ -78,12 +88,7 @@ def pauli_basis(dims=[2]):
     size = np.prod(np.array(dims) ** 2)
     B = np.zeros((size, size), dtype=complex)
     for idx, op_tuple in enumerate(res_tuple):
-        if nq == 1:
-            op = op_tuple[0]
-        if nq == 2:
-            op = np.kron(op_tuple[0], op_tuple[1])
-        if nq == 3:
-            op = np.kron(np.kron(op_tuple[0], op_tuple[1]), op_tuple[2])
+        op = np_kron_n(op_tuple)
         vec = np.reshape(np.transpose(op), [-1, 1])
         B[:, idx] = vec.T.conj()
     return B
@@ -94,8 +99,8 @@ def np_kron_n(mat_list):
     """
     Apply Kronecker product to a list of matrices.
     """
-    tmp = mat_list[0]
-    for m in mat_list[1:]:
+    tmp = np.eye(1)
+    for m in mat_list:
         tmp = np.kron(tmp, m)
     return tmp
 
@@ -263,9 +268,8 @@ def pad_matrix(matrix, dim, padding):
     return matrix
 
 
-def perfect_gate(  # noqa
-    gates_str: str, index=[0, 1], dims=[2, 2], proj: str = "wzeros"
-):
+# TODO should rename index to indeces or something similar indicating multiple indeces
+def perfect_gate(gates_str: str, index=None, dims=None, proj: str = "wzeros"):  # noqa
     """
     Construct an ideal single or two-qubit gate.
 
@@ -286,18 +290,23 @@ def perfect_gate(  # noqa
         Ideal representation of the gate.
 
     """
+    if dims is None:
+        dims = [2] * len(gates_str.split(":"))
+    if index is None:
+        index = list(range(len(dims)))
     do_pad_gate = True
-    # TODO index for now unused
     kron_list = []
     # for dim in dims:
     #     kron_list.append(np.eye(dim))
     # kron_gate = 1
-    gate_num = 0
+    gate_index = 0
     # Note that the gates_str has to be explicit for all subspaces
     # (and ordered)
     for gate_str in gates_str.split(":"):
-        lvls = dims[gate_num]
-        if gate_str == "Id":
+        lvls = dims[gate_index]
+        if gate_index not in index:
+            gate = groundstate
+        elif gate_str == "Id":
             gate = Id
         elif gate_str == "X90p":
             gate = X90p
@@ -318,24 +327,24 @@ def perfect_gate(  # noqa
         elif gate_str == "Zp":
             gate = Zp
         elif gate_str == "CNOT":
-            lvls2 = dims[gate_num + 1]
+            lvls2 = dims[gate_index + 1]
             NOT = 1j * perfect_gate("Xp", index, [lvls2], proj)
             C = perfect_gate("Id", index, [lvls2], proj)
             gate = scipy_block_diag(C, NOT)
             # We increase gate_num since CNOT is a two qubit gate
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         elif gate_str == "CZ":
-            lvls2 = dims[gate_num + 1]
+            lvls2 = dims[gate_index + 1]
             Z = 1j * perfect_gate("Zp", index, [lvls2], proj)
             C = perfect_gate("Id", index, [lvls2], proj)
             gate = scipy_block_diag(C, Z)
             # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         elif gate_str == "CCZ":
             # TODO to be tested and generalized
@@ -346,33 +355,33 @@ def perfect_gate(  # noqa
             # We increase gate_num since CZ is a two qubit gate
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, U_CZ.shape[0], proj)
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         elif gate_str == "CR":
             # TODO: Fix the ideal CNOT construction.
-            lvls2 = dims[gate_num + 1]
+            lvls2 = dims[gate_index + 1]
             Z = 1j * perfect_gate("Zp", index, [lvls], proj)
             X = perfect_gate("Xp", index, [lvls2], proj)
             gate = np.kron(Z, X)
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         elif gate_str == "CR90":
-            lvls2 = dims[gate_num + 1]
+            lvls2 = dims[gate_index + 1]
             RXp = perfect_gate("X90p", index, [lvls2], proj)
             RXm = perfect_gate("X90m", index, [lvls2], proj)
             gate = scipy_block_diag(RXp, RXm)
             for ii in range(2, lvls):
                 gate = pad_matrix(gate, lvls2, proj)
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         elif gate_str == "iSWAP":
             # TODO make construction of iSWAP work with superoperator too
-            lvls2 = dims[gate_num + 1]
+            lvls2 = dims[gate_index + 1]
             if lvls == 2 and lvls2 == 2:
                 gate = iswap
             elif lvls == 3 and lvls2 == 3:
                 gate = iswap3
-            gate_num += 1
+            gate_index += 1
             do_pad_gate = False
         else:
             print("gate_str must be one of the basic 90 or 180 degree gates.")
@@ -391,7 +400,7 @@ def perfect_gate(  # noqa
                 identity = np.eye(lvls - 2)
                 gate = scipy_block_diag(gate, identity)
         kron_list.append(gate)
-        gate_num += 1
+        gate_index += 1
     return np_kron_n(kron_list)
 
 
