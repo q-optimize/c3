@@ -1,65 +1,28 @@
 """Convenience Module for creating different c3_backend
 """
-from typing import Dict, List
+from typing import Any, Dict, List
+import numpy as np
 import tensorflow as tf
 import math
 from .c3_exceptions import C3QiskitError
 
 GATE_MAP = {
-    "X": "RXp",
-    "x": "RXp",
-    "Y": "RYp",
-    "y": "RYp",
-    "Z": "RZp",
-    "z": "RZp",
-    "CNOT": "CRXp",
-    "CX": "CRXp",
-    "cx": "CRXp",
-    "CZ": "CRZp",
-    "cz": "CRZp",
-    "I": "Id",
-    "u0": "Id",
-    "id": "Id",
-    "RX90p": "RX90p",  # RX((np.pi)/2)
-    "RX90m": "RX90m",  # RX((-np.pi)/2)
-    "RY90p": "RY90p",  # RY((np.pi)/2)
-    "RY90m": "RY90m",  # RY(-(np.pi)/2)
-    "RZ90p": "RZ90p",  # RZ((np.pi)/2)
-    "RZ90m": "RZ90m",  # RZ(-(np.pi)/2)
-    "iSwap": "ISWAP",
+    "x": "rxp",
+    "y": "ryp",
+    "z": "rzp",
+    "cx": "crxp",
+    "cz": "crzp",
+    "I": "id",
+    "u0": "id",
+    "id": "id",
+    "iSwap": "iswap",
 }
 
-
-def pad_gate_name(gate_name: str, qubits: List[int], n_qubits: int) -> str:
-    """Pad gate name with Identity gates in correct indices
-
-    Parameters
-    ----------
-    gate_name : str
-        A C3 compatible gate name
-    qubits : List[int]
-        Indices to apply gate
-    n_qubits : int
-        Total number of qubits in the device
-
-    Returns
-    -------
-    str
-        Identity padded gate name, eg ::
-
-            pad_gate_name("CCRX90p", [1, 2, 3], 5) -> 'Id:CCRX90p:Id'
-            pad_gate_name("RX90p", [0], 5) -> 'RX90p:Id:Id:Id:Id'
-    """
-
-    # TODO (check) Assumption control and action qubits next to each other
-    gate_names = ["Id"] * (n_qubits - (len(qubits) - 1))
-    gate_names[qubits[0]] = gate_name
-    padded_gate_str = ":".join(gate_names)
-    return padded_gate_str
+PARAMETER_MAP = {np.pi / 2: "90p", np.pi: "p", -np.pi / 2: "90m", -np.pi: "m"}
 
 
-def get_sequence(instructions: List, n_qubits: int) -> List[str]:
-    """Return a sequence of gates from instructions
+def get_sequence(instructions: List) -> List[str]:
+    """Return a sequence of c3 gates from Qasm instructions
 
     Parameters
     ----------
@@ -77,15 +40,12 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
                 {"name": "u2", "qubits": [0], "params": [0.4,0.2], "conditional": 2}
             ]
 
-    n_qubits: int
-        Number of qubits in the device config
-
     Returns
     -------
     List[str]
         List of gates, for example::
 
-        sequence = ["RX90p:Id", "Id:RX90p", "CR90"]
+        sequence = ["rx90p[1]", "cr90[0,1]", "rx90p[0]"]
 
     """
 
@@ -93,7 +53,6 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
 
     for instruction in instructions:
 
-        # TODO Check if gate is possible from device_config
         # TODO parametric gates
 
         iname = instruction.name
@@ -106,29 +65,66 @@ def get_sequence(instructions: List, n_qubits: int) -> List[str]:
         elif iname in ["reset", "bfunc"]:
             raise C3QiskitError("C3 Simulator does not support {}".format(iname))
 
-        # barrier is implemented internally through Identity gates
-        elif iname == "barrier":
+        # barrier/measure implemented separately
+        elif iname in ["barrier", "measure"]:
             pass
 
-        # TODO U, u3
-        elif iname in ("U", "u3"):
-            raise C3QiskitError("U3 gates are not yet implemented")
+        elif iname in ["rx", "ry", "rz"]:
+            param = instruction.params[0]
+            suffix = [
+                PARAMETER_MAP[i]
+                for i in PARAMETER_MAP.keys()
+                if np.isclose(param, i, rtol=1e-2)
+            ]
+            if len(suffix) == 0:
+                raise C3QiskitError("Only pi and pi/2 rotation gates are available")
+            gate_name = iname + suffix[0]
+            sequence.append(make_gate_str(instruction, gate_name))
 
-        # measure implemented outside sequences
-        elif iname == "measure":
-            pass
+        elif iname == "rzx":
+            param = instruction.params[0]
+            if np.isclose(param, (np.pi / 2), rtol=1e-2):
+                gate_name = "cr90"
+                sequence.append(make_gate_str(instruction, gate_name))
+            elif np.isclose(param, (np.pi), rtol=1e-2):
+                gate_name = "cr"
+                sequence.append(make_gate_str(instruction, gate_name))
+            else:
+                raise C3QiskitError("Only pi and pi/2 ZX gates are available")
 
         elif iname in GATE_MAP.keys():
             gate_name = GATE_MAP[iname]
-            qubits = instruction.qubits
-            padded_gate_str = pad_gate_name(gate_name, qubits, n_qubits)
-            sequence.append(padded_gate_str)
+            sequence.append(make_gate_str(instruction, gate_name))
 
         # raise C3QiskitError if unknown instruction
         else:
             raise C3QiskitError("Encountered unknown operation {}".format(iname))
 
     return sequence
+
+
+def make_gate_str(instruction: Dict[str, Any], gate_name: str) -> str:
+    """Make C3 style gate name string
+
+    Parameters
+    ----------
+    instruction : Dict[str, Any]
+        A dict in OpenQasm instruction format ::
+
+            {"name": "rx", "qubits": [0], "params": [1.57]}
+    gate_name : str
+        C3 style gate names
+
+    Returns
+    -------
+    str
+        C3 style gate name + qubit string ::
+
+            {"name": "rx", "qubits": [0], "params": [1.57]} -> rx90p[0]
+    """
+    qubits = instruction.qubits
+    gate_str = gate_name + str(qubits)
+    return gate_str
 
 
 def get_init_ground_state(n_qubits: int, n_levels: int) -> tf.Tensor:
@@ -186,6 +182,8 @@ def flip_labels(counts: Dict[str, int]) -> Dict[str, int]:
     https://qiskit.org/documentation/tutorials/circuits/3_summary_of_quantum_operations.html#Basis-vector-ordering-in-Qiskit
 
     """
+
+    # TODO: https://github.com/q-optimize/c3/issues/58
     labels_flipped_counts = {}
     for key, value in counts.items():
         key_bin = bin(int(key, 0))

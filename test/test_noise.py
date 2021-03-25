@@ -194,29 +194,29 @@ carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
 
-RX90p = gates.Instruction(name="RX90p", t_start=0.0, t_end=t_final, channels=["d1"])
+rx90p = gates.Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
 
-RX90p.add_component(gauss_env_single, "d1")
-RX90p.add_component(carr, "d1")
+rx90p.add_component(gauss_env_single, "d1")
+rx90p.add_component(carr, "d1")
 
-pmap = Pmap([RX90p], generator, model)
+pmap = Pmap([rx90p], generator, model)
 
 exp = Exp(pmap)
 
-pmap2 = Pmap([RX90p], generator2, model)
+pmap2 = Pmap([rx90p], generator2, model)
 exp2 = Exp(pmap2)
 
-exp.set_opt_gates(["RX90p"])
+exp.set_opt_gates(["rx90p[0]"])
 
 gateset_opt_map = [
     [
-        ("RX90p", "d1", "gauss", "amp"),
+        ("rx90p[0]", "d1", "gauss", "amp"),
     ],
     [
-        ("RX90p", "d1", "gauss", "freq_offset"),
+        ("rx90p[0]", "d1", "gauss", "freq_offset"),
     ],
     [
-        ("RX90p", "d1", "gauss", "xy_angle"),
+        ("rx90p[0]", "d1", "gauss", "xy_angle"),
     ],
 ]
 
@@ -259,9 +259,9 @@ def test_c1_robust():
 @pytest.mark.slow
 @pytest.mark.integration
 def test_noise_devices():
-    exp.get_gates()
+    exp.compute_propagators()
     fidelity0 = fidelities.average_infid_set(
-        exp.unitaries, [1], exp.pmap.model.dims, 0, proj=True
+        exp.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
     )
 
     noise_map = [
@@ -276,17 +276,17 @@ def test_noise_devices():
 
         exp2.pmap.set_parameters(params, noise_map)
 
-        exp2.get_gates()
+        exp2.compute_propagators()
         fidelityA = fidelities.average_infid_set(
-            exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True
+            exp2.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
         )
         pink_noiseA = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseA = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
         awg_noiseA = exp2.pmap.generator.devices["AWGNoise"].signal["noise-inphase"]
 
-        exp2.get_gates()
+        exp2.compute_propagators()
         fidelityB = fidelities.average_infid_set(
-            exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True
+            exp2.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
         )
         pink_noiseB = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseB = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
