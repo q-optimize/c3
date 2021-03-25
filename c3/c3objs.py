@@ -182,24 +182,33 @@ class Quantity:
         """
         return self.get_value().numpy() / self.pref
 
-    def get_value(self, val: tf.float64 = None) -> tf.Tensor:
+    def get_value(self, val: tf.float64 = None, dtype: tf.dtypes = None) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 
         Parameters
         ----------
         val : tf.float64
+        dtype: tf.dtypes
         """
         if val is None:
             val = self.value
-        return self.scale * (val + 1) / 2 + self.offset
+        if dtype is None:
+            dtype = self.value.dtype
+
+        # TODO: cleanup mashup between numpy and tensorflow (scale and offset or numpyish)
+        value = self.scale * (val + 1) / 2 + self.offset
+        return tf.cast(value, dtype)
 
     def set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
-        tmp = 2 * (np.array(val) * self.pref - self.offset) / self.scale - 1
-        if np.any(tmp < -1) or np.any(tmp > 1):
+        tmp = (
+            2 * (tf.cast(val, dtype=tf.float64) * self.pref - self.offset) / self.scale
+            - 1
+        )
+        if tf.reduce_any([tmp < -1, tmp > 1]):
             raise Exception(
                 f"Value {np.array(val)}{self.unit} out of bounds for quantity with "
                 f"min_val: {num3str(self.offset / self.pref)}{self.unit} and "
@@ -207,12 +216,12 @@ class Quantity:
             )
             # TODO if we want we can extend bounds when force flag is given
         else:
-            if isinstance(val, ops.EagerTensor):
+            if isinstance(val, ops.EagerTensor) or isinstance(val, ops.Tensor):
                 self.value = tf.cast(
                     2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64
                 )
             else:
-                self.value = tf.constant(tmp, dtype=tf.float64)
+                self.value = tf.constant(tmp, tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""
