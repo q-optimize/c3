@@ -93,6 +93,7 @@ class Model:
         """
         ann_opers = []
         dims = self.dims
+        self.tot_dim = np.prod(dims)
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
             ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
@@ -111,11 +112,7 @@ class Model:
             self.state_labels = cut_labels
             excitation_cutter = np.array(proj)
             self.ex_cutter = excitation_cutter
-            ann_opers = [
-                excitation_cutter @ op @ excitation_cutter.T for op in ann_opers
-            ]
 
-        self.tot_dim = ann_opers[0].shape[0]
         self.ann_opers = ann_opers
 
     def __create_matrix_representations(self) -> None:
@@ -256,9 +253,9 @@ class Model:
 
     def get_Hamiltonians(self):
         if self.dressed:
-            return self.dressed_drift_H, self.dressed_control_Hs
+            return self.dressed_drift_ham, self.dressed_control_hams
         else:
-            return self.drift_H, self.control_Hs
+            return self.drift_ham, self.control_hams
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -275,18 +272,22 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_Hs = {}
+        control_hams = {}
         tot_dim = self.tot_dim
-        drift_H = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
+        drift_ham = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
         for sub in self.subsystems.values():
-            drift_H += sub.get_Hamiltonian()
+            drift_ham += sub.get_Hamiltonian()
         for key, line in self.couplings.items():
             if isinstance(line, Coupling):
-                drift_H += line.get_Hamiltonian()
+                drift_ham += line.get_Hamiltonian()
             elif isinstance(line, Drive):
-                control_Hs[key] = line.get_Hamiltonian()
-        self.drift_H = drift_H
-        self.control_Hs = control_Hs
+                control_hams[key] = line.get_Hamiltonian()
+        self.drift_ham = drift_ham
+        self.control_hams = control_hams
+
+    def _cut_by_excitation(self, op):
+        cutter = self.ex_cutter
+        return cutter @ op @ cutter.T
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -299,7 +300,7 @@ class Model:
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
         # TODO Raise error if dressing unsuccesful
-        e, v = tf.linalg.eigh(self.drift_H)
+        e, v = tf.linalg.eigh(self.drift_ham)
         if ordered:
             reorder_matrix = tf.cast(
                 (
@@ -327,18 +328,18 @@ class Model:
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
         self.update_drift_eigen(ordered=ordered)
-        dressed_control_Hs = {}
+        dressed_control_hams = {}
         dressed_col_ops = []
-        dressed_drift_H = tf.matmul(
-            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_H), self.transform
+        dressed_drift_ham = tf.matmul(
+            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_ham), self.transform
         )
-        for key in self.control_Hs:
-            dressed_control_Hs[key] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), self.control_Hs[key]),
+        for key in self.control_hams:
+            dressed_control_hams[key] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), self.control_hams[key]),
                 self.transform,
             )
-        self.dressed_drift_H = dressed_drift_H
-        self.dressed_control_Hs = dressed_control_Hs
+        self.dressed_drift_ham = dressed_drift_ham
+        self.dressed_control_hams = dressed_control_hams
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(

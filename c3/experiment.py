@@ -452,6 +452,10 @@ class Experiment:
         """
         model = self.pmap.model
         h0, hctrls = model.get_Hamiltonians()
+        if model.max_excitations:
+            cutter = model.ex_cutter
+            h0 = cutter @ h0 @ cutter.T
+            hctrls = [cutter @ chs @ cutter.T for chs in hctrls]
         signals = []
         hks = []
         for key in signal:
