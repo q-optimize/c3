@@ -39,7 +39,7 @@ class Model:
         self.dressed = True
         self.lindbladian = False
         self.use_FR = True
-        self.max_excitations = max_excitations
+        self.set_excitations(max_excitations)
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems = {}
@@ -61,7 +61,7 @@ class Model:
         for comp in couplings:
             self.couplings[comp.name] = comp
         self.__create_labels()
-        self.__create_annihilators(max_excitations)
+        self.__create_annihilators()
         self.__create_matrix_representations()
 
     def set_tasks(self, tasks) -> None:
@@ -87,7 +87,7 @@ class Model:
         self.state_labels = list(itertools.product(*state_labels))
         self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
-    def __create_annihilators(self, max_excitations) -> None:
+    def __create_annihilators(self) -> None:
         """
         Construct the annihilation operators for the full system via Kronecker product.
         """
@@ -97,22 +97,6 @@ class Model:
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
             ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
-        if max_excitations:
-            labels = self.state_labels
-            cut_labels = []
-            proj = []
-            ii = 0
-            for li in labels:
-                if sum(li) < max_excitations:
-                    cut_labels.append(li)
-                    line = [0] * len(labels)
-                    line[ii] = 1
-                    proj.append(line)
-                ii += 1
-            self.state_labels = cut_labels
-            excitation_cutter = np.array(proj)
-            self.ex_cutter = excitation_cutter
-
         self.ann_opers = ann_opers
 
     def __create_matrix_representations(self) -> None:
@@ -139,6 +123,29 @@ class Model:
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
         self.update_model()
+        
+    def set_max_excitations(self, max_excitations) -> None:
+        """
+        Set the maximum number of excitations in the system used for propagation.
+        """
+        if max_excitations:
+            labels = self.state_labels
+            cut_labels = []
+            proj = []
+            ii = 0
+            for li in labels:
+                if sum(li) < max_excitations:
+                    cut_labels.append(li)
+                    line = [0] * len(labels)
+                    line[ii] = 1
+                    proj.append(line)
+                ii += 1
+            self.state_labels = cut_labels
+            excitation_cutter = np.array(proj)
+            self.ex_cutter = excitation_cutter
+        else:
+            self.ex_cutter = np.eye(self.tot_dim)
+        self.max_excitations = max_excitations
 
     def read_config(self, filepath: str) -> None:
         """
