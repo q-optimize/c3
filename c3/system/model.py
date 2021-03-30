@@ -114,7 +114,8 @@ class Model:
             ann_opers = [
                 excitation_cutter @ op @ excitation_cutter.T for op in ann_opers
             ]
-            self.tot_dim = ann_opers[0].shape[0]
+
+        self.tot_dim = ann_opers[0].shape[0]
         self.ann_opers = ann_opers
 
     def __create_matrix_representations(self) -> None:
@@ -186,7 +187,8 @@ class Model:
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
-        self.__create_annihilators(cfg["max_excitations"])
+        max_ex = cfg.pop("max_excitations", None)
+        self.__create_annihilators(max_ex)
         self.__create_matrix_representations()
 
     def write_config(self, filepath: str) -> None:
