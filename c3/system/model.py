@@ -39,7 +39,6 @@ class Model:
         self.dressed = True
         self.lindbladian = False
         self.use_FR = True
-        self.set_excitations(max_excitations)
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems = {}
@@ -63,6 +62,7 @@ class Model:
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
+        self.set_max_excitations(max_excitations)
 
     def set_tasks(self, tasks) -> None:
         for task in tasks:
@@ -123,7 +123,7 @@ class Model:
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
         self.update_model()
-        
+
     def set_max_excitations(self, max_excitations) -> None:
         """
         Set the maximum number of excitations in the system used for propagation.
@@ -191,9 +191,10 @@ class Model:
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.__create_labels()
-        max_ex = cfg.pop("max_excitations", None)
-        self.__create_annihilators(max_ex)
+        self.__create_annihilators()
         self.__create_matrix_representations()
+        max_ex = cfg.pop("max_excitations", None)
+        self.set_max_excitations(max_ex)
 
     def write_config(self, filepath: str) -> None:
         """
