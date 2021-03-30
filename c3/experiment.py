@@ -470,7 +470,8 @@ class Experiment:
         dUs = tf.cast(dUs, tf.complex128)
         if model.max_excitations:
             U = cutter.T @ tf_matmul_left(dUs) @ cutter
-            self.partial_propagators[gate] = tf.stop_gradient(cutter.T @ tf_matmul_left(dUs) @ cutter)
+            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
+            self.partial_propagators[gate] = tf.stop_gradient(tf.linalg.matmul(tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs), ex_cutter))
         else:
             U = tf_matmul_left(dUs)
             self.partial_propagators[gate] = dUs
