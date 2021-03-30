@@ -285,10 +285,6 @@ class Model:
         self.drift_ham = drift_ham
         self.control_hams = control_hams
 
-    def _cut_by_excitation(self, op):
-        cutter = self.ex_cutter
-        return cutter @ op @ cutter.T
-
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
         col_ops = []

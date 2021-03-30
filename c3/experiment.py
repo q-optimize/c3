@@ -424,11 +424,8 @@ class Experiment:
                     )
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
-            if model.max_excitations:
-                gates[gate] = model.ex_cutter.T @ U @ model.ex_cutter
-            else:
-                gates[gate] = U
-            self.propagators = gates
+            gates[gate] = U
+        self.propagators = gates
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -472,7 +469,10 @@ class Experiment:
         self.partial_propagators[gate] = dUs
         self.ts = ts
         dUs = tf.cast(dUs, tf.complex128)
-        U = tf_matmul_left(dUs)
+        if model.max_excitations:
+            U = cutter.T @ tf_matmul_left(dUs) @ cutter
+        else:
+            U = tf_matmul_left(dUs)
         self.U = U
         return U
 
