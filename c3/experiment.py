@@ -466,13 +466,14 @@ class Experiment:
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation_vectorized(h0, hks, signals, dt)
-        self.partial_propagators[gate] = dUs
         self.ts = ts
         dUs = tf.cast(dUs, tf.complex128)
         if model.max_excitations:
             U = cutter.T @ tf_matmul_left(dUs) @ cutter
+            self.partial_propagators[gate] = tf.stop_gradient(cutter.T @ tf_matmul_left(dUs) @ cutter)
         else:
             U = tf_matmul_left(dUs)
+            self.partial_propagators[gate] = dUs
         self.U = U
         return U
 
