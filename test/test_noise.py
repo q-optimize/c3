@@ -1,8 +1,6 @@
 import pytest
-
 import pickle
 import numpy as np
-import pytest
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -51,11 +49,7 @@ drive = chip.Drive(
     hamiltonian_func=hamiltonians.x_drive,
 )
 
-model = Mdl(
-    subsystems=[q1],
-    couplings=[drive],
-    tasks=[]
-)
+model = Mdl(subsystems=[q1], couplings=[drive], tasks=[])
 
 model.set_lindbladian(False)
 model.set_dressed(True)
@@ -79,9 +73,9 @@ generator = Gnr(
         ),
         "Mixer": devices.Mixer(name="mixer", inputs=2, outputs=1),
         "DCOffset": devices.DC_Offset(
-            name='dc_offset',
-            offset_amp=Qty(value=0, min_val=-0.2, max_val=0.2, unit='V'),
-            resolution=sim_res
+            name="dc_offset",
+            offset_amp=Qty(value=0, min_val=-0.2, max_val=0.2, unit="V"),
+            resolution=sim_res,
         ),
         "VoltsToHertz": devices.VoltsToHertz(
             name="v_to_hz",
@@ -91,7 +85,15 @@ generator = Gnr(
         ),
     },
     chains={
-        "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "DCOffset", "VoltsToHertz"],
+        "d1": [
+            "LO",
+            "AWG",
+            "DigitalToAnalog",
+            "Response",
+            "Mixer",
+            "DCOffset",
+            "VoltsToHertz",
+        ],
     },
 )
 
@@ -111,31 +113,31 @@ generator2 = Gnr(
         ),
         "Mixer": devices.Mixer(name="mixer", inputs=2, outputs=1),
         "DCOffset": devices.DC_Offset(
-            name='dc_offset',
-            offset_amp=Qty(value=0, min_val=-0.2, max_val=0.2, unit='V'),
-            resolution=sim_res
+            name="dc_offset",
+            offset_amp=Qty(value=0, min_val=-0.2, max_val=0.2, unit="V"),
+            resolution=sim_res,
         ),
         "Highpass": devices.HighpassFilter(
             name="highpass",
-            cutoff=Qty(value=100e3 * 2 * np.pi, unit='Hz 2Pi'),
-            rise_time=Qty(value=25e3 * 2 * np.pi, unit='Hz 2Pi'),
-            resolution=sim_res
+            cutoff=Qty(value=100e3 * 2 * np.pi, unit="Hz 2Pi"),
+            rise_time=Qty(value=25e3 * 2 * np.pi, unit="Hz 2Pi"),
+            resolution=sim_res,
         ),
         "AWGNoise": devices.Additive_Noise(
-            name='awg_noise',
-            noise_amp=Qty(value=0, min_val=-0.01, max_val=1, unit='Phi0'),
-            resolution=sim_res
+            name="awg_noise",
+            noise_amp=Qty(value=0, min_val=-0.01, max_val=1, unit="Phi0"),
+            resolution=sim_res,
         ),
         "DCNoise": devices.DC_Noise(
-            name='dc_noise',
-            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit='V'),
-            resolution=sim_res
+            name="dc_noise",
+            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
+            resolution=sim_res,
         ),
         "PinkNoise": devices.Pink_Noise(
-            name='pink_noise',
-            noise_strength=Qty(value=0, min_val=0.00, max_val=1, unit='V'),
+            name="pink_noise",
+            noise_amp=Qty(value=0, min_val=0.00, max_val=1, unit="V"),
             bfl_num=Qty(value=15),
-            resolution=sim_res
+            resolution=sim_res,
         ),
         "VoltsToHertz": devices.VoltsToHertz(
             name="v_to_hz",
@@ -145,8 +147,19 @@ generator2 = Gnr(
         ),
     },
     chains={
-        "d1": ["LO", "AWG", "AWGNoise", "DigitalToAnalog", "Response", "Highpass", "Mixer", "DCNoise", "PinkNoise",
-               "DCOffset", "VoltsToHertz"],
+        "d1": [
+            "LO",
+            "AWG",
+            "AWGNoise",
+            "DigitalToAnalog",
+            "Response",
+            "Highpass",
+            "Mixer",
+            "DCNoise",
+            "PinkNoise",
+            "DCOffset",
+            "VoltsToHertz",
+        ],
     },
 )
 
@@ -181,30 +194,30 @@ carr = pulse.Carrier(
     name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
 )
 
-X90p = gates.Instruction(name="X90p", t_start=0.0, t_end=t_final, channels=["d1"])
+rx90p = gates.Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
 
-X90p.add_component(gauss_env_single, "d1")
-X90p.add_component(carr, "d1")
+rx90p.add_component(gauss_env_single, "d1")
+rx90p.add_component(carr, "d1")
 
-pmap = Pmap([X90p], generator, model)
+pmap = Pmap([rx90p], generator, model)
 
 exp = Exp(pmap)
 
-pmap2 = Pmap([X90p], generator2, model)
+pmap2 = Pmap([rx90p], generator2, model)
 exp2 = Exp(pmap2)
 
-exp.set_opt_gates(["X90p"])
+exp.set_opt_gates(["rx90p[0]"])
 
 gateset_opt_map = [
     [
-        ("X90p", "d1", "gauss", "amp"),
+        ("rx90p[0]", "d1", "gauss", "amp"),
     ],
     [
-        ("X90p", "d1", "gauss", "freq_offset"),
+        ("rx90p[0]", "d1", "gauss", "freq_offset"),
     ],
     [
-        ("X90p", "d1", "gauss", "xy_angle"),
-    ]
+        ("rx90p[0]", "d1", "gauss", "xy_angle"),
+    ],
 ]
 
 pmap.set_opt_map(gateset_opt_map)
@@ -215,7 +228,7 @@ pmap.set_opt_map(gateset_opt_map)
 @pytest.mark.integration
 @pytest.mark.skip(reason="Data needs to be updated")
 def test_c1_robust():
-    noise_map = [[np.linspace(-0.1, 0.1, 5), [('dc_offset', 'offset_amp')]]]
+    noise_map = [[np.linspace(-0.1, 0.1, 5), [("dc_offset", "offset_amp")]]]
     opt = C1_robust(
         dir_path="/tmp/c3log/",
         fid_func=fidelities.average_infid_set,
@@ -231,26 +244,32 @@ def test_c1_robust():
 
     opt.optimize_controls()
 
-    assert opt.optim_status['goal'] < 0.1
+    assert opt.optim_status["goal"] < 0.1
     assert opt.current_best_goal < 0.1
-    assert np.all(np.abs(opt.optim_status['gradient']) > 0)
-    assert np.all(np.abs(opt.optim_status['gradient_std']) > 0)
-    assert np.abs(opt.optim_status['goal_std']) > 0
+    assert np.all(np.abs(opt.optim_status["gradient"]) > 0)
+    assert np.all(np.abs(opt.optim_status["gradient_std"]) > 0)
+    assert np.abs(opt.optim_status["goal_std"]) > 0
 
-    with open('test/c1_robust.pickle', 'rb') as f:
+    with open("test/c1_robust.pickle", "rb") as f:
         data = pickle.load(f)
 
-    for k, v in data['c1_robust_lbfgs'].items():
+    for k, v in data["c1_robust_lbfgs"].items():
         assert np.any(np.abs(np.array(opt.optim_status[k]) - np.array(v)) < 1e-7)
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 def test_noise_devices():
-    exp.get_gates()
-    fidelity0 = fidelities.average_infid_set(exp.unitaries, [1], exp.pmap.model.dims, 0, proj=True)
+    exp.compute_propagators()
+    fidelity0 = fidelities.average_infid_set(
+        exp.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
+    )
 
-    noise_map = [[('pink_noise', 'noise_strength')], [('dc_noise', 'noise_amp')], [('awg_noise', 'noise_amp')]]
+    noise_map = [
+        [("pink_noise", "noise_amp")],
+        [("dc_noise", "noise_amp")],
+        [("awg_noise", "noise_amp")],
+    ]
     for i in range(len(noise_map) + 1):
         params = np.zeros(len(noise_map))
         if i < len(noise_map):
@@ -258,14 +277,18 @@ def test_noise_devices():
 
         exp2.pmap.set_parameters(params, noise_map)
 
-        exp2.get_gates()
-        fidelityA = fidelities.average_infid_set(exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True)
+        exp2.compute_propagators()
+        fidelityA = fidelities.average_infid_set(
+            exp2.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
+        )
         pink_noiseA = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseA = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
         awg_noiseA = exp2.pmap.generator.devices["AWGNoise"].signal["noise-inphase"]
 
-        exp2.get_gates()
-        fidelityB = fidelities.average_infid_set(exp2.unitaries, [1], exp2.pmap.model.dims, 0, proj=True)
+        exp2.compute_propagators()
+        fidelityB = fidelities.average_infid_set(
+            exp2.propagators, pmap.instructions, index=[0], dims=exp.pmap.model.dims
+        )
         pink_noiseB = exp2.pmap.generator.devices["PinkNoise"].signal["noise"]
         dc_noiseB = exp2.pmap.generator.devices["DCNoise"].signal["noise"]
         awg_noiseB = exp2.pmap.generator.devices["AWGNoise"].signal["noise-inphase"]

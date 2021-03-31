@@ -114,7 +114,7 @@ source env/bin/activate
 pip install -e .
 ```
 
-This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit==0.23`.
+This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, `pytest-xdist` and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit==0.23.2`.
 
 ## Coding Standards
 
@@ -185,12 +185,12 @@ Python is a dynamically typed language which is great when you are solving a hom
 Example type annotation:
 
 ```python
-def func(x: tf.Variable) -> tf.Variable:
+def func(x: tf.constant) -> tf.constant:
   """
   Do cool TensorFlow Stuff
   """
   # fancy tensorflow GPU autodiff tensor operations
-  return tf.Variable(result)
+  return tf.constant(result)
 ```
 
 Check [this resource](https://realpython.com/python-type-checking/#annotations) for more details on Type Checking and Annotation.

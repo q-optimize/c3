@@ -177,7 +177,7 @@ class C3(Optimizer):
             pass
 
     def _one_par_sim_vals(
-        self, current_params: tf.Variable, m: dict, ipar: int, target: str
+        self, current_params: tf.constant, m: dict, ipar: int, target: str
     ) -> tf.float64:
         seqs_pp = self.seqs_per_point
         m = self.learn_from[ipar]
@@ -190,7 +190,7 @@ class C3(Optimizer):
         # We find the unique gates used in the sequence and compute
         # only those.
         self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
-        self.exp.get_gates()
+        self.exp.compute_propagators()
         pops = self.exp.evaluate(sequences)
         sim_vals, pops = self.exp.process(
             labels=self.state_labels[target], populations=pops
@@ -231,7 +231,7 @@ class C3(Optimizer):
                     )
                 logfile.flush()
 
-    def goal_run(self, current_params: tf.Variable) -> tf.float64:
+    def goal_run(self, current_params: tf.constant) -> tf.float64:
         """
         Evaluate the figure of merit for the current model parameters.
 
@@ -281,15 +281,15 @@ class C3(Optimizer):
                     one_goal = neg_loglkh_multinom_norm(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.Variable(m_stds, dtype=tf.float64),
-                        tf.Variable(m_shots, dtype=tf.float64),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 else:
                     one_goal = g_LL_prime(
                         m_vals,
                         tf.stack(sim_vals),
-                        tf.Variable(m_stds, dtype=tf.float64),
-                        tf.Variable(m_shots, dtype=tf.float64),
+                        tf.constant(m_stds, dtype=tf.float64),
+                        tf.constant(m_shots, dtype=tf.float64),
                     )
                 exp_stds.extend(m_stds)
                 exp_shots.extend(m_shots)
@@ -363,15 +363,15 @@ class C3(Optimizer):
                         one_goal = neg_loglkh_multinom_norm(
                             m_vals,
                             tf.stack(sim_vals),
-                            tf.Variable(m_stds, dtype=tf.float64),
-                            tf.Variable(m_shots, dtype=tf.float64),
+                            tf.constant(m_stds, dtype=tf.float64),
+                            tf.constant(m_shots, dtype=tf.float64),
                         )
                     else:
                         one_goal = g_LL_prime(
                             m_vals,
                             tf.stack(sim_vals),
-                            tf.Variable(m_stds, dtype=tf.float64),
-                            tf.Variable(m_shots, dtype=tf.float64),
+                            tf.constant(m_stds, dtype=tf.float64),
+                            tf.constant(m_shots, dtype=tf.float64),
                         )
 
                 exp_stds.extend(m_stds)
@@ -440,15 +440,15 @@ class C3(Optimizer):
                 goal = neg_loglkh_multinom_norm(
                     exp_values,
                     tf.stack(sim_values),
-                    tf.Variable(exp_stds, dtype=tf.float64),
-                    tf.Variable(exp_shots, dtype=tf.float64),
+                    tf.constant(exp_stds, dtype=tf.float64),
+                    tf.constant(exp_shots, dtype=tf.float64),
                 )
             else:
                 goal = g_LL_prime(
                     exp_values,
                     tf.stack(sim_values),
-                    tf.Variable(exp_stds, dtype=tf.float64),
-                    tf.Variable(exp_shots, dtype=tf.float64),
+                    tf.constant(exp_stds, dtype=tf.float64),
+                    tf.constant(exp_shots, dtype=tf.float64),
                 )
             grad = t.gradient(goal, current_params).numpy()
             goal = goal.numpy()

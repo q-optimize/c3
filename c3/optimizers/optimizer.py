@@ -3,11 +3,11 @@
 import os
 import time
 from typing import Callable, Union
-
 import numpy as np
 import tensorflow as tf
 import json
 import c3.libraries.algorithms as algorithms
+from c3.experiment import Experiment
 
 
 class Optimizer:
@@ -18,10 +18,6 @@ class Optimizer:
     ----------
     algorithm : callable
         From the algorithm library
-    plot_dynamics : boolean
-        Save plots of time-resolved dynamics in dir_path
-    plot_pulses : boolean
-        Save plots of control signals
     store_unitaries : boolean
         Store propagators as text and pickle
     """
@@ -42,7 +38,7 @@ class Optimizer:
         self.created_by = None
         self.logname = None
         self.options = None
-        self.dir_path = None
+        self.__dir_path = None
         self.logdir = None
         self.set_algorithm(algorithm)
 
@@ -64,17 +60,22 @@ class Optimizer:
         """
         old_logdir = self.logdir
         self.logdir = new_logdir
+
+        if old_logdir is None:
+            return
+
         try:
-            os.remove(os.path.join(self.dir_path, "recent"))
+            os.remove(os.path.join(self.__dir_path, "recent"))
         except FileNotFoundError:
             pass
-        # os.remove(self.dir_path + self.string)
+        # os.remove(self.__dir_path + self.string)
+
         try:
             os.rmdir(old_logdir)
         except OSError:
             pass
 
-    def set_exp(self, exp) -> None:
+    def set_exp(self, exp: Experiment) -> None:
         self.exp = exp
 
     def set_created_by(self, config) -> None:
@@ -133,7 +134,7 @@ class Optimizer:
         Save the best unitary in the log.
         """
         with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
-            U_dict = self.exp.unitaries
+            U_dict = self.exp.propagators
             for gate, U in U_dict.items():
                 best_point.write("\n")
                 best_point.write(f"Re {gate}: \n")
@@ -172,8 +173,8 @@ class Optimizer:
             logfile.flush()
 
     def goal_run(
-        self, current_params: Union[np.ndarray, tf.Variable]
-    ) -> Union[np.ndarray, tf.Variable]:
+        self, current_params: Union[np.ndarray, tf.constant]
+    ) -> Union[np.ndarray, tf.constant]:
         """
         Placeholder for the goal function. To be implemented by inherited classes.
         """
@@ -201,27 +202,36 @@ class Optimizer:
             Value of the gradient.
         """
         key = str(x)
-        return self.gradients.pop(key)
+        gradient = self.gradients.pop(key)
+        if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
+            # TODO: is simply a warning sufficient?
+            gradient[
+                np.isnan(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
+            gradient[
+                np.isinf(gradient)
+            ] = 1e-10  # Most probably at boundary of Quantity
+        return gradient
 
     def fct_to_min(
-        self, input_parameters: Union[np.ndarray, tf.Variable]
-    ) -> Union[np.ndarray, tf.Variable]:
+        self, input_parameters: Union[np.ndarray, tf.constant]
+    ) -> Union[np.ndarray, tf.constant]:
         """
         Wrapper for the goal function.
 
         Parameters
         ----------
-        x : [np.array, tf.Variable]
+        x : [np.array, tf.constant]
             Vector of parameters in the optimizer friendly way.
 
         Returns
         -------
-        [float, tf.Variable]
-            Value of the goal function. Float if input is np.array else tf.Variable
+        [float, tf.constant]
+            Value of the goal function. Float if input is np.array else tf.constant
         """
 
         if isinstance(input_parameters, np.ndarray):
-            current_params = tf.Variable(input_parameters)
+            current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
             self.log_parameters()
             goal = float(goal)
@@ -247,7 +257,7 @@ class Optimizer:
          float
              Value of the goal function.
         """
-        current_params = tf.Variable(x)
+        current_params = tf.constant(x)
         goal, grad = self.goal_run_with_grad(current_params)
         if isinstance(grad, tf.Tensor):
             grad = grad.numpy()

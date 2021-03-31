@@ -8,10 +8,6 @@ import copy
 import pickle
 import pytest
 import numpy as np
-import time
-import itertools
-import tensorflow as tf
-import tensorflow_probability as tfp
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
@@ -25,15 +21,10 @@ import c3.generator.devices as devices
 import c3.signal.gates as gates
 import c3.system.chip as chip
 import c3.signal.pulse as pulse
-import c3.system.tasks as tasks
 
 # Libs and helpers
-import c3.libraries.algorithms as algorithms
 import c3.libraries.hamiltonians as hamiltonians
-import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
-import c3.utils.qt_utils as qt_utils
-import c3.utils.tf_utils as tf_utils
 
 
 lindblad = False
@@ -188,6 +179,7 @@ fluxbias = devices.FluxTuning(
         value=freq_tc, min_val=0.9 * freq_tc, max_val=1.1 * freq_tc, unit="Hz 2pi"
     ),
     d=Qty(value=d, min_val=d * 0.9, max_val=d * 1.1, unit=""),
+    anhar=Qty(value=anhar_q1, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
 )
 v_to_hz = devices.VoltsToHertz(
     name="v2hz",
@@ -250,20 +242,25 @@ flux_env = pulse.Envelope(
     params=flux_params,
     shape=envelopes.flattop,
 )
-CZ = gates.Instruction(
-    name="Id:CZ", t_start=0.0, t_end=cphase_time, channels=["Q1", "Q2", "TC"]
+crzp = gates.Instruction(
+    name="crzp",
+    targets=[0, 1],
+    t_start=0.0,
+    t_end=cphase_time,
+    channels=["Q1", "Q2", "TC"],
 )
-CZ.add_component(flux_env, "TC")
-CZ.add_component(carr_tc, "TC")
-CZ.add_component(nodrive_env, "Q1")
-CZ.add_component(carr_q1, "Q1")
-CZ.comps["Q1"]["carrier"].params["framechange"].set_value(framechange_q1)
-CZ.add_component(nodrive_env, "Q2")
-CZ.add_component(carr_q2, "Q2")
-CZ.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
+crzp.add_component(flux_env, "TC")
+crzp.add_component(carr_tc, "TC")
+crzp.add_component(nodrive_env, "Q1")
+crzp.add_component(carr_q1, "Q1")
+crzp.comps["Q1"]["carrier"].params["framechange"].set_value(framechange_q1)
+crzp.add_component(nodrive_env, "Q2")
+crzp.add_component(carr_q2, "Q2")
+crzp.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
+
 
 # ### MAKE EXPERIMENT
-parameter_map = PMap(instructions=[CZ], model=model, generator=generator)
+parameter_map = PMap(instructions=[crzp], model=model, generator=generator)
 exp = Exp(pmap=parameter_map)
 
 ##### TESTING ######
@@ -362,9 +359,7 @@ def test_energy_levels() -> None:
     assert (np.abs(product_basis - data["product_basis"]) < 1).all()
     assert (np.abs(ordered_basis - data["ordered_basis"]) < 1).all()
     # Dressed basis might change at avoided crossings depending on how we
-    # decide to deal with it. Atm now error is given and the energy levels
-    # are mapped to the lowest level.
-    # This happens when an eigenvalue doesn't have any overlap larger than 50%
+    # decide to deal with it. Atm no state with largest probability is chosen.
     assert (np.abs(dressed_basis - data["dressed_basis"]) < 1).all()
 
 
@@ -372,12 +367,12 @@ def test_energy_levels() -> None:
 @pytest.mark.integration
 def test_dynamics_CPHASE() -> None:
     # Dynamics (closed system)
-    exp.set_opt_gates(["Id:CZ"])
-    exp.get_gates()
+    exp.set_opt_gates(["crzp[0, 1]"])
+    exp.compute_propagators()
     dUs = []
-    for indx in range(len(exp.dUs["Id:CZ"])):
+    for indx in range(len(exp.partial_propagators["crzp[0, 1]"])):
         if indx % 50 == 0:
-            dUs.append(exp.dUs["Id:CZ"][indx].numpy())
+            dUs.append(exp.partial_propagators["crzp[0, 1]"][indx].numpy())
     dUs = np.array(dUs)
     assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
     assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
@@ -391,8 +386,8 @@ def test_dynamics_CPHASE() -> None:
 def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
-    U_dict = exp.get_gates()
-    U_super = U_dict["Id:CZ"]
+    U_dict = exp.compute_propagators()
+    U_super = U_dict["crzp[0, 1]"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
@@ -409,10 +404,10 @@ def test_separate_chains() -> None:
 @pytest.mark.slow
 @pytest.mark.integration
 def test_flux_signal() -> None:
-    instr = exp.pmap.instructions["Id:CZ"]
+    instr = exp.pmap.instructions["crzp[0, 1]"]
     signal = exp.pmap.generator.generate_signals(instr)
     awg = exp.pmap.generator.devices["awg"]
-    mixer = exp.pmap.generator.devices["mixer"]
+    # mixer = exp.pmap.generator.devices["mixer"]
     channel = "TC"
     tc_signal = signal[channel]["values"].numpy()
     tc_ts = signal[channel]["ts"].numpy()
@@ -429,3 +424,46 @@ def test_flux_signal() -> None:
     assert (rel_diff < 1e-12).all()
     rel_diff = np.abs((tc_awg_ts - data["tc_awg_ts"]) / np.max(data["tc_awg_ts"]))
     assert (rel_diff < 1e-12).all()
+
+
+@pytest.mark.unit
+def test_FluxTuning():
+    flux_tune = devices.FluxTuning(
+        name="flux_tune",
+        phi_0=Qty(phi_0_tc),
+        phi=Qty(value=0, min_val=-phi_0_tc, max_val=phi_0_tc),
+        omega_0=Qty(freq_tc),
+        anhar=Qty(anhar_TC),
+        d=Qty(d),
+    )
+
+    transmon = chip.Transmon(
+        name="transmon",
+        hilbert_dim=3,
+        freq=Qty(freq_tc),
+        phi=Qty(value=0, min_val=-1.5 * phi_0_tc, max_val=1.5 * phi_0_tc),
+        phi_0=Qty(phi_0_tc),
+        d=Qty(d),
+        anhar=Qty(anhar_TC),
+    )
+
+    bias_phis = [0, 0.2]
+    phis = np.linspace(-1, 1, 10) * phi_0_tc
+
+    for bias_phi in bias_phis:
+        flux_tune.params["phi"].set_value(bias_phi)
+        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal_out = flux_tune.process(None, None, signal)
+        flux_tune_frequencies = signal_out["values"].numpy()
+
+        transmon_frequencies = []
+        transmon.params["phi"].set_value(bias_phi)
+        bias_freq = transmon.get_freq()
+        for phi in phis + bias_phi:
+            transmon.params["phi"].set_value(phi)
+            transmon_frequencies.append(transmon.get_freq())
+        transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
+
+        assert (
+            np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
+        )

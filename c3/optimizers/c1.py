@@ -65,14 +65,6 @@ class C1(Optimizer):
     def log_setup(self) -> None:
         """
         Create the folders to store data.
-
-        Parameters
-        ----------
-        dir_path : str
-            Filepath
-        run_name : str
-            User specified name for the run
-
         """
         dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
@@ -90,11 +82,12 @@ class C1(Optimizer):
         self.pmap.model.update_model()
         shutil.copy(adjust_exp, os.path.join(self.logdir, "adjust_exp.log"))
 
-    def optimize_controls(self) -> None:
+    def optimize_controls(self, setup_log: bool = True) -> None:
         """
         Apply a search algorithm to your gateset given a fidelity function.
         """
-        self.log_setup()
+        if setup_log:
+            self.log_setup()
         self.start_log()
         self.exp.set_enable_store_unitaries(self.store_unitaries, self.logdir)
         print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
@@ -134,13 +127,11 @@ class C1(Optimizer):
         if self.update_model:
             self.pmap.model.update_model()
         dims = self.pmap.model.dims
-        propagators = self.exp.get_gates()
-        try:
-            goal = self.fid_func(propagators, self.index, dims, self.evaluation + 1)
-        except TypeError:
-            goal = self.fid_func(
-                self.exp, propagators, self.index, dims, self.evaluation + 1
-            )
+        propagators = self.exp.compute_propagators()
+
+        goal = self.fid_func(
+            propagators, self.pmap.instructions, self.index, dims, self.evaluation + 1
+        )
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")

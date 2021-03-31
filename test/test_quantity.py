@@ -107,3 +107,23 @@ def test_qty_matrix_set() -> None:
 @pytest.mark.unit
 def test_qty_matrix_set_opt() -> None:
     assert (matrix.get_opt_value() == [1.0, -1.0, -1.0, 1.0]).all()
+
+
+def test_qty_np_conversions() -> None:
+    a = Quantity(value=3, unit="unit")
+    assert repr(a) == "3.000 unit"
+    assert np.mod(a, 2) == 1.0
+    assert type(a.numpy()) is np.float64 or type(a.numpy()) is np.ndarray
+    assert a + a == 6
+    np.array([a])  # test conversion
+    np.array(a)
+    float(a)
+    assert np.mod([a], 2) == np.array([[1.0]])
+    assert list(a) == [3.0]
+
+    b = Quantity(np.array([0.0000001, 0.00001]))
+    np.array([b])
+
+    c = Quantity([0, 0.1], min_val=0, max_val=1)
+    assert len(c) == 2
+    assert c.shape == (2,)

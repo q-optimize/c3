@@ -49,6 +49,11 @@ class Model:
         if tasks:
             self.set_tasks(tasks)
 
+    def get_ground_state(self) -> tf.constant:
+        gs = [[0] * self.tot_dim]
+        gs[0][0] = 1
+        return tf.transpose(tf.constant(gs, dtype=tf.complex128))
+
     def set_components(self, subsystems, couplings=None) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
@@ -275,7 +280,13 @@ class Model:
         # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_H)
         if ordered:
-            reorder_matrix = tf.round(tf.abs(v) ** 2)
+            reorder_matrix = tf.cast(
+                (
+                    tf.expand_dims(tf.reduce_max(tf.abs(v) ** 2, axis=1), 1)
+                    == tf.abs(v) ** 2
+                ),
+                tf.float64,
+            )
             signed_rm = tf.cast(
                 # TODO determine if the changing of sign is needed
                 # (by looking at TC_eneregies_bases I see no difference)
@@ -337,14 +348,14 @@ class Model:
         tf.Tensor
             A (diagonal) propagator that adjust phases
         """
-        exponent = tf.Variable(0.0, dtype=tf.complex128)
+        exponent = tf.constant(0.0, dtype=tf.complex128)
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[self.names.index(qubit)]
-            num_oper = tf.Variable(
+            num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
             # TODO test dressing of FR
@@ -381,19 +392,21 @@ class Model:
             qubit = self.couplings[line].connected[0]
             # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[self.names.index(qubit)]
-            num_oper = tf.Variable(
+            num_oper = tf.constant(
                 np.matmul(ann_oper.T.conj(), ann_oper), dtype=tf.complex128
             )
             Z = tf_utils.tf_super(
                 tf.linalg.expm(
-                    1.0j * num_oper * tf.Variable(np.pi, dtype=tf.complex128)
+                    1.0j * num_oper * tf.constant(np.pi, dtype=tf.complex128)
                 )
             )
             p = t_final * amp * self.dephasing_strength
-            print("dephasing stength: ", p)
             if p.numpy() > 1 or p.numpy() < 0:
-                raise ValueError("strengh of dephasing channels outside [0,1]")
-                print("dephasing stength: ", p)
+                raise ValueError(
+                    "Dephasing channel strength {strength} is outside [0,1] range".format(
+                        strength=p
+                    )
+                )
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch

@@ -1,4 +1,4 @@
-C3 Backend for Qiskit Experiments
+C3 Simulator as a backend for Qiskit Experiments
 ================================================
 
 This notebook demonstrates the use of the C3 Simulator with a high-level
@@ -7,30 +7,31 @@ must additionally install qiskit and matplotlib to run this example.
 
 .. code:: ipython3
 
-    #!pip install qiskit matplotlib
+    !pip install -q qiskit==0.23.6 matplotlib==3.3.4
 
 .. code:: ipython3
 
+    import numpy as np
     from c3.qiskit import C3Provider
-    from qiskit import transpile, execute, QuantumCircuit
-    from qiskit.tools.visualization import plot_histogram, plot_state_city
+    from qiskit import transpile, execute, QuantumCircuit, Aer
+    from qiskit.tools.visualization import plot_histogram
 
-Define a basic circuit to make a Bell State
--------------------------------------------
+Define a basic Quantum circuit
+------------------------------
 
 .. code:: ipython3
 
     qc = QuantumCircuit(6, 6)
-    qc.x(0)
-    qc.cx(0,1)
-    qc.measure([0, 1], [0, 1])
+    qc.rx(np.pi/2, 0)
+    qc.rx(np.pi/2, 1)
+    qc.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
 
 
 
 
 .. parsed-literal::
 
-    <qiskit.circuit.instructionset.InstructionSet at 0x7f086f0b3280>
+    <qiskit.circuit.instructionset.InstructionSet at 0x7f08b3621280>
 
 
 
@@ -43,21 +44,21 @@ Define a basic circuit to make a Bell State
 
 .. raw:: html
 
-    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌───┐     ┌─┐   
-    q_0: ┤ X ├──■──┤M├───
-         └───┘┌─┴─┐└╥┘┌─┐
-    q_1: ─────┤ X ├─╫─┤M├
-              └───┘ ║ └╥┘
-    q_2: ───────────╫──╫─
-                    ║  ║ 
-    q_3: ───────────╫──╫─
-                    ║  ║ 
-    q_4: ───────────╫──╫─
-                    ║  ║ 
-    q_5: ───────────╫──╫─
-                    ║  ║ 
-    c: 6/═══════════╩══╩═
-                    0  1 </pre>
+    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌─────────┐         ┌─┐   
+    q_0: ┤ RX(π/2) ├─────────┤M├───
+         ├─────────┤         └╥┘┌─┐
+    q_1: ┤ RX(π/2) ├──────────╫─┤M├
+         └───┬─┬───┘          ║ └╥┘
+    q_2: ────┤M├──────────────╫──╫─
+             └╥┘    ┌─┐       ║  ║ 
+    q_3: ─────╫─────┤M├───────╫──╫─
+              ║     └╥┘┌─┐    ║  ║ 
+    q_4: ─────╫──────╫─┤M├────╫──╫─
+              ║      ║ └╥┘┌─┐ ║  ║ 
+    q_5: ─────╫──────╫──╫─┤M├─╫──╫─
+              ║      ║  ║ └╥┘ ║  ║ 
+    c: 6/═════╩══════╩══╩══╩══╩══╩═
+              2      3  4  5  0  1 </pre>
 
 
 
@@ -67,7 +68,7 @@ Get the C3 Provider and Backend
 .. code:: ipython3
 
     c3_provider = C3Provider()
-    c3_backend = c3_provider.get_backend("c3_qasm_simulator")
+    c3_backend = c3_provider.get_backend("c3_qasm_perfect_simulator")
 
 .. code:: ipython3
 
@@ -82,11 +83,11 @@ Get the C3 Provider and Backend
 
 .. parsed-literal::
 
-    Name: c3_qasm_simulator
-    Version: 1.1
-    Max Qubits: 15
+    Name: c3_qasm_perfect_simulator
+    Version: 0.1
+    Max Qubits: 20
     OpenPulse Support: False
-    Basis Gates: ['u3', 'cx', 'id', 'x']
+    Basis Gates: ['cx', 'cz', 'iSwap', 'id', 'x', 'y', 'z', 'rx', 'ry', 'rz', 'rzx']
 
 
 Let’s view how the Qiskit Transpiler will convert the circuit
@@ -105,30 +106,31 @@ Let’s view how the Qiskit Transpiler will convert the circuit
 
 .. raw:: html
 
-    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌───┐     ┌─┐   
-    q_0: ┤ X ├──■──┤M├───
-         └───┘┌─┴─┐└╥┘┌─┐
-    q_1: ─────┤ X ├─╫─┤M├
-              └───┘ ║ └╥┘
-    q_2: ───────────╫──╫─
-                    ║  ║ 
-    q_3: ───────────╫──╫─
-                    ║  ║ 
-    q_4: ───────────╫──╫─
-                    ║  ║ 
-    q_5: ───────────╫──╫─
-                    ║  ║ 
-    c: 6/═══════════╩══╩═
-                    0  1 </pre>
+    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌─────────┐         ┌─┐   
+    q_0: ┤ RX(π/2) ├─────────┤M├───
+         ├─────────┤         └╥┘┌─┐
+    q_1: ┤ RX(π/2) ├──────────╫─┤M├
+         └───┬─┬───┘          ║ └╥┘
+    q_2: ────┤M├──────────────╫──╫─
+             └╥┘    ┌─┐       ║  ║ 
+    q_3: ─────╫─────┤M├───────╫──╫─
+              ║     └╥┘┌─┐    ║  ║ 
+    q_4: ─────╫──────╫─┤M├────╫──╫─
+              ║      ║ └╥┘┌─┐ ║  ║ 
+    q_5: ─────╫──────╫──╫─┤M├─╫──╫─
+              ║      ║  ║ └╥┘ ║  ║ 
+    c: 6/═════╩══════╩══╩══╩══╩══╩═
+              2      3  4  5  0  1 </pre>
 
 
 
-Run the simulation job
-----------------------
+Run an ideal device simulation using C3
+---------------------------------------
 
 .. code:: ipython3
 
     c3_backend.set_device_config("quickstart.hjson")
+    c3_backend.disable_flip_labels()
     c3_job = execute(qc, c3_backend, shots=1000)
     result = c3_job.result()
 
@@ -140,16 +142,33 @@ Run the simulation job
 
 .. parsed-literal::
 
-    {'000000': 164, '010000': 799, '100000': 14}
+    {'000000': 250, '010000': 250, '100000': 250, '110000': 250}
 
 
 .. code:: ipython3
 
-    plot_histogram(res_counts, title='6-qubit physics simulation')
+    plot_histogram(res_counts, title='C3 Perfect Devices simulation')
 
 
 
 
-.. image:: c3_qiskit_files/c3_qiskit_16_0.png
+.. image:: c3_qiskit_files/c3_qiskit_16_0.svg
+
+
+
+Run Simulation and verify results on Qiskit simulator
+-----------------------------------------------------
+
+.. code:: ipython3
+
+    qiskit_simulator = Aer.get_backend('qasm_simulator')
+    qiskit_result = execute(qc, qiskit_simulator, shots=1000).result()
+    counts = qiskit_result.get_counts(qc)
+    plot_histogram(counts, title='Qiskit simulation')
+
+
+
+
+.. image:: c3_qiskit_files/c3_qiskit_18_0.svg
 
 
