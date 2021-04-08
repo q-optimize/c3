@@ -1041,7 +1041,7 @@ class AWG(Device):
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle + freq_offset * ts
+                phase = xy_angle + freq_offset * ts
                 env = comp.get_shape_values(ts)
                 # TODO option to have t_before
                 # env = comp.get_shape_values(ts, t_before)
@@ -1112,7 +1112,7 @@ class AWG(Device):
                 denv = t.gradient(env, ts)
                 if denv is None:
                     denv = tf.zeros_like(ts, dtype=tf.float64)
-                phase = -xy_angle + freq_offset * ts
+                phase = xy_angle + freq_offset * ts
                 inphase_comps.append(
                     amp * (env * tf.cos(phase) + denv * delta * tf.sin(phase))
                 )
@@ -1172,7 +1172,7 @@ class AWG(Device):
                     quadrature = tf.math.imag(shape)
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle + freq_offset * ts
+                phase = xy_angle + freq_offset * ts
 
                 if len(inphase) != len(quadrature):
                     raise ValueError("inphase and quadrature are of different lengths.")

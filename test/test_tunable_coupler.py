@@ -63,7 +63,7 @@ flux_freq = 829 * 1e6
 offset = 0 * 1e6
 fluxamp = 0.1 * phi_0_tc
 t_down = cphase_time - 5e-9
-xy_angle = 0.3590456701578104
+xy_angle = -0.3590456701578104
 framechange_q1 = 0.725 * np.pi
 framechange_q2 = 1.221 * np.pi
 

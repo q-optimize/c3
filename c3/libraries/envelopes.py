@@ -112,7 +112,7 @@ def fourier_cos(t, params):
 
 
 @env_reg_deco
-def rect(t, params):
+def rect(t, params=None):
     """Rectangular pulse. Returns 1 at every time step."""
     return tf.ones_like(t, tf.float64)
 
