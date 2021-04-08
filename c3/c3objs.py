@@ -85,10 +85,10 @@ class Quantity:
 
         self.pref = pref
         if min_val is None and max_val is None:
-            if value != 0:
+            if value.any():
                 minmax = [0.9 * value, 1.1 * value]
-                min_val = min(minmax)
-                max_val = max(minmax)
+                min_val = np.min(minmax)
+                max_val = np.max(minmax)
             else:
                 min_val = -1
                 max_val = 1
