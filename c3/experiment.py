@@ -203,7 +203,7 @@ class Experiment:
         """
         model = self.pmap.model
         psi_init = model.tasks["init_ground"].initialise(
-            model.drift_H, model.lindbladian
+            model.drift_ham, model.lindbladian
         )
         self.psi_init = psi_init
         populations = []
@@ -235,7 +235,7 @@ class Experiment:
         model = self.pmap.model
         if "init_ground" in model.tasks:
             psi_init = model.tasks["init_ground"].initialise(
-                model.drift_H, model.lindbladian
+                model.drift_ham, model.lindbladian
             )
         else:
             psi_init = model.get_ground_state()
@@ -471,7 +471,12 @@ class Experiment:
         if model.max_excitations:
             U = cutter.T @ tf_matmul_left(dUs) @ cutter
             ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
-            self.partial_propagators[gate] = tf.stop_gradient(tf.linalg.matmul(tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs), ex_cutter))
+            self.partial_propagators[gate] = tf.stop_gradient(
+                tf.linalg.matmul(
+                    tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                    ex_cutter,
+                )
+            )
         else:
             U = tf_matmul_left(dUs)
             self.partial_propagators[gate] = dUs
