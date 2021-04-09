@@ -35,7 +35,7 @@ class Model:
 
     """
 
-    def __init__(self, subsystems=None, couplings=None, tasks=None):
+    def __init__(self, subsystems=None, couplings=None, tasks=None, max_excitations=0):
         self.dressed = True
         self.lindbladian = False
         self.use_FR = True
@@ -45,7 +45,7 @@ class Model:
         self.couplings = {}
         self.tasks = {}
         if subsystems:
-            self.set_components(subsystems, couplings)
+            self.set_components(subsystems, couplings, max_excitations)
         if tasks:
             self.set_tasks(tasks)
 
@@ -54,7 +54,7 @@ class Model:
         gs[0][0] = 1
         return tf.transpose(tf.constant(gs, dtype=tf.complex128))
 
-    def set_components(self, subsystems, couplings=None) -> None:
+    def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
         for comp in couplings:
@@ -62,6 +62,7 @@ class Model:
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
+        self.set_max_excitations(max_excitations)
 
     def set_tasks(self, tasks) -> None:
         for task in tasks:
@@ -81,7 +82,6 @@ class Model:
             # TODO user defined labels
             state_labels.append(list(range(subs.hilbert_dim)))
             comp_state_labels.append([0, 1])
-        self.tot_dim = np.prod(dims)
         self.names = names
         self.dims = dims
         self.state_labels = list(itertools.product(*state_labels))
@@ -93,6 +93,7 @@ class Model:
         """
         ann_opers = []
         dims = self.dims
+        self.tot_dim = np.prod(dims)
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
             ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
@@ -122,6 +123,29 @@ class Model:
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
         self.update_model()
+
+    def set_max_excitations(self, max_excitations) -> None:
+        """
+        Set the maximum number of excitations in the system used for propagation.
+        """
+        if max_excitations:
+            labels = self.state_labels
+            cut_labels = []
+            proj = []
+            ii = 0
+            for li in labels:
+                if sum(li) < max_excitations:
+                    cut_labels.append(li)
+                    line = [0] * len(labels)
+                    line[ii] = 1
+                    proj.append(line)
+                ii += 1
+            self.state_labels = cut_labels
+            excitation_cutter = np.array(proj)
+            self.ex_cutter = excitation_cutter
+        else:
+            self.ex_cutter = np.eye(self.tot_dim)
+        self.max_excitations = max_excitations
 
     def read_config(self, filepath: str) -> None:
         """
@@ -169,6 +193,8 @@ class Model:
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
+        max_ex = cfg.pop("max_excitations", None)
+        self.set_max_excitations(max_ex)
 
     def write_config(self, filepath: str) -> None:
         """
@@ -235,9 +261,9 @@ class Model:
 
     def get_Hamiltonians(self):
         if self.dressed:
-            return self.dressed_drift_H, self.dressed_control_Hs
+            return self.dressed_drift_ham, self.dressed_control_hams
         else:
-            return self.drift_H, self.control_Hs
+            return self.drift_ham, self.control_hams
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -254,18 +280,18 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_Hs = {}
+        control_hams = {}
         tot_dim = self.tot_dim
-        drift_H = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
+        drift_ham = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
         for sub in self.subsystems.values():
-            drift_H += sub.get_Hamiltonian()
+            drift_ham += sub.get_Hamiltonian()
         for key, line in self.couplings.items():
             if isinstance(line, Coupling):
-                drift_H += line.get_Hamiltonian()
+                drift_ham += line.get_Hamiltonian()
             elif isinstance(line, Drive):
-                control_Hs[key] = line.get_Hamiltonian()
-        self.drift_H = drift_H
-        self.control_Hs = control_Hs
+                control_hams[key] = line.get_Hamiltonian()
+        self.drift_ham = drift_ham
+        self.control_hams = control_hams
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -278,7 +304,7 @@ class Model:
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
         # TODO Raise error if dressing unsuccesful
-        e, v = tf.linalg.eigh(self.drift_H)
+        e, v = tf.linalg.eigh(self.drift_ham)
         if ordered:
             reorder_matrix = tf.cast(
                 (
@@ -306,18 +332,18 @@ class Model:
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
         self.update_drift_eigen(ordered=ordered)
-        dressed_control_Hs = {}
+        dressed_control_hams = {}
         dressed_col_ops = []
-        dressed_drift_H = tf.matmul(
-            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_H), self.transform
+        dressed_drift_ham = tf.matmul(
+            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_ham), self.transform
         )
-        for key in self.control_Hs:
-            dressed_control_Hs[key] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), self.control_Hs[key]),
+        for key in self.control_hams:
+            dressed_control_hams[key] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), self.control_hams[key]),
                 self.transform,
             )
-        self.dressed_drift_H = dressed_drift_H
-        self.dressed_control_Hs = dressed_control_Hs
+        self.dressed_drift_ham = dressed_drift_ham
+        self.dressed_control_hams = dressed_control_hams
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(

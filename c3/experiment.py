@@ -203,7 +203,7 @@ class Experiment:
         """
         model = self.pmap.model
         psi_init = model.tasks["init_ground"].initialise(
-            model.drift_H, model.lindbladian
+            model.drift_ham, model.lindbladian
         )
         self.psi_init = psi_init
         populations = []
@@ -235,7 +235,7 @@ class Experiment:
         model = self.pmap.model
         if "init_ground" in model.tasks:
             psi_init = model.tasks["init_ground"].initialise(
-                model.drift_H, model.lindbladian
+                model.drift_ham, model.lindbladian
             )
         else:
             psi_init = model.get_ground_state()
@@ -425,7 +425,7 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-            self.propagators = gates
+        self.propagators = gates
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -449,6 +449,10 @@ class Experiment:
         """
         model = self.pmap.model
         h0, hctrls = model.get_Hamiltonians()
+        if model.max_excitations:
+            cutter = model.ex_cutter
+            h0 = cutter @ h0 @ cutter.T
+            hctrls = [cutter @ chs @ cutter.T for chs in hctrls]
         signals = []
         hks = []
         for key in signal:
@@ -462,10 +466,20 @@ class Experiment:
             dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
         else:
             dUs = tf_propagation_vectorized(h0, hks, signals, dt)
-        self.partial_propagators[gate] = dUs
         self.ts = ts
         dUs = tf.cast(dUs, tf.complex128)
-        U = tf_matmul_left(dUs)
+        if model.max_excitations:
+            U = cutter.T @ tf_matmul_left(dUs) @ cutter
+            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
+            self.partial_propagators[gate] = tf.stop_gradient(
+                tf.linalg.matmul(
+                    tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                    ex_cutter,
+                )
+            )
+        else:
+            U = tf_matmul_left(dUs)
+            self.partial_propagators[gate] = dUs
         self.U = U
         return U
 
