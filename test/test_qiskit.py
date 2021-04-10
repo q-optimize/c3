@@ -98,7 +98,6 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.slow
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_exception(get_bad_circuit, backend):  # noqa
     """Test to check exceptions
