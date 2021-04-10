@@ -565,7 +565,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         seed_simulator = 2441129
 
         # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions, self._number_of_qubits)  # noqa
+        sequence = get_sequence(experiment.instructions)  # noqa
 
         # TODO get_init_ground_state(), get_gates(), evaluate(), process()
 
