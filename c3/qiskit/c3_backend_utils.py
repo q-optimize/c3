@@ -1,6 +1,6 @@
 """Convenience Module for creating different c3_backend
 """
-from typing import Any, Dict, List
+from typing import Dict, List
 import numpy as np
 import tensorflow as tf
 import math
@@ -103,7 +103,7 @@ def get_sequence(instructions: List) -> List[str]:
     return sequence
 
 
-def make_gate_str(instruction: Dict[str, Any], gate_name: str) -> str:
+def make_gate_str(instruction: dict, gate_name: str) -> str:
     """Make C3 style gate name string
 
     Parameters
@@ -122,7 +122,7 @@ def make_gate_str(instruction: Dict[str, Any], gate_name: str) -> str:
 
             {"name": "rx", "qubits": [0], "params": [1.57]} -> rx90p[0]
     """
-    qubits = instruction.qubits
+    qubits = instruction.qubits  # type: ignore
     gate_str = gate_name + str(qubits)
     return gate_str
 
