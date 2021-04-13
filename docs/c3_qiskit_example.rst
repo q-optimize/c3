@@ -7,7 +7,7 @@ must additionally install qiskit and matplotlib to run this example.
 
 .. code:: ipython3
 
-    !pip install -q qiskit==0.23.6 matplotlib==3.3.4
+    !pip install -q qiskit==0.25.0 matplotlib==3.3.4
 
 .. code:: ipython3
 
