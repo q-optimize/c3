@@ -114,7 +114,7 @@ source env/bin/activate
 pip install -e .
 ```
 
-This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, `pytest-xdist` and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit==0.23.2`.
+This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, `pytest-xdist` and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit`. The `requirements.txt` file lists out these dependencies with their versions.
 
 ## Coding Standards
 

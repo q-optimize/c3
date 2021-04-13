@@ -26,7 +26,7 @@ jobs:
     - name: Install c3 package
       run: |
         python -m pip install --upgrade pip
-        pip install pytest-cov pytest-xdist qiskit==0.23.2
+        pip install pytest qiskit==0.25.0
         pip install .
     - name: Test with pytest
       run: |
