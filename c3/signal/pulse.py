@@ -36,6 +36,7 @@ class Envelope(C3obj):
         comment: str = " ",
         params: dict = {},
         shape: types.FunctionType = None,
+        force_start_at_0: bool = True,
     ):
         if isinstance(shape, str):
             self.shape = envelopes[shape]
@@ -56,6 +57,10 @@ class Envelope(C3obj):
             comment=comment,
             params=default_params,
         )
+        if force_start_at_0:
+            self.get_shape_values = self.get_shape_values_force_start_at_0
+        else:
+            self.get_shape_values = self.get_shape_values_as_is
 
     def write_config(self, filepath: str) -> None:
         """
@@ -77,7 +82,7 @@ class Envelope(C3obj):
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def get_shape_values(self, ts, t_before=None):
+    def get_shape_values_force_start_at_0(self, ts, t_before=None):
         """Return the value of the shape function at the specified times.
 
         Parameters
@@ -88,14 +93,25 @@ class Envelope(C3obj):
             Offset the beginning of the shape by this time.
         """
         t_final = self.params["t_final"]
-        if t_before:
-            offset = self.shape(t_before, self.params)
-            vals = self.shape(ts, self.params) - offset
-            mask = tf.cast(ts < t_final.numpy() - t_before, vals.dtype)
-        else:
-            vals = self.shape(ts, self.params)
-            mask = tf.cast(ts < t_final.numpy(), vals.dtype)
+        offset = self.shape(t_before, self.params)
+        vals = self.shape(ts, self.params) - offset
+        mask = tf.cast(ts < t_final.numpy() - t_before, vals.dtype)
         # With the offset, we make sure the signal starts with amplitude 0.
+        return vals * mask
+
+    def get_shape_values_as_is(self, ts, t_before=None):
+        """Return the value of the shape function at the specified times.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        t_before : tf.float64
+            Offset the beginning of the shape by this time.
+        """
+        t_final = self.params["t_final"]
+        vals = self.shape(ts, self.params)
+        mask = tf.cast(ts < t_final.numpy(), vals.dtype)
         return vals * mask
 
 

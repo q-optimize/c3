@@ -143,6 +143,7 @@ class Experiment:
             instructions.append(instr)
 
         self.pmap = ParameterMap(instructions, generator=gen, model=model)
+        self.set_created_by(filepath)
 
     def read_config(self, filepath: str) -> None:
         """
@@ -163,6 +164,7 @@ class Experiment:
         pmap = ParameterMap(model=model, generator=generator)
         pmap.fromdict(cfg["instructions"])
         self.pmap = pmap
+        self.set_created_by(filepath)
 
     def write_config(self, filepath: str) -> None:
         """
