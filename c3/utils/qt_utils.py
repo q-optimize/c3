@@ -29,20 +29,8 @@ iswap3 = np.array(
     dtype=np.complex128,
 )
 
-CCZ_3dim = np.array(
-    [
-        [1, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    ],
-    dtype=np.complex128,
-)
+CCZ = np.diag([1, 1, 1, 1, 1, 1, 1, -1])
+
 
 # TODO Combine the above Pauli definitions with this dict. Move to constants.
 PAULIS = {"X": X, "Y": Y, "Z": Z, "Id": Id}
@@ -238,14 +226,17 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
-def projector(dims, indices):
+def projector(dims, indices, outdims=None):
     """
     Computes the projector to cut down a matrix to the selected indices from dims.
     """
+    if outdims is None:
+        outdims = dims
     ids = []
     for index, dim in enumerate(dims):
+        outdim = outdims[index]
         if index in indices:
-            ids.append(np.eye(dim))
+            ids.append(np.eye(dim)[:outdim])
         else:
             mask = np.zeros(dim)
             mask[0] = 1
@@ -348,14 +339,11 @@ def perfect_gate(gates_str: str, index=None, dims=None, proj: str = "wzeros"):  
             do_pad_gate = False
         elif gate_str == "CCZ":
             # TODO to be tested and generalized
-            U_CZ = perfect_gate("CZ", index=[0], dims=dims[1:], proj="wzeros")
-            C = np.abs(U_CZ)
-            print(C.shape, U_CZ.shape)
-            gate = scipy_block_diag(C, U_CZ)
-            # We increase gate_num since CZ is a two qubit gate
-            for ii in range(2, lvls):
-                gate = pad_matrix(gate, U_CZ.shape[0], proj)
-            gate_index += 1
+            project_mat = projector(
+                dims[gate_index : gate_index + 3], [0, 1, 2], outdims=[2] * 3
+            )
+            gate = project_mat.T @ CCZ @ project_mat
+            gate_index += 2
             do_pad_gate = False
         elif gate_str == "CR":
             # TODO: Fix the ideal CNOT construction.
