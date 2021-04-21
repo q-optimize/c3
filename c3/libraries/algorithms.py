@@ -473,7 +473,7 @@ def lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
 def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the scipy.optimize.minimize implementation of LBFG-S.
-    We are let the algorithm determine the gradient by its own.
+    We let the algorithm determine the gradient by its own.
      See also:
 
     https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html

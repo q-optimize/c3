@@ -249,7 +249,9 @@ def flattop_cut(t, params):
     t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
     risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
-    return tf.clip_by_value(shape, 0, 2)
+    shape = tf.clip_by_value(shape, 0, 1)
+    shape /= tf.reduce_max(shape)
+    return shape
 
 
 @env_reg_deco
@@ -287,16 +289,29 @@ def slepian_fourier(t, params):
     fourier_coeffs = tf.cast(params["fourier_coeffs"].get_value(), tf.float64)
     offset = tf.cast(params["offset"].get_value(), tf.float64)
     amp = tf.cast(params["amp"].get_value(), tf.float64)
+    if "risefall" in params:
+        plateau = width - params["risefall"].get_value() * 2
+        x = tf.identity(t)
+        x = tf.where(t > (t_final + plateau) / 2, t - plateau / 2, x)
+        x = tf.where(t < (t_final - plateau) / 2, t + plateau / 2, x)
+        x = tf.where(np.abs(t - t_final / 2) < plateau / 2, (t_final) / 2, x)
+        length = params["risefall"].get_value() * 2
+    else:
+        x = tf.identity(t)
+        length = tf.identity(width)
     shape = tf.zeros_like(t)
     for n, coeff in enumerate(fourier_coeffs):
         shape += coeff * (
-            1 - tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width)
+            1 - tf.cos(2 * np.pi * (n + 1) * (x - (t_final - length) / 2) / length)
         )
+    if "sin_coeffs" in params:
+        for n, coeff in enumerate(params["sin_coeffs"].get_value()):
+            shape += coeff * (
+                tf.sin((np.pi * (2 * n + 1)) * (x - (t_final - length) / 2) / length)
+            )
     shape = tf.where(tf.abs(t_final / 2 - t) > width / 2, tf.zeros_like(t), shape)
-    shape /= 2 * tf.reduce_sum(fourier_coeffs[::2])
+    shape /= tf.reduce_max(shape)
     shape = shape * (1 - offset / amp) + offset / amp
-    # plt.plot(t, shape)
-    # plt.show()
     return shape
 
 
@@ -324,10 +339,12 @@ def gaussian_sigma(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
     gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
-        t_final / (np.sqrt(8) * sigma)
-    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+
     offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    norm = (
+        tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+        - t_final * offset
+    )
     return (gauss - offset) / norm
 
 
