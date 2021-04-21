@@ -5,6 +5,7 @@ import tensorflow as tf
 import numpy as np
 import types
 import hjson
+from typing import Callable, Union
 
 components = dict()
 
@@ -24,7 +25,7 @@ class Envelope(C3obj):
 
     Parameters
     ----------
-    shape: function
+    shape: Callable
         function evaluating the shape in time
 
     """
@@ -35,7 +36,8 @@ class Envelope(C3obj):
         desc: str = " ",
         comment: str = " ",
         params: dict = {},
-        shape: types.FunctionType = None,
+        shape: Union[Callable, str] = None,
+        drag=False,
     ):
         if isinstance(shape, str):
             self.shape = envelopes[shape]
@@ -50,6 +52,7 @@ class Envelope(C3obj):
             "t_final": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="s"),
         }
         default_params.update(params)
+        self.drag = drag
         super().__init__(
             name=name,
             desc=desc,
@@ -72,10 +75,19 @@ class Envelope(C3obj):
             "c3type": self.__class__.__name__,
             "shape": self.shape.__name__,
             "params": params,
+            "drag": self.drag,
         }
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
+
+    def __repr__(self) -> str:
+        repr_str = self.name + ":: "
+        for key, item in self.params.items():
+            repr_str += str(key) + " : " + str(item) + ", "
+        repr_str += "shape: " + self.shape.__name__ + ", "
+        repr_str += "drag pulse" + str(self.drag) + ", "
+        return repr_str
 
     def get_shape_values(self, ts, t_before=None):
         """Return the value of the shape function at the specified times.
@@ -99,6 +111,7 @@ class Envelope(C3obj):
         return vals * mask
 
 
+@comp_reg_deco
 class EnvelopeNetZero(Envelope):
     """
     Represents the envelopes shaping a pulse.
@@ -119,13 +132,10 @@ class EnvelopeNetZero(Envelope):
         comment: str = " ",
         params: dict = {},
         shape: types.FunctionType = None,
+        drag: bool = False,
     ):
         super().__init__(
-            name=name,
-            desc=desc,
-            comment=comment,
-            params=params,
-            shape=shape,
+            name=name, desc=desc, comment=comment, params=params, shape=shape, drag=drag
         )
 
     def get_shape_values(self, ts, t_before=None):
@@ -182,3 +192,9 @@ class Carrier(C3obj):
         for key, item in self.params.items():
             params[key] = item.asdict()
         return {"c3type": self.__class__.__name__, "params": params}
+
+    def __repr__(self) -> str:
+        repr_str = self.name + ":: "
+        for key, item in self.params.items():
+            repr_str += str(key) + " : " + str(item) + ", "
+        return repr_str

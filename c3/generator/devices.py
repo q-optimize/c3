@@ -95,8 +95,9 @@ class Device(C3obj):
         centered: boolean
             Sample in the middle of an interval, otherwise at the beginning.
         """
-        if not hasattr(self, "slice_num"):
-            self.calc_slice_num(t_start, t_end)
+
+        # Slice num can change between pulses
+        self.calc_slice_num(t_start, t_end)
         dt = 1 / self.resolution
         # TODO This type of centering does not guarantee zeros at the ends
         if centered:
@@ -243,7 +244,7 @@ class DigitalToAnalog(Device):
 
 @dev_reg_deco
 class Filter(Device):
-    # TODO This can apply a general function to a signal.
+    # TODO This can apply a general function to a signal. --> Should merge into StepFuncFilter
     """Apply a filter function to the signal."""
 
     def __init__(self, **props):
@@ -965,6 +966,7 @@ class LO(Device):
                 self.signal["inphase"] = cos
                 self.signal["quadrature"] = sin
                 self.signal["ts"] = ts
+        assert "inphase" in self.signal, f"Probably no carrier proviced for {self.name}"
         return self.signal
 
 
@@ -1031,112 +1033,17 @@ class AWG(Device):
 
         """
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
-        components = instr.comps
         self.ts = ts
-        # dt = ts[1] - ts[0]
-        # t_before = ts[0] - dt
-        amp_tot_sq = 0.0
-        inphase_comps = []
-        quadrature_comps = []
 
-        for comp in components[chan].values():
-            if isinstance(comp, Envelope):
-
-                amp = comp.params["amp"].get_value()
-
-                amp_tot_sq += amp ** 2
-
-                xy_angle = comp.params["xy_angle"].get_value()
-                freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle + freq_offset * ts
-                env = comp.get_shape_values(ts)
-                # TODO option to have t_before
-                # env = comp.get_shape_values(ts, t_before)
-                inphase_comps.append(amp * env * tf.cos(phase))
-                quadrature_comps.append(-amp * env * tf.sin(phase))
-
-        norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-        if len(inphase_comps) > 1:
-            inphase = tf.add_n(inphase_comps, name="inphase")
-            quadrature = tf.add_n(quadrature_comps, name="quadrature")
-        else:
-            inphase = inphase_comps[0]
-            quadrature = quadrature_comps[0]
+        signal, norm = instr.get_awg_signal(chan, ts, options={self.__options: True})
 
         self.amp_tot = norm
-        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-
-    def create_IQ_drag(self, instr: Instruction, chan: str) -> dict:
-        """
-        Construct the in-phase (I) and quadrature (Q) components of the signal.
-        These are universal to either experiment or simulation.
-        In the xperiment these will be routed to AWG and mixer
-        electronics, while in the simulation they provide the shapes of the
-        instruction fields to be added to the Hamiltonian.
-
-        Parameters
-        ----------
-        channel : str
-            Identifier for the selected drive line.
-        components : dict
-            Separate signals to be combined onto this drive line.
-        t_start : float
-            Beginning of the signal.
-        t_end : float
-            End of the signal.
-
-        Returns
-        -------
-        dict
-            Waveforms as I and Q components.
-
-        """
-        ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
-        components = instr.comps
-        self.ts = ts
-        dt = ts[1] - ts[0]
-        t_before = ts[0] - dt
-        amp_tot_sq = 0.0
-        inphase_comps = []
-        quadrature_comps = []
-
-        for comp in components[chan].values():
-            if isinstance(comp, Envelope):
-
-                amp = comp.params["amp"].get_value()
-                amp_tot_sq += amp ** 2
-
-                xy_angle = comp.params["xy_angle"].get_value()
-                freq_offset = comp.params["freq_offset"].get_value()
-                # TODO should we remove this redefinition?
-                delta = -comp.params["delta"].get_value()
-                if self.__options == "drag_2":
-                    delta = delta * dt
-
-                with tf.GradientTape() as t:
-                    t.watch(ts)
-                    env = comp.get_shape_values(ts, t_before)
-                    # TODO option to have t_before = 0
-                    # env = comp.get_shape_values(ts, t_before)
-
-                denv = t.gradient(env, ts)
-                if denv is None:
-                    denv = tf.zeros_like(ts, dtype=tf.float64)
-                phase = -xy_angle + freq_offset * ts
-                inphase_comps.append(
-                    amp * (env * tf.cos(phase) + denv * delta * tf.sin(phase))
-                )
-                quadrature_comps.append(
-                    amp * (denv * delta * tf.cos(phase) - env * tf.sin(phase))
-                )
-        norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-        inphase = tf.add_n(inphase_comps, name="inphase")
-        quadrature = tf.add_n(quadrature_comps, name="quadrature")
-
-        self.amp_tot = norm
-        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
+        self.signal[chan] = {
+            "inphase": signal["inphase"],
+            "quadrature": signal["quadrature"],
+            "ts": ts,
+        }
+        return self.signal[chan]
 
     def create_IQ_pwc(self, instr: Instruction, chan: str) -> dict:
         """
@@ -1236,7 +1143,6 @@ class AWG(Device):
         self.process = self.create_IQ_drag
 
     def enable_drag_2(self):
-        self.process = self.create_IQ_drag
         self.__options = "drag_2"
 
     def enable_pwc(self):
