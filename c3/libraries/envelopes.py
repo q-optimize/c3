@@ -33,10 +33,10 @@ def pwc(t, params):
     return params
 
 
+@env_reg_deco
 def pwc_shape(t, params):
-    t_bin_start = tf.cast(params["t_bin_end"].get_value(), tf.float64)
-    t_bin_end = tf.cast(params["t_bin_start"].get_value(), tf.float64)
-    # t_final = tf.cast(params["t_final"].get_value(), tf.float64)
+    t_bin_start = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_end = tf.cast(params["t_bin_end"].get_value(), tf.float64)
     inphase = tf.cast(params["inphase"].get_value(), tf.float64)
 
     t_interp = t
@@ -49,9 +49,42 @@ def pwc_shape(t, params):
             fill_value_below=0,
             fill_value_above=0,
         ),
-        [len(t)],
+        [len(t), 1],
     )
 
+    return shape
+
+
+@env_reg_deco
+def pwc_shape_plateau(t, params):
+    t_bin_start = params["t_bin_start"].get_value()
+    t_bin_end = params["t_bin_end"].get_value()
+    inphase = params["inphase"].get_value()
+    if "width" in params:
+        width = params["width"].get_value()
+        plateau = width - (t_bin_end - t_bin_start)
+        t_mid = (t_bin_end - t_bin_start) / 2
+        x = tf.identity(t)
+        x = tf.where(t > t_mid + plateau, t - plateau, x)
+        x = tf.where(t < t_mid, t, x)
+        x = tf.where(tf.logical_and(t < t_mid + plateau, t > t_mid), t_mid, x)
+        t_interp = x
+    else:
+        t_interp = t
+    shape = tf.reshape(
+        tfp.math.interp_regular_1d_grid(
+            t_interp,
+            t_bin_start,
+            t_bin_end,
+            inphase,
+            fill_value_below=0,
+            fill_value_above=0,
+        ),
+        [len(t), 1],
+    )
+
+    if "width" in params:
+        shape = tf.where(x == t_mid, 1.0, shape)
     return shape
 
 
@@ -59,8 +92,8 @@ def pwc_shape(t, params):
 def pwc_symmetric(t, params):
     """symmetic PWC pulse
     This works only for inphase component"""
-    t_bin_start = tf.cast(params["t_bin_end"].get_value(), tf.float64)
-    t_bin_end = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_start = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_end = tf.cast(params["t_bin_end"].get_value(), tf.float64)
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     inphase = tf.cast(params["inphase"].get_value(), tf.float64)
 
