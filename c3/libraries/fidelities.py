@@ -261,7 +261,31 @@ def nophase_unitary_fidelity_set(U_dict: dict, index, dims, eval=0, proj=True):
         Project to computational subspace
     """
     Us = {k: tf.cast(tf.math.abs(U), tf.complex128) for k, U in U_dict.items()}
-    return unitary_infid_set(Us, index, dims, eval, proj)
+    infid = unitary_infid_set(Us, index, dims, eval, proj)
+    print(infid)
+    return infid
+
+
+@fid_reg_deco
+def nophase_average_fidelity_set(U_dict: dict, index, dims, eval=0, proj=True):
+    """
+    Mean unitary overlap between ideal and actually performed gate for the gates in
+    U_dict, while removing phases of gates in U_dict.
+
+    Parameters
+    ----------
+    U_dict : dict
+        Contains unitary representations of the gates, identified by a key.
+    index : int
+        Index of the qubit(s) in the Hilbert space to be evaluated
+    dims : list
+        List of dimensions of qubits
+    proj : boolean
+        Project to computational subspace
+    """
+    Us = {k: tf.cast(tf.math.abs(U), tf.complex128) for k, U in U_dict.items()}
+    infid = average_infid_set(Us, index, dims, eval, proj)
+    return infid
 
 
 @fid_reg_deco

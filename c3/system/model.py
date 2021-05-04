@@ -1,4 +1,5 @@
 """The model class, containing information on the system and its modelling."""
+import warnings
 
 import numpy as np
 import hjson
@@ -47,6 +48,7 @@ class Model:
         self.couplings: dict = dict()
         self.tasks: dict = dict()
         self.cut_excitations = 0
+        self.max_excitations = 0
         self.drift_H = None
         self.dressed_drift_H = None
         self.__hamiltonians = None
@@ -241,6 +243,12 @@ class Model:
         """
         self.cut_excitations = n_cut
 
+    def set_max_excitations(self, max_excitation):
+        self.max_excitations = max_excitation
+        self.__create_annihilators()
+        self.__create_matrix_representations()
+        self.update_model()
+
     def set_dephasing_strength(self, dephasing_strength):
         self.dephasing_strength = dephasing_strength
 
@@ -252,7 +260,15 @@ class Model:
 
     def get_Hamiltonians(self):
         if self.dressed:
-            return self.dressed_drift_H, self.dressed_control_Hs
+            if self.max_excitations:
+                red_drift_H = self.ex_cutter @ self.dressed_drift_H @ self.ex_cutter.T
+                red_control_Hs = {
+                    k: (self.ex_cutter @ op @ self.ex_cutter.T)
+                    for k, op in self.dressed_control_Hs.items()
+                }
+                return red_drift_H, red_control_Hs
+            else:
+                return self.dressed_drift_H, self.dressed_control_Hs
         else:
             return self.drift_H, self.control_Hs
 
@@ -312,14 +328,22 @@ class Model:
         if self.dressed:
             self.update_dressed(ordered=ordered)
 
+    def truncate_hamiltonian(self, h):
+        return h
+        n = self.num_reduced_states
+        e, v = tf.linalg.eigh(h)
+        return tf.linalg.matmul(
+            tf.linalg.matmul(v[:, :n], e[:n]), v[:, :n], adjoint_b=True
+        )
+
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
         control_Hs = dict()
         hamiltonians = dict()
         for key, sub in self.subsystems.items():
-            hamiltonians[key] = sub.get_Hamiltonian()
+            hamiltonians[key] = self.truncate_hamiltonian(sub.get_Hamiltonian())
         for key, line in self.couplings.items():
-            hamiltonians[key] = line.get_Hamiltonian()
+            hamiltonians[key] = self.truncate_hamiltonian(line.get_Hamiltonian())
             if isinstance(line, Drive):
                 control_Hs[key] = line.get_Hamiltonian(True)
 
@@ -347,12 +371,12 @@ class Model:
             else:
                 failed_states = np.sum(max_probabilities < 0.5)
                 min_failed_state = np.argmax(max_probabilities[0] < 0.5)
-                print(
+                warnings.warn(
                     f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
                 )
                 vc = v_sq.numpy()
                 reorder_matrix = np.zeros_like(vc)
-                for i in range(self.tot_dim):
+                for i in range(vc.shape[1]):
                     idx = np.unravel_index(np.argmax(vc), vc.shape)
                     vc[idx[0], :] = 0
                     vc[:, idx[1]] = 0
@@ -371,6 +395,7 @@ class Model:
             reorder_matrix = tf.eye(self.tot_dim)
             eigenframe = tf.math.real(e)
             transform = v
+
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
         self.reorder_matrix = reorder_matrix
