@@ -156,15 +156,18 @@ class C1(Optimizer):
                     eval=self.evaluation + 1,
                 )
             except TypeError:
-                pass
-            raise e
+                raise e
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
                 val = cal(
-                    propagators, self.index, dims, self.logdir, self.evaluation + 1
+                    renamed_propagators,
+                    self.index,
+                    dims,
+                    self.logdir,
+                    self.evaluation + 1,
                 )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())

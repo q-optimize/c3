@@ -374,15 +374,20 @@ class TensorBoardLogger(BaseLogger):
         with self.writer.as_default():
             self.write_params(opt_status.pop("params"), evaluation)
             tf.summary.scalar("goal", opt_status.pop("goal"), step=evaluation)
+
             if "gradient" in opt_status:
                 tf.summary.histogram(
                     "gradient",
                     tf.clip_by_value(opt_status.pop("gradient"), -3, 3),
                     step=evaluation,
                 )
+
+            opt_status.pop("time")
             for k, v in opt_status.items():
                 if type(v) is float:
                     tf.summary.scalar(k, v, step=evaluation)
+                elif type(v) is list:
+                    tf.summary.histogram(k, v, step=evaluation)
                 else:
                     # print(k, v)
                     raise Warning(
