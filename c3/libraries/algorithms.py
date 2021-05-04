@@ -620,6 +620,19 @@ def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     refinement.
 
     """
+    if "cmaes" not in options:
+        options["cmaes"] = {}
+    if "lbfgs" not in options:
+        options["lbfgs"] = {}
+    for k in options:
+        if k == "cmaes" or k == "lbfgs":
+            continue
+        else:
+            if k not in options["cmaes"]:
+                options["cmaes"][k] = options[k]
+            if k not in options["lbfgs"]:
+                options["lbfgs"][k] = options[k]
+
     x1 = cmaes(x_init, fun, options=options["cmaes"])
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
