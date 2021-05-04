@@ -15,8 +15,8 @@ import hjson
 import json
 import numpy as np
 import tensorflow as tf
-
 from typing import Dict
+import time
 
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
@@ -47,13 +47,15 @@ class Experiment:
     def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
-        self.unitaries: dict = {}
+        self.unitaries: Dict[str, tf.Tensor] = {}
         self.dUs: dict = {}
         self.created_by = None
         self.logdir: str = None
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_unitaries = True
+        self.get_gates_timestamp = 0
+        self.stop_dU_gradient = True
 
     def set_created_by(self, config):
         """
@@ -361,55 +363,9 @@ class Experiment:
                 self.unitaries = gates
             else:
                 self.unitaries[gate] = U
+            self.get_gates_timestamp = time.time()
         return gates
 
-    # @tf.function #(autograph=True)
-    # def batch_propagate(self, hamiltonian, dt, batch_size):
-    #     dUs = None
-    #
-    #     batches = hamiltonian.shape[0] // batch_size
-    #
-    #     strategy = tf.distribute.get_strategy()
-    #     batch_array = tf.cast([hamiltonian[i * batch_size:i* batch_size+batch_size] for i in range(batches)], tf.complex128)
-    #     orig_hamiltonian_shape = hamiltonian.shape
-    #     batch_array = tf.reshape(hamiltonian, [batches, hamiltonian.shape[0] // batches] + hamiltonian.shape[-2:])
-    #     # print(batch_array.shape)
-    #     # @tf.function
-    #     # def map_func(ham):
-    #     #     print(type(ham), ham.shape)
-    #     #     return tf_utils.tf_propagation_vectorized(ham, None, None, dt)
-    #     # out = tf.map_fn(map_func, batch_array, swap_memory=True)
-    #     # print(out.shape)
-    #     # dUs = tf.reshape(out, orig_hamiltonian_shape)
-    #     # print(dUs.shape)
-    #     # assert False
-    #     for i in range(batches):
-    #         # tf.autograph.experimental.set_loop_options(swap_memory=True)
-    #         idx = i * batch_size
-    #         if self.pmap.model.lindbladian:
-    #             col_ops = model.get_Lindbladians()
-    #             dUs_list.append(tf_utils.tf_propagation_lind(tf.cast(hamiltonian[idx:idx+batch_size], tf.complex128), None, col_ops, None, dt))
-    #         else:
-    #             # strategy.
-    #             # print(strategy)
-    #             # print(i)
-    #             # print(idx+batch_size)
-    #             x = hamiltonian[idx:idx+batch_size]
-    #             # print(x.shape)
-    #             out = tf_utils.tf_propagation_vectorized(x, None, None, dt)
-    #             # with tf.device("/device:GPU:1"):
-    #                 # strategy = tf.distribute.get_strategy()
-    #             result = strategy.run(tf_utils.tf_propagation_vectorized, args=(x, None, None, dt))
-    #                 # result = tf_utils.tf_propagation_vectorized(x, None, None, dt)
-    #             # print(type(result))
-    #             if tf.distribute.has_strategy():
-    #                 result = result.values[0]
-    #             # dUs_list.write(i, result)
-    #             if dUs is not None:
-    #                 dUs = tf.concat([dUs, result], axis=0)
-    #             else:
-    #                 dUs = result
-    #     return dUs
     def propagation(self, signal: dict, gate):
         """
         Solve the equation of motion (Lindblad or Schrödinger) for a given control
@@ -465,40 +421,6 @@ class Experiment:
 
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
-        # # print(strategy)
-        # def distribute_propagation(dataset):
-        #     # def replica_fn(input):
-        #     #     result = tf_utils.tf_propagation_vectorized(input, None, None, dt)
-        #     #     return result
-        #
-        #     for x in dataset.batch(self.propagate_batch_size, drop_remainder=False):
-        #         # print(x.shape)
-        #         dUs_list.append(strategy.run(tf_utils.tf_propagation_vectorized, args=(x, None, None, dt)).values[0])
-        #     # dUs_list = strategy.gather(dUs_list, axis=0)
-        #     # print(type(dUs_list))
-        #     # print(dUs_list[-1].values)
-        #     return dUs_list
-        # dUs_list = []
-        # dataset = tf.data.Dataset.from_tensor_slices(hamiltonian)
-        # print(dataset, len(dataset))
-        # dist_data = strategy.experimental_distribute_dataset(dataset)
-        #
-        # dUs_list = distribute_propagation(dataset)
-        # # for x in dataset:
-        # #     dUs_list.append(
-        # #         strategy.run(tf_utils.tf_propagation_vectorized, args=((tf.cast(hamiltonian[idx:idx + batch_size], tf.complex128), None,
-        # #                                            None, tf.cast(dt, tf.complex128)))
-
-        # print(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128).shape)
-        # print(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128)[0])
-        # batch_propagate(tf.eye(hamiltonian.shape[-1], batch_shape=[batch_size * batches], dtype=tf.complex128)*1e-10)
-        # # print(add_slices)
-        # print("hamshape_bef", hamiltonian.shape)
-        # print("hamshape", hamiltonian.shape)
-        # # with tf.distribute.experimental.CentralStorageStrategy().scope():
-        # print("Batch Propagate")
-        # print(dUs.shape)
-        # dUs = tf.concat(dUs_list, axis=0)
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
             dUs = tf_utils.tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
@@ -515,18 +437,35 @@ class Experiment:
             dUs = tf_utils.batch_propagate(
                 hamiltonian, hks, signals, dt, batch_size=batch_size
             )
-        if mask_ids is None:
-            self.dUs[gate] = dUs
-        else:
-            # TODO check if gradient would be necessary for some operations
+
+        if mask_ids is not None:
+            if self.stop_dU_gradient:
+                self.dUs[gate] = tf.stop_gradient(
+                    tf_utils.uncut_hilbert_matrix(dUs, mask_ids, full_hilbert_dim)
+                )
+            else:
+                self.dUs[gate] = tf_utils.uncut_hilbert_matrix(
+                    dUs, mask_ids, full_hilbert_dim
+                )
+
+        elif model.max_excitations:
+            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
             self.dUs[gate] = tf.stop_gradient(
-                tf_utils.uncut_hilbert_matrix(dUs, mask_ids, full_hilbert_dim)
+                tf.linalg.matmul(
+                    tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                    ex_cutter,
+                )
             )
+        else:
+            self.dUs[gate] = dUs
+
         dUs = tf.cast(dUs, tf.complex128)
         self.ts = ts
         U = tf_utils.tf_matmul_left(dUs)
         if mask_ids is not None:
             U = tf_utils.uncut_hilbert_matrix(U, mask_ids, full_hilbert_dim)
+        if model.max_excitations:
+            U = model.ex_cutter.T @ U @ model.ex_cutter
         return U
 
     def set_opt_gates(self, gates):
@@ -535,9 +474,11 @@ class Experiment:
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+        gates: Identifiers of the gates of interest. Can contain duplicates.
 
         """
+        if type(gates) is str:
+            gates = [gates]
         self.opt_gates = gates
 
     def set_opt_gates_seq(self, seqs):
@@ -546,7 +487,7 @@ class Experiment:
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+        seqs: Identifiers of the sequences of interest. Can contain duplicates.
 
         """
         self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))

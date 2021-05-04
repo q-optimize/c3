@@ -61,6 +61,9 @@ class ParameterMap:
         self.__pars: Dict[str, Quantity] = pars
         self.__par_ids_model = par_ids_model
 
+    def update_parameters(self):
+        self.__initialize_parameters()
+
     def load_values(self, init_point):
         """
         Load a previous parameter point to start the optimization from.
@@ -242,7 +245,7 @@ class ParameterMap:
             value_dict[key] = self.__pars[key]
         return value_dict
 
-    def set_parameters(self, values: list, opt_map=None) -> None:
+    def set_parameters(self, values: list, opt_map=None, extend_bounds=False) -> None:
         """Set the values in the original instruction class.
 
         Parameters
@@ -251,6 +254,8 @@ class ParameterMap:
             List of parameter values. Can be nested, if a parameter is matrix valued.
         opt_map: list
             Corresponding identifiers for the parameter values.
+        extend_bounds: bool
+            If true bounds of quantity objects will be extended.
 
         """
         model_updated = False
@@ -267,7 +272,7 @@ class ParameterMap:
                 except ValueError as ve:
                     raise Exception(f"C3:ERROR:{key} not defined.") from ve
                 try:
-                    par.set_value(values[val_indx])
+                    par.set_value(values[val_indx], extend_bounds=extend_bounds)
                 except (ValueError, InvalidArgumentError) as ve:
                     try:
                         raise Exception(

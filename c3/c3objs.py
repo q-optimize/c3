@@ -87,8 +87,8 @@ class Quantity:
         self.pref = pref
         if min_val is None and max_val is None:
             minmax = [0.9 * value, 1.1 * value]
-            min_val = np.min(minmax, axis=0)
-            max_val = np.max(minmax, axis=0)
+            min_val = np.min(minmax)
+            max_val = np.max(minmax)
         self.offset = np.array(min_val) * pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit
@@ -248,7 +248,7 @@ class Quantity:
         value = self.scale * (val + 1) / 2 + self.offset
         return tf.cast(value, dtype)
 
-    def set_value(self, val) -> None:
+    def set_value(self, val, extend_bounds=False) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
@@ -259,7 +259,13 @@ class Quantity:
 
         tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
 
-        # TODO if we want we can extend bounds when force flag is given
+        if extend_bounds and tf.math.abs(tmp) > 1:
+            min_val, max_val = self.get_limits()
+            min_val = tf.math.reduce_min([val, min_val])
+            max_val = tf.math.reduce_max([val, max_val])
+            self.set_limits(min_val, max_val)
+            tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
+
         tf.debugging.assert_less_equal(
             tf.math.abs(tmp),
             tf.constant(1.0, tf.float64),

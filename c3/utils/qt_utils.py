@@ -296,7 +296,8 @@ def perfect_gate(gates_str: str, index=None, dims=None, proj: str = "wzeros"):  
     for gate_str in gates_str.split(":"):
         lvls = dims[gate_index]
         if gate_index not in index:
-            gate = groundstate
+            gate = np.ones((1,))
+            lvls += 1
         elif gate_str == "Id":
             gate = Id
         elif gate_str == "X90p":

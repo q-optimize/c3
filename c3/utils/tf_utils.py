@@ -841,8 +841,8 @@ def tf_unitary_overlap(A: tf.Tensor, B: tf.Tensor, lvls: tf.Tensor = None) -> tf
     try:
         if lvls is None:
             lvls = tf.cast(B.shape[0], B.dtype)
-        overlap = (
-            tf_abs(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls) ** 2
+        overlap = tf_abs_squared(
+            tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls
         )
     except TypeError:
         raise TypeError("Possible Inconsistent Dimensions while casting tensors")
@@ -864,12 +864,14 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     return overlap
 
 
-def tf_average_fidelity(A, B, lvls=None):
+def tf_average_fidelity(A, B, lvls=None, index=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
         lvls = tf.cast(B.shape[0], B.dtype)
+    if index is None:
+        index = list(range(len(lvls)))
     Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)), B
+        tf.linalg.adjoint(tf_project_to_comp(A, lvls, index, to_super=False)), B
     )
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
@@ -893,6 +895,7 @@ def tf_super_to_fid(err, lvls):
 def tf_project_to_comp(A, dims, to_super=False):
     """Project an operator onto the computational subspace."""
     # TODO projection to computational subspace can be done more efficiently than this
+    # TODO include indexing
     proj_list = []
     for dim in dims:
         p = np.zeros([dim, 2])
