@@ -68,6 +68,9 @@ class Instruction:
                 components[chan][key] = comp.asdict()
         return {"gate_length": self.t_end - self.t_start, "drive_channels": components}
 
+    def __repr__(self):
+        return f"Instruction[{self.name}]"
+
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
@@ -170,14 +173,11 @@ class Instruction:
                 start, end = self.get_timings(chan, name, minimal_time=True)
                 t_gate_start = min(t_gate_start, start)
                 t_gate_end = max(t_gate_end, end)
-                # print(end, chan, name)
-        print("k")
         return t_gate_start, t_gate_end
 
     def auto_adjust_t_end(self, buffer=0):
         while True:
             t_end = self.get_full_gate_length()[1]
-            print(t_end, self.t_end)
             if self.t_end == t_end:
                 break
             self.t_end = t_end
