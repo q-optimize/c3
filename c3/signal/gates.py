@@ -7,6 +7,8 @@ from c3.libraries.envelopes import gaussian_nonorm
 import warnings
 from typing import List, Dict
 import copy
+from c3.libraries.constants import GATES
+from c3.utils.qt_utils import kron_ids
 
 
 class Instruction:
@@ -42,23 +44,52 @@ class Instruction:
     def __init__(
         self,
         name: str = " ",
+        targets: list = [0],
+        params: list = None,
+        ideal: np.array = None,
         channels: List[str] = [],
         t_start: float = None,
         t_end: float = None,  # TODO remove in the long term
         # fixed_t_end: bool = True,
     ):
         self.name = name
+        self.targets = targets
+        self.params = params
         self.t_start = t_start
         self.t_end = t_end
         self.comps: Dict[str, Dict[str, C3obj]] = dict()
         self.__options: Dict[str, dict] = dict()
         self.fixed_t_end = True
+        if ideal:
+            self.ideal = ideal
+        elif name in GATES.keys():
+            self.ideal = GATES[name]
+        else:
+            self.ideal = None
         for chan in channels:
             self.comps[chan] = dict()
             self.__options[chan] = dict()
 
         self.__timings: Dict[str, tuple] = dict()
         # TODO remove redundancy of channels in instruction
+
+    def as_openqasm(self) -> dict:
+        asdict = {"name": self.name, "qubits": self.targets, "params": self.params}
+        if self.ideal:
+            asdict["ideal"] = self.ideal
+        return asdict
+
+    def get_ideal_gate(self, dims):
+        if self.ideal is None:
+            raise Exception(
+                "C3:ERROR: No ideal representation definded for gate"
+                f" {self.name+str(self.targets)}"
+            )
+        return kron_ids(
+            [2] * len(dims),  # we compare to the computational basis
+            self.targets,
+            [self.ideal],
+        )
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -121,7 +152,15 @@ class Instruction:
                 for option_name, option_val in self.__options[chan][comp].items():
                     if isinstance(option_val, Quantity):
                         parameter_list.append(
-                            ([self.name, chan, comp, option_name], option_val)
+                            (
+                                [
+                                    self.name + str(self.targets),
+                                    chan,
+                                    comp,
+                                    option_name,
+                                ],
+                                option_val,
+                            )
                         )
         return parameter_list
 

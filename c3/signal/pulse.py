@@ -44,7 +44,7 @@ class Envelope(C3obj):
         else:
             self.shape = shape
         default_params = {
-            "amp": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="V"),
+            "amp": Qty(value=1.0, min_val=-1.0, max_val=+1.5, unit="V"),
             "delta": Qty(value=0.0, min_val=-5.0, max_val=+5.0, unit="V"),
             "freq_offset": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="Hz 2pi"),
             "xy_angle": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="rad"),

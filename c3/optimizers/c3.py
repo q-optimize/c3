@@ -190,7 +190,7 @@ class C3(Optimizer):
         # We find the unique gates used in the sequence and compute
         # only those.
         self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
-        self.exp.get_gates()
+        self.exp.compute_propagators()
         pops = self.exp.evaluate(sequences)
         sim_vals, pops = self.exp.process(
             labels=self.state_labels[target], populations=pops

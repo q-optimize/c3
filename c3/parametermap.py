@@ -25,7 +25,8 @@ class ParameterMap:
         self.model = model
         self.generator = generator
         for instr in instructions:
-            self.instructions[instr.name] = instr
+            # Is this redundant key necessary?
+            self.instructions[instr.name + str(instr.targets)] = instr
 
         # Collecting model components
         components = {}
@@ -266,7 +267,12 @@ class ParameterMap:
         ), "Different number of elements in values and opt_map"
         for equiv_ids in opt_map:
             for key in equiv_ids:
-                model_updated = True if key in self.__par_ids_model else model_updated
+                # We check if a model parameter has changed
+                model_updated = key in self.__par_ids_model or model_updated
+            for par_id in equiv_ids:
+                key = "-".join(par_id)
+                # We check if a model parameter has changed
+                model_updated = key in self.__par_ids_model or model_updated
                 try:
                     par = self.__pars[key]
                 except ValueError as ve:
@@ -284,7 +290,9 @@ class ParameterMap:
                     except TypeError:
                         raise ve
             val_indx += 1
-        if model_updated:
+
+        # TODO: This check is too simple. Not every model parameter requires an update.
+        if model_updated and self.model:
             self.model.update_model()
 
     def get_parameters_scaled(self, opt_map=None) -> np.ndarray:

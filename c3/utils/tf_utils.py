@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-from c3.utils import qt_utils
+from c3.utils.qt_utils import pauli_basis, projector
 
 
 def tf_setup():
@@ -148,8 +148,8 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     return dU
 
 
-@tf.function
-def tf_dU_of_t_lind(h, col_ops, dt):
+# @tf.function
+def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     """
     Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
 
@@ -172,79 +172,25 @@ def tf_dU_of_t_lind(h, col_ops, dt):
         dU = exp(L(t) dt)
 
     """
-    Id = Id_like(col_ops[0])
-    lind_op = -1j * (tf_kron(h, Id) - tf_kron(Id, tf.transpose(h)))
-
+    h = h0
+    for ii in range(len(hks)):
+        h += cflds_t[ii] * hks[ii]
+    lind_op = -1j * (tf_spre(h) - tf_spost(h))
     for col_op in col_ops:
-        left = tf_kron(col_op, Id)
-        right = tf_kron(Id, tf.transpose(col_op))
-        super_clp = tf.matmul(left, right, adjoint_b=True)
-        anticomm_L_clp = 0.5 * tf.matmul(left, left, adjoint_a=True)
-        anticomm_R_clp = 0.5 * tf.matmul(right, right, adjoint_b=True)
+        super_clp = tf.matmul(tf_spre(col_op), tf_spost(tf.linalg.adjoint(col_op)))
+        anticomm_L_clp = 0.5 * tf.matmul(
+            tf_spre(tf.linalg.adjoint(col_op)), tf_spre(col_op)
+        )
+        anticomm_R_clp = 0.5 * tf.matmul(
+            tf_spost(col_op), tf_spost(tf.linalg.adjoint(col_op))
+        )
         lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    lind_expmatrix = lind_op * dt
-    dU = tf.linalg.expm(lind_expmatrix)
-    return dU
-
-
-@tf.function
-def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
-    col_ops = tf.cast(col_ops, dtype=tf.complex128)
-    dt = tf.cast(dt, dtype=tf.complex128)
-    if hks is not None and cflds_t is not None:
-        cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
-        hks = tf.cast(hks, dtype=tf.complex128)
-        cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
-        hks = tf.expand_dims(hks, 1)
-        h0 = tf.expand_dims(h0, 0)
-        prod = cflds * hks
-        h = h0 + tf.reduce_sum(prod, axis=0)
-    else:
-        h = h0
-
-    h_id = tf.eye(h.shape[-1], batch_shape=[h.shape[0]], dtype=tf.complex128)
-    l_s = tf_kron_batch(h, h_id)
-    r_s = tf_kron_batch(h_id, tf.linalg.matrix_transpose(h))
-    lind_op = -1j * (l_s - r_s)
-
-    col_ops_id = tf.eye(
-        col_ops.shape[-1], batch_shape=[col_ops.shape[0]], dtype=tf.complex128
-    )
-    l_col_ops = tf_kron_batch(col_ops, col_ops_id)
-    r_col_ops = tf_kron_batch(col_ops_id, tf.linalg.matrix_transpose(col_ops))
-
-    super_clp = tf.matmul(l_col_ops, r_col_ops, adjoint_b=True)
-    anticom_L_clp = 0.5 * tf.matmul(l_col_ops, l_col_ops, adjoint_a=True)
-    anticom_R_clp = 0.5 * tf.matmul(r_col_ops, r_col_ops, adjoint_b=True)
-    clp = tf.expand_dims(
-        tf.reduce_sum(super_clp - anticom_L_clp - anticom_R_clp, axis=0), 0
-    )
-    lind_op += clp
-
+    # terms = int(1e12 * dt) # Eyeball number of terms in expm
+    #     print('terms in exponential: ', terms)
+    # dU = tf_expm(lind_op * dt, terms)
+    # Built-in tensorflow exponential below
     dU = tf.linalg.expm(lind_op * dt)
     return dU
-
-
-# def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
-#     with tf.name_scope("Propagation"):
-#         dUs = []
-#         num = len(cflds[0]) if cflds else len(h0)
-#         dt = tf.cast(dt, tf.complex128)
-#         if cflds is not None and hks is not None:
-#             cflds = tf.cast(cflds, tf.complex128)
-#             hks = tf.cast(hks, tf.complex128)
-#         for ii in range(num):
-#             if cflds is not None and hks is not None:
-#                 cf_t = []
-#                 h_i = h0
-#                 for jj in range(len(cflds)):
-#                     h_i += cflds[jj, ii] * hks[jj]
-#             else:
-#                 cf_t = None
-#                 h_i = h0[ii]
-#
-#             dUs.append(tf_dU_of_t_lind(h_i, col_ops, dt))
-#         return dUs
 
 
 @tf.function
@@ -420,38 +366,76 @@ def tf_propagation(h0, hks, cflds, dt):
 #     return dUs
 
 
-def tf_propagation_lind_old(h0, hks, col_ops, cflds, dt, history=False):
-    """
-    Calculate the time evolution of an open system controlled by time-dependent
-    fields.
+# def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
+#     """
+#     Calculate the time evolution of an open system controlled by time-dependent
+#     fields.
+#
+#     Parameters
+#     ----------
+#     h0 : tf.tensor
+#         Drift Hamiltonian.
+#     hks : list of tf.tensor
+#         List of control Hamiltonians.
+#     col_ops : list of tf.tensor
+#         List of collapse operators.
+#     cflds : list
+#         List of control fields, one per control Hamiltonian.
+#     dt : float
+#         Length of one time slice.
+#
+#     Returns
+#     -------
+#     list
+#         List of incremental propagators dU.
+#
+#     """
+#     with tf.name_scope("Propagation"):
+#         dUs = []
+#         for ii in range(len(cflds[0])):
+#             cf_t = []
+#             for fields in cflds:
+#                 cf_t.append(tf.cast(fields[ii], tf.complex128))
+#             dUs.append(tf_dU_of_t_lind(h0, hks, col_ops, cf_t, dt))
+#         return dUs
 
-    Parameters
-    ----------
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    col_ops : list of tf.tensor
-        List of collapse operators.
-    cflds : list
-        List of control fields, one per control Hamiltonian.
-    dt : float
-        Length of one time slice.
 
-    Returns
-    -------
-    list
-        List of incremental propagators dU.
+@tf.function
+def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
+    col_ops = tf.cast(col_ops, dtype=tf.complex128)
+    dt = tf.cast(dt, dtype=tf.complex128)
+    if hks is not None and cflds_t is not None:
+        cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
+        hks = tf.cast(hks, dtype=tf.complex128)
+        cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
+        hks = tf.expand_dims(hks, 1)
+        h0 = tf.expand_dims(h0, 0)
+        prod = cflds * hks
+        h = h0 + tf.reduce_sum(prod, axis=0)
+    else:
+        h = h0
 
-    """
-    with tf.name_scope("Propagation"):
-        dUs = []
-        for ii in range(len(cflds[0])):
-            cf_t = []
-            for fields in cflds:
-                cf_t.append(tf.cast(fields[ii], tf.complex128))
-            dUs.append(tf_dU_of_t_lind(h0, hks, col_ops, cf_t, dt))
-        return dUs
+    h_id = tf.eye(h.shape[-1], batch_shape=[h.shape[0]], dtype=tf.complex128)
+    l_s = tf_kron_batch(h, h_id)
+    r_s = tf_kron_batch(h_id, tf.linalg.matrix_transpose(h))
+    lind_op = -1j * (l_s - r_s)
+
+    col_ops_id = tf.eye(
+        col_ops.shape[-1], batch_shape=[col_ops.shape[0]], dtype=tf.complex128
+    )
+    l_col_ops = tf_kron_batch(col_ops, col_ops_id)
+    r_col_ops = tf_kron_batch(col_ops_id, tf.linalg.matrix_transpose(col_ops))
+
+    super_clp = tf.matmul(l_col_ops, r_col_ops, adjoint_b=True)
+    anticom_L_clp = 0.5 * tf.matmul(l_col_ops, l_col_ops, adjoint_a=True)
+    anticom_R_clp = 0.5 * tf.matmul(r_col_ops, r_col_ops, adjoint_b=True)
+    clp = tf.expand_dims(
+        tf.reduce_sum(super_clp - anticom_L_clp - anticom_R_clp, axis=0), 0
+    )
+    lind_op += clp
+
+    dU = tf.linalg.expm(lind_op * dt)
+    return dU
 
 
 # MATRIX MULTIPLICATION FUNCTIONS
@@ -511,7 +495,6 @@ def evaluate_sequences(U_dict: dict, sequences: list):
 
 
 @tf.function
-# @tf.custom_gradient
 def tf_matmul_left(dUs: tf.Tensor):
     """
     Parameters:
@@ -522,34 +505,6 @@ def tf_matmul_left(dUs: tf.Tensor):
 
     """
     return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
-    # out_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
-    # dUs_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
-    # dUs_array = dUs_array.unstack(dUs)
-    # out = tf.eye(dUs_array.element_shape[0], dtype=tf.complex128)
-    #
-    # def func(i, U):
-    #     x = dUs_array.read(i)
-    #     out = tf.matmul(x, U)
-    #     return [i + 1, out]
-    #
-    # i, out = tf.while_loop(
-    #     lambda ii, U: ii < dUs.shape[0],
-    #     func,
-    #     [tf.constant(0), out]
-    # )
-    # for i in range(dUs.shape[0]):
-
-    # # @tf.function
-    # def grad(z):
-    #     grad_array = tf.TensorArray(tf.complex128, size=dUs.shape[0], element_shape=dUs.shape[-2:])
-    #     back_out = tf.eye(dUs_array.element_shape[0], dtype=tf.complex128)
-    #     for ii in range(dUs.shape[0]):
-    #         grad_array.write(ii, z * back_out)
-    #         grad_x = dUs_array.read(ii)
-    #         back_out = tf.matmul(back_out, grad_x)
-    #     return grad_array.stack()
-
-    # return out
 
 
 # def tf_matmul_right(dUs):
@@ -629,11 +584,6 @@ def tf_diff(l):  # noqa
 
 
 # MATRIX FUNCTIONS
-
-
-@tf.function
-def tf_expm_func(A):
-    return tf.linalg.expm(A)
 
 
 def tf_expm(A, terms):
@@ -753,29 +703,6 @@ def tf_super(A):
     return superA
 
 
-def tf_choi_to_chi(U, dims=None):
-    """
-    Convert the choi representation of a process to chi representation.
-
-    """
-    if dims is None:
-        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.constant(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
-    return tf.linalg.adjoint(B) @ U @ B
-
-
-def super_to_choi(A):
-    """
-    Convert a super operator to choi representation.
-
-    """
-    sqrt_shape = int(np.sqrt(A.shape[0]))
-    A_choi = tf.reshape(
-        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
-    )
-    return A_choi
-
-
 def tf_state_to_dm(psi_ket):
     """Make a state vector into a density matrix."""
     psi_ket = tf.reshape(psi_ket, [psi_ket.shape[0], 1])
@@ -864,15 +791,11 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
     return overlap
 
 
-def tf_average_fidelity(A, B, lvls=None, index=None):
+def tf_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    if index is None:
-        index = list(range(len(lvls)))
-    Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, index, to_super=False)), B
-    )
+        lvls = [tf.cast(B.shape[0], B.dtype)]
+    Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
@@ -892,21 +815,36 @@ def tf_super_to_fid(err, lvls):
     return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
 
 
-def tf_project_to_comp(A, dims, to_super=False):
+def tf_choi_to_chi(U, dims=None):
+    """
+    Convert the choi representation of a process to chi representation.
+
+    """
+    if dims is None:
+        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
+    B = tf.constant(pauli_basis([2] * len(dims)), dtype=tf.complex128)
+    return tf.linalg.adjoint(B) @ U @ B
+
+
+def super_to_choi(A):
+    """
+    Convert a super operator to choi representation.
+
+    """
+    sqrt_shape = int(np.sqrt(A.shape[0]))
+    A_choi = tf.reshape(
+        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
+    )
+    return A_choi
+
+
+def tf_project_to_comp(A, dims, index=None, to_super=False):
     """Project an operator onto the computational subspace."""
-    # TODO projection to computational subspace can be done more efficiently than this
-    # TODO include indexing
-    proj_list = []
-    for dim in dims:
-        p = np.zeros([dim, 2])
-        p[0, 0] = 1
-        p[1, 1] = 1
-        if to_super:
-            p = np.kron(p, p)
-        proj_list.append(p)
-    proj = proj_list.pop()
-    while not proj_list == []:
-        proj = np.kron(proj_list.pop(), proj)
+    if not index:
+        index = list(range(len(dims)))
+    proj = projector(dims, index)
+    if to_super:
+        proj = np.kron(proj, proj)
     P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
 
@@ -947,75 +885,3 @@ def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
     convolution = tf.signal.ifft(fft_conv)
     return convolution[:sig_len]
-
-
-@tf.function
-def batch_matrix_gather(a, indeces, num_inner_dims=2):
-    if len(a.shape) == num_inner_dims:
-        return tf.gather_nd(a, indeces)
-    elif len(a.shape) == num_inner_dims + 1:
-        b_arr = tf.TensorArray(a.dtype, size=a.shape[0])
-        ii, b_arr = tf.while_loop(
-            lambda ii, b_arr: ii < a.shape[0],
-            lambda ii, b_arr: (ii + 1, b_arr.write(ii, tf.gather_nd(a[ii], indeces))),
-            [tf.constant(0), b_arr],
-        )
-        b = b_arr.stack()
-        return b
-    else:
-        raise NotImplementedError("multiple batch dimensions not supported")
-
-
-@tf.function
-def batch_matrix_scatter(b, indeces, out_dim, num_inner_dims=2):
-    if len(b.shape) == num_inner_dims:
-        out_shape = [out_dim] * num_inner_dims
-        a = tf.tensor_scatter_nd_add(
-            tf.zeros(out_shape, b.dtype), indices=indeces, updates=b
-        )
-    elif len(b.shape) == num_inner_dims + 1:
-        a_arr = tf.TensorArray(b.dtype, size=b.shape[0])
-        zeros_tensor = tf.zeros([out_dim] * num_inner_dims, b.dtype)
-        ii, a_arr = tf.while_loop(
-            lambda ii, a_arr: ii < b.shape[0],
-            lambda ii, a_arr: (
-                ii + 1,
-                a_arr.write(
-                    ii,
-                    tf.tensor_scatter_nd_add(
-                        zeros_tensor, indices=indeces, updates=b[ii]
-                    ),
-                ),
-            ),
-            [tf.constant(0), a_arr],
-        )
-        a = a_arr.stack()
-    else:
-        raise NotImplementedError("multiple batch dimensions not supported")
-    return a
-
-
-@tf.custom_gradient
-def cut_hilbert_matrix(a, indeces, num_inner_dims=2):
-    b = batch_matrix_gather(a, indeces, num_inner_dims=num_inner_dims)
-
-    # TODO double check that gradient is passed correctly
-    def grad(z):
-        g = batch_matrix_scatter(
-            z, indeces, tf.shape(a)[-1], num_inner_dims=num_inner_dims
-        )
-        return g, None
-
-    return b, grad
-
-
-@tf.custom_gradient
-def uncut_hilbert_matrix(b, indeces, out_shape, num_inner_dims=2):
-    a = batch_matrix_scatter(b, indeces, out_shape, num_inner_dims=num_inner_dims)
-
-    # TODO double check that gradient is passed correctly
-    def grad(z):
-        g = batch_matrix_gather(z, indeces, num_inner_dims=num_inner_dims)
-        return g, None, None
-
-    return a, grad

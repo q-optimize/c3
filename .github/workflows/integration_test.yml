@@ -29,4 +29,5 @@ jobs:
         pip install -r requirements.txt
     - name: Test with pytest
       run: |
-        pytest -v --cov=c3 test/
+        pytest -v -x -m "not slow" test/
+        pytest -v -x -m "slow" test/

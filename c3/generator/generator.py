@@ -130,4 +130,9 @@ class Generator:
             # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
         self.gen_stacked_signals = gen_stacked_signals
+
+        # Hack to use crosstalk. Will be generalized to a post-processing module.
+        # TODO: Rework of the signal generation for larger chips, similar to qiskit
+        if "crosstalk" in self.devices:
+            gen_signal = self.devices["crosstalk"].process(signal=gen_signal)
         return gen_signal

@@ -9,6 +9,7 @@ states or populations.
 """
 
 import os
+import copy
 import pickle
 import itertools
 import hjson
@@ -22,8 +23,15 @@ from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
-from c3.utils import tf_utils
-from c3.utils.qt_utils import perfect_gate
+from c3.utils.tf_utils import (
+    batch_propagate,
+    tf_propagation_lind,
+    tf_matmul_left,
+    tf_state_to_dm,
+    tf_super,
+    tf_vec_to_dm,
+)
+from c3.utils.qt_utils import perfect_single_q_parametric_gate, kron_ids
 
 
 class Experiment:
@@ -33,29 +41,38 @@ class Experiment:
 
     Parameters
     ----------
-    model: Model
-        The underlying physical device.
-    generator: Generator
-        The infrastructure for generating and sending control signals to the
-        device.
-    gateset: GateSet
-        A gate level description of the operations implemented by control
-        pulses.
+    pmap: ParameterMap
+        including
+        model: Model
+            The underlying physical device.
+        generator: Generator
+            The infrastructure for generating and sending control signals to the
+            device.
+        gateset: GateSet
+            A gate level description of the operations implemented by control
+            pulses.
 
     """
 
     def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
-        self.unitaries: Dict[str, tf.Tensor] = {}
-        self.dUs: dict = {}
+        self.propagators: Dict[str, tf.Tensor] = {}
+        self.partial_propagators: dict = {}
         self.created_by = None
         self.logdir: str = None
         self.propagate_batch_size = None
         self.use_control_fields = True
-        self.overwrite_unitaries = True
+        self.overwrite_propagators = True
         self.get_gates_timestamp = 0
         self.stop_dU_gradient = True
+        self.evaluate = self.evaluate_legacy
+
+    def enable_qasm(self) -> None:
+        """
+        Switch the sequencing format to QASM. Will become the default.
+        """
+        self.evaluate = self.evaluate_qasm
 
     def set_created_by(self, config):
         """
@@ -87,9 +104,10 @@ class Experiment:
         instructions = []
         sideband = cfg.pop("sideband", None)
         for gate_name, props in cfg["single_qubit_gates"].items():
-            target_qubit = model.subsystems[props["target_qubit"]]
+            target_qubit = model.subsystems[props["qubits"]]
             instr = Instruction(
-                name=gate_name,
+                name=props["name"],
+                targets=[model.names.index(props["qubits"])],
                 t_start=0.0,
                 t_end=single_gate_time,
                 channels=[target_qubit.drive_line],
@@ -108,6 +126,10 @@ class Experiment:
             qubit_2 = model.subsystems[props["qubit_2"]]
             instr = Instruction(
                 name=gate_name,
+                targets=[
+                    model.names.index(props["qubit_1"]),
+                    model.names.index(props["qubit_2"]),
+                ],
                 t_start=0.0,
                 t_end=props["gate_time"],
                 channels=[qubit_1.drive_line, qubit_2.drive_line],
@@ -172,13 +194,13 @@ class Experiment:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
 
-    def evaluate(self, seqs):
+    def evaluate_legacy(self, sequences):
         """
         Compute the population values for a given sequence of operations.
 
         Parameters
         ----------
-        seqs: str list
+        sequences: str list
             A list of control pulses/gates to perform on the device.
 
         Returns
@@ -188,17 +210,71 @@ class Experiment:
 
         """
         model = self.pmap.model
-        Us = tf_utils.evaluate_sequences(self.unitaries, seqs)
         psi_init = model.tasks["init_ground"].initialise(
-            model.drift_H, model.lindbladian
+            model.drift_ham, model.lindbladian
         )
         self.psi_init = psi_init
         populations = []
-        for U in Us:
-            psi_final = tf.matmul(U, self.psi_init)
-            pops = self.populations(psi_final, model.lindbladian)
+        for sequence in sequences:
+            psi_t = copy.deepcopy(self.psi_init)
+            for gate in sequence:
+                psi_t = tf.matmul(self.propagators[gate], psi_t)
+
+            pops = self.populations(psi_t, model.lindbladian)
             populations.append(pops)
         return populations
+
+    def evaluate_qasm(self, sequences):
+        """
+        Compute the population values for a given sequence (in QASM format) of
+        operations.
+
+        Parameters
+        ----------
+        sequences: dict list
+            A list of control pulses/gates to perform on the device in QASM format.
+
+        Returns
+        -------
+        list
+            A list of populations
+
+        """
+        model = self.pmap.model
+        if "init_ground" in model.tasks:
+            psi_init = model.tasks["init_ground"].initialise(
+                model.drift_ham, model.lindbladian
+            )
+        else:
+            psi_init = model.get_ground_state()
+        self.psi_init = psi_init
+        populations = []
+        for sequence in sequences:
+            psi_t = copy.deepcopy(self.psi_init)
+            for gate in sequence:
+                psi_t = tf.matmul(self.lookup_gate(**gate), psi_t)
+
+            pops = self.populations(psi_t, model.lindbladian)
+            populations.append(pops)
+        return populations
+
+    def lookup_gate(self, name, qubits, params=None) -> tf.constant:
+        """
+        Returns a fixed operation or a parametric virtual Z gate. To be extended to
+        general parametric gates.
+        """
+        if name == "VZ":
+            gate = tf.constant(self.get_VZ(qubits, params))
+        else:
+            gate = self.propagators[name + str(qubits)]
+        return gate
+
+    def get_VZ(self, target, params):
+        """
+        Returns the appropriate Z-rotation.
+        """
+        dims = self.pmap.model.dims
+        return perfect_single_q_parametric_gate("Z", target[0], params[0], dims)
 
     def process(self, populations, labels=None):
         """
@@ -254,9 +330,13 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
-    def get_perfect_gates(self) -> Dict[str, np.array]:
-        """Return a perfect gateset. If not operations are
-        specified in self.opt_gates, return complete gateset
+    def get_perfect_gates(self, gate_keys: list = None) -> Dict[str, np.array]:
+        """Return a perfect gateset for the gate_keys.
+
+        Parameters
+        ----------
+        gate_keys: list
+            (Optional) List of gates to evaluate.
 
         Returns
         -------
@@ -271,25 +351,19 @@ class Experiment:
         """
         instructions = self.pmap.instructions
         gates = {}
-        gate_keys = self.opt_gates
+        dims = self.pmap.model.dims
         if gate_keys is None:
-            gate_keys = instructions.keys()
-
+            gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
-            if gate not in instructions.keys():
-                raise Exception(
-                    f"C3:Error: Gate '{gate}' is not defined."
-                    f" Available gates are:\n {list(instructions.keys())}."
-                )
-            gates[gate] = perfect_gate(
-                gate,
-                index=list(range(len(self.pmap.model.dims))),
-                dims=self.pmap.model.dims,
+            gates[gate] = kron_ids(
+                dims, instructions[gate].targets, [instructions[gate].ideal]
             )
+
+        # TODO parametric gates
 
         return gates
 
-    def get_gates(self):
+    def compute_propagators(self):
         """
         Compute the unitary representation of operations. If no operations are
         specified in self.opt_gates the complete gateset is computed.
@@ -303,11 +377,11 @@ class Experiment:
         generator = self.pmap.generator
         instructions = self.pmap.instructions
         gates = {}
-        gate_keys = self.opt_gates
-        if gate_keys is None:
-            gate_keys = instructions.keys()
+        gate_ids = self.opt_gates
+        if gate_ids is None:
+            gate_ids = instructions.keys()
 
-        for gate in gate_keys:
+        for gate in gate_ids:
             try:
                 instr = instructions[gate]
             except KeyError:
@@ -339,7 +413,7 @@ class Experiment:
                 t_final = tf.constant(instr.t_end - instr.t_start, dtype=tf.complex128)
                 FR = model.get_Frame_Rotation(t_final, freqs, framechanges)
                 if model.lindbladian:
-                    SFR = tf_utils.tf_super(FR)
+                    SFR = tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
                 else:
@@ -359,10 +433,10 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-            if self.overwrite_unitaries:
-                self.unitaries = gates
+            if self.overwrite_propagators:
+                self.propagators = gates
             else:
-                self.unitaries[gate] = U
+                self.propagators[gate] = U
             self.get_gates_timestamp = time.time()
         return gates
 
@@ -375,8 +449,6 @@ class Experiment:
         ----------
         signal: dict
             Waveform of the control signal per drive line.
-        ts: tf.float64
-            Vector of times.
         gate: str
             Identifier for one of the gates.
 
@@ -387,9 +459,6 @@ class Experiment:
         """
         model = self.pmap.model
 
-        mask_ids, full_hilbert_dim = model.get_reduced_indices()
-        if mask_ids is not None:
-            mask_ids = tf.cast(mask_ids, tf.int32)
         if self.use_control_fields:
             hamiltonian, hctrls = model.get_Hamiltonians()
             signals = []
@@ -401,8 +470,7 @@ class Experiment:
             signals = tf.cast(signals, tf.complex128)
             hks = tf.cast(hks, tf.complex128)
         else:
-            with tf.profiler.experimental.Trace("Get Hamiltonian"):
-                hamiltonian = model.get_Hamiltonian(signal)
+            hamiltonian = model.get_Hamiltonian(signal)
             ts_list = [sig["ts"][1:] for sig in signal.values()]
             ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
             signals = None
@@ -414,16 +482,17 @@ class Experiment:
                 tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
             )
 
-        if mask_ids is not None:
-            hamiltonian = tf_utils.cut_hilbert_matrix(hamiltonian, mask_ids)
+        if model.max_excitations:
+            cutter = model.ex_cutter
+            hamiltonian = cutter @ hamiltonian @ cutter.T
             if hks is not None:
-                hks = tf_utils.cut_hilbert_matrix(hks, mask_ids)
+                hks = tf.matmul(cutter, tf.matmul(hks, cutter, transpose_b=True))
 
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
-            dUs = tf_utils.tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
+            dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
         else:
             batch_size = (
                 self.propagate_batch_size
@@ -434,38 +503,30 @@ class Experiment:
                 len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
             )
             batch_size = tf.constant(batch_size, tf.int32)
-            dUs = tf_utils.batch_propagate(
-                hamiltonian, hks, signals, dt, batch_size=batch_size
-            )
+            dUs = batch_propagate(hamiltonian, hks, signals, dt, batch_size=batch_size)
 
-        if mask_ids is not None:
+        U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+        if model.max_excitations:
+            U = cutter.T @ U @ cutter
+            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
             if self.stop_dU_gradient:
-                self.dUs[gate] = tf.stop_gradient(
-                    tf_utils.uncut_hilbert_matrix(dUs, mask_ids, full_hilbert_dim)
+                self.partial_propagators[gate] = tf.stop_gradient(
+                    tf.linalg.matmul(
+                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                        ex_cutter,
+                    )
                 )
             else:
-                self.dUs[gate] = tf_utils.uncut_hilbert_matrix(
-                    dUs, mask_ids, full_hilbert_dim
+                self.partial_propagators[gate] = tf.stop_gradient(
+                    tf.linalg.matmul(
+                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                        ex_cutter,
+                    )
                 )
-
-        elif model.max_excitations:
-            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
-            self.dUs[gate] = tf.stop_gradient(
-                tf.linalg.matmul(
-                    tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
-                    ex_cutter,
-                )
-            )
         else:
-            self.dUs[gate] = dUs
+            self.partial_propagators[gate] = dUs
 
-        dUs = tf.cast(dUs, tf.complex128)
         self.ts = ts
-        U = tf_utils.tf_matmul_left(dUs)
-        if mask_ids is not None:
-            U = tf_utils.uncut_hilbert_matrix(U, mask_ids, full_hilbert_dim)
-        if model.max_excitations:
-            U = model.ex_cutter.T @ U @ model.ex_cutter
         return U
 
     def set_opt_gates(self, gates):
@@ -530,8 +591,8 @@ class Experiment:
         if not os.path.exists(folder):
             os.mkdir(folder)
         with open(folder + "Us.pickle", "wb+") as file:
-            pickle.dump(self.unitaries, file)
-        for key, value in self.unitaries.items():
+            pickle.dump(self.propagators, file)
+        for key, value in self.propagators.items():
             # Windows is not able to parse ":" as file path
             np.savetxt(folder + key.replace(":", ".") + ".txt", value)
 
@@ -552,7 +613,7 @@ class Experiment:
             Vector of populations.
         """
         if lindbladian:
-            rho = tf_utils.tf_vec_to_dm(state)
+            rho = tf_vec_to_dm(state)
             pops = tf.math.real(tf.linalg.diag_part(rho))
             return tf.reshape(pops, shape=[pops.shape[0], 1])
         else:
@@ -560,8 +621,8 @@ class Experiment:
 
     def expect_oper(self, state, lindbladian, oper):
         if lindbladian:
-            rho = tf_utils.tf_vec_to_dm(state)
+            rho = tf_vec_to_dm(state)
         else:
-            rho = tf_utils.tf_state_to_dm(state)
+            rho = tf_state_to_dm(state)
         trace = np.trace(np.matmul(rho, oper))
         return [[np.real(trace)]]  # ,[np.imag(trace)]]

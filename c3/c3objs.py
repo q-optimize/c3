@@ -77,18 +77,23 @@ class Quantity:
     def __init__(
         self, value, unit="undefined", min_val=None, max_val=None, symbol=r"\alpha"
     ):
+        pref = 1.0
         value = np.array(value)
         if "pi" in unit:
             pref = np.pi
         if "2pi" in unit:
             pref = 2 * np.pi
-        else:
-            pref = 1.0
+
         self.pref = pref
         if min_val is None and max_val is None:
-            minmax = [0.9 * value, 1.1 * value]
-            min_val = np.min(minmax)
-            max_val = np.max(minmax)
+            if value.any():
+                minmax = [0.9 * value, 1.1 * value]
+                min_val = np.min(minmax, axis=0)
+                max_val = np.max(minmax, axis=0)
+            else:
+                # When would this case be reached?
+                min_val = -1
+                max_val = 1
         self.offset = np.array(min_val) * pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
         self.unit = unit

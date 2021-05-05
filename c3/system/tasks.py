@@ -33,13 +33,13 @@ class InitialiseGround(Task):
         super().__init__(name=name, desc=desc, comment=comment)
         self.params["init_temp"] = init_temp
 
-    def initialise(self, drift_H, lindbladian=False, init_temp=None):
+    def initialise(self, drift_ham, lindbladian=False, init_temp=None):
         """
         Prepare the initial state of the system. At the moment finite temperature requires open system dynamics.
 
         Parameters
         ----------
-        drift_H : tf.Tensor
+        drift_ham : tf.Tensor
             Drift Hamiltonian.
         lindbladian : boolean
             Whether to include open system dynamics. Required for Temperature > 0.
@@ -55,7 +55,7 @@ class InitialiseGround(Task):
             init_temp = tf.cast(
                 self.params["init_temp"].get_value(), dtype=tf.complex128
             )
-        diag = tf.linalg.diag_part(drift_H)
+        diag = tf.linalg.diag_part(drift_ham)
         dim = len(diag)
         if abs(init_temp) > np.finfo(float).eps:  # this checks that it's not zero
             # TODO Deal with dressed basis for thermal state

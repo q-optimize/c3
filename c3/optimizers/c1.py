@@ -35,8 +35,6 @@ class C1(Optimizer):
         User specified name for the run, will be used as root folder
     opt_gates : dict
         Dictionary with ideal gate names as values and evaluated gate names as keys.
-    callback: callable
-        Callback to be called when parameters are being logged
     """
 
     def __init__(
@@ -132,7 +130,7 @@ class C1(Optimizer):
         """
         self.pmap.set_parameters_scaled(current_params)
         dims = self.pmap.model.dims
-        propagators = self.exp.get_gates()
+        propagators = self.exp.compute_propagators()
         if self.opt_gates is not None:
             renamed_propagators = dict()
             for k, v in self.opt_gates.items():
@@ -147,6 +145,8 @@ class C1(Optimizer):
                 eval=self.evaluation + 1,
             )
         except TypeError as e:
+            # If additional information about the experiment is necessary in the fidelity
+            # function pass on also the experiment
             try:
                 goal = self.fid_func(
                     exp=self.exp,
