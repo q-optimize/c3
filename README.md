@@ -7,7 +7,7 @@
 [![PyPI version fury.io](https://badge.fury.io/py/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
 [![PyPI license](https://img.shields.io/pypi/l/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/c3-toolset.svg)](https://pypi.python.org/pypi/c3-toolset/)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/q-optimize/c3/HEAD)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/q-optimize/c3/dev)
 
 The C3 package is intended to close the loop between open-loop control optimization, control pulse calibration, and model-matching based on calibration data.
 
