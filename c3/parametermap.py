@@ -19,14 +19,16 @@ class ParameterMap:
     representations depending on use.
     """
 
-    def __init__(self, instructions: list = [], generator=None, model=None):
+    def __init__(
+        self, instructions: List[Instruction] = [], generator=None, model=None
+    ):
         self.instructions: Dict[str, Instruction] = dict()
         self.opt_map: List[List[Tuple[str]]] = list()
         self.model = model
         self.generator = generator
         for instr in instructions:
             # Is this redundant key necessary?
-            self.instructions[instr.name + str(instr.targets)] = instr
+            self.instructions[instr.name + instr.get_target_str()] = instr
 
         # Collecting model components
         components = {}
@@ -267,10 +269,6 @@ class ParameterMap:
         ), "Different number of elements in values and opt_map"
         for equiv_ids in opt_map:
             for key in equiv_ids:
-                # We check if a model parameter has changed
-                model_updated = key in self.__par_ids_model or model_updated
-            for par_id in equiv_ids:
-                key = "-".join(par_id)
                 # We check if a model parameter has changed
                 model_updated = key in self.__par_ids_model or model_updated
                 try:

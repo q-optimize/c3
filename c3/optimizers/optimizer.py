@@ -150,8 +150,8 @@ class Optimizer:
         Save the best unitary in the log.
         """
         with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
-            U_dict = self.exp.propagators
-            for gate, U in U_dict.items():
+            propagators = self.exp.propagators
+            for gate, U in propagators.items():
                 best_point.write("\n")
                 best_point.write(f"Re {gate}: \n")
                 best_point.write(f"{np.round(np.real(U), 3)}\n")

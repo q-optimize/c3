@@ -47,8 +47,8 @@ class Model:
         self.subsystems: dict = dict()
         self.couplings: dict = dict()
         self.tasks: dict = dict()
-        self.drift_H = None
-        self.dressed_drift_H = None
+        self.drift_ham = None
+        self.dressed_drift_ham = None
         self.__hamiltonians = None
         self.__dressed_hamiltonians = None
         if subsystems:
@@ -281,9 +281,9 @@ class Model:
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
         if signal is None:
             if self.dressed:
-                return self.dressed_drift_H
+                return self.dressed_drift_ham
             else:
-                return self.drift_H
+                return self.drift_ham
         if self.dressed:
             hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
             transform = self.transform
@@ -452,7 +452,7 @@ class Model:
         return FR
 
     def get_qubit_freqs(self) -> List[float]:
-        es = tf.math.real(tf.linalg.diag_part(self.dressed_drift_H))
+        es = tf.math.real(tf.linalg.diag_part(self.dressed_drift_ham))
         frequencies = []
         for i in range(len(self.dims)):
             state = [0] * len(self.dims)

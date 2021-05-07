@@ -64,7 +64,7 @@ class Experiment:
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_propagators = True
-        self.get_gates_timestamp = 0
+        self.compute_propagators_timestamp = 0
         self.stop_dU_gradient = True
         self.evaluate = self.evaluate_legacy
 
@@ -355,9 +355,7 @@ class Experiment:
         if gate_keys is None:
             gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
-            gates[gate] = kron_ids(
-                dims, instructions[gate].targets, [instructions[gate].ideal]
-            )
+            gates[gate] = instructions[gate].get_ideal_gate(dims)
 
         # TODO parametric gates
 
@@ -437,7 +435,7 @@ class Experiment:
                 self.propagators = gates
             else:
                 self.propagators[gate] = U
-            self.get_gates_timestamp = time.time()
+            self.compute_propagators_timestamp = time.time()
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -486,7 +484,8 @@ class Experiment:
             cutter = model.ex_cutter
             hamiltonian = cutter @ hamiltonian @ cutter.T
             if hks is not None:
-                hks = tf.matmul(cutter, tf.matmul(hks, cutter, transpose_b=True))
+                cutter_tf = tf.cast(cutter, tf.complex128)
+                hks = tf.matmul(cutter_tf, tf.matmul(hks, cutter_tf, transpose_b=True))
 
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 

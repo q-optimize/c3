@@ -386,8 +386,8 @@ def test_dynamics_CPHASE() -> None:
 def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
-    U_dict = exp.compute_propagators()
-    U_super = U_dict["crzp[0, 1]"]
+    propagators = exp.compute_propagators()
+    U_super = propagators["crzp[0, 1]"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()

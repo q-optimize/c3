@@ -8,7 +8,8 @@ import warnings
 from typing import List, Dict
 import copy
 from c3.libraries.constants import GATES
-from c3.utils.qt_utils import kron_ids
+from c3.utils.qt_utils import kron_ids, np_kron_n, insert_mat_kron
+from c3.utils.tf_utils import tf_project_to_comp
 
 
 class Instruction:
@@ -44,12 +45,12 @@ class Instruction:
     def __init__(
         self,
         name: str = " ",
-        targets: list = [0],
+        targets: list = None,
         params: list = None,
         ideal: np.array = None,
         channels: List[str] = [],
         t_start: float = None,
-        t_end: float = None,  # TODO remove in the long term
+        t_end: float = None,
         # fixed_t_end: bool = True,
     ):
         self.name = name
@@ -60,18 +61,22 @@ class Instruction:
         self.comps: Dict[str, Dict[str, C3obj]] = dict()
         self.__options: Dict[str, dict] = dict()
         self.fixed_t_end = True
-        if ideal:
+        if ideal is not None:
             self.ideal = ideal
-        elif name in GATES.keys():
-            self.ideal = GATES[name]
         else:
-            self.ideal = None
+            gate_list = []
+            for key in name.split(":"):
+                if key in GATES:
+                    gate_list.append(GATES[key])
+                else:
+                    raise AttributeError(f"No ideal gate found for gate: {key}")
+            self.ideal = np_kron_n(gate_list)
+        print(name, self.ideal.shape)
         for chan in channels:
             self.comps[chan] = dict()
             self.__options[chan] = dict()
 
         self.__timings: Dict[str, tuple] = dict()
-        # TODO remove redundancy of channels in instruction
 
     def as_openqasm(self) -> dict:
         asdict = {"name": self.name, "qubits": self.targets, "params": self.params}
@@ -79,17 +84,34 @@ class Instruction:
             asdict["ideal"] = self.ideal
         return asdict
 
-    def get_ideal_gate(self, dims):
+    def get_ideal_gate(self, dims, index=None):
         if self.ideal is None:
             raise Exception(
                 "C3:ERROR: No ideal representation definded for gate"
-                f" {self.name+str(self.targets)}"
+                f" {self.name + self.get_target_str()}"
             )
-        return kron_ids(
+
+        targets = self.targets
+        if targets is None:
+            targets = list(range(len(dims)))
+
+        ideal_gate = insert_mat_kron(
             [2] * len(dims),  # we compare to the computational basis
-            self.targets,
+            targets,
             [self.ideal],
         )
+
+        if index:
+            ideal_gate = tf_project_to_comp(
+                ideal_gate, dims=[2] * len(dims), index=index
+            )
+
+        return ideal_gate
+
+    def get_target_str(self) -> str:
+        if self.targets is None:
+            return ""
+        return str(self.targets)
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -154,7 +176,7 @@ class Instruction:
                         parameter_list.append(
                             (
                                 [
-                                    self.name + str(self.targets),
+                                    self.name + self.get_target_str(),
                                     chan,
                                     comp,
                                     option_name,

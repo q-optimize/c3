@@ -2,9 +2,11 @@
 
 import numpy as np
 import tensorflow as tf
-from typing import List
+from typing import List, Dict
 
 from scipy.optimize import curve_fit
+
+from c3.signal.gates import Instruction
 from c3.utils.tf_utils import (
     tf_ave,
     tf_super,
@@ -63,7 +65,7 @@ def state_transfer_infid_set(
     Returns
     -------
     tf.float
-        State infidelity, averaged over the gates in U_dict
+        State infidelity, averaged over the gates in propagators
     """
     infids = []
     for gate, propagator in propagators.items():
@@ -108,8 +110,8 @@ def state_transfer_infid(ideal: np.array, actual: tf.constant, index, dims, psi_
 
 @fid_reg_deco
 def unitary_infid(
-    ideal: np.array, actual: tf.constant, index: List[int] = None, dims=None
-) -> tf.constant:
+    ideal: np.array, actual: tf.Tensor, index: List[int] = None, dims=None
+) -> tf.Tensor:
     """
     Unitary overlap between ideal and actually performed gate.
 
@@ -122,7 +124,7 @@ def unitary_infid(
     index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
     gate : str
-        One of the keys of U_dict, selects the gate to be evaluated
+        One of the keys of propagators, selects the gate to be evaluated
     dims : list
         List of dimensions of qubits
 
@@ -143,7 +145,7 @@ def unitary_infid(
 def unitary_infid_set(propagators: dict, instructions: dict, index, dims, n_eval=-1):
     """
     Mean unitary overlap between ideal and actually performed gate for the gates in
-    U_dict.
+    propagators.
 
     Parameters
     ----------
@@ -166,7 +168,7 @@ def unitary_infid_set(propagators: dict, instructions: dict, index, dims, n_eval
     """
     infids = []
     for gate, propagator in propagators.items():
-        perfect_gate = kron_ids(dims, index, [instructions[gate].ideal])
+        perfect_gate = instructions[gate].get_ideal_gate(dims, index)
         infid = unitary_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
@@ -204,7 +206,7 @@ def lindbladian_unitary_infid(
 
 @fid_reg_deco
 def lindbladian_unitary_infid_set(
-    propagators: dict, instructions: dict, index, dims, n_eval
+    propagators: dict, instructions: Dict[str, Instruction], index, dims, n_eval
 ):
     """
     Variant of the mean unitary fidelity for the Lindbladian propagator.
@@ -226,11 +228,11 @@ def lindbladian_unitary_infid_set(
     Returns
     -------
     tf.float
-        Mean overlap fidelity for the Lindblad propagator for all gates in U_dict.
+        Mean overlap fidelity for the Lindblad propagator for all gates in propagators.
     """
     infids = []
     for gate, propagator in propagators.items():
-        perfect_gate = kron_ids(dims, index, [instructions[gate].ideal])
+        perfect_gate = instructions[gate].get_ideal_gate(dims)
         infid = lindbladian_unitary_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
@@ -238,7 +240,7 @@ def lindbladian_unitary_infid_set(
 
 @fid_reg_deco
 def average_infid(
-    ideal: np.array, actual: tf.Tensor, index=[0], dims=[2]
+    ideal: np.array, actual: tf.Tensor, index: List[int] = [0], dims=[2]
 ) -> tf.constant:
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
@@ -250,7 +252,7 @@ def average_infid(
         Contains ideal unitary representations of the gate
     actual: tf.Tensor
         Contains actual unitary representations of the gate
-    index : int
+    index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
     dims : list
         List of dimensions of qubits
@@ -262,13 +264,15 @@ def average_infid(
 
 
 @fid_reg_deco
-def average_infid_set(propagators: dict, instructions: dict, index, dims, n_eval=-1):
+def average_infid_set(
+    propagators: dict, instructions: dict, index: List[int], dims, n_eval=-1
+):
     """
-    Mean average fidelity over all gates in U_dict.
+    Mean average fidelity over all gates in propagators.
 
     Parameters
     ----------
-    U_dict : dict
+    propagators : dict
         Contains unitary representations of the gates, identified by a key.
     index : int
         Index of the qubit(s) in the Hilbert space to be evaluated
@@ -284,7 +288,7 @@ def average_infid_set(propagators: dict, instructions: dict, index, dims, n_eval
     """
     infids = []
     for gate, propagator in propagators.items():
-        perfect_gate = instructions[gate].get_ideal_gate(dims)
+        perfect_gate = instructions[gate].get_ideal_gate(dims, index)
         infid = average_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
@@ -293,11 +297,11 @@ def average_infid_set(propagators: dict, instructions: dict, index, dims, n_eval
 @fid_reg_deco
 def average_infid_seq(propagators: dict, instructions: dict, index, dims, n_eval=-1):
     """
-    Average sequence fidelity over all gates in U_dict.
+    Average sequence fidelity over all gates in propagators.
 
     Parameters
     ----------
-    U_dict : dict
+    propagators : dict
         Contains unitary representations of the gates, identified by a key.
     index : int
         Index of the qubit(s) in the Hilbert space to be evaluated
@@ -345,14 +349,14 @@ def lindbladian_average_infid(
 
 @fid_reg_deco
 def lindbladian_average_infid_set(
-    propagators: dict, instructions: dict, index, dims, n_eval
+    propagators: dict, instructions: Dict[str, Instruction], index, dims, n_eval
 ):
     """
-    Mean average fidelity over all gates in U_dict.
+    Mean average fidelity over all gates in propagators.
 
     Parameters
     ----------
-    U_dict : dict
+    propagators : dict
         Contains unitary representations of the gates, identified by a key.
     index : int
         Index of the qubit(s) in the Hilbert space to be evaluated
@@ -368,22 +372,24 @@ def lindbladian_average_infid_set(
     """
     infids = []
     for gate, propagator in propagators.items():
-        perfect_gate = kron_ids(dims, index, [instructions[gate].ideal])
+        perfect_gate = instructions[gate].get_ideal_gate()
         infid = lindbladian_average_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)
 
 
 @fid_reg_deco
-def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
+def epc_analytical(propagators: dict, index, dims, proj: bool, cliffords=False):
     # TODO check this work with new index and dims (double-check)
     num_gates = len(dims)
     if cliffords:
-        real_cliffords = evaluate_sequences(U_dict, [[C] for C in cliffords_string])
+        real_cliffords = evaluate_sequences(
+            propagators, [[C] for C in cliffords_string]
+        )
     elif num_gates == 1:
-        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+        real_cliffords = evaluate_sequences(propagators, cliffords_decomp)
     elif num_gates == 2:
-        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
+        real_cliffords = evaluate_sequences(propagators, cliffords_decomp_xId)
     ideal_cliffords = perfect_cliffords(lvls=[2] * num_gates, num_gates=num_gates)
     fids = []
     for C_indx in range(24):
@@ -396,14 +402,18 @@ def epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
 
 
 @fid_reg_deco
-def lindbladian_epc_analytical(U_dict: dict, index, dims, proj: bool, cliffords=False):
+def lindbladian_epc_analytical(
+    propagators: dict, index, dims, proj: bool, cliffords=False
+):
     num_gates = len(dims)
     if cliffords:
-        real_cliffords = evaluate_sequences(U_dict, [[C] for C in cliffords_string])
+        real_cliffords = evaluate_sequences(
+            propagators, [[C] for C in cliffords_string]
+        )
     elif num_gates == 1:
-        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp)
+        real_cliffords = evaluate_sequences(propagators, cliffords_decomp)
     elif num_gates == 2:
-        real_cliffords = evaluate_sequences(U_dict, cliffords_decomp_xId)
+        real_cliffords = evaluate_sequences(propagators, cliffords_decomp_xId)
     ideal_cliffords = perfect_cliffords(lvls=[2] * num_gates, num_gates=num_gates)
     fids = []
     for C_indx in range(24):
@@ -429,16 +439,16 @@ def populations(state, lindbladian):
 
 
 @fid_reg_deco
-def population(U_dict: dict, lvl: int, gate: str):
-    U = U_dict[gate]
+def population(propagators: dict, lvl: int, gate: str):
+    U = propagators[gate]
     lvls = U.shape[0]
     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
     psi_actual = tf.matmul(U, psi_0)
     return populations(psi_actual, lindbladian=False)[lvl]
 
 
-def lindbladian_population(U_dict: dict, lvl: int, gate: str):
-    U = U_dict[gate]
+def lindbladian_population(propagators: dict, lvl: int, gate: str):
+    U = propagators[gate]
     lvls = int(np.sqrt(U.shape[0]))
     psi_0 = tf.constant(basis(lvls, 0), dtype=tf.complex128)
     dv_0 = tf_dm_to_vec(tf_state_to_dm(psi_0))
@@ -448,7 +458,7 @@ def lindbladian_population(U_dict: dict, lvl: int, gate: str):
 
 @fid_reg_deco
 def RB(
-    U_dict,
+    propagators,
     min_length: int = 5,
     max_length: int = 500,
     num_lengths: int = 20,
@@ -457,8 +467,8 @@ def RB(
     lindbladian=False,
     padding="",
 ):
-    gate = list(U_dict.keys())[0]
-    U = U_dict[gate]
+    gate = list(propagators.keys())[0]
+    U = propagators[gate]
     dim = int(U.shape[0])
     psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
@@ -472,7 +482,7 @@ def RB(
     surv_prob = []
     for L in lengths:
         seqs = single_length_RB(num_seqs, L, padding)
-        Us = evaluate_sequences(U_dict, seqs)
+        Us = evaluate_sequences(propagators, seqs)
         pop0s = []
         for U in Us:
             pops = populations(tf.matmul(U, psi_init), lindbladian)
@@ -513,7 +523,7 @@ def RB(
             max_length = max_length * 2
             for L in new_lengths:
                 seqs = single_length_RB(num_seqs, L, padding)
-                Us = evaluate_sequences(U_dict, seqs)
+                Us = evaluate_sequences(propagators, seqs)
                 pop0s = []
                 for U in Us:
                     pops = populations(tf.matmul(U, psi_init), lindbladian)
@@ -527,23 +537,23 @@ def RB(
 
 @fid_reg_deco
 def lindbladian_RB_left(
-    U_dict: dict,
+    propagators: dict,
     gate: str,
     index,
     dims,
     proj: bool = False,
 ):
-    return RB(U_dict, padding="left")
+    return RB(propagators, padding="left")
 
 
 @fid_reg_deco
-def lindbladian_RB_right(U_dict: dict, gate: str, index, dims, proj: bool):
-    return RB(U_dict, padding="right")
+def lindbladian_RB_right(propagators: dict, gate: str, index, dims, proj: bool):
+    return RB(propagators, padding="right")
 
 
 @fid_reg_deco
 def leakage_RB(
-    U_dict,
+    propagators,
     min_length: int = 5,
     max_length: int = 500,
     num_lengths: int = 20,
@@ -551,8 +561,8 @@ def leakage_RB(
     logspace=False,
     lindbladian=False,
 ):
-    gate = list(U_dict.keys())[0]
-    U = U_dict[gate]
+    gate = list(propagators.keys())[0]
+    U = propagators[gate]
     dim = int(U.shape[0])
     psi_init = tf.constant(basis(dim, 0), dtype=tf.complex128)
     if logspace:
@@ -567,7 +577,7 @@ def leakage_RB(
     surv_prob = []
     for L in lengths:
         seqs = single_length_RB(num_seqs, L)
-        Us = evaluate_sequences(U_dict, seqs)
+        Us = evaluate_sequences(propagators, seqs)
         pop0s = []
         pop_comps = []
         for U in Us:
@@ -616,7 +626,7 @@ def leakage_RB(
             max_length = max_length * 2
             for L in new_lengths:
                 seqs = single_length_RB(num_seqs, L)
-                Us = evaluate_sequences(U_dict, seqs)
+                Us = evaluate_sequences(propagators, seqs)
                 pop0s = []
                 pop_comps = []
                 for U in Us:
@@ -667,7 +677,7 @@ def leakage_RB(
             max_length = max_length * 2
             for L in new_lengths:
                 seqs = single_length_RB(num_seqs, L)
-                Us = evaluate_sequences(U_dict, seqs)
+                Us = evaluate_sequences(propagators, seqs)
                 pop0s = []
                 pop_comps = []
                 for U in Us:
@@ -687,7 +697,7 @@ def leakage_RB(
 
 @fid_reg_deco
 def orbit_infid(
-    U_dict,
+    propagators,
     RB_number: int = 30,
     RB_length: int = 20,
     lindbladian=False,
@@ -697,7 +707,7 @@ def orbit_infid(
 ):
     if not seqs:
         seqs = single_length_RB(RB_number=RB_number, RB_length=RB_length)
-    Us = evaluate_sequences(U_dict, seqs)
+    Us = evaluate_sequences(propagators, seqs)
     infids = []
     for U in Us:
         dim = int(U.shape[0])

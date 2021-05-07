@@ -1,5 +1,5 @@
 """Useful functions to get basis vectors and matrices of the right size."""
-
+import itertools
 import numpy as np
 from typing import List
 from scipy.linalg import block_diag as scipy_block_diag
@@ -186,11 +186,9 @@ def projector(dims, indices, outdims=None):
     for index, dim in enumerate(dims):
         outdim = outdims[index]
         if index in indices:
-            ids.append(np.eye(dim)[:outdim])
+            ids.append(np.eye(dim, outdim))
         else:
-            mask = np.zeros(dim)
-            mask[0] = 1
-            ids.append(mask)
+            ids.append(np.eye(dim, 1))
     return np_kron_n(ids)
 
 
@@ -204,6 +202,49 @@ def kron_ids(dims, indices, matrices):
     for index, matrix in enumerate(matrices):
         ids[indices[index]] = matrix
     return np_kron_n(ids)
+
+
+def get_basis_matrices(dim):
+    """
+    Basis matrices with single ones of the matrices with given dimensions.
+    """
+    basis_mats = list()
+    for i in range(dim ** 2):
+        b = np.zeros((dim, dim), dtype=np.complex128)
+        b.flat[i] = 1
+        basis_mats.append(b)
+    return basis_mats
+
+
+def insert_mat_kron(dims, target_ids, matrix) -> np.ndarray:
+    """
+    Insert matrix at given indices. All other spaces are filled with zeros.
+
+    Parameters
+    ----------
+    dims: dimensions of each qubit subspace
+    target_ids: qubits to apply matrix to
+    matrix: matrix to be applied
+
+    Returns
+    -------
+    composed matrix
+    """
+    seperated_basis_matrices = list(
+        itertools.product(*[get_basis_matrices(dims[target]) for target in target_ids])
+    )
+
+    tot_dim = np.product(dims)
+    out_matrix = np.zeros((tot_dim, tot_dim), dtype=np.complex128)
+    for basis_mats in seperated_basis_matrices:
+        kron_mat = np_kron_n(basis_mats)
+        norm = np.sqrt(np.sum(np.abs(kron_mat)))
+        kron_mat /= norm
+        expanded_mat = kron_ids(dims, target_ids, basis_mats) / norm
+        decomposition = np.sum(matrix * kron_mat)
+        out_matrix += decomposition * expanded_mat
+
+    return out_matrix
 
 
 def pad_matrix(matrix, dim, padding):

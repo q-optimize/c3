@@ -33,8 +33,6 @@ class C1(Optimizer):
         Options to be passed to the algorithm
     run_name : str
         User specified name for the run, will be used as root folder
-    opt_gates : dict
-        Dictionary with ideal gate names as values and evaluated gate names as keys.
     """
 
     def __init__(
@@ -49,8 +47,8 @@ class C1(Optimizer):
         options={},
         run_name=None,
         interactive=True,
-        opt_gates=None,
         logger=None,
+        fid_func_kwargs={},
     ) -> None:
         super().__init__(
             pmap=pmap,
@@ -62,10 +60,10 @@ class C1(Optimizer):
         self.fid_subspace = fid_subspace
         self.callback_fids = callback_fids
         self.options = options
-        self.opt_gates = opt_gates
         self.__dir_path = dir_path
         self.__run_name = run_name
         self.interactive = interactive
+        self.fid_func_kwargs = fid_func_kwargs
 
     def log_setup(self) -> None:
         """
@@ -131,43 +129,26 @@ class C1(Optimizer):
         self.pmap.set_parameters_scaled(current_params)
         dims = self.pmap.model.dims
         propagators = self.exp.compute_propagators()
-        if self.opt_gates is not None:
-            renamed_propagators = dict()
-            for k, v in self.opt_gates.items():
-                renamed_propagators[v] = propagators[k]
-        else:
-            renamed_propagators = propagators
-        try:
-            goal = self.fid_func(
-                U_dict=renamed_propagators,
-                index=self.index,
-                dims=dims,
-                eval=self.evaluation + 1,
-            )
-        except TypeError as e:
-            # If additional information about the experiment is necessary in the fidelity
-            # function pass on also the experiment
-            try:
-                goal = self.fid_func(
-                    exp=self.exp,
-                    U_dict=renamed_propagators,
-                    index=self.index,
-                    dims=dims,
-                    eval=self.evaluation + 1,
-                )
-            except TypeError:
-                raise e
+
+        goal = self.fid_func(
+            propagators=propagators,
+            instructions=self.pmap.instructions,
+            index=self.index,
+            dims=dims,
+            n_eval=self.evaluation + 1,
+            **self.fid_func_kwargs,
+        )
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
                 val = cal(
-                    renamed_propagators,
-                    self.index,
-                    dims,
-                    self.logdir,
-                    self.evaluation + 1,
+                    propagators=propagators,
+                    instructions=self.pmap.instructions,
+                    index=self.index,
+                    dims=dims,
+                    n_eval=self.evaluation + 1,
                 )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())

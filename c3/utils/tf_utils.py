@@ -441,17 +441,17 @@ def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
 # MATRIX MULTIPLICATION FUNCTIONS
 
 
-def evaluate_sequences(U_dict: dict, sequences: list):
+def evaluate_sequences(propagators: dict, sequences: list):
     """
     Compute the total propagator of a sequence of gates.
 
     Parameters
     ----------
-    U_dict : dict
+    propagators : dict
         Dictionary of unitary representation of gates.
 
     sequences : list
-        List of keys from U_dict specifying a gate sequence.
+        List of keys from propagators specifying a gate sequence.
         The sequence is multiplied from the left, i.e.
             sequence = [U0, U1, U2, ...]
         is applied as
@@ -463,7 +463,7 @@ def evaluate_sequences(U_dict: dict, sequences: list):
         Propagator of the sequence.
 
     """
-    gates = U_dict
+    gates = propagators
     # get dims to deal with the case where a sequence is empty
     dim = list(gates.values())[0].shape[0]
     dtype = list(gates.values())[0].dtype

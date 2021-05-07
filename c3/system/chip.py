@@ -10,7 +10,7 @@ from c3.utils.qt_utils import hilbert_space_kron as hskron
 from scipy.optimize import fmin
 import tensorflow_probability as tfp
 import copy
-from typing import List, Dict
+from typing import List, Dict, Union
 import scipy.optimize
 
 device_lib = dict()
@@ -1270,7 +1270,7 @@ class Drive(LineComponent):
         self.h: tf.Tensor = tf.cast(sum(hs), tf.complex128)
 
     def get_Hamiltonian(
-        self, signal: Dict = None, transform: tf.Tensor = None
+        self, signal: Union[Dict, bool] = None, transform: tf.Tensor = None
     ) -> tf.Tensor:
         if signal is None:
             return tf.zeros_like(self.h)

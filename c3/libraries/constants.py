@@ -55,6 +55,8 @@ GATES = {
     "ry90p": np.array([[1, -1], [1, 1]], dtype=np.complex128) / np.sqrt(2),
     "ry90m": np.array([[1, 1], [-1, 1]], dtype=np.complex128) / np.sqrt(2),
     "ryp": np.array([[0, -1], [1, 0]], dtype=np.complex128),
+    "x": X,
+    "y": Y,
     "rz90p": np.array([[1 - 1j, 0], [0, 1 + 1j]], dtype=np.complex128) / np.sqrt(2),
     "rz90m": np.array([[1 + 1j, 0], [0, 1 - 1j]], dtype=np.complex128) / np.sqrt(2),
     "rzp": np.array([[-1.0j, 0], [0, 1.0j]], dtype=np.complex128),
@@ -62,6 +64,7 @@ GATES = {
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, -1j], [0, 0, -1j, 0]],
         dtype=np.complex128,
     ),
+    # What is the meaning of this gate?
     "crzp": np.array(
         [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1j, 0], [0, 0, 0, 1j]], dtype=np.complex128
     ),
@@ -76,6 +79,11 @@ GATES = {
     / np.sqrt(2),
     "iswap": np.array(
         [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=np.complex128
+    ),
+    "cz": np.diag(np.array([1, 1, 1, -1], dtype=np.complex128)),
+    "ccz": np.diag(np.array([1, 1, 1, 1, 1, 1, 1, -1], dtype=np.complex128)),
+    "cx": np.array(
+        [[1, 0, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0], [0, 1, 0, 0]], dtype=np.complex128
     ),
 }
 
