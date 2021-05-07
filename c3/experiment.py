@@ -13,7 +13,6 @@ import copy
 import pickle
 import itertools
 import hjson
-import json
 import numpy as np
 import tensorflow as tf
 from typing import Dict
@@ -31,7 +30,7 @@ from c3.utils.tf_utils import (
     tf_super,
     tf_vec_to_dm,
 )
-from c3.utils.qt_utils import perfect_single_q_parametric_gate, kron_ids
+from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
 
 class Experiment:
@@ -177,7 +176,7 @@ class Experiment:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            json.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file)
 
     def asdict(self) -> dict:
         """

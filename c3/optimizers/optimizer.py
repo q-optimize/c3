@@ -5,7 +5,7 @@ import time
 from typing import Callable, Union, List, Dict, Any
 import numpy as np
 import tensorflow as tf
-import json
+import hjson
 import c3.libraries.algorithms as algorithms
 from c3.experiment import Experiment
 from c3.parametermap import ParameterMap
@@ -121,13 +121,13 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(json.dumps(self.pmap.opt_map))
+            logfile.write(hjson.dumps(self.pmap.opt_map))
             logfile.write("\n")
             logfile.write("Units:\n")
-            logfile.write(json.dumps(self.pmap.get_opt_units()))
+            logfile.write(hjson.dumps(self.pmap.get_opt_units()))
             logfile.write("\n")
             logfile.write("Algorithm options:\n")
-            logfile.write(json.dumps(self.options))
+            logfile.write(hjson.dumps(self.options))
             logfile.write("\n")
             logfile.flush()
 
@@ -174,7 +174,7 @@ class Optimizer:
                     "units": self.pmap.get_opt_units(),
                     "optim_status": self.optim_status,
                 }
-                best_point.write(json.dumps(best_dict))
+                best_point.write(hjson.dumps(best_dict))
                 best_point.write("\n")
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
@@ -185,7 +185,7 @@ class Optimizer:
                 f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n"
             )
             # logfile.write(json.dumps(self.optim_status, indent=2))
-            logfile.write(json.dumps(self.optim_status))
+            logfile.write(hjson.dumps(self.optim_status))
             logfile.write("\n")
             logfile.flush()
 
@@ -347,7 +347,7 @@ class TensorBoardLogger(BaseLogger):
             self.write_params(opt.pmap.get_parameters())
             tf.summary.text(
                 "Parameters",
-                json.dumps(opt.pmap.asdict(instructions_only=False), indent=2),
+                hjson.dumps(opt.pmap.asdict(instructions_only=False), indent=2),
                 step=0,
             )
 
