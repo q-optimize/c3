@@ -284,7 +284,7 @@ class Optimizer:
         gradients = grad.flatten()
         for i in tf.where(gradients == 0).numpy().tolist():
             warnings.warn(
-                f"{self.pmap.get_key_of_parameters_scaled(i[0])} has no gradient. This might indicate no usage for current experiment.",
+                f"{self.pmap.get_key_from_scaled_index(i[0])} has no gradient. This might indicate no usage for current experiment.",
                 Warning,
             )
         self.gradients[str(current_params.numpy())] = gradients

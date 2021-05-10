@@ -111,7 +111,13 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
-        # TODO: adjust the way we calculate the time slices for devices
+        np.testing.assert_almost_equal(
+            np.mod(t_end, dt),
+            0,
+            decimal=7,
+            err_msg="Given length of is not a multiple of the resolution",
+        )
+
         # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
         return ts
@@ -595,7 +601,7 @@ class ResponseFFT(Device):
         assert (
             tf.abs((iq_signal["ts"][1] - iq_signal["ts"][0]) - 1 / self.resolution)
             < 1e-15
-        ) or True  # Signals are currently not equally spaced!
+        )
         n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
@@ -711,6 +717,7 @@ class SkinEffectResponse(StepFuncFilter):
         return tf.math.erfc(alpha / 21 / tf.math.sqrt(np.abs(ts)))
 
 
+# Obsolete. Use HighpassExponential
 class HighpassFilter(Device):
     """Introduce a highpass filter
 

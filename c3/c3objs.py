@@ -233,6 +233,7 @@ class Quantity:
         """
         Return the value of this quantity as numpy.
         """
+        # TODO should be removed to be consistent with get_value
         return self.get_value().numpy() / self.pref
 
     def get_value(self, val: tf.float64 = None, dtype: tf.dtypes = None) -> tf.Tensor:
@@ -249,7 +250,6 @@ class Quantity:
         if dtype is None:
             dtype = self.value.dtype
 
-        # TODO: cleanup mashup between numpy and tensorflow (scale and offset or numpyish)
         value = self.scale * (val + 1) / 2 + self.offset
         return tf.cast(value, dtype)
 
@@ -266,8 +266,9 @@ class Quantity:
 
         if extend_bounds and tf.math.abs(tmp) > 1:
             min_val, max_val = self.get_limits()
-            min_val = tf.math.reduce_min([val, min_val])
-            max_val = tf.math.reduce_max([val, max_val])
+            # Extra bounds included to not be directly at border due to differentiability
+            min_val = tf.math.reduce_min([val * 0.9, min_val])
+            max_val = tf.math.reduce_max([val * 1.1, max_val])
             self.set_limits(min_val, max_val)
             tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
 
@@ -280,11 +281,6 @@ class Quantity:
         )
 
         self.value = tf.cast(tmp, tf.float64)
-
-        if isinstance(val, ops.EagerTensor) or isinstance(val, ops.Tensor):
-            self.value = tf.cast(tmp, tf.float64)
-        else:
-            self.value = tf.constant(tmp, tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """ Get an optimizer friendly representation of the value."""

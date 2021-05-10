@@ -22,15 +22,6 @@ def pauli_basis(dims=[2]):
         A square matrix containing the Pauli basis of the product space
     """
 
-    def expand_dims(op, dim):
-        """
-        pad operator with zeros to be of dimension dim
-        Attention! Not related to the TensorFlow function
-        """
-        op_out = np.zeros([dim, dim], dtype=op.dtype)
-        op_out[: op.shape[0], : op.shape[1]] = op
-        return op_out
-
     _SINGLE_QUBIT_PAULI_BASIS = (Id, X, Y, Z)
     paulis = []
     for dim in dims:
@@ -51,6 +42,16 @@ def pauli_basis(dims=[2]):
         vec = np.reshape(np.transpose(op), [-1, 1])
         B[:, idx] = vec.T.conj()
     return B
+
+
+def expand_dims(op, dim):
+    """
+    pad operator with zeros to be of dimension dim
+    Attention! Not related to the TensorFlow function
+    """
+    op_out = np.zeros([dim, dim], dtype=op.dtype)
+    op_out[: op.shape[0], : op.shape[1]] = op
+    return op_out
 
 
 # MATH HELPERS
@@ -241,8 +242,9 @@ def insert_mat_kron(dims, target_ids, matrix) -> np.ndarray:
         norm = np.sqrt(np.sum(np.abs(kron_mat)))
         kron_mat /= norm
         expanded_mat = kron_ids(dims, target_ids, basis_mats) / norm
-        decomposition = np.sum(matrix * kron_mat)
-        out_matrix += decomposition * expanded_mat
+        # calculate overlap of initial matrix with element
+        overlap = np.sum(matrix * kron_mat)
+        out_matrix += overlap * expanded_mat
 
     return out_matrix
 

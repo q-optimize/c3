@@ -33,6 +33,8 @@ class C1(Optimizer):
         Options to be passed to the algorithm
     run_name : str
         User specified name for the run, will be used as root folder
+    fid_func_kwargs: dict
+        Additional kwargs to be passed to the main fidelity function.
     """
 
     def __init__(

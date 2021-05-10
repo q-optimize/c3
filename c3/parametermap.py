@@ -26,7 +26,6 @@ class ParameterMap:
         self.model = model
         self.generator = generator
         for instr in instructions:
-            # Is this redundant key necessary?
             self.instructions[instr.name + instr.get_target_str()] = instr
 
         # Collecting model components
@@ -181,6 +180,17 @@ class ParameterMap:
         return limits
 
     def check_limits(self, opt_map):
+        """
+        Check if all elements of equal ids have the same limits. This has to be checked against if setting values optimizer friendly.
+
+        Parameters
+        ----------
+        opt_map
+
+        Returns
+        -------
+
+        """
         for equiv_ids in self.get_opt_map():
             if len(equiv_ids) > 1:
                 limit = self.__pars[equiv_ids[0]].get_limits()
@@ -344,7 +354,18 @@ class ParameterMap:
         if model_updated:
             self.model.update_model()
 
-    def get_key_of_parameters_scaled(self, idx, opt_map=None) -> str:
+    def get_key_from_scaled_index(self, idx, opt_map=None) -> str:
+        """
+        Get the key of the value at position `ìdx` of the scaled_parameters output
+        Parameters
+        ----------
+        idx
+        opt_map
+
+        Returns
+        -------
+
+        """
         opt_map = self.get_opt_map(opt_map)
         curr_indx = 0
         for equiv_ids in opt_map:

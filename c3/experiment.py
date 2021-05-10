@@ -23,7 +23,7 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils.tf_utils import (
-    batch_propagate,
+    tf_batch_propagate,
     tf_propagation_lind,
     tf_matmul_left,
     tf_state_to_dm,
@@ -62,9 +62,9 @@ class Experiment:
         self.logdir: str = None
         self.propagate_batch_size = None
         self.use_control_fields = True
-        self.overwrite_propagators = True
+        self.overwrite_propagators = True  # Keep only currently computed propagators
         self.compute_propagators_timestamp = 0
-        self.stop_dU_gradient = True
+        self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
 
     def enable_qasm(self) -> None:
@@ -430,11 +430,13 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-            if self.overwrite_propagators:
-                self.propagators = gates
-            else:
-                self.propagators[gate] = U
-            self.compute_propagators_timestamp = time.time()
+
+        # TODO we might want to move storing of the propagators to the instruction object
+        if self.overwrite_propagators:
+            self.propagators = gates
+        else:
+            self.propagators.update(gates)
+        self.compute_propagators_timestamp = time.time()
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -479,6 +481,7 @@ class Experiment:
                 tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
             )
 
+        # TODO: is this compatible with lindbladian
         if model.max_excitations:
             cutter = model.ex_cutter
             hamiltonian = cutter @ hamiltonian @ cutter.T
@@ -490,6 +493,9 @@ class Experiment:
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
+            if model.max_excitations:
+                cutter = model.ex_cutter
+                col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
             dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
         else:
             batch_size = (
@@ -501,13 +507,15 @@ class Experiment:
                 len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
             )
             batch_size = tf.constant(batch_size, tf.int32)
-            dUs = batch_propagate(hamiltonian, hks, signals, dt, batch_size=batch_size)
+            dUs = tf_batch_propagate(
+                hamiltonian, hks, signals, dt, batch_size=batch_size
+            )
 
         U = tf_matmul_left(tf.cast(dUs, tf.complex128))
         if model.max_excitations:
             U = cutter.T @ U @ cutter
             ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
-            if self.stop_dU_gradient:
+            if self.stop_partial_propagator_gradient:
                 self.partial_propagators[gate] = tf.stop_gradient(
                     tf.linalg.matmul(
                         tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),

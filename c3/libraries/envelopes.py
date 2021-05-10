@@ -36,6 +36,18 @@ def pwc(t, params):
 
 @env_reg_deco
 def pwc_shape(t, params):
+    """
+    Piecewise constant pulse while defining only a given number of samples, while interpolating linearly between those.
+    Parameters
+    ----------
+    t
+    params
+        t_bin_start/t_bin_end can be used to specify specific range. e.g. timepoints taken from awg.
+
+    Returns
+    -------
+
+    """
     t_bin_start = tf.cast(params["t_bin_start"].get_value(), tf.float64)
     t_bin_end = tf.cast(params["t_bin_end"].get_value(), tf.float64)
     inphase = tf.cast(params["inphase"].get_value(), tf.float64)

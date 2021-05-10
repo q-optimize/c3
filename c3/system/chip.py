@@ -9,7 +9,6 @@ from c3.libraries.hamiltonians import hamiltonians
 from c3.utils.qt_utils import hilbert_space_kron as hskron
 from scipy.optimize import fmin
 import tensorflow_probability as tfp
-import copy
 from typing import List, Dict, Union
 import scipy.optimize
 
@@ -46,6 +45,43 @@ class PhysicalComponent(C3obj):
 
     def set_subspace_index(self, index):
         self.index = index
+
+    def get_transformed_hamiltonians(self, transform: tf.Tensor = None):
+        """
+        get transformed hamiltonians with given applied transformation. The Hamiltonians are assumed to be stored in `Hs`.
+        Parameters
+        ----------
+        transform:
+            transform to be applied to the hamiltonians. Default: None for returning the hamiltonians without transformation applied.
+
+        Returns
+        -------
+
+        """
+        if transform is None:
+            return self.Hs
+        transformed_Hs = dict()
+        for key, ham in self.Hs.items():
+            transformed_Hs[key] = tf.matmul(
+                tf.matmul(transform, self.Hs["freq"], adjoint_a=True), transform
+            )
+
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ) -> Dict[str, tf.Tensor]:
+        """
+        Compute the Hamiltonian.
+        Parameters
+        ----------
+        signal:
+            dictionary with signals to be used a time dependend Hamiltonian. By default "values" key will be used.
+            If `true` value control hamiltonian will be returned, used for later combination of signal and hamiltonians.
+        transform:
+            transform the hamiltonian, e.g. for expressing the hamiltonian in the expressed basis.
+            Use this function if transform will be necessary and signal is given, in order to apply the `transform`
+            only on single hamiltonians instead of all timeslices.
+        """
+        raise NotImplementedError
 
     def asdict(self) -> dict:
         params = {}
@@ -128,7 +164,9 @@ class Qubit(PhysicalComponent):
             duffing = hamiltonians["duffing"]
             self.Hs["anhar"] = tf.constant(duffing(ann_oper), dtype=tf.complex128)
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
         """
         Compute the Hamiltonian. Multiplies the number operator with the frequency and
         anharmonicity with the Duffing part and returns their sum.
@@ -139,14 +177,13 @@ class Qubit(PhysicalComponent):
             Hamiltonian
 
         """
-        if signal:
+        if signal is not None:
             raise NotImplementedError(f"implement action of signal on {self.name}")
-        if transform:
-            raise NotImplementedError()
-        h = tf.cast(self.params["freq"].get_value(), tf.complex128) * self.Hs["freq"]
+        Hs = self.get_transformed_hamiltonians(transform)
+        h = tf.cast(self.params["freq"].get_value(), tf.complex128) * Hs["freq"]
         if self.hilbert_dim > 2:
             anhar = tf.cast(self.params["anhar"].get_value(), tf.complex128)
-            h += anhar * self.Hs["anhar"]
+            h += anhar * Hs["anhar"]
         return h
 
     def init_Ls(self, ann_oper):
@@ -233,14 +270,15 @@ class Resonator(PhysicalComponent):
         """NOT IMPLEMENTED"""
         pass
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
         """Compute the Hamiltonian."""
         if signal:
             raise NotImplementedError(f"implement action of signal on {self.name}")
-        if transform:
-            raise NotImplementedError()
+        Hs = self.get_transformed_hamiltonians(transform)
         freq = tf.cast(self.params["freq"].get_value(), tf.complex128)
-        return freq * self.Hs["freq"]
+        return freq * Hs["freq"]
 
     def get_Lindbladian(self, dims):
         """NOT IMPLEMENTED"""
@@ -364,19 +402,14 @@ class Transmon(PhysicalComponent):
         self.collapse_ops["temp"] = ann_oper.T.conj()
         self.collapse_ops["t2star"] = 2 * tf.matmul(ann_oper.T.conj(), ann_oper)
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
-        if transform is not None:
-            H_freq = tf.matmul(
-                tf.matmul(transform, self.Hs["freq"], adjoint_a=True), transform
-            )
-            H_anhar = tf.matmul(
-                tf.matmul(transform, self.Hs["anhar"], adjoint_a=True), transform
-            )
-        else:
-            H_freq = self.Hs["freq"]
-            H_anhar = self.Hs["anhar"]
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
+        Hs = self.get_transformed_hamiltonians(transform)
+        H_freq = Hs["freq"]
+        H_anhar = Hs["anhar"]
 
-        if signal:
+        if isinstance(signal, dict):
             sig = signal["values"]
             freq = tf.cast(self.get_freq(sig), tf.complex128)
             freq = tf.reshape(freq, [freq.shape[0], 1, 1])
@@ -494,15 +527,12 @@ class TransmonExpanded(Transmon):
             (float(self.params["EC"]), float(self.params["EJ"])),
         )
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
-        Hs = copy.deepcopy(self.Hs)
-        if transform is not None:
-            for k in Hs:
-                Hs[k] = tf.matmul(
-                    tf.matmul(transform, Hs[k], adjoint_a=True), transform
-                )
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
+        Hs = self.get_transformed_hamiltonians(transform)
 
-        if signal:
+        if isinstance(signal, dict):
             sig = signal["values"]
         else:
             sig = 0
@@ -511,91 +541,6 @@ class TransmonExpanded(Transmon):
         for k in prefactors:
             h += Hs[k] * tf.cast(prefactors[k], tf.complex128)
         return h
-
-
-# @dev_reg_deco
-# class Fluxonium(Qubit):
-#     def __init__(
-#             self,
-#             name: str,
-#             desc: str = None,
-#             comment: str = None,
-#             hilbert_dim: int = None,
-#             calc_dim: int = None,
-#             EC: Quantity = None,
-#             EJ: Quantity = None,
-#             EL: Quantity = None,
-#             phi: Quantity = None,
-#             phi_0:Quantity = None,
-#             gamma: Quantity = None,
-#             d: Quantity = None,
-#             t1: np.float64 = None,
-#             t2star: np.float64 = None,
-#             temp: np.float64 = None,
-#             anhar: np.float64 = None,
-#             params=None,
-#     ):
-#         super().__init__(
-#             name=name,
-#             desc=desc,
-#             comment=comment,
-#             hilbert_dim=hilbert_dim,
-#             freq=tf.math.sqrt(8 * EC * EL),
-#             anhar=None,
-#             t1=t1,
-#             t2star=t2star,
-#             temp=temp,
-#             params=params,
-#         )
-#         if EC:
-#             self.params["EC"] = EC
-#         if EJ:
-#             self.params["EJ"] = EJ
-#         if EL:
-#             self.params["EL"] = EL
-#         if phi:
-#             self.params["phi"] = phi
-#         if phi_0:
-#             self.params["phi_0"] = phi_0
-#         if gamma:
-#             self.params["gamma"] = gamma
-#         if calc_dim:
-#             self.params["calc_dim"] = calc_dim
-#
-#     def get_phase_variable(self):
-#         ann_oper = tf.linalg.diag(tf.math.sqrt(tf.range(1,self.params["calc_dim"], dtype=tf.float64)), k=1)
-#         EC = self.params["EC"].get_value()
-#         EL = self.params["EL"].get_value()
-#         phi_zpf = (2.0 * EC / EL) ** 0.25
-#         return tf.cast(phi_zpf * (tf.transpose(ann_oper, conjugate=True) + ann_oper), tf.complex128)
-#
-#     def init_exponentiated_vars(self, ann_oper):
-#         # TODO check if a 2Pi should be included in the exponentiation
-#         self.exp_phi_op = tf.linalg.expm(1.j * self.get_phase_variable())
-#
-#     def get_freq(self):
-#         EC = self.params["EC"].get_value()
-#         EL = self.params["EL"].get_value()
-#         return tf.cast(tf.math.sqrt(8.0 * EL * EC), tf.complex128)
-#
-#     def init_Hs(self, ann_oper):
-#         self.init_exponentiated_vars(ann_oper)
-#         resonator = hamiltonians["resonator"]
-#         self.Hs["freq"] = tf.constant(resonator(ann_oper), dtype=tf.complex128)
-#         # self.Hs["freq"] = tf.cast(tf.linalg.diag(tf.range(self.params['calc_dim'], dtype=tf.float64)), tf.complex128)
-#
-#     def get_Hamiltonian(self):
-#         EJ = tf.cast(self.params["EJ"].get_value(), tf.complex128)
-#         phi = tf.cast(self.params["phi"].get_value(), tf.complex128)
-#         phi_0 = tf.cast(self.params["phi_0"].get_value(), tf.complex128)
-#         phase = tf.cast(1j * 2 * np.pi * phi / phi_0, tf.complex128)
-#         exp_mat = self.exp_phi_op * tf.math.exp(phase)
-#         cos_mat = tf.cast(tf.math.real(exp_mat), tf.complex128)
-#         # cos_mat = 0.5 * (exp_mat + tf.transpose(exp_mat, conjugate=True))
-#         cos_mat = cos_mat[:self.hilbert_dim, :self.hilbert_dim]
-#         h = self.get_freq() * self.Hs["freq"]
-#         h -= EJ * cos_mat
-#         return tf.cast(tf.math.real(h), tf.complex128) #TODO apply kronecker product
 
 
 @dev_reg_deco
@@ -689,15 +634,11 @@ class CShuntFluxQubitCos(Qubit):
         exponent = 1j * (a * var)
         exp_mat = tf.linalg.expm(exponent) * tf.exp(1j * b)
         cos_mat = 0.5 * (exp_mat + tf.transpose(exp_mat, conjugate=True))
-        # plt.imshow(tf.math.imag(cos_mat))
-        # plt.colorbar()
-        # plt.show()
-        # plt.imshow(tf.math.real(cos_mat))
-        # plt.colorbar()
-        # plt.show()
         return cos_mat
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
         if signal:
             raise NotImplementedError(f"implement action of signal on {self.name}")
         if transform:
@@ -931,10 +872,9 @@ class CShuntFluxQubit(Qubit):
             self.Hs["anhar"] = tf.constant(duffing(ann_oper), dtype=tf.complex128)
         third = hamiltonians["third_order"]
         self.Hs["third_order"] = tf.constant(third(ann_oper), dtype=tf.complex128)
-        self.signal_h = None
 
     def get_Hamiltonian(
-        self, signal: dict = None, transform: tf.Tensor = None
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
     ) -> tf.Tensor:
         """
         Calculate the hamiltonian
@@ -945,37 +885,36 @@ class CShuntFluxQubit(Qubit):
         """
         if signal:
             raise NotImplementedError(f"implement action of signal on {self.name}")
-        if transform:
-            raise NotImplementedError()
-        h = tf.cast(self.get_frequency(), tf.complex128) * self.Hs["freq"]
-        # h += tf.cast(self.get_third_order_prefactor(), tf.complex128) * self.Hs["third_order"]
+        Hs = self.get_transformed_hamiltonians(transform)
+        h = tf.cast(self.get_frequency(), tf.complex128) * Hs["freq"]
+        # h += tf.cast(self.get_third_order_prefactor(), tf.complex128) * Hs["third_order"]
         if self.hilbert_dim > 2:
-            h += tf.cast(self.get_anharmonicity(), tf.complex128) * self.Hs["anhar"]
+            h += tf.cast(self.get_anharmonicity(), tf.complex128) * Hs["anhar"]
         return h
 
-    def process(self, instr, chan: str, signal_in):
-        sig = signal_in["values"]
-        anharmonicity = self.get_anharmonicity(sig)
-        frequency = self.get_frequency(sig)
-        # third_order = self.get_third_order_prefactor(sig)
-        h = (
-            tf.expand_dims(tf.expand_dims(tf.cast(frequency, tf.complex128), 1), 2)
-            * self.Hs["freq"]
-        )
-        if self.hilbert_dim > 2:
-            # h += tf.expand_dims(tf.expand_dims(tf.cast(third_order, tf.complex128), 1), 2) * self.Hs["third_order"]
-            h += (
-                tf.expand_dims(
-                    tf.expand_dims(tf.cast(anharmonicity, tf.complex128), 1), 2
-                )
-                * self.Hs["anhar"]
-            )
-        self.signal_h = h
-        return {
-            "ts": signal_in["ts"],
-            "frequency": frequency,
-            "anharmonicity": anharmonicity,
-        }  # , "#third order": third_order}
+    # def process(self, instr, chan: str, signal_in):
+    #     sig = signal_in["values"]
+    #     anharmonicity = self.get_anharmonicity(sig)
+    #     frequency = self.get_frequency(sig)
+    #     # third_order = self.get_third_order_prefactor(sig)
+    #     h = (
+    #             tf.expand_dims(tf.expand_dims(tf.cast(frequency, tf.complex128), 1), 2)
+    #             * self.Hs["freq"]
+    #     )
+    #     if self.hilbert_dim > 2:
+    #         # h += tf.expand_dims(tf.expand_dims(tf.cast(third_order, tf.complex128), 1), 2) * self.Hs["third_order"]
+    #         h += (
+    #                 tf.expand_dims(
+    #                     tf.expand_dims(tf.cast(anharmonicity, tf.complex128), 1), 2
+    #                 )
+    #                 * self.Hs["anhar"]
+    #         )
+    #     self.signal_h = h
+    #     return {
+    #         "ts": signal_in["ts"],
+    #         "frequency": frequency,
+    #         "anharmonicity": anharmonicity,
+    #     }  # , "#third order": third_order}
 
 
 @dev_reg_deco
@@ -1144,7 +1083,9 @@ class SNAIL(Qubit):
         third = hamiltonians["third_order"]
         self.Hs["beta"] = tf.constant(third(ann_oper), dtype=tf.complex128)
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
         """
         Compute the Hamiltonian. Multiplies the number operator with the frequency and anharmonicity with
         the Duffing part and returns their sum.
@@ -1155,15 +1096,13 @@ class SNAIL(Qubit):
         """
         if signal:
             raise NotImplementedError(f"implement action of signal on {self.name}")
+        Hs = self.get_transformed_hamiltonians(transform)
         if transform:
             raise NotImplementedError()
-        h = tf.cast(self.params["freq"].get_value(), tf.complex128) * self.Hs["freq"]
-        h += tf.cast(self.params["beta"].get_value(), tf.complex128) * self.Hs["beta"]
+        h = tf.cast(self.params["freq"].get_value(), tf.complex128) * Hs["freq"]
+        h += tf.cast(self.params["beta"].get_value(), tf.complex128) * Hs["beta"]
         if self.hilbert_dim > 2:
-            h += (
-                tf.cast(self.params["anhar"].get_value(), tf.complex128)
-                * self.Hs["anhar"]
-            )
+            h += tf.cast(self.params["anhar"].get_value(), tf.complex128) * Hs["anhar"]
 
         return h
 
@@ -1242,7 +1181,9 @@ class Coupling(LineComponent):
             self.hamiltonian_func(opers_list), dtype=tf.complex128
         )
 
-    def get_Hamiltonian(self, signal: dict = None, transform: tf.Tensor = None):
+    def get_Hamiltonian(
+        self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
+    ):
         if signal:
             raise NotImplementedError(f"implement action of signal on {self.name}")
         if transform:
@@ -1281,7 +1222,7 @@ class Drive(LineComponent):
 
         if signal is True:
             return h
-        elif signal:
+        elif isinstance(signal, dict):
             sig = tf.cast(signal["values"], tf.complex128)
             sig = tf.reshape(sig, [sig.shape[0], 1, 1])
             return tf.expand_dims(h, 0) * sig

@@ -66,6 +66,7 @@ class Model:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
+        # TODO ensure that all elements have different keys / names
         if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
             raise Exception("Do not use same name for multiple devices")
         self.__create_labels()
@@ -139,12 +140,12 @@ class Model:
         """
         if max_excitations:
             labels = self.state_labels
-            cut_labels = []
+            # cut_labels = []
             proj = []
             ii = 0
             for li in labels:
                 if sum(li) <= max_excitations:
-                    cut_labels.append(li)
+                    # cut_labels.append(li)
                     line = [0] * len(labels)
                     line[ii] = 1
                     proj.append(line)
@@ -327,7 +328,7 @@ class Model:
         for key, line in self.couplings.items():
             hamiltonians[key] = line.get_Hamiltonian()
             if isinstance(line, Drive):
-                control_hams[key] = line.get_Hamiltonian(True)
+                control_hams[key] = line.get_Hamiltonian(signal=True)
 
         self.drift_ham = sum(hamiltonians.values())
         self.control_hams = control_hams

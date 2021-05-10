@@ -8,7 +8,7 @@ import warnings
 from typing import List, Dict
 import copy
 from c3.libraries.constants import GATES
-from c3.utils.qt_utils import kron_ids, np_kron_n, insert_mat_kron
+from c3.utils.qt_utils import np_kron_n, insert_mat_kron
 from c3.utils.tf_utils import tf_project_to_comp
 
 
@@ -56,6 +56,11 @@ class Instruction:
         self.name = name
         self.targets = targets
         self.params = params
+        if t_start is not None:
+            warnings.warn(
+                "t_start will be removed in the future. Do not set it anymore.",
+                category=DeprecationWarning,
+            )
         self.t_start = t_start
         self.t_end = t_end
         self.comps: Dict[str, Dict[str, C3obj]] = dict()
@@ -65,13 +70,13 @@ class Instruction:
             self.ideal = ideal
         else:
             gate_list = []
+            # legacy use
             for key in name.split(":"):
                 if key in GATES:
                     gate_list.append(GATES[key])
                 else:
                     raise AttributeError(f"No ideal gate found for gate: {key}")
             self.ideal = np_kron_n(gate_list)
-        print(name, self.ideal.shape)
         for chan in channels:
             self.comps[chan] = dict()
             self.__options[chan] = dict()

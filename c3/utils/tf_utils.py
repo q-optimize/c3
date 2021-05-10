@@ -211,7 +211,7 @@ def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     return tf.linalg.expm(dh)
 
 
-def batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     """
     Propagate signal in batches
     Parameters
