@@ -1224,13 +1224,13 @@ class AWG(Device):
         return self.signal[line]["quadrature"]  # * self.amp_tot
 
     def enable_drag(self):
-        self.process = self.create_IQ_drag
+        self.__options = "drag"
 
     def enable_drag_2(self):
         self.__options = "drag_2"
 
     def enable_pwc(self):
-        self.process = self.create_IQ_pwc
+        self.__options = "pwc"
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

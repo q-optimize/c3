@@ -308,11 +308,11 @@ propagator = exp.propagation(gen_signal, "rx90p[0]")
 
 
 def test_signals() -> None:
-    assert (
-        gen_signal["d1"]["values"].numpy() - test_data["signal"]["d1"]["values"].numpy()
-        < 1
-    ).all()
-    assert (ts.numpy() == test_data["ts"].numpy()).all()
+    np.testing.assert_allclose(ts, test_data["ts"])
+    np.testing.assert_allclose(
+        actual=gen_signal["d1"]["values"].numpy(),
+        desired=test_data["signal"]["d1"]["values"].numpy(),
+    )
 
 
 def test_hamiltonians() -> None:

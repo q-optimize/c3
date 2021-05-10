@@ -23,7 +23,6 @@ from c3.utils.tf_utils import (
 )
 from c3.utils.qt_utils import (
     basis,
-    kron_ids,
     perfect_cliffords,
     cliffords_decomp,
     cliffords_decomp_xId,
@@ -372,7 +371,7 @@ def lindbladian_average_infid_set(
     """
     infids = []
     for gate, propagator in propagators.items():
-        perfect_gate = instructions[gate].get_ideal_gate()
+        perfect_gate = instructions[gate].get_ideal_gate(dims)
         infid = lindbladian_average_infid(perfect_gate, propagator, index, dims)
         infids.append(infid)
     return tf.reduce_mean(infids)

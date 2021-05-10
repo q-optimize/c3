@@ -123,57 +123,57 @@ class Quantity:
 
     def __add__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() + other)
+        out_val.set_value(self.get_value() + other, extend_bounds=True)
         return out_val
 
     def __radd__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() + other)
+        out_val.set_value(self.get_value() + other, extend_bounds=True)
         return out_val
 
     def __sub__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() - other)
+        out_val.set_value(self.get_value() - other, extend_bounds=True)
         return out_val
 
     def __rsub__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() - other)
+        out_val.set_value(self.get_value() - other, extend_bounds=True)
         return out_val
 
     def __mul__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() * other)
+        out_val.set_value(self.get_value() * other, extend_bounds=True)
         return out_val
 
     def __rmul__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() * other)
+        out_val.set_value(self.get_value() * other, extend_bounds=True)
         return out_val
 
     def __pow__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() ** other)
+        out_val.set_value(self.get_value() ** other, extend_bounds=True)
         return out_val
 
     def __rpow__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(other ** self.get_value())
+        out_val.set_value(other ** self.get_value(), extend_bounds=True)
         return out_val
 
     def __truediv__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() / other)
+        out_val.set_value(self.get_value() / other, extend_bounds=True)
         return out_val
 
     def __rtruediv__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(other / self.get_value())
+        out_val.set_value(other / self.get_value(), extend_bounds=True)
         return out_val
 
     def __mod__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() % other)
+        out_val.set_value(self.get_value() % other, extend_bounds=True)
         return out_val
 
     def __lt__(self, other):

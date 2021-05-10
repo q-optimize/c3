@@ -26,7 +26,7 @@ class ParameterMap:
         self.model = model
         self.generator = generator
         for instr in instructions:
-            self.instructions[instr.name + instr.get_target_str()] = instr
+            self.instructions[instr.get_key()] = instr
 
         # Collecting model components
         components = {}

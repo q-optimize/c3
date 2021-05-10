@@ -75,7 +75,7 @@ class Instruction:
                 if key in GATES:
                     gate_list.append(GATES[key])
                 else:
-                    raise AttributeError(f"No ideal gate found for gate: {key}")
+                    warnings.warn(f"No ideal gate found for gate: {key}")
             self.ideal = np_kron_n(gate_list)
         for chan in channels:
             self.comps[chan] = dict()
@@ -93,7 +93,7 @@ class Instruction:
         if self.ideal is None:
             raise Exception(
                 "C3:ERROR: No ideal representation definded for gate"
-                f" {self.name + self.get_target_str()}"
+                f" {self.get_key()}"
             )
 
         targets = self.targets
@@ -113,10 +113,10 @@ class Instruction:
 
         return ideal_gate
 
-    def get_target_str(self) -> str:
+    def get_key(self) -> str:
         if self.targets is None:
-            return ""
-        return str(self.targets)
+            return self.name
+        return self.name + str(self.targets)
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -127,7 +127,7 @@ class Instruction:
         return {"gate_length": self.t_end - self.t_start, "drive_channels": components}
 
     def __repr__(self):
-        return f"Instruction[{self.name}]"
+        return f"Instruction[{self.get_key()}]"
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())
@@ -159,7 +159,7 @@ class Instruction:
         """
         if chan in self.comps and comp.name in self.comps[chan]:
             print(
-                f"Component of instruction {self.name} has been overwritten: Channel: {chan}, Component: {comp.name}",
+                f"Component of instruction {self.get_key()} has been overwritten: Channel: {chan}, Component: {comp.name}",
             )
         if name is None:
             name = comp.name
@@ -174,14 +174,14 @@ class Instruction:
             for comp in self.comps[chan]:
                 for par_name, par_value in self.comps[chan][comp].params.items():
                     parameter_list.append(
-                        ([self.name, chan, comp, par_name], par_value)
+                        ([self.get_key(), chan, comp, par_name], par_value)
                     )
                 for option_name, option_val in self.__options[chan][comp].items():
                     if isinstance(option_val, Quantity):
                         parameter_list.append(
                             (
                                 [
-                                    self.name + self.get_target_str(),
+                                    self.get_key(),
                                     chan,
                                     comp,
                                     option_name,
@@ -216,7 +216,7 @@ class Instruction:
         if t_end > self.t_end:
             if self.fixed_t_end and not minimal_time:
                 warnings.warn(
-                    f"Length of instruction {self.name} is fixed, but cuts at least one component. {chan}-{name} is should end @ {t_end}, but instruction ends at {self.t_end}"
+                    f"Length of instruction {self.get_key()} is fixed, but cuts at least one component. {chan}-{name} is should end @ {t_end}, but instruction ends at {self.t_end}"
                 )
                 t_end = self.t_end
             elif minimal_time:
@@ -224,7 +224,7 @@ class Instruction:
             else:
                 # TODO make compatible with generator
                 warnings.warn(
-                    f"""T_end of {self.name} has been extended to {t_end}. This will however only take effect on the next signal generation"""
+                    f"""T_end of {self.get_key()} has been extended to {t_end}. This will however only take effect on the next signal generation"""
                 )
                 self.t_end = t_end
         self.__timings[key] = (t_start, t_end)
@@ -280,10 +280,10 @@ class Instruction:
                 if freq_offset == 0:
                     phase = -xy_angle
                 else:
-                    phase = -xy_angle + freq_offset * comp_ts
+                    phase = -xy_angle - freq_offset * comp_ts
                 denv = None
                 # TODO account for t_before
-                if "drag" in opts and opts["drag"] or comp.drag:
+                if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
                     dt = ts[1] - ts[0]
                     delta = -comp.params["delta"].get_value()
                     with tf.GradientTape() as t:
@@ -291,11 +291,12 @@ class Instruction:
                         env = comp.get_shape_values(
                             comp_ts
                         )  # TODO t_before was ignored here
-                    # Use drag_2 definition here
                     denv = t.gradient(
                         env, comp_ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
                     )  # Derivative W.R.T. to bins
-                    denv = denv * dt  # derivative W.R.T. to time
+                    if not opts.pop("drag", False):
+                        # Use drag_2 definition here
+                        denv = denv * dt  # derivative W.R.T. to time
 
                     env = tf.complex(env, denv * delta)
                 elif "pwc" in options and options["pwc"]:
@@ -320,7 +321,7 @@ class Instruction:
 
                 # Minus in front of the phase is equivalent of quadrature definition with -sin(phase)
                 comp_sig = (
-                    amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), -phase))
+                    amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
                 )
                 mask_ids = tf.reshape(mask_ids, comp_ts.shape)
                 comp_sig = tf.reshape(comp_sig, comp_ts.shape[:1])
@@ -349,9 +350,14 @@ class Instruction:
         if sideband:
             env_params["freq_offset"] = Quantity(value=sideband, unit="Hz 2pi")
             carrier_freq -= sideband
-        self.comps[chan]["gaussian"] = Envelope(
-            "gaussian", shape=gaussian_nonorm, params=env_params
+        self.add_component(
+            comp=Envelope("gaussian", shape=gaussian_nonorm, params=env_params),
+            chan=chan,
         )
-        self.comps[chan]["carrier"] = Carrier(
-            "Carr_" + chan, params={"freq": Quantity(value=carrier_freq, unit="Hz 2pi")}
+
+        self.add_component(
+            comp=Carrier(
+                "carrier", params={"freq": Quantity(value=carrier_freq, unit="Hz 2pi")}
+            ),
+            chan=chan,
         )
