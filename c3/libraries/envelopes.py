@@ -268,12 +268,14 @@ def flattop(t, params):
     t_up = tf.cast(params["t_up"].get_value(), tf.float64)
     t_down = tf.cast(params["t_down"].get_value(), tf.float64)
     risefall = tf.cast(params["risefall"].get_value(), tf.float64)
-    return (
-        (1 + tf.math.erf((t - t_up) / (risefall)))
+
+    shape = (
+        (1 + tf.math.erf((t - t_up) / risefall))
         / 2
-        * (1 + tf.math.erf((-t + t_down) / (risefall)))
+        * (1 + tf.math.erf((-t + t_down) / risefall))
         / 2
     )
+    return shape
 
 
 @env_reg_deco

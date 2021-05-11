@@ -285,7 +285,7 @@ class Instruction:
                 # TODO account for t_before
                 if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
                     dt = ts[1] - ts[0]
-                    delta = -comp.params["delta"].get_value()
+                    delta = comp.params["delta"].get_value()
                     with tf.GradientTape() as t:
                         t.watch(comp_ts)
                         env = comp.get_shape_values(
@@ -298,7 +298,7 @@ class Instruction:
                         # Use drag_2 definition here
                         denv = denv * dt  # derivative W.R.T. to time
 
-                    env = tf.complex(env, denv * delta)
+                    env = tf.complex(env, -denv * delta)
                 elif "pwc" in options and options["pwc"]:
                     inphase = comp.params["inphase"].get_value()
                     quadrature = comp.params["quadrature"].get_value()
@@ -319,7 +319,6 @@ class Instruction:
                     env = comp.get_shape_values(comp_ts)
                     env = tf.cast(env, tf.complex128)
 
-                # Minus in front of the phase is equivalent of quadrature definition with -sin(phase)
                 comp_sig = (
                     amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
                 )

@@ -257,7 +257,9 @@ class ParameterMap:
             value_dict[key] = self.__pars[key]
         return value_dict
 
-    def set_parameters(self, values: list, opt_map=None, extend_bounds=False) -> None:
+    def set_parameters(
+        self, values: Union[List, np.ndarray], opt_map=None, extend_bounds=False
+    ) -> None:
         """Set the values in the original instruction class.
 
         Parameters

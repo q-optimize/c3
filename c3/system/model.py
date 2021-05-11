@@ -140,18 +140,14 @@ class Model:
         """
         if max_excitations:
             labels = self.state_labels
-            # cut_labels = []
             proj = []
             ii = 0
             for li in labels:
                 if sum(li) <= max_excitations:
-                    # cut_labels.append(li)
                     line = [0] * len(labels)
                     line[ii] = 1
                     proj.append(line)
                 ii += 1
-            # ... If we state labels are changed then final unitaries would have to be changed, too ...
-            # self.state_labels = cut_labels
             excitation_cutter = np.array(proj)
             self.ex_cutter = excitation_cutter
         else:
