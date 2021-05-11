@@ -283,7 +283,7 @@ class Quantity:
         self.value = tf.cast(tmp, tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
-        """ Get an optimizer friendly representation of the value."""
+        """Get an optimizer friendly representation of the value."""
         return self.value.numpy().flatten()
 
     def set_opt_value(self, val: float) -> None:

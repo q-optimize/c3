@@ -92,7 +92,7 @@ def eng_num(val: float) -> Tuple[float, str]:
 
 
 def num3str(val: float, use_prefix: bool = True) -> str:
-    """Convert a number to a human readable string in engineering notation. """
+    """Convert a number to a human readable string in engineering notation."""
     if np.array(val).size > 1:
         return np.array2string(val, precision=3)
     if use_prefix:
