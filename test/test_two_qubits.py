@@ -200,16 +200,36 @@ carr_2 = copy.deepcopy(carr)
 carr_2.params["freq"].set_value(lo_freq_q2)
 
 rx90p_q1 = gates.Instruction(
-    name="rx90p", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="rx90p",
+    targets=[0],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 rx90p_q2 = gates.Instruction(
-    name="rx90p", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="rx90p",
+    targets=[1],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 QId_q1 = gates.Instruction(
-    name="id", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id",
+    targets=[0],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 QId_q2 = gates.Instruction(
-    name="id", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id",
+    targets=[1],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 
 rx90p_q1.add_component(gauss_env_single, "d1")

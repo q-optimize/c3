@@ -46,7 +46,7 @@ class Instruction:
         self,
         name: str = " ",
         targets: list = None,
-        params: list = None,
+        params: dict = None,
         ideal: np.array = None,
         channels: List[str] = [],
         t_start: float = None,
@@ -55,7 +55,9 @@ class Instruction:
     ):
         self.name = name
         self.targets = targets
-        self.params = params
+        self.params = {"use_t_before": False}
+        if isinstance(params, dict):
+            self.params.update(params)
         if t_start is not None:
             warnings.warn(
                 "t_start will be removed in the future. Do not set it anymore.",
@@ -253,6 +255,12 @@ class Instruction:
         amp_tot_sq = 0
         signal = tf.zeros_like(ts, tf.complex128)
         self.__timings = dict()
+        if self.params["use_t_before"] is True:
+            dt = ts[1] - ts[0]
+            t_before = ts[0] - dt
+        else:
+            t_before = None
+
         for comp_name in self.comps[chan]:
             opts = copy.copy(self.__options[chan][comp_name])
             opts.update(options)
@@ -282,15 +290,12 @@ class Instruction:
                 else:
                     phase = -xy_angle - freq_offset * comp_ts
                 denv = None
-                # TODO account for t_before
                 if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
                     dt = ts[1] - ts[0]
                     delta = comp.params["delta"].get_value()
                     with tf.GradientTape() as t:
                         t.watch(comp_ts)
-                        env = comp.get_shape_values(
-                            comp_ts
-                        )  # TODO t_before was ignored here
+                        env = comp.get_shape_values(ts=comp_ts, t_before=t_before)
                     denv = t.gradient(
                         env, comp_ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
                     )  # Derivative W.R.T. to bins
@@ -316,7 +321,7 @@ class Instruction:
                         print("C3 Warning: AWG has less timesteps than given PWC bins")
 
                 else:
-                    env = comp.get_shape_values(comp_ts)
+                    env = comp.get_shape_values(ts=comp_ts, t_before=t_before)
                     env = tf.cast(env, tf.complex128)
 
                 comp_sig = (
