@@ -10,7 +10,6 @@ from c3.utils.qt_utils import hilbert_space_kron as hskron
 from scipy.optimize import fmin
 import tensorflow_probability as tfp
 from typing import List, Dict, Union
-import scipy.optimize
 
 device_lib = dict()
 
@@ -518,7 +517,7 @@ class TransmonExpanded(Transmon):
             anhar_diff = tf.math.abs(tf.math.real(es[2] - es[1]) - (freq + anhar))
             return freq_diff + anhar_diff
 
-        scipy.optimize.fmin(
+        fmin(
             eval_func,
             x0=[self.params["EC"].get_opt_value(), self.params["EJ"].get_opt_value()],
         )

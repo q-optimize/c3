@@ -58,8 +58,6 @@ def replace_symlink(path: str, alias: str) -> None:
         pass
     except OSError:
         warnings.warn("OSError encountered while creating symlink")
-    except PermissionError:
-        warnings.warn("Permission encountered while creating symlink")
 
 
 # NICE PRINTING FUNCTIONS
