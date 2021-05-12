@@ -4,6 +4,7 @@ import numpy as np
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
+from c3.optimizers.optimizer import TensorBoardLogger
 from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
 from c3.system.model import Model as Mdl
@@ -238,6 +239,7 @@ def test_c1_robust():
         algorithm=algorithms.lbfgs,
         options={"maxfun": 2},
         run_name="better_X90_tf_sgd",
+        logger=[TensorBoardLogger()],
     )
 
     opt.set_exp(exp)

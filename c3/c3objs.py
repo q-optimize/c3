@@ -88,8 +88,8 @@ class Quantity:
         if min_val is None and max_val is None:
             if value.any():
                 minmax = [0.9 * value, 1.1 * value]
-                min_val = np.min(minmax, axis=0)
-                max_val = np.max(minmax, axis=0)
+                min_val = np.min(minmax)
+                max_val = np.max(minmax)
             else:
                 # When would this case be reached?
                 min_val = -1
@@ -138,7 +138,7 @@ class Quantity:
 
     def __rsub__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() - other, extend_bounds=True)
+        out_val.set_value(other - self.get_value(), extend_bounds=True)
         return out_val
 
     def __mul__(self, other):
@@ -267,8 +267,9 @@ class Quantity:
         if extend_bounds and tf.math.abs(tmp) > 1:
             min_val, max_val = self.get_limits()
             # Extra bounds included to not be directly at border due to differentiability
-            min_val = tf.math.reduce_min([val * 0.9, min_val])
-            max_val = tf.math.reduce_max([val * 1.1, max_val])
+            minmax = [val * 0.9, val * 1.1, min_val, max_val]
+            min_val = tf.math.reduce_min(minmax)
+            max_val = tf.math.reduce_max(minmax)
             self.set_limits(min_val, max_val)
             tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
 

@@ -1,4 +1,5 @@
 """Component class and subclasses for the components making up the quantum device."""
+import warnings
 
 import numpy as np
 import tensorflow as tf
@@ -234,7 +235,7 @@ class Qubit(PhysicalComponent):
             gamma = (0.5 / self.params["t2star"].get_value()) ** 0.5
             L = gamma * self.collapse_ops["t2star"]
             Ls.append(L)
-        if Ls == []:
+        if not Ls:
             raise Exception("No T1 or T2 provided")
         return tf.cast(sum(Ls), tf.complex128)
 
@@ -344,11 +345,10 @@ class Transmon(PhysicalComponent):
         if temp:
             self.params["temp"] = temp
         if "d" not in self.params.keys() and "gamma" not in self.params.keys():
-            print(
+            warnings.warn(
                 "C3:WANING: No junction asymmetry specified, setting symmetric SQUID"
                 " for tuning."
             )
-            self.params["d"] = 0
 
     def get_factor(self, phi_sig=0):
         pi = tf.constant(np.pi, tf.float64)

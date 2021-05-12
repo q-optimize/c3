@@ -467,3 +467,44 @@ def test_FluxTuning():
         assert (
             np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
         )
+
+
+@pytest.mark.unit
+def test_symmetric_FluxTuning():
+    flux_tune = devices.FluxTuning(
+        name="flux_tune",
+        phi_0=Qty(phi_0_tc),
+        phi=Qty(value=0, min_val=-phi_0_tc, max_val=phi_0_tc),
+        omega_0=Qty(freq_tc),
+        anhar=Qty(anhar_TC),
+    )
+
+    transmon = chip.Transmon(
+        name="transmon",
+        hilbert_dim=3,
+        freq=Qty(freq_tc),
+        phi=Qty(value=0, min_val=-1.5 * phi_0_tc, max_val=1.5 * phi_0_tc),
+        phi_0=Qty(phi_0_tc),
+        anhar=Qty(anhar_TC),
+    )
+
+    bias_phis = [0, 0.2]
+    phis = np.linspace(-1, 1, 10) * phi_0_tc
+
+    for bias_phi in bias_phis:
+        flux_tune.params["phi"].set_value(bias_phi)
+        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal_out = flux_tune.process(None, None, signal)
+        flux_tune_frequencies = signal_out["values"].numpy()
+
+        transmon_frequencies = []
+        transmon.params["phi"].set_value(bias_phi)
+        bias_freq = transmon.get_freq()
+        for phi in phis + bias_phi:
+            transmon.params["phi"].set_value(phi)
+            transmon_frequencies.append(transmon.get_freq())
+        transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
+
+        assert (
+            np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
+        )

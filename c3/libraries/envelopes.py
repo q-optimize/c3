@@ -127,7 +127,7 @@ def pwc_symmetric(t, params):
 
 @env_reg_deco
 def delta_pulse(t, params):
-    "Pulse shape which gives an output only at a given time bin"
+    """Pulse shape which gives an output only at a given time bin"""
     t_sig = tf.cast(params["t_sig"].get_value(), tf.float64)
     shape = tf.zeros_like(t)
     for t_s in t_sig:
@@ -342,7 +342,7 @@ def slepian_fourier(t, params):
         x = tf.identity(t)
         x = tf.where(t > (t_final + plateau) / 2, t - plateau / 2, x)
         x = tf.where(t < (t_final - plateau) / 2, t + plateau / 2, x)
-        x = tf.where(np.abs(t - t_final / 2) < plateau / 2, (t_final) / 2, x)
+        x = tf.where(np.abs(t - t_final / 2) < plateau / 2, t_final / 2, x)
         length = params["risefall"].get_value() * 2
     else:
         x = tf.identity(t)
@@ -366,7 +366,7 @@ def slepian_fourier(t, params):
 @env_reg_deco
 def flattop_risefall_1ns(t, params):
     """Flattop gaussian with fixed width of 1ns."""
-    params["risefall"] = 1e-9
+    params["risefall"] = Qty(1e-9, unit="s")
     return flattop_risefall(t, params)
 
 
@@ -511,7 +511,7 @@ def gaussian_der(t, params):
         / sigma ** 2
     )
     norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
-        t_final / (tf.sqrt(8) * sigma)
+        t_final / (tf.cast(tf.sqrt(8.0), tf.float64) * sigma)
     ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
     return gauss_der / norm
 
