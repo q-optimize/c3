@@ -146,8 +146,12 @@ def create_experiment():
         params=carrier_parameters,
     )
 
-    rx90p = gates.Instruction(name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"])
-    QId = gates.Instruction(name="id", t_start=0.0, t_end=t_final, channels=["d1"])
+    rx90p = gates.Instruction(
+        name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"], targets=[0]
+    )
+    QId = gates.Instruction(
+        name="id", t_start=0.0, t_end=t_final, channels=["d1"], targets=[0]
+    )
 
     rx90p.add_component(gauss_env_single, "d1")
     rx90p.add_component(carr, "d1")

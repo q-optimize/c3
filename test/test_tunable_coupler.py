@@ -505,6 +505,4 @@ def test_symmetric_FluxTuning():
             transmon_frequencies.append(transmon.get_freq())
         transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
 
-        assert (
-            np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
-        )
+        np.testing.assert_allclose(flux_tune_frequencies, transmon_diff_freq)
