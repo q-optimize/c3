@@ -50,17 +50,21 @@ def replace_symlink(path: str, alias: str) -> None:
         os.remove(alias)
     except FileNotFoundError:
         pass
+    except PermissionError:
+        warnings.warn("Could not remove symlink")
     try:
         os.symlink(path, alias)
     except FileExistsError:
         pass
     except OSError:
-        Warning("OSError encountered while creating symlink")
+        warnings.warn("OSError encountered while creating symlink")
 
 
 # NICE PRINTING FUNCTIONS
 def eng_num(val: float) -> Tuple[float, str]:
     """Convert a number to engineering notation by returning number and prefix."""
+    if np.array(val).size > 1:
+        return np.array(val), ""
     if np.isnan(val):
         return np.nan, "NaN"
     big_units = ["", "K", "M", "G", "T", "P", "E", "Z"]
@@ -87,6 +91,8 @@ def eng_num(val: float) -> Tuple[float, str]:
 
 def num3str(val: float, use_prefix: bool = True) -> str:
     """Convert a number to a human readable string in engineering notation."""
+    if np.array(val).size > 1:
+        return np.array2string(val, precision=3)
     if use_prefix:
         num, prefix = eng_num(val)
         formatted_string = f"{num:.3f} " + prefix
@@ -119,7 +125,7 @@ def ask_yn() -> bool:
 
 def jsonify_list(data):
     if isinstance(data, dict):
-        return {k: jsonify_list(v) for k, v in data.items()}
+        return {str(k): jsonify_list(v) for k, v in data.items()}
     elif isinstance(data, list):
         return [jsonify_list(v) for v in data]
     elif isinstance(data, tuple):

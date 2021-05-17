@@ -15,22 +15,22 @@ import itertools
 import hjson
 import numpy as np
 import tensorflow as tf
-
 from typing import Dict
+import time
 
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.system.model import Model
 from c3.utils.tf_utils import (
-    tf_propagation_vectorized,
+    tf_batch_propagate,
     tf_propagation_lind,
     tf_matmul_left,
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
 )
-from c3.utils.qt_utils import perfect_single_q_parametric_gate, kron_ids
+from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
 
 class Experiment:
@@ -40,24 +40,31 @@ class Experiment:
 
     Parameters
     ----------
-    model: Model
-        The underlying physical device.
-    generator: Generator
-        The infrastructure for generating and sending control signals to the
-        device.
-    gateset: GateSet
-        A gate level description of the operations implemented by control
-        pulses.
+    pmap: ParameterMap
+        including
+        model: Model
+            The underlying physical device.
+        generator: Generator
+            The infrastructure for generating and sending control signals to the
+            device.
+        gateset: GateSet
+            A gate level description of the operations implemented by control
+            pulses.
 
     """
 
     def __init__(self, pmap: ParameterMap = None):
         self.pmap = pmap
         self.opt_gates = None
-        self.propagators: dict = {}
+        self.propagators: Dict[str, tf.Tensor] = {}
         self.partial_propagators: dict = {}
         self.created_by = None
         self.logdir: str = None
+        self.propagate_batch_size = None
+        self.use_control_fields = True
+        self.overwrite_propagators = True  # Keep only currently computed propagators
+        self.compute_propagators_timestamp = 0
+        self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
 
     def enable_qasm(self) -> None:
@@ -192,7 +199,7 @@ class Experiment:
 
         Parameters
         ----------
-        seqs: str list
+        sequences: str list
             A list of control pulses/gates to perform on the device.
 
         Returns
@@ -223,7 +230,7 @@ class Experiment:
 
         Parameters
         ----------
-        seqs: dict list
+        sequences: dict list
             A list of control pulses/gates to perform on the device in QASM format.
 
         Returns
@@ -347,9 +354,7 @@ class Experiment:
         if gate_keys is None:
             gate_keys = instructions.keys()  # type: ignore
         for gate in gate_keys:
-            gates[gate] = kron_ids(
-                dims, instructions[gate].targets, [instructions[gate].ideal]
-            )
+            gates[gate] = instructions[gate].get_ideal_gate(dims)
 
         # TODO parametric gates
 
@@ -425,7 +430,13 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             gates[gate] = U
-        self.propagators = gates
+
+        # TODO we might want to move storing of the propagators to the instruction object
+        if self.overwrite_propagators:
+            self.propagators = gates
+        else:
+            self.propagators.update(gates)
+        self.compute_propagators_timestamp = time.time()
         return gates
 
     def propagation(self, signal: dict, gate):
@@ -437,8 +448,6 @@ class Experiment:
         ----------
         signal: dict
             Waveform of the control signal per drive line.
-        ts: tf.float64
-            Vector of times.
         gate: str
             Identifier for one of the gates.
 
@@ -448,39 +457,82 @@ class Experiment:
             Matrix representation of the gate.
         """
         model = self.pmap.model
-        h0, hctrls = model.get_Hamiltonians()
+
+        if self.use_control_fields:
+            hamiltonian, hctrls = model.get_Hamiltonians()
+            signals = []
+            hks = []
+            for key in signal:
+                signals.append(signal[key]["values"])
+                ts = signal[key]["ts"]
+                hks.append(hctrls[key])
+            signals = tf.cast(signals, tf.complex128)
+            hks = tf.cast(hks, tf.complex128)
+        else:
+            hamiltonian = model.get_Hamiltonian(signal)
+            ts_list = [sig["ts"][1:] for sig in signal.values()]
+            ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+            signals = None
+            hks = None
+            assert np.all(
+                tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
+            )
+            assert np.all(
+                tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
+            )
+
+        # TODO: is this compatible with lindbladian
         if model.max_excitations:
             cutter = model.ex_cutter
-            h0 = cutter @ h0 @ cutter.T
-            hctrls = [cutter @ chs @ cutter.T for chs in hctrls]
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
+            hamiltonian = cutter @ hamiltonian @ cutter.T
+            if hks is not None:
+                cutter_tf = tf.cast(cutter, tf.complex128)
+                hks = tf.matmul(cutter_tf, tf.matmul(hks, cutter_tf, transpose_b=True))
+
         dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
         if model.lindbladian:
             col_ops = model.get_Lindbladians()
-            dUs = tf_propagation_lind(h0, hks, col_ops, signals, dt)
+            if model.max_excitations:
+                cutter = model.ex_cutter
+                col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
+            dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
         else:
-            dUs = tf_propagation_vectorized(h0, hks, signals, dt)
-        self.ts = ts
-        dUs = tf.cast(dUs, tf.complex128)
-        if model.max_excitations:
-            U = cutter.T @ tf_matmul_left(dUs) @ cutter
-            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
-            self.partial_propagators[gate] = tf.stop_gradient(
-                tf.linalg.matmul(
-                    tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
-                    ex_cutter,
-                )
+            batch_size = (
+                self.propagate_batch_size
+                if self.propagate_batch_size
+                else len(hamiltonian)
             )
+            batch_size = (
+                len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
+            )
+            batch_size = tf.constant(batch_size, tf.int32)
+            dUs = tf_batch_propagate(
+                hamiltonian, hks, signals, dt, batch_size=batch_size
+            )
+
+        U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+        if model.max_excitations:
+            U = cutter.T @ U @ cutter
+            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
+            if self.stop_partial_propagator_gradient:
+                self.partial_propagators[gate] = tf.stop_gradient(
+                    tf.linalg.matmul(
+                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                        ex_cutter,
+                    )
+                )
+            else:
+                self.partial_propagators[gate] = tf.stop_gradient(
+                    tf.linalg.matmul(
+                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+                        ex_cutter,
+                    )
+                )
         else:
-            U = tf_matmul_left(dUs)
             self.partial_propagators[gate] = dUs
-        self.U = U
+
+        self.ts = ts
         return U
 
     def set_opt_gates(self, gates):
@@ -489,9 +541,11 @@ class Experiment:
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+        gates: Identifiers of the gates of interest. Can contain duplicates.
 
         """
+        if type(gates) is str:
+            gates = [gates]
         self.opt_gates = gates
 
     def set_opt_gates_seq(self, seqs):
@@ -500,7 +554,7 @@ class Experiment:
 
         Parameters
         ----------
-        opt_gates: Identifiers of the gates of interest. Can contain duplicates.
+        seqs: Identifiers of the sequences of interest. Can contain duplicates.
 
         """
         self.opt_gates = list(set(itertools.chain.from_iterable(seqs)))

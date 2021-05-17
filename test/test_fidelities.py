@@ -14,13 +14,13 @@ Id = GATES["id"]
 @pytest.mark.unit
 def test_unitary_infid_1() -> None:
     """Testing that a matrix has no error with itself."""
-    almost_equal(unitary_infid(X, X), 0)
+    almost_equal(unitary_infid(X, X, dims=[2]), 0)
 
 
 @pytest.mark.unit
 def test_unitary_infid_2() -> None:
     """Testing that X and Y have maximal error."""
-    assert unitary_infid(X, Y) == 1
+    assert unitary_infid(X, Y, dims=[2]) == 1
 
 
 @pytest.mark.unit

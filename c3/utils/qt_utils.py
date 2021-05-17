@@ -1,5 +1,5 @@
 """Useful functions to get basis vectors and matrices of the right size."""
-
+import itertools
 import numpy as np
 from typing import List
 from scipy.linalg import block_diag as scipy_block_diag
@@ -21,11 +21,11 @@ def pauli_basis(dims=[2]):
     np.array
         A square matrix containing the Pauli basis of the product space
     """
-    nq = len(dims)
+
     _SINGLE_QUBIT_PAULI_BASIS = (Id, X, Y, Z)
     paulis = []
     for dim in dims:
-        paulis.append([P for P in _SINGLE_QUBIT_PAULI_BASIS])
+        paulis.append([expand_dims(P, dim) for P in _SINGLE_QUBIT_PAULI_BASIS])
     result = [[]]
     res_tuple = []
     # TAKEN FROM ITERTOOLS
@@ -38,12 +38,20 @@ def pauli_basis(dims=[2]):
     size = np.prod(np.array(dims) ** 2)
     B = np.zeros((size, size), dtype=complex)
     for idx, op_tuple in enumerate(res_tuple):
-        op = op_tuple[0]
-        for i in range(nq - 1):
-            op = np.kron(op, op_tuple[i + 1])
+        op = np_kron_n(op_tuple)
         vec = np.reshape(np.transpose(op), [-1, 1])
         B[:, idx] = vec.T.conj()
     return B
+
+
+def expand_dims(op, dim):
+    """
+    pad operator with zeros to be of dimension dim
+    Attention! Not related to the TensorFlow function
+    """
+    op_out = np.zeros([dim, dim], dtype=op.dtype)
+    op_out[: op.shape[0], : op.shape[1]] = op
+    return op_out
 
 
 # MATH HELPERS
@@ -51,8 +59,8 @@ def np_kron_n(mat_list):
     """
     Apply Kronecker product to a list of matrices.
     """
-    tmp = mat_list[0]
-    for m in mat_list[1:]:
+    tmp = np.eye(1)
+    for m in mat_list:
         tmp = np.kron(tmp, m)
     return tmp
 
@@ -167,16 +175,19 @@ def xy_basis(lvls: int, vect: str):
     return psi
 
 
-def projector(dims, indices):
+def projector(dims, indices, outdims=None):
     """
     Computes the projector to cut down a matrix to the computational space. The
     subspaces indicated in indeces will be projected to the lowest two states,
-    the rest is projected onto the lowest state.
+    the rest is projected onto the lowest state. If outdims is defined projection will be performed to those states.
     """
+    if outdims is None:
+        outdims = [2] * len(dims)
     ids = []
     for index, dim in enumerate(dims):
+        outdim = outdims[index]
         if index in indices:
-            ids.append(np.eye(dim, 2))
+            ids.append(np.eye(dim, outdim))
         else:
             ids.append(np.eye(dim, 1))
     return np_kron_n(ids)
@@ -192,6 +203,50 @@ def kron_ids(dims, indices, matrices):
     for index, matrix in enumerate(matrices):
         ids[indices[index]] = matrix
     return np_kron_n(ids)
+
+
+def get_basis_matrices(dim):
+    """
+    Basis matrices with single ones of the matrices with given dimensions.
+    """
+    basis_mats = list()
+    for i in range(dim ** 2):
+        b = np.zeros((dim, dim), dtype=np.complex128)
+        b.flat[i] = 1
+        basis_mats.append(b)
+    return basis_mats
+
+
+def insert_mat_kron(dims, target_ids, matrix) -> np.ndarray:
+    """
+    Insert matrix at given indices. All other spaces are filled with zeros.
+
+    Parameters
+    ----------
+    dims: dimensions of each qubit subspace
+    target_ids: qubits to apply matrix to
+    matrix: matrix to be applied
+
+    Returns
+    -------
+    composed matrix
+    """
+    seperated_basis_matrices = list(
+        itertools.product(*[get_basis_matrices(dims[target]) for target in target_ids])
+    )
+
+    tot_dim = np.product(dims)
+    out_matrix = np.zeros((tot_dim, tot_dim), dtype=np.complex128)
+    for basis_mats in seperated_basis_matrices:
+        kron_mat = np_kron_n(basis_mats)
+        norm = np.sqrt(np.sum(np.abs(kron_mat)))
+        kron_mat /= norm
+        expanded_mat = kron_ids(dims, target_ids, basis_mats) / norm
+        # calculate overlap of initial matrix with element
+        overlap = np.sum(matrix * kron_mat)
+        out_matrix += overlap * expanded_mat
+
+    return out_matrix
 
 
 def pad_matrix(matrix, dim, padding):

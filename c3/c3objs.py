@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
 from tensorflow.python.framework import ops
+import copy
 
 
 class C3obj:
@@ -90,6 +91,7 @@ class Quantity:
                 min_val = np.min(minmax)
                 max_val = np.max(minmax)
             else:
+                # When would this case be reached?
                 min_val = -1
                 max_val = 1
         self.offset = np.array(min_val) * pref
@@ -103,6 +105,7 @@ class Quantity:
             self.shape = (1,)
             self.length = 1
 
+        self.value = None
         self.set_value(np.array(value))
 
     def asdict(self) -> dict:
@@ -119,37 +122,77 @@ class Quantity:
         }
 
     def __add__(self, other):
-        return self.numpy() + other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() + other, extend_bounds=True)
+        return out_val
 
     def __radd__(self, other):
-        return self.numpy() + other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() + other, extend_bounds=True)
+        return out_val
 
     def __sub__(self, other):
-        return self.numpy() - other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() - other, extend_bounds=True)
+        return out_val
 
     def __rsub__(self, other):
-        return other - self.numpy()
+        out_val = copy.deepcopy(self)
+        out_val.set_value(other - self.get_value(), extend_bounds=True)
+        return out_val
 
     def __mul__(self, other):
-        return self.numpy() * other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() * other, extend_bounds=True)
+        return out_val
 
     def __rmul__(self, other):
-        return self.numpy() * other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() * other, extend_bounds=True)
+        return out_val
 
     def __pow__(self, other):
-        return self.numpy() ** other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() ** other, extend_bounds=True)
+        return out_val
 
     def __rpow__(self, other):
-        return other ** self.numpy()
+        out_val = copy.deepcopy(self)
+        out_val.set_value(other ** self.get_value(), extend_bounds=True)
+        return out_val
 
     def __truediv__(self, other):
-        return self.numpy() / other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() / other, extend_bounds=True)
+        return out_val
 
     def __rtruediv__(self, other):
-        return other / self.numpy()
+        out_val = copy.deepcopy(self)
+        out_val.set_value(other / self.get_value(), extend_bounds=True)
+        return out_val
 
     def __mod__(self, other):
-        return self.numpy() % other
+        out_val = copy.deepcopy(self)
+        out_val.set_value(self.get_value() % other, extend_bounds=True)
+        return out_val
+
+    def __lt__(self, other):
+        return self.get_value() < other
+
+    def __le__(self, other):
+        return self.get_value() <= other
+
+    def __eq__(self, other):
+        return self.get_value() == other
+
+    def __ne__(self, other):
+        return self.get_value() != other
+
+    def __ge__(self, other):
+        return self.get_value() >= other
+
+    def __gt__(self, other):
+        return self.get_value() > other
 
     def __array__(self):
         return np.array(self.numpy())
@@ -180,43 +223,65 @@ class Quantity:
                 ret += num3str(entry, use_prefix=False) + " "
         return ret
 
+    def subtract(self, val):
+        self.set_value(self.get_value() - val)
+
+    def add(self, val):
+        self.set_value(self.get_value() + val)
+
     def numpy(self) -> np.ndarray:
         """
         Return the value of this quantity as numpy.
         """
+        # TODO should be removed to be consistent with get_value
         return self.get_value().numpy() / self.pref
 
-    def get_value(self, val: tf.float64 = None) -> tf.Tensor:
+    def get_value(self, val: tf.float64 = None, dtype: tf.dtypes = None) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 
         Parameters
         ----------
         val : tf.float64
+        dtype: tf.dtypes
         """
         if val is None:
             val = self.value
-        return self.scale * (val + 1) / 2 + self.offset
+        if dtype is None:
+            dtype = self.value.dtype
 
-    def set_value(self, val) -> None:
+        value = self.scale * (val + 1) / 2 + self.offset
+        return tf.cast(value, dtype)
+
+    def set_value(self, val, extend_bounds=False) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
-        tmp = 2 * (np.array(val) * self.pref - self.offset) / self.scale - 1
-        if np.any(tmp < -1) or np.any(tmp > 1):
-            raise Exception(
-                f"Value {np.array(val)}{self.unit} out of bounds for quantity with "
-                f"min_val: {num3str(self.offset / self.pref)}{self.unit} and "
-                f"max_val: {num3str((self.scale + self.offset) / self.pref)}{self.unit}"
-            )
-            # TODO if we want we can extend bounds when force flag is given
+        if isinstance(val, ops.EagerTensor) or isinstance(val, ops.Tensor):
+            val = tf.cast(val, tf.float64)
         else:
-            if isinstance(val, ops.EagerTensor):
-                self.value = tf.cast(
-                    2 * (val * self.pref - self.offset) / self.scale - 1, tf.float64
-                )
-            else:
-                self.value = tf.constant(tmp, dtype=tf.float64)
+            val = tf.constant(val, tf.float64)
+
+        tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
+
+        if extend_bounds and tf.math.abs(tmp) > 1:
+            min_val, max_val = self.get_limits()
+            # Extra bounds included to not be directly at border due to differentiability
+            minmax = [val * 0.9, val * 1.1, min_val, max_val]
+            min_val = tf.math.reduce_min(minmax)
+            max_val = tf.math.reduce_max(minmax)
+            self.set_limits(min_val, max_val)
+            tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
+
+        tf.debugging.assert_less_equal(
+            tf.math.abs(tmp),
+            tf.constant(1.0, tf.float64),
+            f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
+            f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
+            f"max_val: {num3str(self.get_limits()[1])}{self.unit}",
+        )
+
+        self.value = tf.cast(tmp, tf.float64)
 
     def get_opt_value(self) -> np.ndarray:
         """Get an optimizer friendly representation of the value."""
@@ -232,3 +297,14 @@ class Quantity:
         """
         bound_val = tf.cos((tf.reshape(val, self.shape) + 1) * np.pi / 2)
         self.value = tf.acos(bound_val) / np.pi * 2 - 1
+
+    def get_limits(self):
+        min_val = self.offset / self.pref
+        max_val = (self.scale + self.offset) / self.pref
+        return min_val, max_val
+
+    def set_limits(self, min_val, max_val):
+        val = self.get_value()
+        self.offset = np.array(min_val) * self.pref
+        self.scale = np.abs(np.array(max_val) - np.array(min_val)) * self.pref
+        self.set_value(val)

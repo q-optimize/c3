@@ -3,6 +3,7 @@ import hjson
 import tensorflow as tf
 from c3.optimizers.c1 import C1
 from c3.utils.utils import jsonify_list
+import numpy as np
 
 
 class C1_robust(C1):
@@ -32,34 +33,8 @@ class C1_robust(C1):
         User specified name for the run, will be used as root folder
     """
 
-    def __init__(
-        self,
-        dir_path,
-        fid_func,
-        fid_subspace,
-        pmap,
-        noise_map,
-        callback_fids=[],
-        algorithm=None,
-        store_unitaries=False,
-        options={},
-        run_name=None,
-        interactive=True,
-        num_runs=1,
-    ) -> None:
-        super().__init__(
-            dir_path=dir_path,
-            fid_func=fid_func,
-            fid_subspace=fid_subspace,
-            pmap=pmap,
-            callback_fids=callback_fids,
-            algorithm=algorithm,
-            store_unitaries=store_unitaries,
-            options=options,
-            run_name=run_name,
-            interactive=interactive,
-        )
-        self.num_runs = num_runs
+    def __init__(self, noise_map, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.noise_map = noise_map
 
     def goal_run_with_grad(self, current_params):
@@ -68,6 +43,7 @@ class C1_robust(C1):
         grads = []
         evaluation = int(self.evaluation)
         for noise_vals, noise_map in self.noise_map:
+            orig_val = np.array(self.exp.pmap.get_parameters([noise_map]))
             for noise_val in noise_vals:
                 self.exp.pmap.set_parameters([noise_val], [noise_map])
                 self.evaluation = evaluation
@@ -78,7 +54,7 @@ class C1_robust(C1):
                 goals.append(goal)
                 goals_float.append(float(goal))
                 grads.append(grad)
-            self.exp.pmap.set_parameters([0], [noise_map])
+            self.exp.pmap.set_parameters(orig_val, [noise_map])
 
         self.optim_status["goals_individual"] = [float(goal) for goal in goals]
         self.optim_status["goal_std"] = float(tf.math.reduce_std(goals))

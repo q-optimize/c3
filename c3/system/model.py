@@ -1,12 +1,14 @@
 """The model class, containing information on the system and its modelling."""
-
+import warnings
 import numpy as np
 import hjson
 import itertools
+import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
-from c3.system.chip import device_lib, Coupling, Drive
+from c3.system.chip import device_lib, Drive
+from typing import List, Tuple
 
 
 class Model:
@@ -26,11 +28,12 @@ class Model:
     tasks : list
         Badly named list of processing steps like line distortions and read out
         modeling
+    max_excitations : int
+        Allow only up to max_excitations in the system
 
 
     Attributes
     ----------
-    H0: :class: Drift Hamiltonian
 
 
     """
@@ -41,9 +44,13 @@ class Model:
         self.use_FR = True
         self.dephasing_strength = 0.0
         self.params = {}
-        self.subsystems = {}
-        self.couplings = {}
-        self.tasks = {}
+        self.subsystems: dict = dict()
+        self.couplings: dict = dict()
+        self.tasks: dict = dict()
+        self.drift_ham = None
+        self.dressed_drift_ham = None
+        self.__hamiltonians = None
+        self.__dressed_hamiltonians = None
         if subsystems:
             self.set_components(subsystems, couplings, max_excitations)
         if tasks:
@@ -59,6 +66,9 @@ class Model:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
+        # TODO ensure that all elements have different keys / names
+        if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
+            raise Exception("Do not use same name for multiple devices")
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -93,7 +103,7 @@ class Model:
         """
         ann_opers = []
         dims = self.dims
-        self.tot_dim = np.prod(dims)
+        self.tot_dim = int(np.prod(dims))
         for indx in range(len(dims)):
             a = np.diag(np.sqrt(np.arange(1, dims[indx])), k=1)
             ann_opers.append(qt_utils.hilbert_space_kron(a, indx, dims))
@@ -130,17 +140,14 @@ class Model:
         """
         if max_excitations:
             labels = self.state_labels
-            cut_labels = []
             proj = []
             ii = 0
             for li in labels:
-                if sum(li) < max_excitations:
-                    cut_labels.append(li)
+                if sum(li) <= max_excitations:
                     line = [0] * len(labels)
                     line[ii] = 1
                     proj.append(line)
                 ii += 1
-            self.state_labels = cut_labels
             excitation_cutter = np.array(proj)
             self.ex_cutter = excitation_cutter
         else:
@@ -167,8 +174,8 @@ class Model:
 
         Parameters
         ----------
-        filepath : str
-            Location of the configuration file
+        cfg : dict
+            configuration file
 
         """
         for name, props in cfg["Qubits"].items():
@@ -265,6 +272,36 @@ class Model:
         else:
             return self.drift_ham, self.control_hams
 
+    @tf.function
+    def get_Hamiltonian(self, signal=None):
+        """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
+        Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
+        if signal is None:
+            if self.dressed:
+                return self.dressed_drift_ham
+            else:
+                return self.drift_ham
+        if self.dressed:
+            hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
+            transform = self.transform
+        else:
+            hamiltonians = copy.deepcopy(self.__hamiltonians)
+            transform = None
+        for key, sig in signal.items():
+            if key in self.subsystems:
+                hamiltonians[key] = self.subsystems[key].get_Hamiltonian(sig, transform)
+            elif key in self.couplings:
+                hamiltonians[key] = self.couplings[key].get_Hamiltonian(sig, transform)
+            else:
+                raise Exception(f"Signal channel {key} not in model systems")
+        signal_hamiltonian = sum(
+            [
+                tf.expand_dims(h, 0) if len(h.shape) == 2 else h
+                for h in hamiltonians.values()
+            ]
+        )
+        return signal_hamiltonian
+
     def get_Lindbladians(self):
         if self.dressed:
             return self.dressed_col_ops
@@ -280,18 +317,18 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_hams = {}
-        tot_dim = self.tot_dim
-        drift_ham = tf.zeros([tot_dim, tot_dim], dtype=tf.complex128)
-        for sub in self.subsystems.values():
-            drift_ham += sub.get_Hamiltonian()
+        control_hams = dict()
+        hamiltonians = dict()
+        for key, sub in self.subsystems.items():
+            hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
-            if isinstance(line, Coupling):
-                drift_ham += line.get_Hamiltonian()
-            elif isinstance(line, Drive):
-                control_hams[key] = line.get_Hamiltonian()
-        self.drift_ham = drift_ham
+            hamiltonians[key] = line.get_Hamiltonian()
+            if isinstance(line, Drive):
+                control_hams[key] = line.get_Hamiltonian(signal=True)
+
+        self.drift_ham = sum(hamiltonians.values())
         self.control_hams = control_hams
+        self.__hamiltonians = hamiltonians
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -303,16 +340,27 @@ class Model:
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
-        # TODO Raise error if dressing unsuccesful
         e, v = tf.linalg.eigh(self.drift_ham)
         if ordered:
-            reorder_matrix = tf.cast(
-                (
-                    tf.expand_dims(tf.reduce_max(tf.abs(v) ** 2, axis=1), 1)
-                    == tf.abs(v) ** 2
-                ),
-                tf.float64,
-            )
+            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
+
+            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
+            if tf.math.reduce_min(max_probabilities) > 0.5:
+                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
+            else:
+                failed_states = np.sum(max_probabilities < 0.5)
+                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
+                warnings.warn(
+                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
+                )
+                vc = v_sq.numpy()
+                reorder_matrix = np.zeros_like(vc)
+                for i in range(vc.shape[1]):
+                    idx = np.unravel_index(np.argmax(vc), vc.shape)
+                    vc[idx[0], :] = 0
+                    vc[:, idx[1]] = 0
+                    reorder_matrix[idx] = 1
+                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
             signed_rm = tf.cast(
                 # TODO determine if the changing of sign is needed
                 # (by looking at TC_eneregies_bases I see no difference)
@@ -323,10 +371,13 @@ class Model:
             eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
             transform = tf.matmul(v, tf.transpose(signed_rm))
         else:
+            reorder_matrix = tf.eye(self.tot_dim)
             eigenframe = tf.math.real(e)
             transform = v
+
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
+        self.reorder_matrix = reorder_matrix
 
     def update_dressed(self, ordered=True):
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
@@ -334,6 +385,11 @@ class Model:
         self.update_drift_eigen(ordered=ordered)
         dressed_control_hams = {}
         dressed_col_ops = []
+        dressed_hamiltonians = dict()
+        for k, h in self.__hamiltonians.items():
+            dressed_hamiltonians[k] = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
+            )
         dressed_drift_ham = tf.matmul(
             tf.matmul(tf.linalg.adjoint(self.transform), self.drift_ham), self.transform
         )
@@ -344,6 +400,7 @@ class Model:
             )
         self.dressed_drift_ham = dressed_drift_ham
         self.dressed_control_hams = dressed_control_hams
+        self.__dressed_hamiltonians = dressed_hamiltonians
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(
@@ -386,12 +443,27 @@ class Model:
             )
             # TODO test dressing of FR
             exponent = exponent + 1.0j * num_oper * (freq * t_final + framechange)
+        if len(exponent.shape) == 0:
+            return tf.eye(self.tot_dim, dtype=tf.complex128)
         FR = tf.linalg.expm(exponent)
         return FR
 
-    def get_qubit_freqs(self):
-        # TODO figure how to get the correct dressed frequencies
-        pass
+    def get_qubit_freqs(self) -> List[float]:
+        es = tf.math.real(tf.linalg.diag_part(self.dressed_drift_ham))
+        frequencies = []
+        for i in range(len(self.dims)):
+            state = [0] * len(self.dims)
+            state[i] = 1
+            idx = self.state_labels.index(tuple(state))
+            freq = float(es[idx] - es[0]) / 2 / np.pi
+            frequencies.append(freq)
+        return frequencies
+
+    def get_state_index(self, state: Tuple) -> int:
+        return self.state_labels.index(tuple(state))
+
+    def get_state_indeces(self, states: List[Tuple]) -> List[int]:
+        return [self.get_state_index(s) for s in states]
 
     def get_dephasing_channel(self, t_final, amps):
         """
