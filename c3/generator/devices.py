@@ -1,5 +1,6 @@
 import os
 import tempfile
+import warnings
 import hjson
 from typing import Callable, Dict, Any
 import tensorflow as tf
@@ -469,6 +470,7 @@ class FluxTuningLinear(Device):
         return self.freq
 
 
+# Depreciated use ResponseFFT instead
 @dev_reg_deco
 class Response(Device):
     """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
@@ -483,6 +485,9 @@ class Response(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
+        warnings.warn(
+            "use ResponseFFT for faster signal generation instead", DeprecationWarning
+        )
 
     def convolve(self, signal: list, resp_shape: list):
         """

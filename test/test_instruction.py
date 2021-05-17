@@ -14,7 +14,7 @@ import pytest
 model = Model()
 model.read_config("test/test_model.cfg")
 generator = Generator()
-generator.read_config("test/generator.cfg")
+generator.read_config("test/generator2.cfg")
 
 t_final = 7e-9  # Time for single qubit gates
 sideband = 50e6
@@ -103,7 +103,7 @@ def test_extended_pulse():
     gen_signal = generator.generate_signals(instr)
     ts = gen_signal["d1"]["ts"]
 
-    np.testing.assert_allclose(ts, test_data["ts"])
+    np.testing.assert_allclose(ts, test_data["signal"]["d1"]["ts"])
     np.testing.assert_allclose(
         actual=gen_signal["d1"]["values"].numpy(),
         desired=test_data["signal"]["d1"]["values"].numpy(),
@@ -148,5 +148,6 @@ def test_extended_pulse():
     )
 
 
-with open("test/instruction.pickle", "wb") as filename:
-    pickle.dump(test_data, filename)
+@pytest.mark.unit
+def test_str_conversion():
+    assert repr(instr) == "Instruction[multi_instruction]"

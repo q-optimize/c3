@@ -1,4 +1,5 @@
 """Component class and subclasses for the components making up the quantum device."""
+import copy
 import warnings
 
 import numpy as np
@@ -59,12 +60,13 @@ class PhysicalComponent(C3obj):
 
         """
         if transform is None:
-            return self.Hs
+            return copy.deepcopy(self.Hs)
         transformed_Hs = dict()
         for key, ham in self.Hs.items():
             transformed_Hs[key] = tf.matmul(
-                tf.matmul(transform, self.Hs["freq"], adjoint_a=True), transform
+                tf.matmul(transform, self.Hs[key], adjoint_a=True), transform
             )
+        return transformed_Hs
 
     def get_Hamiltonian(
         self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
@@ -308,6 +310,7 @@ class Transmon(PhysicalComponent):
         comment: str = None,
         hilbert_dim: int = None,
         freq: Quantity = None,
+        anhar: Quantity = None,
         phi: Quantity = None,
         phi_0: Quantity = None,
         gamma: Quantity = None,
@@ -315,7 +318,6 @@ class Transmon(PhysicalComponent):
         t1: Quantity = None,
         t2star: Quantity = None,
         temp: Quantity = None,
-        anhar: Quantity = None,
         params=None,
     ):
         super().__init__(
@@ -520,19 +522,19 @@ class TransmonExpanded(Transmon):
         fmin(
             eval_func,
             x0=[self.params["EC"].get_opt_value(), self.params["EJ"].get_opt_value()],
-        )
-        print(
-            (float(EC_guess), float(EJ_guess)),
-            (float(self.params["EC"]), float(self.params["EJ"])),
+            disp=False,
         )
 
     def get_Hamiltonian(
         self, signal: Union[dict, bool] = None, transform: tf.Tensor = None
     ):
         Hs = self.get_transformed_hamiltonians(transform)
-
         if isinstance(signal, dict):
             sig = signal["values"]
+            sig = tf.reshape(sig, [sig.shape[0], 1, 1])
+
+            for k in Hs:
+                Hs[k] = tf.expand_dims(Hs[k], 0)
         else:
             sig = 0
         prefactors = self.get_prefactors(sig)

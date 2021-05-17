@@ -250,17 +250,3 @@ def test_nodrive():
     np.testing.assert_allclose(
         actual=envelopes["rect"](t=ts, params=params), desired=test_data["rect"]
     )
-
-
-# test_pwc_envelope()
-test_pwc_shape()
-test_delta_pulse()
-test_fourier()
-test_flattop()
-test_flattop_cut()
-test_cosine()
-test_gaussian()
-test_nodrive()
-
-with open("test/envelopes.pickle", "wb") as filename:
-    pickle.dump(test_data, filename)

@@ -272,7 +272,6 @@ class Model:
         else:
             return self.drift_ham, self.control_hams
 
-    @tf.function
     def get_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
@@ -435,7 +434,14 @@ class Model:
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
-            qubit = self.couplings[line].connected[0]
+            if line in self.couplings:
+                qubit = self.couplings[line].connected[0]
+            elif line in self.subsystems:
+                qubit = line
+            else:
+                raise Exception(
+                    f"Component {line} not found in couplings or subsystems"
+                )
             # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[self.names.index(qubit)]
             num_oper = tf.constant(
