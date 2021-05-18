@@ -163,12 +163,20 @@ class Experiment:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read())
+        self.from_dict(cfg)
+
+    def from_dict(self, cfg: dict) -> None:
+        """
+        Load experiment from dictionary
+        """
         model = Model()
         model.fromdict(cfg["model"])
         generator = Generator()
         generator.fromdict(cfg["generator"])
         pmap = ParameterMap(model=model, generator=generator)
         pmap.fromdict(cfg["instructions"])
+        for k, v in cfg["options"].items():
+            self.__dict__[k] = v
         self.pmap = pmap
 
     def write_config(self, filepath: str) -> None:
@@ -188,6 +196,12 @@ class Experiment:
             exp_dict["instructions"][name] = instr.asdict()
         exp_dict["model"] = self.pmap.model.asdict()
         exp_dict["generator"] = self.pmap.generator.asdict()
+        exp_dict["options"] = {
+            "propagate_batch_size": self.propagate_batch_size,
+            "use_control_fields": self.use_control_fields,
+            "overwrite_propagators": self.overwrite_propagators,
+            "stop_partial_propagator_gradient": self.stop_partial_propagator_gradient,
+        }
         return exp_dict
 
     def __str__(self) -> str:

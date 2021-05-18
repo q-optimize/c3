@@ -220,7 +220,13 @@ class Model:
         couplings = {}
         for name, coup in self.couplings.items():
             couplings[name] = coup.asdict()
-        return {"Qubits": qubits, "Couplings": couplings}
+
+        cfg = {
+            "Qubits": qubits,
+            "Couplings": couplings,
+            "max_excitations": self.max_excitations,
+        }
+        return cfg
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict())

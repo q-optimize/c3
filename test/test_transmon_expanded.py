@@ -220,3 +220,14 @@ def test_propagation():
     np.testing.assert_allclose(
         actual=exp.partial_propagators["instr2"], desired=data["partial_propagators_q2"]
     )
+
+
+def test_save_and_load():
+    exp.compute_propagators()
+    propagators = exp.propagators
+    cfg = exp.asdict()
+    exp2 = Experiment()
+    exp2.from_dict(cfg)
+    exp2.compute_propagators()
+    for k in propagators:
+        np.testing.assert_allclose(exp2.propagators[k], propagators[k])

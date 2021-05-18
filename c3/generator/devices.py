@@ -900,7 +900,8 @@ class Additive_Noise(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_amp"] = props.pop("noise_amp")
+        if "noise_amp" in props:
+            self.params["noise_amp"] = props.pop("noise_amp")
 
     def get_noise(self, sig):
         noise_amp = self.params["noise_amp"].get_value()
