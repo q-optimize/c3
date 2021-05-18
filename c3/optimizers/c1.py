@@ -47,6 +47,7 @@ class C1(Optimizer):
         options={},
         run_name=None,
         interactive=True,
+        include_model=False,
     ) -> None:
         super().__init__(
             pmap=pmap,
@@ -60,7 +61,7 @@ class C1(Optimizer):
         self.__dir_path = dir_path
         self.__run_name = run_name
         self.interactive = interactive
-        self.update_model = False
+        self.update_model = include_model
 
     def log_setup(self) -> None:
         """
