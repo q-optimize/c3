@@ -16,23 +16,7 @@ from c3.generator.generator import Generator
 logging.getLogger("tensorflow").disabled = True
 
 # flake8: noqa: C901
-if __name__ == "__main__":
-
-    os.nice(5)  # keep responsiveness when we overcommit memory
-
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("master_config")
-    args = parser.parse_args()
-
-    opt_config = args.master_config
-    with open(opt_config, "r") as cfg_file:
-        try:
-            cfg = hjson.loads(cfg_file.read())
-        except hjson.decoder.HjsonDecodeError:
-            raise Exception(f"Config {opt_config} is invalid.")
-
+def run_cfg(cfg):
     optim_type = cfg["optim_type"]
 
     tf_utils.tf_setup()
@@ -141,3 +125,21 @@ if __name__ == "__main__":
 
             print("sensitivity test ...")
             opt.sensitivity()
+
+
+if __name__ == "__main__":
+    os.nice(5)  # keep responsiveness when we overcommit memory
+
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("master_config")
+    args = parser.parse_args()
+
+    opt_config = args.master_config
+    with open(opt_config, "r") as cfg_file:
+        try:
+            cfg = hjson.load(cfg_file)
+        except hjson.decoder.HjsonDecodeError:
+            raise Exception(f"Config {opt_config} is invalid.")
+    run_cfg(cfg)
