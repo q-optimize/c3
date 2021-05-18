@@ -115,8 +115,6 @@ class Generator:
 
         """
         gen_signal = {}
-        if self.gen_stacked_signals:
-            del self.gen_stacked_signals
         gen_stacked_signals: dict = dict()
         for chan in instr.comps:
             signal_stack: List[tf.constant] = []

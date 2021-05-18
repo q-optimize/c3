@@ -200,16 +200,36 @@ carr_2 = copy.deepcopy(carr)
 carr_2.params["freq"].set_value(lo_freq_q2)
 
 rx90p_q1 = gates.Instruction(
-    name="rx90p", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="rx90p",
+    targets=[0],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 rx90p_q2 = gates.Instruction(
-    name="rx90p", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="rx90p",
+    targets=[1],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 QId_q1 = gates.Instruction(
-    name="id", targets=[0], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id",
+    targets=[0],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 QId_q2 = gates.Instruction(
-    name="id", targets=[1], t_start=0.0, t_end=t_final, channels=["d1", "d2"]
+    name="id",
+    targets=[1],
+    t_start=0.0,
+    t_end=t_final,
+    channels=["d1", "d2"],
+    params={"use_t_before": True},
 )
 
 rx90p_q1.add_component(gauss_env_single, "d1")
@@ -308,11 +328,11 @@ propagator = exp.propagation(gen_signal, "rx90p[0]")
 
 
 def test_signals() -> None:
-    assert (
-        gen_signal["d1"]["values"].numpy() - test_data["signal"]["d1"]["values"].numpy()
-        < 1
-    ).all()
-    assert (ts.numpy() == test_data["ts"].numpy()).all()
+    np.testing.assert_allclose(ts, test_data["ts"])
+    np.testing.assert_allclose(
+        actual=gen_signal["d1"]["values"].numpy(),
+        desired=test_data["signal"]["d1"]["values"].numpy(),
+    )
 
 
 def test_hamiltonians() -> None:

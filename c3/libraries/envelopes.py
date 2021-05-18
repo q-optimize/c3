@@ -35,11 +35,78 @@ def pwc(t, params):
 
 
 @env_reg_deco
+def pwc_shape(t, params):
+    """
+    Piecewise constant pulse while defining only a given number of samples, while interpolating linearly between those.
+    Parameters
+    ----------
+    t
+    params
+        t_bin_start/t_bin_end can be used to specify specific range. e.g. timepoints taken from awg.
+
+    Returns
+    -------
+
+    """
+    t_bin_start = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_end = tf.cast(params["t_bin_end"].get_value(), tf.float64)
+    inphase = tf.cast(params["inphase"].get_value(), tf.float64)
+
+    t_interp = t
+    shape = tf.reshape(
+        tfp.math.interp_regular_1d_grid(
+            t_interp,
+            t_bin_start,
+            t_bin_end,
+            inphase,
+            fill_value_below=0,
+            fill_value_above=0,
+        ),
+        [len(t), 1],
+    )
+
+    return shape
+
+
+@env_reg_deco
+def pwc_shape_plateau(t, params):
+    t_bin_start = params["t_bin_start"].get_value()
+    t_bin_end = params["t_bin_end"].get_value()
+    inphase = params["inphase"].get_value()
+    if "width" in params:
+        width = params["width"].get_value()
+        plateau = width - (t_bin_end - t_bin_start)
+        t_mid = (t_bin_end - t_bin_start) / 2
+        x = tf.identity(t)
+        x = tf.where(t > t_mid + plateau, t - plateau, x)
+        x = tf.where(t < t_mid, t, x)
+        x = tf.where(tf.logical_and(t < t_mid + plateau, t > t_mid), t_mid, x)
+        t_interp = x
+    else:
+        t_interp = t
+    shape = tf.reshape(
+        tfp.math.interp_regular_1d_grid(
+            t_interp,
+            t_bin_start,
+            t_bin_end,
+            inphase,
+            fill_value_below=0,
+            fill_value_above=0,
+        ),
+        [len(t), 1],
+    )
+
+    if "width" in params:
+        shape = tf.where(x == t_mid, 1.0, shape)
+    return shape
+
+
+@env_reg_deco
 def pwc_symmetric(t, params):
     """symmetic PWC pulse
     This works only for inphase component"""
-    t_bin_start = tf.cast(params["t_bin_end"].get_value(), tf.float64)
-    t_bin_end = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_start = tf.cast(params["t_bin_start"].get_value(), tf.float64)
+    t_bin_end = tf.cast(params["t_bin_end"].get_value(), tf.float64)
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     inphase = tf.cast(params["inphase"].get_value(), tf.float64)
 
@@ -55,7 +122,20 @@ def pwc_symmetric(t, params):
         ),
         [len(t)],
     )
+    return shape
 
+
+@env_reg_deco
+def delta_pulse(t, params):
+    """Pulse shape which gives an output only at a given time bin"""
+    t_sig = tf.cast(params["t_sig"].get_value(), tf.float64)
+    shape = tf.zeros_like(t)
+    for t_s in t_sig:
+        shape = tf.where(
+            tf.reduce_min((t - t_s - 1e-9) ** 2) == (t - t_s - 1e-9) ** 2,
+            np.ones_like(t),
+            shape,
+        )
     return shape
 
 
@@ -188,12 +268,14 @@ def flattop(t, params):
     t_up = tf.cast(params["t_up"].get_value(), tf.float64)
     t_down = tf.cast(params["t_down"].get_value(), tf.float64)
     risefall = tf.cast(params["risefall"].get_value(), tf.float64)
-    return (
-        (1 + tf.math.erf((t - t_up) / (risefall)))
+
+    shape = (
+        (1 + tf.math.erf((t - t_up) / risefall))
         / 2
-        * (1 + tf.math.erf((-t + t_down) / (risefall)))
+        * (1 + tf.math.erf((-t + t_down) / risefall))
         / 2
     )
+    return shape
 
 
 @env_reg_deco
@@ -215,7 +297,9 @@ def flattop_cut(t, params):
     t_down = tf.cast(params["t_down"].get_value(), dtype=tf.float64)
     risefall = tf.cast(params["risefall"].get_value(), dtype=tf.float64)
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
-    return tf.clip_by_value(shape, 0, 2)
+    shape = tf.clip_by_value(shape, 0, 1)
+    shape /= tf.reduce_max(shape)
+    return shape
 
 
 @env_reg_deco
@@ -253,23 +337,36 @@ def slepian_fourier(t, params):
     fourier_coeffs = tf.cast(params["fourier_coeffs"].get_value(), tf.float64)
     offset = tf.cast(params["offset"].get_value(), tf.float64)
     amp = tf.cast(params["amp"].get_value(), tf.float64)
+    if "risefall" in params:
+        plateau = width - params["risefall"].get_value() * 2
+        x = tf.identity(t)
+        x = tf.where(t > (t_final + plateau) / 2, t - plateau / 2, x)
+        x = tf.where(t < (t_final - plateau) / 2, t + plateau / 2, x)
+        x = tf.where(np.abs(t - t_final / 2) < plateau / 2, t_final / 2, x)
+        length = params["risefall"].get_value() * 2
+    else:
+        x = tf.identity(t)
+        length = tf.identity(width)
     shape = tf.zeros_like(t)
     for n, coeff in enumerate(fourier_coeffs):
         shape += coeff * (
-            1 - tf.cos(2 * np.pi * (n + 1) * (t - (t_final - width) / 2) / width)
+            1 - tf.cos(2 * np.pi * (n + 1) * (x - (t_final - length) / 2) / length)
         )
+    if "sin_coeffs" in params:
+        for n, coeff in enumerate(params["sin_coeffs"].get_value()):
+            shape += coeff * (
+                tf.sin((np.pi * (2 * n + 1)) * (x - (t_final - length) / 2) / length)
+            )
     shape = tf.where(tf.abs(t_final / 2 - t) > width / 2, tf.zeros_like(t), shape)
-    shape /= 2 * tf.reduce_sum(fourier_coeffs[::2])
+    shape /= tf.reduce_max(shape)
     shape = shape * (1 - offset / amp) + offset / amp
-    # plt.plot(t, shape)
-    # plt.show()
     return shape
 
 
 @env_reg_deco
 def flattop_risefall_1ns(t, params):
     """Flattop gaussian with fixed width of 1ns."""
-    params["risefall"] = 1e-9
+    params["risefall"] = Qty(1e-9, unit="s")
     return flattop_risefall(t, params)
 
 
@@ -290,10 +387,12 @@ def gaussian_sigma(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
     gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
-        t_final / (np.sqrt(8) * sigma)
-    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+
     offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    norm = (
+        tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+        - t_final * offset
+    )
     return (gauss - offset) / norm
 
 
@@ -412,7 +511,7 @@ def gaussian_der(t, params):
         / sigma ** 2
     )
     norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
-        t_final / (tf.sqrt(8) * sigma)
+        t_final / (tf.cast(tf.sqrt(8.0), tf.float64) * sigma)
     ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
     return gauss_der / norm
 

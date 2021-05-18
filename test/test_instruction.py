@@ -1,0 +1,152 @@
+import copy
+import pickle
+
+from c3.c3objs import Quantity
+from c3.experiment import Experiment
+from c3.generator.generator import Generator
+from c3.libraries.envelopes import envelopes
+from c3.parametermap import ParameterMap
+from c3.signal import gates, pulse
+from c3.system.model import Model
+import numpy as np
+import pytest
+
+model = Model()
+model.read_config("test/test_model.cfg")
+generator = Generator()
+generator.read_config("test/generator.cfg")
+
+t_final = 7e-9  # Time for single qubit gates
+sideband = 50e6
+gauss_params_single = {
+    "amp": Quantity(value=0.5, min_val=0.4, max_val=0.6, unit="V"),
+    "t_final": Quantity(
+        value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"
+    ),
+    "sigma": Quantity(
+        value=t_final / 4, min_val=t_final / 8, max_val=t_final / 2, unit="s"
+    ),
+    "xy_angle": Quantity(
+        value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"
+    ),
+    "freq_offset": Quantity(
+        value=-sideband - 3e6, min_val=-56 * 1e6, max_val=-52 * 1e6, unit="Hz 2pi"
+    ),
+    "delta": Quantity(value=-1, min_val=-5, max_val=3, unit=""),
+}
+
+gauss_env_single = pulse.Envelope(
+    name="gauss",
+    desc="Gaussian comp for single-qubit gates",
+    params=gauss_params_single,
+    shape=envelopes["gaussian_nonorm"],
+)
+
+lo_freq_q1 = 5e9 + sideband
+carrier_parameters = {
+    "freq": Quantity(value=lo_freq_q1, min_val=4.5e9, max_val=6e9, unit="Hz 2pi"),
+    "framechange": Quantity(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
+}
+
+carr = pulse.Carrier(
+    name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
+)
+
+lo_freq_q2 = 5.6e9 + sideband
+carr_2 = copy.deepcopy(carr)
+carr_2.params["freq"].set_value(lo_freq_q2)
+
+instr = gates.Instruction(
+    name="multi_instruction",
+    t_start=0.0,
+    t_end=t_final * 3 + 6e-9,
+    channels=["d1", "d2"],
+)
+
+instr.add_component(copy.deepcopy(gauss_env_single), "d1", name="gaussd1_1")
+instr.add_component(
+    copy.deepcopy(gauss_env_single),
+    "d1",
+    name="gaussd1_2",
+    options={"delay": Quantity(1e-9), "trigger_comp": ("d1", "gaussd1_1")},
+)
+instr.add_component(
+    copy.deepcopy(gauss_env_single),
+    "d1",
+    name="gaussd1_3",
+    options={"delay": Quantity(1e-9), "trigger_comp": ("d1", "gaussd1_2")},
+)
+instr.add_component(copy.deepcopy(gauss_env_single), "d2", name="gaussd2_1")
+instr.add_component(
+    copy.deepcopy(gauss_env_single),
+    "d2",
+    name="gaussd2_2",
+    options={
+        "delay": Quantity(1e-9),
+        "trigger_comp": ("d1", "gaussd1_2"),
+        "t_final_cut": Quantity(0.9 * t_final),
+    },
+)
+instr.add_component(carr, "d1")
+instr.add_component(carr_2, "d2")
+
+pmap = ParameterMap(model=model, generator=generator, instructions=[instr])
+
+exp = Experiment(pmap)
+
+with open("test/instruction.pickle", "rb") as filename:
+    test_data = pickle.load(filename)
+
+
+@pytest.mark.integration
+def test_extended_pulse():
+    gen_signal = generator.generate_signals(instr)
+    ts = gen_signal["d1"]["ts"]
+
+    np.testing.assert_allclose(ts, test_data["ts"])
+    np.testing.assert_allclose(
+        actual=gen_signal["d1"]["values"].numpy(),
+        desired=test_data["signal"]["d1"]["values"].numpy(),
+    )
+    np.testing.assert_allclose(
+        actual=gen_signal["d2"]["values"].numpy(),
+        desired=test_data["signal"]["d2"]["values"].numpy(),
+    )
+    np.testing.assert_allclose(
+        instr.get_full_gate_length(), test_data["full_gate_length1"]
+    )
+    instr.auto_adjust_t_end(buffer=0.2)
+    np.testing.assert_allclose(
+        instr.get_full_gate_length(), test_data["full_gate_length2"]
+    )
+    np.testing.assert_allclose(instr.t_end, test_data["t_end2"])
+    pmap.set_parameters(
+        [2 * t_final],
+        [[("multi_instruction", "d1", "gaussd1_2", "t_final")]],
+        extend_bounds=True,
+    )
+
+    gen_signal = generator.generate_signals(instr)
+    ts = gen_signal["d1"]["ts"]
+    np.testing.assert_allclose(
+        actual=gen_signal["d1"]["values"].numpy(),
+        desired=test_data["signal2"]["d1"]["values"].numpy(),
+    )
+    np.testing.assert_allclose(
+        actual=gen_signal["d2"]["values"].numpy(),
+        desired=test_data["signal2"]["d2"]["values"].numpy(),
+    )
+    instr.auto_adjust_t_end(0.1)
+    gen_signal = generator.generate_signals(instr)
+    np.testing.assert_allclose(
+        actual=gen_signal["d1"]["values"].numpy(),
+        desired=test_data["signal3"]["d1"]["values"].numpy(),
+    )
+    np.testing.assert_allclose(
+        actual=gen_signal["d2"]["values"].numpy(),
+        desired=test_data["signal3"]["d2"]["values"].numpy(),
+    )
+
+
+with open("test/instruction.pickle", "wb") as filename:
+    pickle.dump(test_data, filename)

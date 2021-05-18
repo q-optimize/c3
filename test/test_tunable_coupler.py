@@ -69,7 +69,7 @@ framechange_q2 = 1.221 * np.pi
 
 # ### MAKE MODEL
 q1 = chip.Qubit(
-    name="Q1",
+    name="Qubit1",
     desc="Qubit 1",
     freq=Qty(value=freq_q1, min_val=5.0e9, max_val=8.0e9, unit="Hz 2pi"),
     anhar=Qty(value=anhar_q1, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
@@ -79,7 +79,7 @@ q1 = chip.Qubit(
     temp=Qty(value=init_temp, min_val=0.0, max_val=0.12, unit="K"),
 )
 q2 = chip.Qubit(
-    name="Q2",
+    name="Qubit2",
     desc="Qubit 2",
     freq=Qty(value=freq_q2, min_val=5.0e9, max_val=8.0e9, unit="Hz 2pi"),
     anhar=Qty(value=anhar_q2, min_val=-380e6, max_val=-120e6, unit="Hz 2pi"),
@@ -89,7 +89,7 @@ q2 = chip.Qubit(
     temp=Qty(value=init_temp, min_val=0.0, max_val=0.12, unit="K"),
 )
 tc_at = chip.Transmon(
-    name="TC",
+    name="TCQubit",
     desc="Tunable Coupler",
     freq=Qty(value=freq_tc, min_val=0.0e9, max_val=10.0e9, unit="Hz 2pi"),
     phi=Qty(
@@ -108,7 +108,7 @@ tc_at = chip.Transmon(
 q1tc = chip.Coupling(
     name="Q1-TC",
     desc="Coupling qubit 1 to tunable coupler",
-    connected=["Q1", "TC"],
+    connected=["Qubit1", "TCQubit"],
     strength=Qty(
         value=coupling_strength_q1tc, min_val=0 * 1e4, max_val=200e6, unit="Hz 2pi"
     ),
@@ -117,7 +117,7 @@ q1tc = chip.Coupling(
 q2tc = chip.Coupling(
     name="Q2-TC",
     desc="Coupling qubit 2 to t×unable coupler",
-    connected=["Q2", "TC"],
+    connected=["Qubit2", "TCQubit"],
     strength=Qty(
         value=coupling_strength_q2tc, min_val=0 * 1e4, max_val=200e6, unit="Hz 2pi"
     ),
@@ -126,7 +126,7 @@ q2tc = chip.Coupling(
 q1q2 = chip.Coupling(
     name="Q1-Q2",
     desc="Coupling qubit 1 to qubit 2",
-    connected=["Q1", "Q2"],
+    connected=["Qubit1", "Qubit2"],
     strength=Qty(
         value=coupling_strength_q1q2, min_val=0 * 1e4, max_val=200e6, unit="Hz 2pi"
     ),
@@ -135,23 +135,23 @@ q1q2 = chip.Coupling(
 drive_q1 = chip.Drive(
     name="Q1",
     desc="Drive on Q1",
-    connected=["Q1"],
+    connected=["Qubit1"],
     hamiltonian_func=hamiltonians.x_drive,
 )
 drive_q2 = chip.Drive(
     name="Q2",
     desc="Drive on Q2",
-    connected=["Q2"],
+    connected=["Qubit2"],
     hamiltonian_func=hamiltonians.x_drive,
 )
 flux = chip.Drive(
     name="TC",
     desc="Flux drive/control on tunable couler",
-    connected=["TC"],
+    connected=["TCQubit"],
     hamiltonian_func=hamiltonians.z_drive,
 )
 phys_components = [tc_at, q1, q2]
-line_components = [flux, q1tc, q2tc, q1q2, drive_q1, drive_q2]
+line_components = [q1tc, q2tc, q1q2, drive_q1, drive_q2, flux]
 
 model = Mdl(phys_components, line_components, [])
 model.set_lindbladian(lindblad)
@@ -292,7 +292,7 @@ def test_coupler_anahrmonicity() -> None:
 @pytest.mark.integration
 def test_energy_levels() -> None:
     model = parameter_map.model
-    parameter_map.set_parameters([0.0], [[["TC-phi"]]])
+    parameter_map.set_parameters([0.0], [[["TCQubit-phi"]]])
     model.update_model()
     labels = [
         model.state_labels[indx]
@@ -311,7 +311,7 @@ def test_energy_levels() -> None:
         parameter_map.set_parameters(
             [flux_bias, 0.0, 0.0, 0.0],
             [
-                [["TC-phi"]],
+                [["TCQubit-phi"]],
                 [["Q1-TC-strength"]],
                 [["Q2-TC-strength"]],
                 [["Q1-Q2-strength"]],
@@ -350,7 +350,7 @@ def test_energy_levels() -> None:
                 ]
             )
         )
-    parameter_map.set_parameters([fluxpoint], [[["TC-phi"]]])
+    parameter_map.set_parameters([fluxpoint], [[["TCQubit-phi"]]])
     model.update_model()
     dressed_basis = np.array(dressed_basis)
     ordered_basis = np.array(ordered_basis)
@@ -374,9 +374,9 @@ def test_dynamics_CPHASE() -> None:
         if indx % 50 == 0:
             dUs.append(exp.partial_propagators["crzp[0, 1]"][indx].numpy())
     dUs = np.array(dUs)
-    assert (np.abs(np.real(dUs) - np.real(data["dUs"])) < 1e-8).all()
-    assert (np.abs(np.imag(dUs) - np.imag(data["dUs"])) < 1e-8).all()
-    assert (np.abs(np.abs(dUs) - np.abs(data["dUs"])) < 1e-8).all()
+    assert np.isclose(np.real(dUs), np.real(data["dUs"])).all()
+    assert np.isclose(np.imag(dUs), np.imag(data["dUs"])).all()
+    assert np.isclose(np.abs(dUs), np.abs(data["dUs"])).all()
 
 
 @pytest.mark.integration
@@ -386,8 +386,8 @@ def test_dynamics_CPHASE() -> None:
 def test_dynamics_CPHASE_lindblad() -> None:
     # Dynamics (open system)
     exp.pmap.model.set_lindbladian(True)
-    U_dict = exp.compute_propagators()
-    U_super = U_dict["crzp[0, 1]"]
+    propagators = exp.compute_propagators()
+    U_super = propagators["crzp[0, 1]"]
     assert (np.abs(np.real(U_super) - np.real(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.imag(U_super) - np.imag(data["U_super"])) < 1e-8).all()
     assert (np.abs(np.abs(U_super) - np.abs(data["U_super"])) < 1e-8).all()
@@ -467,3 +467,42 @@ def test_FluxTuning():
         assert (
             np.max(np.abs(flux_tune_frequencies - transmon_diff_freq)) < 1e-15 * freq_tc
         )
+
+
+@pytest.mark.unit
+def test_symmetric_FluxTuning():
+    flux_tune = devices.FluxTuning(
+        name="flux_tune",
+        phi_0=Qty(phi_0_tc),
+        phi=Qty(value=0, min_val=-phi_0_tc, max_val=phi_0_tc),
+        omega_0=Qty(freq_tc),
+        anhar=Qty(anhar_TC),
+    )
+
+    transmon = chip.Transmon(
+        name="transmon",
+        hilbert_dim=3,
+        freq=Qty(freq_tc),
+        phi=Qty(value=0, min_val=-1.5 * phi_0_tc, max_val=1.5 * phi_0_tc),
+        phi_0=Qty(phi_0_tc),
+        anhar=Qty(anhar_TC),
+    )
+
+    bias_phis = [0, 0.2]
+    phis = np.linspace(-1, 1, 10) * phi_0_tc
+
+    for bias_phi in bias_phis:
+        flux_tune.params["phi"].set_value(bias_phi)
+        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal_out = flux_tune.process(None, None, signal)
+        flux_tune_frequencies = signal_out["values"].numpy()
+
+        transmon_frequencies = []
+        transmon.params["phi"].set_value(bias_phi)
+        bias_freq = transmon.get_freq()
+        for phi in phis + bias_phi:
+            transmon.params["phi"].set_value(phi)
+            transmon_frequencies.append(transmon.get_freq())
+        transmon_diff_freq = np.array(transmon_frequencies) - bias_freq
+
+        np.testing.assert_allclose(flux_tune_frequencies, transmon_diff_freq)

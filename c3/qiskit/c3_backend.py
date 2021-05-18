@@ -567,7 +567,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)  # noqa
 
-        # TODO get_init_ground_state(), get_gates(), evaluate(), process()
+        # TODO get_init_ground_state(), compute_propagators(), evaluate(), process()
 
         # generate shots style readout with no SPAM
         # TODO a sophisticated readout/measurement routine

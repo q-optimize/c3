@@ -30,7 +30,7 @@ def test_crosstalk_mix(get_xtalk_pmap, get_test_signal) -> None:
 @pytest.mark.unit
 def test_crosstalk_set_get_parameters(get_xtalk_pmap) -> None:
     get_xtalk_pmap.set_parameters(
-        [[1, 1], [1, 1]], [[["crosstalk", "crosstalk_matrix"]]]
+        [[[1, 1], [1, 1]]], [[["crosstalk", "crosstalk_matrix"]]]
     )
     assert (
         get_xtalk_pmap.get_parameters()[0].get_value().numpy() == [[1, 1], [1, 1]]

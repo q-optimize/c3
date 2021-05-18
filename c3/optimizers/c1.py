@@ -33,6 +33,8 @@ class C1(Optimizer):
         Options to be passed to the algorithm
     run_name : str
         User specified name for the run, will be used as root folder
+    fid_func_kwargs: dict
+        Additional kwargs to be passed to the main fidelity function.
     """
 
     def __init__(
@@ -48,11 +50,14 @@ class C1(Optimizer):
         run_name=None,
         interactive=True,
         include_model=False,
+        logger=None,
+        fid_func_kwargs={},
     ) -> None:
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
             store_unitaries=store_unitaries,
+            logger=logger,
         )
         self.fid_func = fid_func
         self.fid_subspace = fid_subspace
@@ -62,6 +67,7 @@ class C1(Optimizer):
         self.__run_name = run_name
         self.interactive = interactive
         self.update_model = include_model
+        self.fid_func_kwargs = fid_func_kwargs
 
     def log_setup(self) -> None:
         """
@@ -125,13 +131,16 @@ class C1(Optimizer):
             Value of the goal function
         """
         self.pmap.set_parameters_scaled(current_params)
-        if self.update_model:
-            self.pmap.model.update_model()
         dims = self.pmap.model.dims
         propagators = self.exp.compute_propagators()
 
         goal = self.fid_func(
-            propagators, self.pmap.instructions, self.index, dims, self.evaluation + 1
+            propagators=propagators,
+            instructions=self.pmap.instructions,
+            index=self.index,
+            dims=dims,
+            n_eval=self.evaluation + 1,
+            **self.fid_func_kwargs,
         )
 
         with open(self.logdir + self.logname, "a") as logfile:
@@ -139,7 +148,11 @@ class C1(Optimizer):
             logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
                 val = cal(
-                    propagators, self.index, dims, self.logdir, self.evaluation + 1
+                    propagators=propagators,
+                    instructions=self.pmap.instructions,
+                    index=self.index,
+                    dims=dims,
+                    n_eval=self.evaluation + 1,
                 )
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
@@ -154,6 +167,3 @@ class C1(Optimizer):
         self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal
-
-    def include_model(self):
-        self.update_model = True

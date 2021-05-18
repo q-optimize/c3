@@ -327,13 +327,12 @@ def tf_adam(
         SciPy OptimizeResult type object with final parameters
     """
     iters = options["maxfun"]
-
     var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
 
-    opt_adam = tf.keras.optimizers.Adam(learning_rate=1, epsilon=0.1)
+    opt_adam = tf.keras.optimizers.Adam(learning_rate=0.001, epsilon=0.1)
 
     for step in range(iters):
         step_count = opt_adam.minimize(tf_fun, [var])
@@ -471,6 +470,36 @@ def lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
 
 @algo_reg_deco
+def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Wrapper for the scipy.optimize.minimize implementation of LBFG-S.
+    We let the algorithm determine the gradient by its own.
+     See also:
+
+    https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html
+
+    Parameters
+    ----------
+    x_init : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options of scipy.optimize.minimize
+
+    Returns
+    -------
+    Result
+        Scipy result object.
+    """
+    return minimize(fun=fun, x0=x_init, options=options)
+
+
+@algo_reg_deco
 def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the pycma implementation of CMA-Es. See also:
@@ -591,6 +620,19 @@ def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     refinement.
 
     """
+    if "cmaes" not in options:
+        options["cmaes"] = {}
+    if "lbfgs" not in options:
+        options["lbfgs"] = {}
+    for k in options:
+        if k == "cmaes" or k == "lbfgs":
+            continue
+        else:
+            if k not in options["cmaes"]:
+                options["cmaes"][k] = options[k]
+            if k not in options["lbfgs"]:
+                options["lbfgs"][k] = options[k]
+
     x1 = cmaes(x_init, fun, options=options["cmaes"])
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 

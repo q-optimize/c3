@@ -4,6 +4,7 @@ import numpy as np
 
 # Main C3 objects
 from c3.c3objs import Quantity as Qty
+from c3.optimizers.optimizer import TensorBoardLogger
 from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
 from c3.system.model import Model as Mdl
@@ -206,17 +207,17 @@ exp = Exp(pmap)
 pmap2 = Pmap([rx90p], generator2, model)
 exp2 = Exp(pmap2)
 
-exp.set_opt_gates(["rx90p[0]"])
+exp.set_opt_gates(["rx90p"])
 
 gateset_opt_map = [
     [
-        ("rx90p[0]", "d1", "gauss", "amp"),
+        ("rx90p", "d1", "gauss", "amp"),
     ],
     [
-        ("rx90p[0]", "d1", "gauss", "freq_offset"),
+        ("rx90p", "d1", "gauss", "freq_offset"),
     ],
     [
-        ("rx90p[0]", "d1", "gauss", "xy_angle"),
+        ("rx90p", "d1", "gauss", "xy_angle"),
     ],
 ]
 
@@ -226,7 +227,7 @@ pmap.set_opt_map(gateset_opt_map)
 @pytest.mark.slow
 @pytest.mark.optimizers
 @pytest.mark.integration
-@pytest.mark.skip(reason="Data needs to be updated")
+# @pytest.mark.skip(reason="Data needs to be updated")
 def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [("dc_offset", "offset_amp")]]]
     opt = C1_robust(
@@ -238,6 +239,7 @@ def test_c1_robust():
         algorithm=algorithms.lbfgs,
         options={"maxfun": 2},
         run_name="better_X90_tf_sgd",
+        logger=[TensorBoardLogger()],
     )
 
     opt.set_exp(exp)
@@ -253,8 +255,9 @@ def test_c1_robust():
     with open("test/c1_robust.pickle", "rb") as f:
         data = pickle.load(f)
 
-    for k, v in data["c1_robust_lbfgs"].items():
-        assert np.any(np.abs(np.array(opt.optim_status[k]) - np.array(v)) < 1e-7)
+    for k in ["goal", "goals_individual", "goal_std", "gradient", "gradient_std"]:
+        desired = data["c1_robust_lbfgs"][k]
+        np.testing.assert_allclose(opt.optim_status[k], desired)
 
 
 @pytest.mark.slow
