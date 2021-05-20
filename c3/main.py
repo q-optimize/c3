@@ -10,7 +10,7 @@ import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
 from c3.parametermap import ParameterMap
 from c3.experiment import Experiment
-from c3.system.model import Model
+from c3.model import Model
 from c3.generator.generator import Generator
 
 logging.getLogger("tensorflow").disabled = True

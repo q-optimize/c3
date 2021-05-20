@@ -21,7 +21,7 @@ import time
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
-from c3.system.model import Model
+from c3.model import Model
 from c3.utils.tf_utils import (
     tf_batch_propagate,
     tf_propagation_lind,

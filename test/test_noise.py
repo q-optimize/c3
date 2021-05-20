@@ -7,7 +7,7 @@ from c3.c3objs import Quantity as Qty
 from c3.optimizers.optimizer import TensorBoardLogger
 from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
-from c3.system.model import Model as Mdl
+from c3.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
 
 # Building blocks

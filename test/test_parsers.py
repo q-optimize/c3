@@ -4,7 +4,7 @@ from c3.c3objs import Quantity
 from c3.libraries.envelopes import envelopes
 from c3.signal.gates import Instruction
 from c3.signal.pulse import Envelope, Carrier
-from c3.system.model import Model
+from c3.model import Model
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.experiment import Experiment as Exp
