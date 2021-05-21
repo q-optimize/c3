@@ -12,7 +12,7 @@ from c3.generator.generator import Generator as Gnr
 
 # Building blocks
 import c3.generator.devices as devices
-import c3.system.chip as chip
+import c3.libraries.chip as chip
 import c3.signal.pulse as pulse
 import c3.signal.gates as gates
 
