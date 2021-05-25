@@ -8,7 +8,7 @@ from c3.main import run_cfg
 def test_main_c1() -> None:
     with open("test/c1.cfg", "r") as cfg_file:
         cfg = hjson.load(cfg_file)
-    run_cfg(cfg)
+    run_cfg(cfg, debug=False)
 
 
 def test_create_c1() -> None:
