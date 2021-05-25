@@ -5,19 +5,36 @@ import logging
 import os
 import hjson
 import argparse
-import c3.utils.parsers as parsers
 import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
 from c3.parametermap import ParameterMap
 from c3.experiment import Experiment
 from c3.system.model import Model
 from c3.generator.generator import Generator
+from c3.optimizers.c1 import C1
+from c3.optimizers.c2 import C2
+from c3.optimizers.c3 import C3
+
 
 logging.getLogger("tensorflow").disabled = True
 
 # flake8: noqa: C901
-def run_cfg(cfg):
-    optim_type = cfg["optim_type"]
+def run_cfg(cfg, debug=False):
+    """Execute an optimization problem described in the cfg file.
+
+    Parameters
+    ----------
+    cfg : Dict[str, Union[str, int, float]]
+        Configuration file containing optimization options and information needed to completely
+        setup the system and optimization problem.
+    debug : bool, optional
+        Skip running the actual optimization, by default False
+
+    """
+    optim_type = cfg.pop("optim_type")
+    optim_lib = {"C1": C1, "C2": C2, "C3": C3}
+    if not optim_type in optim_lib:
+        raise Exception("C3:ERROR:Unknown optimization type specified.")
 
     tf_utils.tf_setup()
     with tf.device("/CPU:0"):
@@ -25,43 +42,31 @@ def run_cfg(cfg):
         gen = None
         if "model" in cfg:
             model = Model()
-            model.read_config(cfg["model"])
+            model.read_config(cfg.pop("model"))
         if "generator" in cfg:
             gen = Generator()
-            gen.read_config(cfg["generator"])
+            gen.read_config(cfg.pop("generator"))
         if "instructions" in cfg:
             pmap = ParameterMap(model=model, generator=gen)
-            pmap.read_config(cfg["instructions"])
+            pmap.read_config(cfg.pop("instructions"))
             exp = Experiment(pmap)
         if "exp_cfg" in cfg:
             exp = Experiment()
-            exp.read_config(cfg["exp_cfg"])
+            exp.read_config(cfg.pop("exp_cfg"))
         else:
             print("C3:STATUS: No instructions specified. Performing quick setup.")
             exp = Experiment()
-            exp.quick_setup(opt_config)
+            exp.quick_setup(cfg)
 
-        if optim_type == "C1":
-            opt = parsers.create_c1_opt(opt_config, exp)
-            if cfg.pop("include_model", False):
-                opt.include_model()
-        elif optim_type == "C2":
-            eval_func = cfg["eval_func"]
-            opt = parsers.create_c2_opt(opt_config, eval_func)
-        elif optim_type == "C3" or optim_type == "C3_confirm":
-            print("C3:STATUS: creating c3 opt ...")
-            opt = parsers.create_c3_opt(opt_config)
-        elif optim_type == "SET":
-            print("C3:STATUS: creating set obj")
-            opt = parsers.create_sensitivity(opt_config)
-        elif optim_type == "confirm":
-            print("C3:STATUS: creating c3 opt ...")
-            opt = parsers.create_c3_opt(opt_config)
-            opt.inverse = True
-        else:
-            raise Exception("C3:ERROR:Unknown optimization type specified.")
+        exp.set_opt_gates(cfg.pop("opt_gates", None))
+        gateset_opt_map = [
+            [tuple(par) for par in pset] for pset in cfg.pop("gateset_opt_map")
+        ]
+        exp.pmap.set_opt_map(gateset_opt_map)
+
+        opt = optim_lib[optim_type](**cfg, pmap=exp.pmap)
         opt.set_exp(exp)
-        opt.set_created_by(opt_config)
+        opt.set_created_by(cfg)
 
         if "initial_point" in cfg:
             initial_points = cfg["initial_point"]
@@ -105,26 +110,12 @@ def run_cfg(cfg):
                         f"{os.path.abspath(adjust_exp)} "
                         "Continuing with default."
                     ) from fnfe
-            opt.optimize_controls()
 
-        elif optim_type == "C2":
-            opt.optimize_controls()
-
-        elif optim_type == "C3" or optim_type == "confirm":
+        elif optim_type in ["C3", "confirm", "C3_confirm", "SET"]:
             opt.read_data(cfg["datafile"])
-            opt.learn_model()
 
-        elif optim_type == "C3_confirm":
-            opt.read_data(cfg["datafile"])
-            opt.log_setup()
-            opt.confirm()
-
-        elif optim_type == "SET":
-            opt.read_data(cfg["datafile"])
-            opt.log_setup()
-
-            print("sensitivity test ...")
-            opt.sensitivity()
+        if not debug:
+            opt.run()
 
 
 if __name__ == "__main__":

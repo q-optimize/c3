@@ -4,8 +4,13 @@ import os
 import shutil
 import time
 import tensorflow as tf
+from typing import Callable, List
+
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
+
+from c3.libraries.algorithms import algorithms
+from c3.libraries.fidelities import fidelities
 
 
 class C1(Optimizer):
@@ -43,7 +48,7 @@ class C1(Optimizer):
         fid_func,
         fid_subspace,
         pmap,
-        callback_fids=[],
+        callback_fids=None,
         algorithm=None,
         store_unitaries=False,
         options={},
@@ -53,21 +58,56 @@ class C1(Optimizer):
         logger=None,
         fid_func_kwargs={},
     ) -> None:
+        if type(algorithm) is str:
+            algorithm = algorithms[algorithm]
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
             store_unitaries=store_unitaries,
             logger=logger,
         )
-        self.fid_func = fid_func
+        self.set_fid_func(fid_func)
+        self.callback_fids: List[Callable] = []
+        if callback_fids:
+            self.set_callback_fids(callback_fids)
         self.fid_subspace = fid_subspace
-        self.callback_fids = callback_fids
         self.options = options
         self.__dir_path = dir_path
         self.__run_name = run_name
         self.interactive = interactive
         self.update_model = include_model
         self.fid_func_kwargs = fid_func_kwargs
+        self.run = (
+            self.optimize_controls
+        )  # Alias the legacy name for the method running the
+        # optimization
+
+    def set_fid_func(self, fid_func) -> None:
+        if type(fid_func) is str:
+            if self.pmap.model.lindbladian:
+                fid = "lindbladian_" + fid_func
+            else:
+                fid = fid_func
+            try:
+                self.fid_func = fidelities[fid]
+            except KeyError:
+                raise Exception(f"C3:ERROR:Unkown goal function: {fid} ")
+            print(f"C3:STATUS:Found {fid} in libraries.")
+        elif type(fid_func) is callable:
+            self.fid_func = fid_func
+
+    def set_callback_fids(self, callback_fids) -> None:
+        if self.pmap.model.lindbladian:
+            cb_fids = ["lindbladian_" + f for f in callback_fids]
+        else:
+            cb_fids = callback_fids
+        for cb_fid in cb_fids:
+            try:
+                cb_fid_func = fidelities[cb_fid]
+            except KeyError:
+                raise Exception(f"C3:ERROR:Unkown goal function: {cb_fid}")
+            print(f"C3:STATUS:Found {cb_fid} in libraries.")
+            self.callback_fids.append(cb_fid_func)
 
     def log_setup(self) -> None:
         """
