@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 from c3.utils.tf_utils import (
+    tf_kron_batch,
     tf_matmul_left,
     tf_spre,
     tf_spost,
@@ -187,113 +188,6 @@ def tf_propagation(h0, hks, cflds, dt):
     return dUs
 
 
-# def tf_propagation(h0, hks, cflds, dt):
-#    """
-#    Time evolution of a system controlled by time-dependent fields.
-#
-#    Parameters
-#    ----------
-#    h0 : tf.tensor
-#        Drift Hamiltonian.
-#    hks : list of tf.tensor
-#        List of control Hamiltonians.
-#    cflds : list
-#        List of control fields, one per control Hamiltonian.
-#    dt : float
-#        Length of one time slice.
-#
-#    Returns
-#    -------
-#    type
-#        Description of returned object.
-#
-#    """
-#    def tf_time_slice(cf_t):
-#        return tf_dU_of_t(h0, hks, cf_t, dt)
-#
-#    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
-#    return tf.map_fn(tf_time_slice, cflds)
-
-# EXPERIMENTAL BATCH PROPAGATION BELOW
-
-# def tf_propagation(h0, hks, cflds, dt):
-#     """
-#     Calculate the time evolution of a system controlled by time-dependent
-#     fields.
-#
-#     Parameters
-#     ----------
-#     h0 : tf.tensor
-#         Drift Hamiltonian.
-#     hks : list of tf.tensor
-#         List of control Hamiltonians.
-#     cflds : list
-#         List of control fields, one per control Hamiltonian.
-#     dt : float
-#         Length of one time slice.
-#
-#     Returns
-#     -------
-#     type
-#         Description of returned object.
-#
-#     """
-#     dUs = []
-#     batch_size = 4
-#     for ii in range(cflds[0].shape[0]//batch_size):
-#         dUs.extend(
-#             tf_propagation_batch(h0, hks, cflds, dt, ii)
-#         )
-#     return dUs
-#
-#
-#
-# def tf_propagation_batch(h0, hks, cflds, dt, left):
-#     """
-#     """
-#     dUs = []
-#     for ii in range(left, left+4):
-#         cf_t = []
-#         for fields in cflds:
-#             cf_t.append(tf.cast(fields[ii], tf.complex128))
-#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-#     return dUs
-
-
-# def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
-#     """
-#     Calculate the time evolution of an open system controlled by time-dependent
-#     fields.
-#
-#     Parameters
-#     ----------
-#     h0 : tf.tensor
-#         Drift Hamiltonian.
-#     hks : list of tf.tensor
-#         List of control Hamiltonians.
-#     col_ops : list of tf.tensor
-#         List of collapse operators.
-#     cflds : list
-#         List of control fields, one per control Hamiltonian.
-#     dt : float
-#         Length of one time slice.
-#
-#     Returns
-#     -------
-#     list
-#         List of incremental propagators dU.
-#
-#     """
-#     with tf.name_scope("Propagation"):
-#         dUs = []
-#         for ii in range(len(cflds[0])):
-#             cf_t = []
-#             for fields in cflds:
-#                 cf_t.append(tf.cast(fields[ii], tf.complex128))
-#             dUs.append(tf_dU_of_t_lind(h0, hks, col_ops, cf_t, dt))
-#         return dUs
-
-
 @tf.function
 def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
     col_ops = tf.cast(col_ops, dtype=tf.complex128)
@@ -429,25 +323,3 @@ def tf_expm_dynamic(A, acc=1e-4):
         ii += 1
         r += A_powers
     return r
-
-
-@tf.function
-def tf_kron_batch(A, B):
-    """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
-    dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
-    res = tf.expand_dims(tf.expand_dims(A, -1), -3) * tf.expand_dims(
-        tf.expand_dims(B, -2), -4
-    )
-    dims = res.shape[:-4] + dims
-    return tf.reshape(res, dims)
-
-
-# def tf_matmul_left(dUs):
-#     """
-#     Multiplies a list of matrices from the left.
-#
-#     """
-#     U = dUs[0]
-#     for ii in range(1, len(dUs)):
-#         U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
-#     return U

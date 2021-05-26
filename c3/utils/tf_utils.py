@@ -116,16 +116,6 @@ def tf_measure_operator(M, rho):
 
 # MATRIX MULTIPLICATION FUNCTIONS
 
-# def tf_matmul_left(dUs):
-#     """
-#     Multiplies a list of matrices from the left.
-#
-#     """
-#     U = dUs[0]
-#     for ii in range(1, len(dUs)):
-#         U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
-#     return U
-
 
 @tf.function
 def tf_matmul_left(dUs: tf.Tensor):
@@ -138,17 +128,6 @@ def tf_matmul_left(dUs: tf.Tensor):
 
     """
     return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
-
-
-# def tf_matmul_right(dUs):
-#     """
-#     Multiplies a list of matrices from the right.
-#
-#     """
-#     U = dUs[0]
-#     for ii in range(1, len(dUs)):
-#         U = tf.matmul(U, dUs[ii], name="timestep_" + str(ii))
-#     return U
 
 
 @tf.function
@@ -234,6 +213,17 @@ def tf_kron(A, B):
     tensordot = tf.tensordot(A, B, axes=0)
     reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
     return reshaped
+
+
+@tf.function
+def tf_kron_batch(A, B):
+    """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
+    dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
+    res = tf.expand_dims(tf.expand_dims(A, -1), -3) * tf.expand_dims(
+        tf.expand_dims(B, -2), -4
+    )
+    dims = res.shape[:-4] + dims
+    return tf.reshape(res, dims)
 
 
 # SUPEROPER FUNCTIONS
