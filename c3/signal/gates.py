@@ -1,7 +1,7 @@
 import hjson
 import numpy as np
 import tensorflow as tf
-from c3.c3objs import C3obj, Quantity
+from c3.c3objs import C3obj, Quantity, hjson_encode
 from c3.signal.pulse import Envelope, Carrier
 from c3.libraries.envelopes import gaussian_nonorm
 import warnings
@@ -10,6 +10,7 @@ import copy
 from c3.libraries.constants import GATES
 from c3.utils.qt_utils import np_kron_n, insert_mat_kron
 from c3.utils.tf_utils import tf_project_to_comp
+from c3.signal.pulse import components as comp_lib
 
 
 class Instruction:
@@ -126,13 +127,47 @@ class Instruction:
             components[chan] = {}
             for key, comp in item.items():
                 components[chan][key] = comp.asdict()
-        return {"gate_length": self.t_end - self.t_start, "drive_channels": components}
+        out_dict = copy.deepcopy(self.__dict__)
+        out_dict["ideal"] = out_dict["ideal"]
+        out_dict.pop("_Instruction__timings")
+        out_dict.pop("t_start")
+        out_dict.pop("t_end")
+        out_dict["gate_length"] = self.t_end - self.t_start
+        print(out_dict.keys())
+        out_dict["drive_channels"] = out_dict.pop("comps")
+        return out_dict
+
+    def from_dict(self, cfg, name=None):
+        self.__init__(
+            name=cfg["name"] if "name" in cfg else name,
+            targets=cfg["targets"] if "targets" in cfg else None,
+            params=cfg["params"] if "params" in cfg else None,
+            ideal=np.array(cfg["ideal"]) if "ideal" in cfg else None,
+            channels=cfg["drive_channels"].keys(),
+            t_start=0.0,
+            t_end=cfg["gate_length"],
+        )
+
+        options = cfg.pop("_Instruction__options", None)
+        components = cfg.pop("drive_channels")
+        self.__dict__.update(cfg)
+        for drive_chan, comps in components.items():
+            for comp, props in comps.items():
+                ctype = props.pop("c3type")
+                if "name" not in props:
+                    props["name"] = comp
+                self.add_component(
+                    comp_lib[ctype](**props),
+                    chan=drive_chan,
+                    options=options[drive_chan][comp] if options else None,
+                    name=comp,
+                )
 
     def __repr__(self):
         return f"Instruction[{self.get_key()}]"
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def add_component(self, comp: C3obj, chan: str, options=None, name=None) -> None:
         """
@@ -168,6 +203,9 @@ class Instruction:
         self.comps[chan][name] = comp
         if options is None:
             options = dict()
+        for k, v in options.items():
+            if isinstance(v, dict):
+                options[k] = Quantity(**v)
         self.__options[chan][name] = options
 
     def get_optimizable_parameters(self):

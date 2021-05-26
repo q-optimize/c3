@@ -3,6 +3,8 @@
 import hjson
 import time
 import random
+
+from c3.c3objs import hjson_decode
 from c3.libraries.algorithms import algorithms
 from c3.libraries.estimators import estimators
 from c3.libraries.fidelities import fidelities
