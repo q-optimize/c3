@@ -47,13 +47,13 @@ class SET(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         estimator,
         estimator_list,
         sampling,
         batch_sizes,
         pmap,
         datafiles,
+        dir_path=None,
         state_labels=None,
         sweep_map=None,
         sweep_bounds=None,
@@ -124,7 +124,6 @@ class SET(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = "-".join(
@@ -135,7 +134,7 @@ class SET(Optimizer):
                     self.fom.__name__,
                 ]
             )
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "sensitivity.log"
 
     def read_data(self, datafiles):

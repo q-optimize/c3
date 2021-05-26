@@ -44,10 +44,10 @@ class C1(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         fid_func,
         fid_subspace,
         pmap,
+        dir_path=None,
         callback_fids=None,
         algorithm=None,
         store_unitaries=False,
@@ -93,7 +93,7 @@ class C1(Optimizer):
             except KeyError:
                 raise Exception(f"C3:ERROR:Unkown goal function: {fid} ")
             print(f"C3:STATUS:Found {fid} in libraries.")
-        elif type(fid_func) is callable:
+        else:
             self.fid_func = fid_func
 
     def set_callback_fids(self, callback_fids) -> None:
@@ -113,11 +113,10 @@ class C1(Optimizer):
         """
         Create the folders to store data.
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = "c1_" + self.fid_func.__name__ + "_" + self.algorithm.__name__
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "open_loop.log"
         if isinstance(self.exp.created_by, str):
             shutil.copy2(self.exp.created_by, self.logdir)

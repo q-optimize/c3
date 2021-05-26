@@ -31,11 +31,11 @@ class C2(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         eval_func,
-        exp_type,
         pmap,
         algorithm,
+        dir_path=None,
+        exp_type=None,
         exp_right=None,
         options={},
         run_name=None,
@@ -72,11 +72,10 @@ class C2(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = self.eval_func.__name__ + self.algorithm.__name__
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "calibration.log"
 
         # We create a copy of the source code of the evaluation function in the log

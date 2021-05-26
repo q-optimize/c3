@@ -51,11 +51,11 @@ class C3(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         sampling,
         batch_sizes,
         pmap,
         datafiles,
+        dir_path=None,
         estimator=None,
         seqs_per_point=None,
         state_labels=None,
@@ -129,13 +129,12 @@ class C3(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = "-".join(
                 [self.algorithm.__name__, self.sampling.__name__, self.fom.__name__]
             )
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "model_learn.log"
         # shutil.copy2(self.__real_model_folder, self.logdir)
 
