@@ -3,7 +3,7 @@
 import hjson
 import numpy as np
 import pytest
-from c3.c3objs import Quantity
+from c3.c3objs import Quantity, hjson_encode
 
 amp = Quantity(value=0.0, min_val=-1.0, max_val=+1.0, unit="V")
 amp_dict = {
@@ -56,7 +56,7 @@ def test_qty_asdict() -> None:
 
 @pytest.mark.unit
 def test_qty_write_cfg() -> None:
-    print(hjson.dumps(amp.asdict()))
+    print(hjson.dumps(amp.asdict(), default=hjson_encode))
 
 
 @pytest.mark.unit

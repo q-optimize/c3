@@ -468,8 +468,9 @@ class Transmon(PhysicalComponent):
         return tf.cast(sum(Ls), tf.complex128)
 
 
+@dev_reg_deco
 class TransmonExpanded(Transmon):
-    def init_Hs(self, ann_oper):
+    def get_Hs(self, ann_oper):
         ann_oper = tf.constant(ann_oper, tf.complex128)
         ann_oper_dag = tf.linalg.matrix_transpose(ann_oper, conjugate=True)
         adag_plus_a = ann_oper_dag + ann_oper
@@ -477,17 +478,25 @@ class TransmonExpanded(Transmon):
         quartic_adag_plus_a = tf.linalg.matmul(sq_adag_plus_a, sq_adag_plus_a)
         sextic_adag_plus_a = tf.linalg.matmul(quartic_adag_plus_a, sq_adag_plus_a)
 
-        self.Hs["quadratic"] = tf.linalg.matmul(ann_oper_dag, ann_oper)  # + 1 / 2
-        self.Hs["quartic"] = quartic_adag_plus_a
-        self.Hs["sextic"] = sextic_adag_plus_a
+        Hs = dict()
+        Hs["quadratic"] = tf.linalg.matmul(ann_oper_dag, ann_oper)  # + 1 / 2
+        Hs["quartic"] = quartic_adag_plus_a
+        Hs["sextic"] = sextic_adag_plus_a
+        return Hs
+
+    def init_Hs(self, ann_oper):
+        ann_oper_loc = np.diag(np.sqrt(range(1, int(np.max(ann_oper) ** 2))), k=1)
+        self.Hs = self.get_Hs(ann_oper)
+        self.Hs_local = self.get_Hs(ann_oper_loc)
+
         if "EC" not in self.params:
             self.energies_from_frequencies()
 
     def get_prefactors(self, sig):
         EC = self.params["EC"].get_value()
-        EJ = self.params["EJ"].get_value() * self.get_factor(sig) ** 2
+        EJ = self.params["EJ"].get_value() * self.get_factor(sig) ** 2.0
         prefactors = dict()
-        prefactors["quadratic"] = tf.math.sqrt(8 * EC * EJ)
+        prefactors["quadratic"] = tf.math.sqrt(8.0 * EC * EJ)
         prefactors["quartic"] = -EC / 12
         prefactors["sextic"] = EJ / 720 * (2 * EC / EJ) ** (3 / 2)
         return prefactors
@@ -510,9 +519,9 @@ class TransmonExpanded(Transmon):
             self.params["EC"].set_opt_value(EC)
             self.params["EJ"].set_opt_value(EJ)
             prefactors = self.get_prefactors(-phi)
-            h = tf.zeros_like(self.Hs["quadratic"])
+            h = tf.zeros_like(self.Hs_local["quadratic"])
             for k in prefactors:
-                h += self.Hs[k] * tf.cast(prefactors[k], tf.complex128)
+                h += self.Hs_local[k] * tf.cast(prefactors[k], tf.complex128)
             es = tf.linalg.eigvalsh(h)
             es -= es[0]
             freq_diff = tf.math.abs(tf.math.real(es[1] - es[0]) - freq)
@@ -523,6 +532,7 @@ class TransmonExpanded(Transmon):
             eval_func,
             x0=[self.params["EC"].get_opt_value(), self.params["EJ"].get_opt_value()],
             disp=False,
+            xtol=1e-9,
         )
 
     def get_Hamiltonian(

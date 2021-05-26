@@ -1,10 +1,12 @@
 import copy
 import pickle
 
+import hjson
+
 from c3.experiment import Experiment
 from c3.generator import devices
 import numpy as np
-from c3.c3objs import Quantity as Qty
+from c3.c3objs import Quantity as Qty, hjson_decode, hjson_encode
 from c3.generator.generator import Generator
 from c3.libraries import hamiltonians
 from c3.libraries.envelopes import envelopes
@@ -22,7 +24,7 @@ fluxpoint2 = 0
 phi_0 = 1
 d1 = 0.1
 d2 = 0.3
-lvls1 = 5
+lvls1 = 6
 lvls2 = 4
 anhar1 = -200e6
 anhar2 = -300e6
@@ -151,8 +153,8 @@ instr2 = Instruction(
     t_end=cphase_time,
     channels=["Qubit2"],
 )
-instr1.add_component(flux_env, "Qubit1")
-instr1.add_component(carr_q1, "Qubit1")
+instr1.add_component(copy.deepcopy(flux_env), "Qubit1")
+instr1.add_component(copy.deepcopy(carr_q1), "Qubit1")
 
 instr2.add_component(flux_env, "Qubit2")
 instr2.add_component(carr_q1, "Qubit2")
@@ -165,7 +167,6 @@ exp = Experiment(pmap=parameter_map)
 exp.use_control_fields = False
 exp.stop_partial_propagator_gradient = False
 
-
 with open("test/transmon_expanded.pickle", "rb") as filename:
     data = pickle.load(filename)
 
@@ -176,58 +177,97 @@ gen_signal2 = generator.generate_signals(instr2)
 @pytest.mark.integration
 def test_signals():
     np.testing.assert_allclose(
-        actual=gen_signal1["Qubit1"]["ts"], desired=data["signal_q1"]["ts"]
+        actual=gen_signal1["Qubit1"]["ts"],
+        desired=data["signal_q1"]["ts"],
+        atol=1e-11 * np.max(data["signal_q1"]["ts"]),
     )
     np.testing.assert_allclose(
-        actual=gen_signal1["Qubit1"]["values"], desired=data["signal_q1"]["values"]
+        actual=gen_signal1["Qubit1"]["values"],
+        desired=data["signal_q1"]["values"],
+        atol=1e-11 * np.max(data["signal_q1"]["values"]),
     )
 
     np.testing.assert_allclose(
-        actual=gen_signal2["Qubit2"]["ts"], desired=data["signal_q2"]["ts"]
+        actual=gen_signal2["Qubit2"]["ts"],
+        desired=data["signal_q2"]["ts"],
+        atol=1e-11 * np.max(data["signal_q2"]["ts"]),
     )
     np.testing.assert_allclose(
-        actual=gen_signal2["Qubit2"]["values"], desired=data["signal_q2"]["values"]
+        actual=gen_signal2["Qubit2"]["values"].numpy(),
+        desired=data["signal_q2"]["values"].numpy(),
+        atol=1e-11 * np.max(data["signal_q2"]["values"]),
+    )
+
+
+def test_chip_hamiltonians():
+    vals = {"values": np.linspace(0, 1, 15)}
+    np.testing.assert_allclose(q1.get_factor(phi_sig=vals["values"]), data["fac_q1"])
+    for k in data["prefac_q1"]:
+        np.testing.assert_allclose(
+            q1.get_prefactors(sig=vals["values"])[k], data["prefac_q1"][k]
+        )
+    np.testing.assert_allclose(
+        actual=q1.get_Hamiltonian(signal=vals), desired=data["q1_hams"]
+    )
+    np.testing.assert_allclose(
+        actual=q2.get_Hamiltonian(signal=vals), desired=data["q2_hams"]
     )
 
 
 @pytest.mark.integration
 def test_hamiltonians():
     ham = model.get_Hamiltonian(gen_signal1)
-    np.testing.assert_allclose(actual=ham, desired=data["hamiltonians_q1"])
+    np.testing.assert_allclose(
+        actual=ham,
+        desired=data["hamiltonians_q1"],
+        atol=1e-9 * np.max(data["hamiltonians_q1"]),
+    )
 
     ham = model.get_Hamiltonian(gen_signal2)
-    np.testing.assert_allclose(actual=ham, desired=data["hamiltonians_q2"])
+    np.testing.assert_allclose(
+        actual=ham,
+        desired=data["hamiltonians_q2"],
+        atol=1e-11 * np.max(data["hamiltonians_q2"]),
+    )
 
 
 @pytest.mark.integration
 def test_propagation():
     exp.set_opt_gates("instr1")
     exp.compute_propagators()
-
     np.testing.assert_allclose(
-        actual=exp.propagators["instr1"], desired=data["propagators_q1"]
+        actual=exp.propagators["instr1"],
+        desired=data["propagators_q1"],
+        atol=1e-11 * np.max(data["propagators_q1"]),
     )
     np.testing.assert_allclose(
-        actual=exp.partial_propagators["instr1"], desired=data["partial_propagators_q1"]
+        actual=exp.partial_propagators["instr1"],
+        desired=data["partial_propagators_q1"],
+        atol=1e-11 * np.max(data["partial_propagators_q1"]),
     )
 
     exp.set_opt_gates(["instr2"])
     exp.compute_propagators()
 
     np.testing.assert_allclose(
-        actual=exp.propagators["instr2"], desired=data["propagators_q2"]
+        actual=exp.propagators["instr2"],
+        desired=data["propagators_q2"],
+        atol=1e-11 * np.max(data["propagators_q2"]),
     )
     np.testing.assert_allclose(
-        actual=exp.partial_propagators["instr2"], desired=data["partial_propagators_q2"]
+        actual=exp.partial_propagators["instr2"],
+        desired=data["partial_propagators_q2"],
+        atol=1e-11 * np.max(data["partial_propagators_q2"]),
     )
 
 
 def test_save_and_load():
     exp.compute_propagators()
     propagators = exp.propagators
-    cfg = exp.asdict()
+    cfg_str = hjson.dumpsJSON(exp.asdict(), default=hjson_encode)
+    cfg_dct = hjson.loads(cfg_str, object_pairs_hook=hjson_decode)
     exp2 = Experiment()
-    exp2.from_dict(cfg)
+    exp2.from_dict(cfg_dct)
     exp2.compute_propagators()
     for k in propagators:
         np.testing.assert_allclose(exp2.propagators[k], propagators[k])
