@@ -33,6 +33,7 @@ class C2(Optimizer):
         self,
         dir_path,
         eval_func,
+        exp_type,
         pmap,
         algorithm,
         exp_right=None,
@@ -40,13 +41,13 @@ class C2(Optimizer):
         run_name=None,
     ):
         super().__init__(pmap=pmap, algorithm=algorithm)
-        self.eval_func = eval_func
+        self.set_eval_func(eval_func, exp_type)
         self.options = options
         self.exp_right = exp_right
         self.__dir_path = dir_path
         self.__run_name = run_name
 
-    def set_eval_func(self, eval_func):
+    def set_eval_func(self, eval_func, exp_type):
         """
         Setter for the eval function.
 
@@ -56,6 +57,7 @@ class C2(Optimizer):
             Function to be evaluated
 
         """
+        # TODO: Implement shell for experiment communication
         self.eval_func = eval_func
 
     def log_setup(self) -> None:
