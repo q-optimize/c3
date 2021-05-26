@@ -37,7 +37,7 @@ def create_c1_opt(optimizer_config, exp):
     lindblad = parameter_map.model.lindbladian
 
     with open(optimizer_config, "r") as cfg_file:
-        cfg = hjson.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
 
     if lindblad:
         fid = "lindbladian_" + cfg["fid_func"]
@@ -138,7 +138,7 @@ def create_c2_opt(optimizer_config, eval_func_path):
     """
     with open(optimizer_config, "r") as cfg_file:
         try:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         except hjson.decoder.HjsonDecodeError as hjerr:
             raise Exception(f"Config {optimizer_config} is invalid.") from hjerr
 
@@ -203,7 +203,7 @@ def create_c3_opt(optimizer_config):
 
     """
     with open(optimizer_config, "r") as cfg_file:
-        cfg = hjson.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
 
     state_labels = {"all": None}
     if "state_labels" in cfg:
@@ -290,7 +290,7 @@ def create_sensitivity(task_config):
 
     """
     with open(task_config, "r") as cfg_file:
-        cfg = hjson.loads(cfg_file.read())
+        cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
 
     sweep_map = [tuple(a) for a in cfg["sweep_map"]]
 

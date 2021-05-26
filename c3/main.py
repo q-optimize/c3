@@ -8,6 +8,7 @@ import argparse
 import c3.utils.parsers as parsers
 import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
+from c3.c3objs import hjson_decode
 from c3.parametermap import ParameterMap
 from c3.experiment import Experiment
 from c3.system.model import Model
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     opt_config = args.master_config
     with open(opt_config, "r") as cfg_file:
         try:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         except hjson.decoder.HjsonDecodeError:
             raise Exception(f"Config {opt_config} is invalid.")
 
