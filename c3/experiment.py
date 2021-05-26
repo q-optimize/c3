@@ -80,9 +80,9 @@ class Experiment:
 
         self.created_by = config
 
-    def quick_setup(self, filepath: str) -> None:
+    def load_quick_setup(self, filepath: str) -> None:
         """
-        Load a quick setup file and create all necessary components.
+        Load a quick setup file.
 
         Parameters
         ----------
@@ -92,7 +92,18 @@ class Experiment:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read())
+        self.quick_setup(cfg)
 
+    def quick_setup(self, cfg) -> None:
+        """
+        Load a quick setup cfg and create all necessary components.
+
+        Parameters
+        ----------
+        cfg : Dict
+            Configuration options
+
+        """
         model = Model()
         model.read_config(cfg["model"])
         gen = Generator()
