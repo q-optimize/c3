@@ -97,17 +97,11 @@ def run_cfg(cfg, debug=False):
                         "C3:STATUS:Loading initial point from : "
                         f"{os.path.abspath(init_point)}"
                     )
-                    init_dir = os.path.basename(
-                        os.path.normpath(os.path.dirname(init_point))
-                    )
                 except FileNotFoundError as fnfe:
                     raise Exception(
                         f"C3:ERROR:No initial point found at "
                         f"{os.path.abspath(init_point)}. "
                     ) from fnfe
-
-        if "real_params" in cfg:
-            real_params = cfg["real_params"]
 
         if optim_type == "C1":
             if "adjust_exp" in cfg:
