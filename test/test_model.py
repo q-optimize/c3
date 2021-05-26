@@ -5,9 +5,9 @@ testing module for Model class
 import pytest
 import numpy as np
 from c3.c3objs import Quantity
-from c3.system.chip import Qubit, Coupling, Drive
-from c3.system.tasks import InitialiseGround, ConfusionMatrix
-from c3.system.model import Model
+from c3.libraries.chip import Qubit, Coupling, Drive
+from c3.libraries.tasks import InitialiseGround, ConfusionMatrix
+from c3.model import Model
 import c3.libraries.hamiltonians as hamiltonians
 from c3.parametermap import ParameterMap
 
