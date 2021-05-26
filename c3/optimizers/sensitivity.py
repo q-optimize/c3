@@ -1,7 +1,6 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import shutil
 import pickle
 import itertools
 import numpy as np
@@ -138,7 +137,6 @@ class SET(Optimizer):
             )
         self.logdir = log_setup(dir_path, run_name)
         self.logname = "sensitivity.log"
-        shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles):
         # TODO move common methods of sensitivity and c3 to super class
@@ -150,7 +148,6 @@ class SET(Optimizer):
         datafiles : list of str
             List of paths for files that contain learning data.
         """
-        self.__real_model_folder = os.path.dirname(datafiles.values()[0])
         for target, datafile in datafiles.items():
             with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)
