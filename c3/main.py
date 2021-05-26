@@ -11,9 +11,11 @@ from c3.parametermap import ParameterMap
 from c3.experiment import Experiment
 from c3.system.model import Model
 from c3.generator.generator import Generator
+
 from c3.optimizers.c1 import C1
 from c3.optimizers.c2 import C2
 from c3.optimizers.c3 import C3
+from c3.optimizers.sensitivity import SET
 
 
 logging.getLogger("tensorflow").disabled = True
@@ -32,7 +34,14 @@ def run_cfg(cfg, debug=False):
 
     """
     optim_type = cfg.pop("optim_type")
-    optim_lib = {"C1": C1, "C2": C2, "C3": C3}
+    optim_lib = {
+        "C1": C1,
+        "C2": C2,
+        "C3": C3,
+        "C3_confirm": C3,
+        "confirm": C3,
+        "SET": SET,
+    }
     if not optim_type in optim_lib:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
 
@@ -40,6 +49,7 @@ def run_cfg(cfg, debug=False):
     with tf.device("/CPU:0"):
         model = None
         gen = None
+        exp = None
         if "model" in cfg:
             model = Model()
             model.read_config(cfg.pop("model"))
@@ -53,16 +63,20 @@ def run_cfg(cfg, debug=False):
         if "exp_cfg" in cfg:
             exp = Experiment()
             exp.read_config(cfg.pop("exp_cfg"))
-        else:
+        if exp is None:
             print("C3:STATUS: No instructions specified. Performing quick setup.")
             exp = Experiment()
             exp.quick_setup(cfg)
 
         exp.set_opt_gates(cfg.pop("opt_gates", None))
-        gateset_opt_map = [
-            [tuple(par) for par in pset] for pset in cfg.pop("gateset_opt_map")
-        ]
-        exp.pmap.set_opt_map(gateset_opt_map)
+        if "gateset_opt_map" in cfg:
+            exp.pmap.set_opt_map(
+                [[tuple(par) for par in pset] for pset in cfg.pop("gateset_opt_map")]
+            )
+        if "exp_opt_map" in cfg:
+            exp.pmap.set_opt_map(
+                [[tuple(par) for par in pset] for pset in cfg.pop("exp_opt_map")]
+            )
 
         opt = optim_lib[optim_type](**cfg, pmap=exp.pmap)
         opt.set_exp(exp)
@@ -110,9 +124,6 @@ def run_cfg(cfg, debug=False):
                         f"{os.path.abspath(adjust_exp)} "
                         "Continuing with default."
                     ) from fnfe
-
-        elif optim_type in ["C3", "confirm", "C3_confirm", "SET"]:
-            opt.read_data(cfg["datafile"])
 
         if not debug:
             opt.run()
