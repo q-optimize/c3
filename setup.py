@@ -42,9 +42,9 @@ setup(
         "rich==9.2.0",
         "numpy==1.19.5",
         "scipy==1.5.2",
-        "tensorflow==2.4.1",
+        "tensorflow==2.4.2",
         "tensorflow-estimator==2.4.0",
-        "tensorflow-probability==0.12.1",
+        "tensorflow-probability==0.12.2",
     ],
     python_requires="~=3.6",
 )
