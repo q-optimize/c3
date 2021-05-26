@@ -90,8 +90,7 @@ class C3(Optimizer):
         for target, labels in state_labels.items():
             self.state_labels[target] = [tuple(lab) for lab in labels]
 
-        self.callback_foms = callback_foms
-        callback_foms = []
+        self.callback_foms = []
         for cb_fom in callback_foms:
             if type(cb_fom) is str:
                 try:
