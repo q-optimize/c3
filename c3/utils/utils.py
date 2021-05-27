@@ -1,6 +1,7 @@
 """Miscellaneous, general utilities."""
 import time
 import os
+import tempfile
 import numpy as np
 from tensorflow.python.framework import ops
 from typing import Tuple
@@ -8,7 +9,7 @@ import warnings
 
 
 # SYSTEM AND SETUP
-def log_setup(data_path: str, run_name: str = "run") -> str:
+def log_setup(data_path: str = None, run_name: str = "run") -> str:
     """
     Make sure the file path to save data exists. Create an appropriately named
     folder with date and time. Also creates a symlink "recent" to the folder.
@@ -26,6 +27,10 @@ def log_setup(data_path: str, run_name: str = "run") -> str:
         The file path to store new data.
 
     """
+    if data_path:
+        data_path = os.path.abspath(data_path)
+    else:
+        data_path = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
     if not os.path.isdir(data_path):
         os.makedirs(data_path)
 
