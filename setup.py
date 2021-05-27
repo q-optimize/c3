@@ -16,7 +16,6 @@ setup(
         "c3/qiskit",
         "c3/schemas",
         "c3/signal",
-        "c3/system",
         "c3/utils",
     ],
     classifiers=[
