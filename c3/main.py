@@ -21,7 +21,7 @@ from c3.optimizers.sensitivity import SET
 logging.getLogger("tensorflow").disabled = True
 
 # flake8: noqa: C901
-def run_cfg(cfg, debug=False):
+def run_cfg(cfg, opt_config_filename, debug=False):
     """Execute an optimization problem described in the cfg file.
 
     Parameters
@@ -80,7 +80,7 @@ def run_cfg(cfg, debug=False):
 
         opt = optim_lib[optim_type](**cfg, pmap=exp.pmap)
         opt.set_exp(exp)
-        opt.set_created_by(cfg)
+        opt.set_created_by(opt_config_filename)
 
         if "initial_point" in cfg:
             initial_points = cfg["initial_point"]
@@ -138,4 +138,4 @@ if __name__ == "__main__":
             cfg = hjson.load(cfg_file)
         except hjson.decoder.HjsonDecodeError:
             raise Exception(f"Config {opt_config} is invalid.")
-    run_cfg(cfg)
+    run_cfg(cfg, opt_config)
