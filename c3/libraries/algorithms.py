@@ -6,7 +6,7 @@ optional arguments.
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
-
+import warnings
 from typing import Callable
 import adaptive
 import copy
@@ -326,6 +326,9 @@ def tf_adam(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
     var = tf.Variable(x_init)
 
@@ -370,6 +373,9 @@ def tf_rmsprop(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
 
     var = tf.Variable(x_init)
@@ -418,6 +424,9 @@ def tf_adadelta(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
 
     var = tf.Variable(x_init)
