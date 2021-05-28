@@ -315,7 +315,7 @@ opt = C1(
     fid_subspace=["Q1", "Q2"],
     pmap=pmap,
     algorithm=algorithms.tf_sgd,
-    options={"maxfun": 2},
+    options={"maxiters": 5},
     run_name="better_X90_tf_sgd",
 )
 
@@ -358,6 +358,26 @@ def test_optim_tf_sgd() -> None:
     """
     opt.optimize_controls()
     assert opt.current_best_goal < 0.01
+
+
+@pytest.mark.optimizers
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.tensorflow
+def test_bad_tf_sgd() -> None:
+    bad_tf_opt = C1(
+        dir_path=logdir,
+        fid_func=fidelities.average_infid_set,
+        fid_subspace=["Q1", "Q2"],
+        pmap=pmap,
+        algorithm=algorithms.tf_sgd,
+        options={"maxfun": 2},
+        run_name="better_X90_bad_tf",
+    )
+    bad_tf_opt.set_exp(exp)
+
+    with pytest.raises(KeyError):
+        bad_tf_opt.optimize_controls()
 
 
 @pytest.mark.optimizers
