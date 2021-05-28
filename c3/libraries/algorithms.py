@@ -326,7 +326,7 @@ def tf_adam(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
     warnings.warn("The integration of this algorithm is incomplete and incorrect.")
 
     iters = options["maxfun"]
@@ -373,7 +373,7 @@ def tf_rmsprop(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
     warnings.warn("The integration of this algorithm is incomplete and incorrect.")
 
     iters = options["maxfun"]
@@ -424,7 +424,7 @@ def tf_adadelta(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
     warnings.warn("The integration of this algorithm is incomplete and incorrect.")
 
     iters = options["maxfun"]
