@@ -315,7 +315,7 @@ opt = C1(
     fid_subspace=["Q1", "Q2"],
     pmap=pmap,
     algorithm=algorithms.tf_sgd,
-    options={"maxfun": 2},
+    options={"maxiters": 5},
     run_name="better_X90_tf_sgd",
 )
 
