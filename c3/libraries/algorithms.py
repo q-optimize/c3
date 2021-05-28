@@ -280,7 +280,7 @@ def tf_sgd(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
+    iters = options["maxiters"]  # TF based optimizers use algo iters not fevals
 
     var = tf.Variable(x_init)
 
