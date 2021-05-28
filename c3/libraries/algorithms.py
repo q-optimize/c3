@@ -291,7 +291,15 @@ def tf_sgd(
     def tf_fun():
         return fun(var)
 
-    opt_sgd = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
+    learning_rate = 0.1
+    momentum = 0.9
+
+    if "learning_rate" in options.keys():
+        learning_rate = options["learning_rate"]
+    if "momentum" in options.keys():
+        momentum = options["momentum"]
+
+    opt_sgd = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=momentum)
 
     for _ in range(iters):
         step_count = opt_sgd.minimize(tf_fun, [var])
