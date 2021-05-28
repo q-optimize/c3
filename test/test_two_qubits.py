@@ -2,6 +2,8 @@
 integration testing module for C1 optimization through two-qubits example
 """
 
+import os
+import tempfile
 import copy
 import pickle
 import numpy as np
@@ -30,6 +32,7 @@ import c3.libraries.envelopes as envelopes
 
 from c3.optimizers.c1 import C1
 
+logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -307,7 +310,7 @@ gateset_opt_map = [
 pmap.set_opt_map(gateset_opt_map)
 
 opt = C1(
-    dir_path="/tmp/c3log/",
+    dir_path=logdir,
     fid_func=fidelities.average_infid_set,
     fid_subspace=["Q1", "Q2"],
     pmap=pmap,
@@ -362,7 +365,7 @@ def test_optim_tf_sgd() -> None:
 @pytest.mark.integration
 def test_optim_lbfgs() -> None:
     lbfgs_opt = C1(
-        dir_path="/tmp/c3log/",
+        dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
         pmap=pmap,
