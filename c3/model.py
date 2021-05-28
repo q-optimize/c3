@@ -7,7 +7,7 @@ import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
-from c3.libraries.chip import device_lib, Drive
+from c3.libraries.chip import device_lib, Drive, Coupling
 from typing import List, Tuple
 
 
@@ -66,9 +66,11 @@ class Model:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
+            if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
+                raise Exception("Tried to connect non-existent devices.")
         # TODO ensure that all elements have different keys / names
         if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
-            raise Exception("Do not use same name for multiple devices")
+            raise KeyError("Do not use same name for multiple devices")
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -178,25 +180,22 @@ class Model:
             configuration file
 
         """
+        subsystems = []
         for name, props in cfg["Qubits"].items():
             props.update({"name": name})
             dev_type = props.pop("c3type")
-            self.subsystems[name] = device_lib[dev_type](**props)
+            subsystems.append(device_lib[dev_type](**props))
+
+        couplings = []
         for name, props in cfg["Couplings"].items():
             props.update({"name": name})
             dev_type = props.pop("c3type")
-            self.couplings[name] = device_lib[dev_type](**props)
-            if dev_type == "Drive":
-                for connection in self.couplings[name].connected:
-                    try:
-                        self.subsystems[connection].drive_line = name
-                    except KeyError as ke:
-                        raise Exception(
-                            f"C3:ERROR: Trying to connect drive {name} to unkown "
-                            f"target {connection}."
-                        ) from ke
+            this_dev = device_lib[dev_type](**props)
+            couplings.append(this_dev)
+
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
+        self.set_components(subsystems, couplings)
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -322,7 +321,8 @@ class Model:
         for key, sub in self.subsystems.items():
             hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
-            hamiltonians[key] = line.get_Hamiltonian()
+            if isinstance(line, Coupling):
+                hamiltonians[key] = line.get_Hamiltonian()
             if isinstance(line, Drive):
                 control_hams[key] = line.get_Hamiltonian(signal=True)
 
