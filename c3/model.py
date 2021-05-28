@@ -66,8 +66,9 @@ class Model:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
-            if isinstance(comp, Drive):  # Check that the target of a drive exists and
-                                         # is store the info in the target.
+
+            # Check that the target of a drive exists and is store the info in the target.
+            if isinstance(comp, Drive):
                 for connect in comp.connected:
                     try:
                         self.subsystems[connect].drive_line = comp.name
@@ -76,7 +77,7 @@ class Model:
                             f"Tried to connect {comp.name}"
                             f" to non-existent device {self.subsystems[connect].name}."
                         )
-                        
+
             if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
                 raise Exception("Tried to connect non-existent devices.")
         # TODO ensure that all elements have different keys / names
