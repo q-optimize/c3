@@ -293,7 +293,7 @@ def tf_sgd(
 
     opt_sgd = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
 
-    for step in range(iters):
+    for _ in range(iters):
         step_count = opt_sgd.minimize(tf_fun, [var])
         print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
 
