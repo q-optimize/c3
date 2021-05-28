@@ -280,6 +280,10 @@ def tf_sgd(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+
+    if "maxfun" in options.keys():
+        raise KeyError("Tensorflow Optimizers require a maxiters")
+
     iters = options["maxiters"]  # TF based optimizers use algo iters not fevals
 
     var = tf.Variable(x_init)
