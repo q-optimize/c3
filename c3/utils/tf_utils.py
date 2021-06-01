@@ -208,7 +208,6 @@ def Id_like(A):
 @tf.function
 def tf_kron(A, B):
     """Kronecker product of 2 matrices."""
-    # TODO make kronecker product general to different dimensions
     dims = tf.shape(A) * tf.shape(B)
     tensordot = tf.tensordot(A, B, axes=0)
     reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)

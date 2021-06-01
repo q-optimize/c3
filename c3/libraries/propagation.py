@@ -296,7 +296,7 @@ def tf_expm(A, terms):
     return r
 
 
-def tf_expm_dynamic(A, acc=1e-4):
+def tf_expm_dynamic(A, acc=1e-5):
     """
     Matrix exponential by the series method with specified accuracy.
 
