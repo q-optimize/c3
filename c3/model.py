@@ -8,7 +8,7 @@ import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 from c3.libraries.chip import device_lib, Drive, Coupling
-from typing import List, Tuple
+from typing import Dict, List, Tuple, Union
 
 
 class Model:
@@ -45,7 +45,7 @@ class Model:
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems: dict = dict()
-        self.couplings: dict = dict()
+        self.couplings: Dict[str, Union[Drive, Coupling]] = {}
         self.tasks: dict = dict()
         self.drift_ham = None
         self.dressed_drift_ham = None
@@ -61,26 +61,27 @@ class Model:
         gs[0][0] = 1
         return tf.transpose(tf.constant(gs, dtype=tf.complex128))
 
+    def __check_drive_connect(self, comp):
+        for connect in comp.connected:
+            try:
+                self.subsystems[connect].drive_line = comp.name
+            except KeyError:
+                raise KeyError(
+                    f"Tried to connect {comp.name}"
+                    f" to non-existent device {self.subsystems[connect].name}."
+                )
+
     def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
-
             # Check that the target of a drive exists and is store the info in the target.
             if isinstance(comp, Drive):
-                for connect in comp.connected:
-                    try:
-                        self.subsystems[connect].drive_line = comp.name
-                    except KeyError:
-                        raise KeyError(
-                            f"Tried to connect {comp.name}"
-                            f" to non-existent device {self.subsystems[connect].name}."
-                        )
-
+                self.__check_drive_connect(comp)
             if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
                 raise Exception("Tried to connect non-existent devices.")
-        # TODO ensure that all elements have different keys / names
+
         if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
             raise KeyError("Do not use same name for multiple devices")
         self.__create_labels()
