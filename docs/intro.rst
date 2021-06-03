@@ -67,3 +67,12 @@ Experiments
 With the building blocks in place, we can bring them all together through an :code:`Experiment` object that
 encapsulates the device model, the control signals, the instructions and the parameter map. Note that depending on
 the use only some of the blocks are essential when building the experiment.
+
+Optimizers
+-----------
+
+At its core, :code:`c3-toolset` is an optimization framework and all of the three steps - Open-Loop, Calibration and 
+Model Learning can be defined as a optimization task. The :code:`optimizers` contain classes that provide 
+helpful encapsulation for these steps. These objects take as arguments the previously defined :code:`Experiment` and 
+:code:`ParameterMap` objects along with an :code:`algorithm` e.g, :code:`CMA-eS` or :code:`L-BFGS` which performs 
+the iterative optimization steps.
