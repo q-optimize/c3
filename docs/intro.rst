@@ -76,3 +76,11 @@ Model Learning can be defined as a optimization task. The :code:`optimizers` con
 helpful encapsulation for these steps. These objects take as arguments the previously defined :code:`Experiment` and 
 :code:`ParameterMap` objects along with an :code:`algorithm` e.g, :code:`CMA-eS` or :code:`L-BFGS` which performs 
 the iterative optimization steps.
+
+Libraries
+----------
+
+The :code:`c3/libraries` sub-module includes various helpful library of components that are used somewhat like lego
+pieces when building the bigger blocks, e.g, :code:`hamiltonians` for the :code:`chip` present in the :code:`Model`
+or :code:`envelopes` defining a control :code:`pulse`. More details about these components are available in the
+:doc:`c3.libraries` section.
