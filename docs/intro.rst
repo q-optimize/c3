@@ -60,3 +60,10 @@ The :code:`ParameterMap` helps to obtain an optimizable vector of parameters fro
 models previously defined. This allows for a simple interface to the optimization algorithms which are tasked
 with optimizing different sets of variables used to define some entity, e.g, optimizing pulse parameters by 
 calibrating on hardware or providing an optimal gate-set through model-based quantum control.
+
+Experiments
+-------------
+
+With the building blocks in place, we can bring them all together through an :code:`Experiment` object that
+encapsulates the device model, the control signals, the instructions and the parameter map. Note that depending on
+the use only some of the blocks are essential when building the experiment.
