@@ -6,7 +6,8 @@ primary objective of understanding how the different sub-modules inside the :cod
 are structured, the purpose they serve and how to tie them together into a complete Automated
 Quantum Device Bring-up workflow. For more detailed examples of how to use the :code:`c3-toolset`
 to perform a specific Quantum Control task, please check out the :doc:`two_qubits` or the 
-:doc:`Simulated_calibration` sections
+:doc:`Simulated_calibration` sections or refer to the :doc:`c3` for descriptions of 
+Classes and Functions.
 
 
 The Building Blocks
@@ -48,7 +49,7 @@ objects. The sequence in which these gates are applied are not defined at this s
 
 
 .. warning::
-    Components inside the :code:`c3/generator/` and :code:`c3/signal` sub-modules will be restructured 
+    Components inside the :code:`c3/generator/` and :code:`c3/signal/` sub-modules will be restructured 
     in an upcoming release to be more consistent with how the :code:`Model` class encapsulates smaller 
     blocks present in the :code:`c3/libraries` sub-module.
 
