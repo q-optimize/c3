@@ -29,3 +29,11 @@ A theoretical Physics-based model of the Quantum Processing Unit. This is encaps
 their couplings while :code:`tasks` let you perform common operations such as qubit initialisation or
 readout. A typical :code:`Model` object would contain objects encapsulating qubits along with their 
 interactions as drive lines and tasks, if any.
+
+Classical Control Electronics
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+A digital twin of the electronic control stack associated with the Quantum Processing Unit. The
+:code:`Generator` class contains the required encapsulation in the form of :code:`devices` which
+help model the behaviour of the classical control electronics taking account of their imperfections and 
+physical realisations. The devices e.g, an LO or an AWG or a Mixer are wired together in the 
+:code:`Generator` object to form a complete representation of accessory electronics.
