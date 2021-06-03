@@ -51,3 +51,12 @@ objects. The sequence in which these gates are applied are not defined at this s
     Components inside the :code:`c3/generator/` and :code:`c3/signal` sub-modules will be restructured 
     in an upcoming release to be more consistent with how the :code:`Model` class encapsulates smaller 
     blocks present in the :code:`c3/libraries` sub-module.
+
+
+Parameter Map
+--------------
+
+The :code:`ParameterMap` helps to obtain an optimizable vector of parameters from the various theoretical 
+models previously defined. This allows for a simple interface to the optimization algorithms which are tasked
+with optimizing different sets of variables used to define some entity, e.g, optimizing pulse parameters by 
+calibrating on hardware or providing an optimal gate-set through model-based quantum control.
