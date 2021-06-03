@@ -37,3 +37,17 @@ A digital twin of the electronic control stack associated with the Quantum Proce
 help model the behaviour of the classical control electronics taking account of their imperfections and 
 physical realisations. The devices e.g, an LO or an AWG or a Mixer are wired together in the 
 :code:`Generator` object to form a complete representation of accessory electronics.
+
+Instructions
+~~~~~~~~~~~~~~
+Once there is a software model for the QPU and the control electronics, one would need to define 
+Instructions or operations to be perform on this device. For gate-based quantum computing , this is 
+in the form of gates and their underlying pulse operations. Pulse shapes are described through a 
+:code:`Envelope` along with a :code:`Carrier`, which are then wrapped up in the form of :code:`Instruction` 
+objects. The sequence in which these gates are applied are not defined at this stage.
+
+
+.. warning::
+    Components inside the :code:`c3/generator/` and :code:`c3/signal` sub-modules will be restructured 
+    in an upcoming release to be more consistent with how the :code:`Model` class encapsulates smaller 
+    blocks present in the :code:`c3/libraries` sub-module.
