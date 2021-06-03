@@ -27,6 +27,7 @@ When combined in sequence, these three procedures represent a recipe for system 
    :maxdepth: 4
    :caption: Contents:
 
+   intro
    two_qubits
    optimal_control
    Simulated_calibration
