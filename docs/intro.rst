@@ -17,10 +17,6 @@ There are three basic building blocks that form the foundation of all the modell
 tasks one can perform using :code:`c3-toolset`, and depending on the use-case, some or all of these
 blocks might be useful. These are the following:
 
-- Quantum Device Model 
-- Classical Control Electronics
-- Instructions
-
 Quantum Device Model
 ~~~~~~~~~~~~~~~~~~~~~
 
