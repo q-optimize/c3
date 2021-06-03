@@ -20,4 +20,12 @@ blocks might be useful. These are the following:
 - Classical Control Electronics
 - Instructions
 
+Quantum Device Model
+~~~~~~~~~~~~~~~~~~~~~
 
+A theoretical Physics-based model of the Quantum Processing Unit. This is encapsulated by the 
+:code:`Model` class which consists of objects from the :code:`chip` and :code:`tasks` library.
+:code:`chip` contains Hamiltonian models of different kinds of qubit realisations, along with
+their couplings while :code:`tasks` let you perform common operations such as qubit initialisation or
+readout. A typical :code:`Model` object would contain objects encapsulating qubits along with their 
+interactions as drive lines and tasks, if any.
