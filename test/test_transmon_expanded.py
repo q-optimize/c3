@@ -13,8 +13,8 @@ from c3.libraries.envelopes import envelopes
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.signal.pulse import Envelope, Carrier
-from c3.system.chip import TransmonExpanded, Transmon, Coupling
-from c3.system.model import Model
+from c3.libraries.chip import TransmonExpanded, Transmon, Coupling
+from c3.model import Model
 import pytest
 
 freq_q1 = 5e9

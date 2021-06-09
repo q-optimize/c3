@@ -648,7 +648,6 @@ def Id_like(A):
     return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
 
 
-
 @tf.function
 def tf_kron(A, B):
     """Kronecker product of 2 matrices."""

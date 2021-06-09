@@ -187,8 +187,9 @@ class Experiment:
         generator.fromdict(cfg["generator"])
         pmap = ParameterMap(model=model, generator=generator)
         pmap.fromdict(cfg["instructions"])
-        for k, v in cfg["options"].items():
-            self.__dict__[k] = v
+        if "options" in cfg:
+            for k, v in cfg["options"].items():
+                self.__dict__[k] = v
         self.pmap = pmap
 
     def write_config(self, filepath: str) -> None:
