@@ -48,10 +48,10 @@ def test_unitary_overlap(args: Tuple[List[int], List[int], List[int]]) -> None:
 @pytest.mark.tensorflow
 @pytest.mark.unit
 def test_convolution() -> None:
-    sigA = data["sigA"]
-    sigB = data["sigB"]
+    sigA = data["convolution"]["sigA"]
+    sigB = data["convolution"]["sigB"]
     out = tf_convolve(sigA, sigB)
-    assert tf.math.reduce_sum(tf.abs(out - data["out"])) < 1e-9
+    assert tf.math.reduce_sum(tf.abs(out - data["convolution"]["out"])) < 1e-9
 
 
 @pytest.mark.tensorflow

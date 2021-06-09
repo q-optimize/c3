@@ -109,7 +109,11 @@ def test_extended_pulse():
     gen_signal = generator.generate_signals(instr_it)
     ts = gen_signal["d1"]["ts"]
 
-    np.testing.assert_allclose(ts, test_data["signal"]["d1"]["ts"])
+    np.testing.assert_allclose(
+        ts,
+        test_data["signal"]["d1"]["ts"],
+        atol=1e-9 * np.max(test_data["signal"]["d1"]["ts"]),
+    )
     np.testing.assert_allclose(
         actual=gen_signal["d1"]["values"].numpy(),
         desired=test_data["signal"]["d1"]["values"].numpy(),
@@ -124,10 +128,10 @@ def test_extended_pulse():
         instr_it.get_full_gate_length(), test_data["full_gate_length1"]
     )
     instr_it.auto_adjust_t_end(buffer=0.2)
-    np.testing.assert_almost_equal(
+    np.testing.assert_allclose(
         instr_it.get_full_gate_length(), test_data["full_gate_length2"]
     )
-    np.testing.assert_almost_equal(instr_it.t_end, test_data["t_end2"])
+    np.testing.assert_allclose(instr_it.t_end, test_data["t_end2"])
 
     pmap.set_parameters(
         [2 * t_final],

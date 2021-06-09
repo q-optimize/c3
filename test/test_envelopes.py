@@ -22,22 +22,26 @@ def test_pwc_shape():
     np.testing.assert_allclose(
         actual=envelopes["pwc_shape"](t=ts, params=params),
         desired=test_data["pwc_shape"],
+        atol=1e-11 * np.max(test_data["pwc_shape"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["pwc_symmetric"](t=ts, params=params),
         desired=test_data["pwc_symmetric"],
+        atol=1e-11 * np.max(test_data["pwc_symmetric"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["pwc_shape_plateau"](t=ts, params=params),
         desired=test_data["pwc_shape_plateau1"],
+        atol=1e-11 * np.max(test_data["pwc_shape_plateau1"]),
     )
 
     params["width"] = Quantity(5e-9)
     np.testing.assert_allclose(
         actual=envelopes["pwc_shape_plateau"](t=ts, params=params),
         desired=test_data["pwc_shape_plateau2"],
+        atol=1e-11 * np.max(test_data["pwc_shape_plateau2"]),
     )
 
 
@@ -54,6 +58,7 @@ def test_delta_pulse():
     np.testing.assert_allclose(
         actual=envelopes["delta_pulse"](t=ts, params=params),
         desired=test_data["delta_pulse"],
+        atol=1e-11 * np.max(test_data["delta_pulse"]),
     )
 
 
@@ -69,11 +74,13 @@ def test_fourier():
     np.testing.assert_allclose(
         actual=envelopes["fourier_sin"](t=ts, params=params),
         desired=test_data["fourier_sin"],
+        atol=1e-11 * np.max(test_data["fourier_sin"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["fourier_cos"](t=ts, params=params),
         desired=test_data["fourier_cos"],
+        atol=1e-11 * np.max(test_data["fourier_cos"]),
     )
 
     params = {
@@ -87,18 +94,21 @@ def test_fourier():
     np.testing.assert_allclose(
         actual=envelopes["slepian_fourier"](t=ts, params=params),
         desired=test_data["slepian_fourier"],
+        atol=1e-11 * np.max(test_data["slepian_fourier"]),
     )
 
     params["risefall"] = Quantity(4e-9)
     np.testing.assert_allclose(
         actual=envelopes["slepian_fourier"](t=ts, params=params),
         desired=test_data["slepian_fourier_risefall"],
+        atol=1e-11 * np.max(test_data["slepian_fourier_risefall"]),
     )
 
     params["sin_coeffs"] = Quantity([0.3])
     np.testing.assert_allclose(
         actual=envelopes["slepian_fourier"](t=ts, params=params),
         desired=test_data["slepian_fourier_sin"],
+        atol=1e-11 * np.max(test_data["slepian_fourier_sin"]),
     )
 
 
@@ -112,16 +122,19 @@ def test_flattop():
     np.testing.assert_allclose(
         actual=envelopes["trapezoid"](t=ts, params=params),
         desired=test_data["trapezoid"],
+        atol=1e-11 * np.max(test_data["trapezoid"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["flattop_risefall"](t=ts, params=params),
         desired=test_data["flattop_risefall"],
+        atol=1e-11 * np.max(test_data["flattop_risefall"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["flattop_risefall_1ns"](t=ts, params=params),
         desired=test_data["flattop_risefall_1ns"],
+        atol=1e-11 * np.max(test_data["flattop_risefall_1ns"]),
     )
 
     params = {
@@ -134,6 +147,7 @@ def test_flattop():
     np.testing.assert_allclose(
         actual=envelopes["flattop_variant"](t=ts, params=params),
         desired=test_data["flattop_variant"],
+        atol=1e-11 * np.max(test_data["flattop_variant"]),
     )
 
     params = {
@@ -160,6 +174,7 @@ def test_flattop_cut():
     np.testing.assert_allclose(
         actual=envelopes["flattop_cut"](t=ts, params=params),
         desired=test_data["flattop_cut"],
+        atol=1e-11 * np.max(test_data["flattop_cut"]),
     )
 
     params = {
@@ -171,6 +186,7 @@ def test_flattop_cut():
     np.testing.assert_allclose(
         actual=envelopes["flattop_cut_center"](t=ts, params=params),
         desired=test_data["flattop_cut_center"],
+        atol=1e-11 * np.max(test_data["flattop_cut_center"]),
     )
 
 
@@ -184,38 +200,49 @@ def test_gaussian():
     np.testing.assert_allclose(
         actual=envelopes["gaussian_sigma"](t=ts, params=params),
         desired=test_data["gaussian_sigma"],
+        atol=1e-11 * np.max(test_data["gaussian_sigma"]),
     )
 
     np.testing.assert_allclose(
-        actual=envelopes["gaussian"](t=ts, params=params), desired=test_data["gaussian"]
+        actual=envelopes["gaussian"](t=ts, params=params),
+        desired=test_data["gaussian"],
+        atol=1e-11 * np.max(test_data["gaussian"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["gaussian_nonorm"](t=ts, params=params),
         desired=test_data["gaussian_nonorm"],
+        atol=1e-11 * np.max(test_data["gaussian_nonorm"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["gaussian_der_nonorm"](t=ts, params=params),
         desired=test_data["gaussian_der_nonorm"],
+        atol=1e-11 * np.max(test_data["gaussian_der_nonorm"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["gaussian_der"](t=ts, params=params),
         desired=test_data["gaussian_der"],
+        atol=1e-11 * np.max(test_data["gaussian_der"]),
     )
 
     np.testing.assert_allclose(
         actual=envelopes["drag_sigma"](t=ts, params=params),
         desired=test_data["drag_sigma"],
+        atol=1e-11 * np.max(test_data["drag_sigma"]),
     )
 
     np.testing.assert_allclose(
-        actual=envelopes["drag_der"](t=ts, params=params), desired=test_data["drag_der"]
+        actual=envelopes["drag_der"](t=ts, params=params),
+        desired=test_data["drag_der"],
+        atol=1e-11 * np.max(test_data["drag_der"]),
     )
 
     np.testing.assert_allclose(
-        actual=envelopes["drag"](t=ts, params=params), desired=test_data["drag"]
+        actual=envelopes["drag"](t=ts, params=params),
+        desired=test_data["drag"],
+        atol=1e-11 * np.max(test_data["drag"]),
     )
 
 
@@ -226,7 +253,9 @@ def test_cosine():
     }
 
     np.testing.assert_allclose(
-        actual=envelopes["cosine"](t=ts, params=params), desired=test_data["cosine"]
+        actual=envelopes["cosine"](t=ts, params=params),
+        desired=test_data["cosine"],
+        atol=1e-11 * np.max(test_data["cosine"]),
     )
 
     params = {
@@ -237,6 +266,7 @@ def test_cosine():
     np.testing.assert_allclose(
         actual=envelopes["cosine_flattop"](t=ts, params=params),
         desired=test_data["cosine_flattop"],
+        atol=1e-11 * np.max(test_data["cosine_flattop"]),
     )
 
 
@@ -244,9 +274,13 @@ def test_cosine():
 def test_nodrive():
     params = {}
     np.testing.assert_allclose(
-        actual=envelopes["no_drive"](t=ts, params=params), desired=test_data["no_drive"]
+        actual=envelopes["no_drive"](t=ts, params=params),
+        desired=test_data["no_drive"],
+        atol=1e-11 * np.max(test_data["no_drive"]),
     )
 
     np.testing.assert_allclose(
-        actual=envelopes["rect"](t=ts, params=params), desired=test_data["rect"]
+        actual=envelopes["rect"](t=ts, params=params),
+        desired=test_data["rect"],
+        atol=1e-11 * np.max(test_data["rect"]),
     )

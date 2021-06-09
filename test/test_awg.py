@@ -57,7 +57,11 @@ def test_AWG_phase_shift() -> None:
     correct_signal = np.cos(2 * np.pi * lo_freq_q1 * sigs["d1"]["ts"] + phase * np.pi)
     print(sigs["d1"]["values"])
     print(generator.gen_stacked_signals)
-    np.testing.assert_allclose(sigs["d1"]["values"].numpy(), correct_signal)
+    np.testing.assert_allclose(
+        sigs["d1"]["values"].numpy(),
+        correct_signal,
+        atol=1e-9 * np.max(sigs["d1"]["values"]),
+    )
 
 
 test_AWG_phase_shift()
