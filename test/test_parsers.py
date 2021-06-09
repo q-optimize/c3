@@ -18,6 +18,13 @@ pmap.read_config("test/instructions.cfg")
 
 
 @pytest.mark.unit
+def test_name_collision() -> None:
+    broken_model = Model()
+    with pytest.raises(KeyError):
+        broken_model.read_config("test/test_model_breaking.cfg")
+
+
+@pytest.mark.unit
 def test_subsystems() -> None:
     assert list(model.subsystems.keys()) == ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"]
 
