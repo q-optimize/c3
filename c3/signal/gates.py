@@ -133,7 +133,6 @@ class Instruction:
         out_dict.pop("t_start")
         out_dict.pop("t_end")
         out_dict["gate_length"] = self.t_end - self.t_start
-        print(out_dict.keys())
         out_dict["drive_channels"] = out_dict.pop("comps")
         return out_dict
 

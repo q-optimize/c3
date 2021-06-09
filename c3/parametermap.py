@@ -105,7 +105,8 @@ class ParameterMap:
                         for par, val in props["params"].items():
                             instr.comps[drive_chan][comp].params[par].set_value(val)
             else:
-                instr = Instruction()
+                # TODO: initialize directly by using the constructor.
+                instr = Instruction(ideal=[[1]])  # Set ideal to mute warning
                 instr.from_dict(gate, name=key)
             self.instructions[key] = instr
             self.__initialize_parameters()
