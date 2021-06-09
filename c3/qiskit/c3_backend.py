@@ -368,7 +368,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # setup C3 Experiment
         exp = Experiment()
-        exp.quick_setup(self._device_config)
+        exp.load_quick_setup(self._device_config)
         pmap = exp.pmap
         instructions = pmap.instructions
 

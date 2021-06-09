@@ -22,7 +22,7 @@ from c3.c3objs import hjson_encode, hjson_decode
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
-from c3.system.model import Model
+from c3.model import Model
 from c3.utils.tf_utils import (
     tf_batch_propagate,
     tf_propagation_lind,
@@ -81,9 +81,9 @@ class Experiment:
 
         self.created_by = config
 
-    def quick_setup(self, filepath: str) -> None:
+    def load_quick_setup(self, filepath: str) -> None:
         """
-        Load a quick setup file and create all necessary components.
+        Load a quick setup file.
 
         Parameters
         ----------
@@ -93,7 +93,18 @@ class Experiment:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
+        self.quick_setup(cfg)
 
+    def quick_setup(self, cfg) -> None:
+        """
+        Load a quick setup cfg and create all necessary components.
+
+        Parameters
+        ----------
+        cfg : Dict
+            Configuration options
+
+        """
         model = Model()
         model.read_config(cfg["model"])
         gen = Generator()

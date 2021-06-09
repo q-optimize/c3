@@ -33,22 +33,23 @@ class C2(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         eval_func,
         pmap,
         algorithm,
+        dir_path=None,
+        exp_type=None,
         exp_right=None,
         options={},
         run_name=None,
     ):
         super().__init__(pmap=pmap, algorithm=algorithm)
-        self.eval_func = eval_func
+        self.set_eval_func(eval_func, exp_type)
         self.options = options
         self.exp_right = exp_right
         self.__dir_path = dir_path
         self.__run_name = run_name
 
-    def set_eval_func(self, eval_func):
+    def set_eval_func(self, eval_func, exp_type):
         """
         Setter for the eval function.
 
@@ -58,6 +59,7 @@ class C2(Optimizer):
             Function to be evaluated
 
         """
+        # TODO: Implement shell for experiment communication
         self.eval_func = eval_func
 
     def log_setup(self) -> None:
@@ -72,11 +74,10 @@ class C2(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = self.eval_func.__name__ + self.algorithm.__name__
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "calibration.log"
 
         # We create a copy of the source code of the evaluation function in the log

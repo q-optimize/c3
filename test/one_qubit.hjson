@@ -1,0 +1,213 @@
+{
+  instructions:
+  {
+    "rx90p":{
+      name: "rx90p",
+      targets: [0],
+      gate_length: 8e-9,
+      drive_channels:{
+        Q1:{
+          cosine:{
+            c3type: Envelope
+            shape: cosine
+            params: {
+              amp: {
+                value:0.05,
+                min_val:0.01,
+                max_val:0.6,
+                unit:V
+                },
+              delta: {
+                  value:0,
+                  min_val:-0.1,
+                  max_val:0.6,
+                  unit:""
+                  },
+              freq_offset:{
+                value : 0e6,
+                unit : "Hz 2pi",
+                min_val : -50e6,
+                max_val : 50e6
+              }
+              t_final:{
+                value : 8e-9,
+                unit : s,
+                min_val : 1e-9,
+                max_val : 10e-9
+              }
+            }
+          },
+          carrier: {
+            c3type: Carrier
+            params: {
+              freq: {
+                value : 3.81966664926965e9,
+                unit : "Hz 2pi",
+                min_val : 2.5e9,
+                max_val : 5.5e9
+              },
+              framechange:
+              {
+                value: 0
+                min_val: -3
+                max_val: 3
+                unit: pi
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  model:
+  {
+    Qubits:
+    {
+      Q1:
+      {
+        c3type: Qubit
+        params:
+        {
+          freq:
+          {
+            value: 3.82e9
+            min_val: 3e9
+            max_val: 8e9
+            unit: "Hz 2pi"
+            symbol: \omega_1
+          }
+          anhar:
+          {
+            value: -229e6
+            min_val: -380000000.0
+            max_val: -120000000.00000003
+            unit: "Hz 2pi"
+            symbol: \alpha_1
+          }
+          t1:
+          {
+            value: 77e-6
+            min_val: 5e-06
+            max_val: 9e-05
+            unit: s
+            symbol: T_1
+          }
+          t2star:
+          {
+            value: 49e-6
+            min_val: 1e-05
+            max_val: 9e-05
+            unit: s
+            symbol: \T_2^*
+          }
+          temp:
+          {
+            value: 0.06
+            min_val: 0.0
+            max_val: 0.12
+            unit: K
+            symbol: \alpha
+          }
+        }
+        hilbert_dim: 3
+      }
+    }
+    Couplings:
+    {
+      Q1:
+      {
+        c3type: Drive
+        params: {}
+        hamiltonian_func: x_drive
+        connected:
+        [
+          Q1
+        ]
+      }
+    }
+  }
+  generator:
+  {
+    Devices:
+    {
+      lo:
+      {
+        c3type: LO
+        inputs: 0
+        outputs: 1
+        resolution: 100000000000.0
+      }
+      awg:
+      {
+        c3type: AWG
+        inputs: 0
+        outputs: 1
+        resolution: 2400000000.0
+        options: "drag_2"
+      }
+      mixer:
+      {
+        c3type: Mixer
+        inputs: 2
+        outputs: 1
+        resolution: 0
+      }
+      dac:
+      {
+        c3type: DigitalToAnalog
+        inputs: 1
+        outputs: 1
+        resolution: 100000000000.0
+      }
+      resp:
+      {
+        c3type: Response
+        inputs: 1
+        outputs: 1
+        params:
+        {
+          rise_time:
+          {
+            value: 3e-10
+            min_val: 5e-11
+            max_val: 6e-10
+            unit: s
+            symbol: \alpha
+          }
+        }
+        resolution: 100000000000.0
+      }
+      v2hz:
+      {
+        c3type: VoltsToHertz
+        inputs: 1
+        outputs: 1
+        params:
+        {
+          V_to_Hz:
+          {
+            value: 1000000000.0
+            min_val: 900000000.0
+            max_val: 1100000000.0
+            unit: "Hz 2pi/V"
+            symbol: \alpha
+          }
+        }
+        resolution: 0
+      }
+    }
+    Chains:
+    {
+      Q1:
+      [
+        lo
+        awg
+        dac
+        resp
+        mixer
+        v2hz
+      ]
+    }
+  }
+}

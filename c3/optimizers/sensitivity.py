@@ -1,13 +1,16 @@
 """Object that deals with the sensitivity test."""
 
 import os
-import shutil
 import pickle
 import itertools
 import numpy as np
 import tensorflow as tf
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
+
+from c3.libraries.algorithms import algorithms as alg_lib
+from c3.libraries.estimators import estimators as est_lib
+from c3.libraries.sampling import sampling as samp_lib
 from c3.libraries.estimators import (
     g_LL_prime_combined,
     g_LL_prime,
@@ -44,12 +47,13 @@ class SET(Optimizer):
 
     def __init__(
         self,
-        dir_path,
-        fom,
+        estimator,
         estimator_list,
         sampling,
         batch_sizes,
         pmap,
+        datafiles,
+        dir_path=None,
         state_labels=None,
         sweep_map=None,
         sweep_bounds=None,
@@ -59,18 +63,51 @@ class SET(Optimizer):
         options={},
     ):
         """Initiliase."""
+        if type(algorithm) is str:
+            try:
+                algorithm = alg_lib[algorithm]
+            except KeyError:
+                raise KeyError("C3:ERROR:Unknown algorithm.")
+        if type(sampling) is str:
+            try:
+                sampling = samp_lib[sampling]
+            except KeyError:
+                raise KeyError("C3:ERROR:Unknown sampling method.")
         super().__init__(pmap=pmap, algorithm=algorithm)
-        self.fom = fom
-        self.estimator_list = estimator_list
+
+        if type(estimator) is str:
+            try:
+                estimator = est_lib[estimator]
+            except KeyError:
+                raise KeyError("C3:ERROR:Unknown estimator.")
+        self.fom = estimator
+
+        for est in estimator_list:
+            if type(est) is str:
+                try:
+                    self.estimator_list.append(est_lib[est])
+                except KeyError:
+                    print(
+                        f"C3:WARNING: No estimator named '{est}' found."
+                        " Skipping this estimator."
+                    )
+            else:
+                self.estimator_list.append(est)
+
+        self.learn_data = {}
+        self.read_data(datafiles)
         self.sampling = sampling
         self.batch_sizes = batch_sizes
-        self.state_labels = state_labels
+
+        self.state_labels = {"all": None}
+        for target, labels in state_labels.items():
+            self.state_labels[target] = [tuple(lab) for lab in labels]
+
         self.sweep_map = sweep_map
         self.opt_map = [sweep_map[0]]
         self.sweep_bounds = sweep_bounds
         self.options = options
         self.inverse = False
-        self.learn_data = {}
         self.same_dyn = same_dyn
         self.__dir_path = dir_path
         self.__run_name = run_name
@@ -87,7 +124,6 @@ class SET(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = "-".join(
@@ -98,9 +134,8 @@ class SET(Optimizer):
                     self.fom.__name__,
                 ]
             )
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "sensitivity.log"
-        shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles):
         # TODO move common methods of sensitivity and c3 to super class
@@ -112,7 +147,6 @@ class SET(Optimizer):
         datafiles : list of str
             List of paths for files that contain learning data.
         """
-        self.__real_model_folder = os.path.dirname(datafiles.values()[0])
         for target, datafile in datafiles.items():
             with open(datafile, "rb+") as file:
                 self.learn_data[target] = pickle.load(file)

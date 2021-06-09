@@ -11,7 +11,7 @@ from c3.generator.generator import Generator
 from c3.libraries.envelopes import envelopes
 from c3.parametermap import ParameterMap
 from c3.signal import gates, pulse
-from c3.system.model import Model
+from c3.model import Model
 import numpy as np
 import pytest
 

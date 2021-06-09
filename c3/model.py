@@ -8,7 +8,7 @@ import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 from c3.c3objs import hjson_encode, hjson_decode
-from c3.system.chip import device_lib, Drive
+from c3.libraries.chip import device_lib, Drive
 from typing import List, Tuple
 
 

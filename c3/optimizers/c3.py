@@ -4,13 +4,16 @@ import os
 import time
 import hjson
 import pickle
-import itertools
 import numpy as np
 import tensorflow as tf
 from typing import List, Dict
 from c3.c3objs import hjson_decode
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
+
+from c3.libraries.algorithms import algorithms as alg_lib
+from c3.libraries.estimators import estimators as est_lib
+from c3.libraries.sampling import sampling as samp_lib
 from c3.libraries.estimators import (
     dv_g_LL_prime,
     g_LL_prime_combined,
@@ -49,10 +52,12 @@ class C3(Optimizer):
 
     def __init__(
         self,
-        dir_path,
         sampling,
         batch_sizes,
         pmap,
+        datafiles,
+        dir_path=None,
+        estimator=None,
         seqs_per_point=None,
         state_labels=None,
         callback_foms=[],
@@ -61,15 +66,53 @@ class C3(Optimizer):
         options={},
     ):
         """Initiliase."""
+        # Consistency checks
+
+        if estimator:
+            raise Exception(
+                "C3:ERROR: Setting estimators is currently not supported."
+                "Only the standard logarithmic likelihood can be used at the moment."
+                "Please remove this setting."
+            )
+        if type(algorithm) is str:
+            try:
+                algorithm = alg_lib[algorithm]
+            except KeyError:
+                raise KeyError("C3:ERROR:Unknown algorithm.")
+        if type(sampling) is str:
+            try:
+                sampling = samp_lib[sampling]
+            except KeyError:
+                raise KeyError("C3:ERROR:Unknown sampling method.")
+
         super().__init__(pmap=pmap, algorithm=algorithm)
+
+        self.state_labels = {"all": None}
+        for target, labels in state_labels.items():
+            self.state_labels[target] = [tuple(lab) for lab in labels]
+
+        self.callback_foms = []
+        for cb_fom in callback_foms:
+            if type(cb_fom) is str:
+                try:
+                    self.callback_foms.append(est_lib[cb_fom])
+                except KeyError:
+                    print(
+                        f"C3:WARNING: No estimator named '{cb_fom}' found."
+                        " Skipping this callback estimator."
+                    )
+            else:
+                self.callback_foms.append(cb_fom)
+
+        self.inverse = False
+        self.options = options
+
+        self.learn_data = {}
+        self.read_data(datafiles)
         self.sampling = sampling
         self.batch_sizes = batch_sizes
         self.seqs_per_point = seqs_per_point
-        self.state_labels = state_labels
-        self.callback_foms = callback_foms
-        self.inverse = False
-        self.options = options
-        self.learn_data = {}
+
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
@@ -86,13 +129,12 @@ class C3(Optimizer):
             User specified name for the run
 
         """
-        dir_path = os.path.abspath(self.__dir_path)
         run_name = self.__run_name
         if run_name is None:
             run_name = "-".join(
                 [self.algorithm.__name__, self.sampling.__name__, self.fom.__name__]
             )
-        self.logdir = log_setup(dir_path, run_name)
+        self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "model_learn.log"
         # shutil.copy2(self.__real_model_folder, self.logdir)
 
@@ -192,7 +234,7 @@ class C3(Optimizer):
         self.pmap.set_parameters(gateset_params, self.gateset_opt_map)
         # We find the unique gates used in the sequence and compute
         # only those.
-        self.exp.opt_gates = list(set(itertools.chain.from_iterable(sequences)))
+        self.exp.set_opt_gates_seq(sequences)
         self.exp.compute_propagators()
         pops = self.exp.evaluate(sequences)
         sim_vals, pops = self.exp.process(

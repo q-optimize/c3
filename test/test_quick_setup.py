@@ -6,7 +6,7 @@ import pytest
 from c3.experiment import Experiment
 
 exp = Experiment()
-exp.quick_setup("test/quickstart.hjson")
+exp.load_quick_setup("test/quickstart.hjson")
 pmap = exp.pmap
 model = pmap.model
 generator = pmap.generator

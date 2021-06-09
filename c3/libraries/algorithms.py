@@ -6,7 +6,7 @@ optional arguments.
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
-
+import warnings
 from typing import Callable
 import adaptive
 import copy
@@ -280,16 +280,28 @@ def tf_sgd(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
+
+    if "maxfun" in options.keys():
+        raise KeyError("Tensorflow Optimizers require a maxiters")
+
+    iters = options["maxiters"]  # TF based optimizers use algo iters not fevals
 
     var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
 
-    opt_sgd = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
+    learning_rate = 0.1
+    momentum = 0.9
 
-    for step in range(iters):
+    if "learning_rate" in options.keys():
+        learning_rate = options["learning_rate"]
+    if "momentum" in options.keys():
+        momentum = options["momentum"]
+
+    opt_sgd = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=momentum)
+
+    for _ in range(iters):
         step_count = opt_sgd.minimize(tf_fun, [var])
         print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
 
@@ -326,6 +338,9 @@ def tf_adam(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
     var = tf.Variable(x_init)
 
@@ -370,6 +385,9 @@ def tf_rmsprop(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
 
     var = tf.Variable(x_init)
@@ -418,6 +436,9 @@ def tf_adadelta(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
+
     iters = options["maxfun"]
 
     var = tf.Variable(x_init)

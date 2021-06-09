@@ -2,6 +2,8 @@
 integration testing module for C1 optimization through two-qubits example
 """
 
+import os
+import tempfile
 import copy
 import pickle
 import numpy as np
@@ -12,15 +14,15 @@ from numpy.testing import assert_array_almost_equal as almost_equal
 from c3.c3objs import Quantity as Qty
 from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
-from c3.system.model import Model as Mdl
+from c3.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
 
 # Building blocks
 import c3.generator.devices as devices
-import c3.system.chip as chip
+import c3.libraries.chip as chip
 import c3.signal.pulse as pulse
 import c3.signal.gates as gates
-import c3.system.tasks as tasks
+import c3.libraries.tasks as tasks
 
 # Libs and helpers
 import c3.libraries.algorithms as algorithms
@@ -30,6 +32,7 @@ import c3.libraries.envelopes as envelopes
 
 from c3.optimizers.c1 import C1
 
+logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -307,12 +310,12 @@ gateset_opt_map = [
 pmap.set_opt_map(gateset_opt_map)
 
 opt = C1(
-    dir_path="/tmp/c3log/",
+    dir_path=logdir,
     fid_func=fidelities.average_infid_set,
     fid_subspace=["Q1", "Q2"],
     pmap=pmap,
     algorithm=algorithms.tf_sgd,
-    options={"maxfun": 2},
+    options={"maxiters": 5},
     run_name="better_X90_tf_sgd",
 )
 
@@ -360,9 +363,29 @@ def test_optim_tf_sgd() -> None:
 @pytest.mark.optimizers
 @pytest.mark.slow
 @pytest.mark.integration
+@pytest.mark.tensorflow
+def test_bad_tf_sgd() -> None:
+    bad_tf_opt = C1(
+        dir_path=logdir,
+        fid_func=fidelities.average_infid_set,
+        fid_subspace=["Q1", "Q2"],
+        pmap=pmap,
+        algorithm=algorithms.tf_sgd,
+        options={"maxfun": 2},
+        run_name="better_X90_bad_tf",
+    )
+    bad_tf_opt.set_exp(exp)
+
+    with pytest.raises(KeyError):
+        bad_tf_opt.optimize_controls()
+
+
+@pytest.mark.optimizers
+@pytest.mark.slow
+@pytest.mark.integration
 def test_optim_lbfgs() -> None:
     lbfgs_opt = C1(
-        dir_path="/tmp/c3log/",
+        dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
         pmap=pmap,

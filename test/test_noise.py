@@ -1,3 +1,5 @@
+import os
+import tempfile
 import pytest
 import pickle
 import numpy as np
@@ -7,12 +9,12 @@ from c3.c3objs import Quantity as Qty
 from c3.optimizers.optimizer import TensorBoardLogger
 from c3.parametermap import ParameterMap as Pmap
 from c3.experiment import Experiment as Exp
-from c3.system.model import Model as Mdl
+from c3.model import Model as Mdl
 from c3.generator.generator import Generator as Gnr
 
 # Building blocks
 import c3.generator.devices as devices
-import c3.system.chip as chip
+import c3.libraries.chip as chip
 import c3.signal.pulse as pulse
 import c3.signal.gates as gates
 
@@ -23,6 +25,8 @@ import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
 
 from c3.optimizers.c1_robust import C1_robust
+
+logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -231,7 +235,7 @@ pmap.set_opt_map(gateset_opt_map)
 def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [("dc_offset", "offset_amp")]]]
     opt = C1_robust(
-        dir_path="/tmp/c3log/",
+        dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1"],
         pmap=pmap,
