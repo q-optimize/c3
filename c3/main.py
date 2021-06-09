@@ -32,19 +32,6 @@ def run_cfg(cfg, opt_config_filename, debug=False):
         setup the system and optimization problem.
     debug : bool, optional
         Skip running the actual optimization, by default False
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("master_config")
-    args = parser.parse_args()
-
-    opt_config = args.master_config
-    with open(opt_config, "r") as cfg_file:
-        try:
-            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
-        except hjson.decoder.HjsonDecodeError:
-            raise Exception(f"Config {opt_config} is invalid.")
-
-    optim_type = cfg["optim_type"]
     """
     optim_type = cfg.pop("optim_type")
     optim_lib = {
