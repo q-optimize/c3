@@ -33,7 +33,7 @@ res = np.cos(theta) * Id + 1j * np.sin(theta) * P
 
 @pytest.mark.unit
 def test_tf_expm() -> None:
-    terms = 25
+    terms = 100
     almost_equal(tf_expm(1j * rot, terms), res)
 
 
