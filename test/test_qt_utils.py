@@ -3,7 +3,7 @@ Test Module for qt_utils
 """
 import numpy as np
 import pytest
-from c3.utils.qt_utils import basis, xy_basis, get_basis_matrices
+from c3.utils.qt_utils import basis, xy_basis, get_basis_matrices, rotation, np_kron_n
 from numpy.testing import assert_array_almost_equal as almost_equal
 
 
@@ -59,3 +59,35 @@ def test_basis_matrices() -> None:
         # normalisation
         for a in matrices:
             almost_equal(np.linalg.norm(np.multiply(a, a)), 1)
+
+
+@pytest.mark.unit
+def test_rotation() -> None:
+    """Testing properties of general rotation matrix"""
+    phase = 2 * np.pi * np.random.random()
+    xyz = np.random.random(3)
+    xyz /= np.linalg.norm(xyz)
+    matrix = rotation(phase, xyz)
+
+    almost_equal(np.trace(matrix), 2 * np.cos(0.5 * phase))
+    almost_equal(np.linalg.det(matrix), 1)
+
+
+@pytest.mark.unit
+def test_np_kron_n() -> None:
+    """Testing Kronecker product"""
+    for dim in [3, 5, 10]:
+        A = np.random.rand(dim, dim)
+        B = np.random.rand(dim, dim)
+        C = np.random.rand(dim, dim)
+        D = np.random.rand(dim, dim)
+
+        # associativity and mixed product
+        almost_equal(np_kron_n([A, B + C]), np_kron_n([A, B]) + np_kron_n([A, C]))
+        almost_equal(np_kron_n([A, B]) * np_kron_n([C, D]), np_kron_n([A * C, B * D]))
+        # trace and determinant
+        almost_equal(np.trace(np_kron_n([A, B])), np.trace(A) * np.trace(B))
+        almost_equal(
+            np.linalg.det(np_kron_n([A, B])),
+            np.linalg.det(A) ** dim * np.linalg.det(B) ** dim,
+        )
