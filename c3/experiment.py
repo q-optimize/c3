@@ -23,12 +23,15 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.model import Model
 from c3.utils.tf_utils import (
-    tf_batch_propagate,
-    tf_propagation_lind,
     tf_matmul_left,
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
+)
+
+from c3.libraries.propagation import (
+    tf_batch_propagate,
+    tf_propagation_lind,
 )
 from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
@@ -309,7 +312,7 @@ class Experiment:
         populations_final = []
         populations_no_rescale = []
         for pops in populations:
-            # TODO: Loop over all tasks in a general fashion
+            # TODO: Loop over all model.tasks in a general fashion
             # TODO: Selecting states by label in the case of computational space
             if "conf_matrix" in model.tasks:
                 pops = model.tasks["conf_matrix"].confuse(pops)

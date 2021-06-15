@@ -19,8 +19,12 @@ from c3.utils.tf_utils import (
     tf_average_fidelity,
     tf_superoper_average_fidelity,
     tf_state_to_dm,
+)
+
+from c3.libraries.propagation import (
     evaluate_sequences,
 )
+
 from c3.utils.qt_utils import (
     basis,
     perfect_cliffords,
