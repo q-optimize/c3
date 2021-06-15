@@ -12,10 +12,10 @@ def test_basis() -> None:
     """Testing orthonormality of basis vectors."""
     for dim in [3, 5, 10, 100]:
         pairs = [(i, j) for i in range(dim) for j in range(dim)]
-        for p in pairs:
-            vi = basis(dim, p[0])
-            vj = basis(dim, p[1])
-            almost_equal(vi.T @ vj, 1 if p[0] == p[1] else 0)
+        for (i, j) in pairs:
+            vi = basis(dim, i)
+            vj = basis(dim, j)
+            almost_equal(vi.T @ vj, 1 if i == j else 0)
 
 
 @pytest.mark.unit
@@ -32,6 +32,18 @@ def test_xy_basis() -> None:
             almost_equal(np.linalg.norm(vi_m), 1)
             almost_equal(np.vdot(vi_p.T, vi_m), 0)
 
+        # overlap
+        pairs = [(a, b) for a in names for b in names if b is not a]
+        for (a, b) in pairs:
+            va_p = xy_basis(dim, a + "p")
+            va_m = xy_basis(dim, a + "m")
+            vb_p = xy_basis(dim, b + "p")
+            vb_m = xy_basis(dim, b + "m")
+            almost_equal(np.linalg.norm(np.vdot(va_p.T, vb_p)), 1.0 / np.sqrt(2))
+            almost_equal(np.linalg.norm(np.vdot(va_p.T, vb_m)), 1.0 / np.sqrt(2))
+            almost_equal(np.linalg.norm(np.vdot(va_m.T, vb_p)), 1.0 / np.sqrt(2))
+            almost_equal(np.linalg.norm(np.vdot(va_m.T, vb_m)), 1.0 / np.sqrt(2))
+
 
 @pytest.mark.unit
 def test_basis_matrices() -> None:
@@ -41,8 +53,8 @@ def test_basis_matrices() -> None:
 
         # orthogonality
         pairs = [(a, b) for a in matrices for b in matrices if b is not a]
-        for p in pairs:
-            almost_equal(np.linalg.norm(np.multiply(p[0], p[1])), 0)
+        for (a, b) in pairs:
+            almost_equal(np.linalg.norm(np.multiply(a, b)), 0)
 
         # normalisation
         for a in matrices:
