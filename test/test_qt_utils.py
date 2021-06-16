@@ -3,7 +3,17 @@ Test Module for qt_utils
 """
 import numpy as np
 import pytest
-from c3.utils.qt_utils import basis, xy_basis, get_basis_matrices, rotation, np_kron_n
+from c3.utils.qt_utils import (
+    basis,
+    xy_basis,
+    get_basis_matrices,
+    rotation,
+    np_kron_n,
+    kron_ids,
+    projector,
+    pad_matrix,
+    perfect_parametric_gate,
+)
 from numpy.testing import assert_array_almost_equal as almost_equal
 
 
@@ -77,10 +87,7 @@ def test_rotation() -> None:
 def test_np_kron_n() -> None:
     """Testing Kronecker product"""
     for dim in [3, 5, 10]:
-        A = np.random.rand(dim, dim)
-        B = np.random.rand(dim, dim)
-        C = np.random.rand(dim, dim)
-        D = np.random.rand(dim, dim)
+        (A, B, C, D) = [np.random.rand(dim, dim) for _ in range(4)]
 
         # associativity and mixed product
         almost_equal(np_kron_n([A, B + C]), np_kron_n([A, B]) + np_kron_n([A, C]))
@@ -91,3 +98,77 @@ def test_np_kron_n() -> None:
             np.linalg.det(np_kron_n([A, B])),
             np.linalg.det(A) ** dim * np.linalg.det(B) ** dim,
         )
+
+
+@pytest.mark.unit
+def test_kron_ids() -> None:
+    """Testing Kronecker product with identities"""
+    # create Kronecker product for some random dimensions and indices
+    dims = np.random.randint(2, 10, 3)
+    indices = np.where(np.random.rand(len(dims)) > 0.5)[0]
+    remaining_indices = np.delete(np.arange(len(dims)), indices)
+    matrices = [np.random.rand(dim, dim) for dim in dims[indices]]
+    result = kron_ids(dims, indices, matrices)
+
+    # expected dimensions
+    assert result.shape[0] == result.shape[1]
+    assert result.shape[0], dims.prod()
+
+    # trace
+    traces = np.array([np.trace(X) for X in matrices])
+    almost_equal(np.trace(result), traces.prod() * np.prod(dims[remaining_indices]))
+
+
+@pytest.mark.unit
+def test_projector() -> None:
+    """Testing subspace projection matrix"""
+    # create projector for some random dimensions and indices
+    dims = np.random.randint(2, 10, 5)
+    indices = np.where(np.random.rand(len(dims)) > 0.5)[0]
+    result = projector(dims, indices)
+
+    # check expected dimensions
+    assert result.shape[0], dims.prod()
+    expected_dims = np.array([2] * len(indices) + [1] * (len(dims) - len(indices)))
+    assert result.shape[1], expected_dims.prod()
+
+
+@pytest.mark.unit
+def test_pad_matrix() -> None:
+    """Testing padding of matrices"""
+    for dim in [3, 5, 10]:
+        M = np.random.rand(dim, dim)
+        padding_dim = np.random.randint(1, 10)
+
+        # padding with unity
+        padded_ones = pad_matrix(M, padding_dim, "fulluni")
+        assert padded_ones.shape[0] == padded_ones.shape[1]
+        almost_equal(padded_ones.shape[0], M.shape[0] + padding_dim)
+        almost_equal(np.linalg.det(padded_ones), np.linalg.det(M))
+        almost_equal(np.trace(padded_ones), np.trace(M) + padding_dim)
+
+        # padding with zeros
+        padded_zeros = pad_matrix(M, padding_dim, "wzeros")
+        assert padded_zeros.shape[0] == padded_zeros.shape[1]
+        almost_equal(padded_ones.shape[0], M.shape[0] + padding_dim)
+        almost_equal(np.linalg.det(padded_zeros), 0)
+        almost_equal(np.trace(padded_zeros), np.trace(M))
+
+
+@pytest.mark.unit
+def test_perfect_parametric_gate() -> None:
+    possible_gates = ["X", "Y", "Z", "Id"]
+    num_gates = np.random.randint(1, 5)
+    gates_str = ":".join(
+        np.take(possible_gates, np.random.randint(0, len(possible_gates), num_gates))
+    )
+    dims = np.random.randint(2, 5, num_gates)
+    angle = 2 * np.pi * np.random.rand()
+    result = perfect_parametric_gate(gates_str, angle, dims)
+
+    # dimension
+    assert result.shape[0] == result.shape[1]
+    assert result.shape[0] == dims.prod()
+
+    # unitarity
+    almost_equal(result * np.matrix(result).H, np.eye(dims.prod()))
