@@ -23,6 +23,12 @@ from numpy.testing import assert_array_almost_equal as almost_equal
 from c3.libraries.constants import GATES
 
 
+@pytest.fixture()
+def test_dimensions() -> list:
+    """Functions that allow arbitrary numbers of dimensions will be tested for all dimensions in this list."""
+    return [3, 5, 10, 50]
+
+
 @pytest.mark.unit
 def test_pauli_basis() -> None:
     """Testing dimensions of Pauli basis"""
@@ -33,9 +39,9 @@ def test_pauli_basis() -> None:
 
 
 @pytest.mark.unit
-def test_basis() -> None:
+def test_basis(test_dimensions) -> None:
     """Testing orthonormality of basis vectors."""
-    for dim in [3, 5, 10, 100]:
+    for dim in test_dimensions:
         pairs = [(i, j) for i in range(dim) for j in range(dim)]
         for (i, j) in pairs:
             vi = basis(dim, i)
@@ -44,11 +50,11 @@ def test_basis() -> None:
 
 
 @pytest.mark.unit
-def test_xy_basis() -> None:
+def test_xy_basis(test_dimensions) -> None:
     """Testing properties of basis vectors."""
     names = ["x", "y", "z"]
 
-    for dim in [3, 5, 10, 100]:
+    for dim in test_dimensions:
         # orthonormality of +/- vectors
         for i in names:
             vi_p = xy_basis(dim, i + "p")
@@ -71,9 +77,9 @@ def test_xy_basis() -> None:
 
 
 @pytest.mark.unit
-def test_basis_matrices() -> None:
+def test_basis_matrices(test_dimensions) -> None:
     """Testing orthogonality and normalisation of basis matrices."""
-    for dim in [3, 5, 10]:
+    for dim in test_dimensions[:3]:
         matrices = get_basis_matrices(dim)
 
         # orthogonality
@@ -99,9 +105,9 @@ def test_rotation() -> None:
 
 
 @pytest.mark.unit
-def test_np_kron_n() -> None:
+def test_np_kron_n(test_dimensions) -> None:
     """Testing properties of Kronecker product"""
-    for dim in [3, 5, 10]:
+    for dim in test_dimensions:
         (A, B, C, D) = [np.random.rand(dim, dim) for _ in range(4)]
 
         # associativity and mixed product
@@ -161,9 +167,9 @@ def test_projector() -> None:
 
 
 @pytest.mark.unit
-def test_pad_matrix() -> None:
+def test_pad_matrix(test_dimensions) -> None:
     """Testing shape, trace, and determinant of matrices after padding"""
-    for dim in [3, 5, 10]:
+    for dim in test_dimensions:
         M = np.random.rand(dim, dim)
         padding_dim = np.random.randint(1, 10)
 
