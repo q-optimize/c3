@@ -219,3 +219,10 @@ def get_test_signal() -> Dict:
         "TC1": {"values": tf.linspace(0, 100, 101)},
         "TC2": {"values": tf.linspace(100, 200, 101)},
     }
+
+
+@pytest.fixture()
+def get_test_dimensions() -> list:
+    """Functions in qt_utils that allow arbitrary numbers of dimensions will be tested for all dimensions in this
+    list."""
+    return [3, 5, 10, 50]
