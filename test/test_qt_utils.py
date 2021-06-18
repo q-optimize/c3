@@ -4,17 +4,32 @@ Test Module for qt_utils
 import numpy as np
 import pytest
 from c3.utils.qt_utils import (
+    pauli_basis,
     basis,
     xy_basis,
     get_basis_matrices,
     rotation,
     np_kron_n,
+    hilbert_space_kron,
     kron_ids,
     projector,
     pad_matrix,
     perfect_parametric_gate,
+    T1_sequence,
+    ramsey_sequence,
+    ramsey_echo_sequence,
 )
 from numpy.testing import assert_array_almost_equal as almost_equal
+from c3.libraries.constants import GATES
+
+
+@pytest.mark.unit
+def test_pauli_basis() -> None:
+    """Testing dimensions of Pauli basis"""
+    dims = np.random.randint(2, 5, np.random.randint(1, 5))
+    result = pauli_basis(dims)
+    assert result.shape[0] == result.shape[1]
+    assert result.shape[0] == dims.prod() ** 2
 
 
 @pytest.mark.unit
@@ -57,7 +72,7 @@ def test_xy_basis() -> None:
 
 @pytest.mark.unit
 def test_basis_matrices() -> None:
-    """Testing properties of basis matrices."""
+    """Testing orthogonality and normalisation of basis matrices."""
     for dim in [3, 5, 10]:
         matrices = get_basis_matrices(dim)
 
@@ -73,7 +88,7 @@ def test_basis_matrices() -> None:
 
 @pytest.mark.unit
 def test_rotation() -> None:
-    """Testing properties of general rotation matrix"""
+    """Testing trace and determinant of general rotation matrix"""
     phase = 2 * np.pi * np.random.random()
     xyz = np.random.random(3)
     xyz /= np.linalg.norm(xyz)
@@ -85,7 +100,7 @@ def test_rotation() -> None:
 
 @pytest.mark.unit
 def test_np_kron_n() -> None:
-    """Testing Kronecker product"""
+    """Testing properties of Kronecker product"""
     for dim in [3, 5, 10]:
         (A, B, C, D) = [np.random.rand(dim, dim) for _ in range(4)]
 
@@ -101,6 +116,18 @@ def test_np_kron_n() -> None:
 
 
 @pytest.mark.unit
+def test_hilbert_space_kron() -> None:
+    """Testing dimensions of Kronecker product"""
+    dims = np.random.randint(1, 10, 5)
+    index = np.random.randint(0, len(dims))
+    op_size = dims[index]
+
+    result = hilbert_space_kron(np.random.rand(op_size, op_size), index, dims)
+    assert result.shape[0] == result.shape[1]
+    assert result.shape[0] == dims.prod()
+
+
+@pytest.mark.unit
 def test_kron_ids() -> None:
     """Testing Kronecker product with identities"""
     # create Kronecker product for some random dimensions and indices
@@ -112,7 +139,7 @@ def test_kron_ids() -> None:
 
     # expected dimensions
     assert result.shape[0] == result.shape[1]
-    assert result.shape[0], dims.prod()
+    assert result.shape[0] == dims.prod()
 
     # trace
     traces = np.array([np.trace(X) for X in matrices])
@@ -128,14 +155,14 @@ def test_projector() -> None:
     result = projector(dims, indices)
 
     # check expected dimensions
-    assert result.shape[0], dims.prod()
+    assert result.shape[0] == dims.prod()
     expected_dims = np.array([2] * len(indices) + [1] * (len(dims) - len(indices)))
-    assert result.shape[1], expected_dims.prod()
+    assert result.shape[1] == expected_dims.prod()
 
 
 @pytest.mark.unit
 def test_pad_matrix() -> None:
-    """Testing padding of matrices"""
+    """Testing shape, trace, and determinant of matrices after padding"""
     for dim in [3, 5, 10]:
         M = np.random.rand(dim, dim)
         padding_dim = np.random.randint(1, 10)
@@ -157,6 +184,7 @@ def test_pad_matrix() -> None:
 
 @pytest.mark.unit
 def test_perfect_parametric_gate() -> None:
+    """Testing shape and unitarity of the gate matrix"""
     possible_gates = ["X", "Y", "Z", "Id"]
     num_gates = np.random.randint(1, 5)
     gates_str = ":".join(
@@ -172,3 +200,24 @@ def test_perfect_parametric_gate() -> None:
 
     # unitarity
     almost_equal(result * np.matrix(result).H, np.eye(dims.prod()))
+
+
+@pytest.mark.unit
+def test_sequence_generating_functions() -> None:
+    """Testing if the output of all utility functions that generate a sequence of gates contains strings
+    from the GATES list"""
+    length = np.random.randint(1, 100)
+    target = 1
+    targetString = "[%d]" % target
+
+    functions = [
+        T1_sequence,
+        ramsey_sequence,
+        ramsey_echo_sequence,
+    ]
+    for func in functions:
+        sequence = func(length, target)
+        for gate in sequence:
+            assert type(gate) == str
+            gateWithoutTarget = gate.replace(targetString, "").lower()
+            assert gateWithoutTarget in GATES
