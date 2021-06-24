@@ -6,20 +6,28 @@ import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 
 
+task_lib = dict()
+
+
+def task_deco(cl):
+    """
+    Decorator for task classes list.
+    """
+    task_lib[str(cl.__name__)] = cl
+    return cl
+
+
 class Task(C3obj):
     # TODO BETTER NAME FOR TASK!
     """Task that is part of the measurement setup."""
 
     def __init__(
-        self,
-        name: str = " ",
-        desc: str = " ",
-        comment: str = " ",
+        self, name: str = " ", desc: str = " ", comment: str = " ", params: dict = None
     ):
-        super().__init__(name=name, desc=desc, comment=comment)
-        self.params = {}
+        super().__init__(name=name, desc=desc, comment=comment, params=params)
 
 
+@task_deco
 class InitialiseGround(Task):
     """Initialise the ground state with a given thermal distribution."""
 
@@ -29,9 +37,11 @@ class InitialiseGround(Task):
         desc: str = " ",
         comment: str = " ",
         init_temp: Quantity = None,
+        params=None,
     ):
-        super().__init__(name=name, desc=desc, comment=comment)
-        self.params["init_temp"] = init_temp
+        super().__init__(name=name, desc=desc, comment=comment, params=params)
+        if init_temp:
+            self.params["init_temp"] = init_temp
 
     def initialise(self, drift_ham, lindbladian=False, init_temp=None):
         """
@@ -78,6 +88,7 @@ class InitialiseGround(Task):
                 return state
 
 
+@task_deco
 class ConfusionMatrix(Task):
     """Allows for misclassificaiton of readout measurement."""
 
@@ -86,9 +97,10 @@ class ConfusionMatrix(Task):
         name: str = "conf_matrix",
         desc: str = " ",
         comment: str = " ",
-        **confusion_rows
+        params=None,
+        **confusion_rows,
     ):
-        super().__init__(name=name, desc=desc, comment=comment)
+        super().__init__(name=name, desc=desc, comment=comment, params=params)
         for qubit, conf_row in confusion_rows.items():
             self.params["confusion_row_" + qubit] = conf_row
 
@@ -117,6 +129,7 @@ class ConfusionMatrix(Task):
         return pops
 
 
+@task_deco
 class MeasurementRescale(Task):
     """
     Rescale the result of the measurements.
@@ -137,10 +150,13 @@ class MeasurementRescale(Task):
         comment: str = " ",
         meas_offset: Quantity = None,
         meas_scale: Quantity = None,
+        params=None,
     ):
-        super().__init__(name=name, desc=desc, comment=comment)
-        self.params["meas_offset"] = meas_offset
-        self.params["meas_scale"] = meas_scale
+        super().__init__(name=name, desc=desc, comment=comment, params=params)
+        if meas_offset:
+            self.params["meas_offset"] = meas_offset
+        if meas_scale:
+            self.params["meas_scale"] = meas_scale
 
     def rescale(self, pop1):
         """
