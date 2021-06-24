@@ -34,6 +34,10 @@ def test_couplings() -> None:
     assert list(model.couplings.keys()) == ["Q1-Q2", "Q4-Q6", "d1", "d2"]
 
 
+def test_tasks() -> None:
+    assert list(model.tasks.keys()) == ["init_ground", "conf_matrix", "meas_rescale"]
+
+
 @pytest.mark.unit
 def test_q6_freq() -> None:
     assert str(model.subsystems["Q6"].params["freq"]) == "4.600 GHz 2pi "
