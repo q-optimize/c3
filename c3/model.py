@@ -207,17 +207,18 @@ class Model:
             this_dev = device_lib[dev_type](**props)
             couplings.append(this_dev)
 
-        tasks = []
-        for name, props in cfg["Tasks"].items():
-            props.update({"name": name})
-            task_type = props.pop("c3type")
-            task = task_lib[task_type](**props)
-            tasks.append(task)
+        if "Tasks" in cfg:
+            tasks = []
+            for name, props in cfg["Tasks"].items():
+                props.update({"name": name})
+                task_type = props.pop("c3type")
+                task = task_lib[task_type](**props)
+                tasks.append(task)
+            self.set_tasks(tasks)
 
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.set_components(subsystems, couplings)
-        self.set_tasks(tasks)
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
