@@ -245,7 +245,7 @@ class C3(Optimizer):
     ) -> None:
         seqs_pp = self.seqs_per_point
         m_vals = data_set["results"][:seqs_pp]
-        m_stds = np.array(data_set["result_stds"][:seqs_pp])
+        m_stds = np.array(data_set["results_std"][:seqs_pp])
         m_shots = data_set["shots"][:seqs_pp]
         sequences = data_set["seqs"][:seqs_pp]
         with open(self.logdir + self.logname, "a") as logfile:
@@ -310,7 +310,7 @@ class C3(Optimizer):
                 count += 1
                 data_set = self.learn_from[ipar]
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = data_set["result_stds"][:seqs_pp]
+                m_stds = data_set["results_std"][:seqs_pp]
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
@@ -389,7 +389,7 @@ class C3(Optimizer):
 
                 seqs_pp = self.seqs_per_point
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = np.array(data_set["result_stds"][:seqs_pp])
+                m_stds = np.array(data_set["results_std"][:seqs_pp])
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
