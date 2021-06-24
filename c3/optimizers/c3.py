@@ -115,6 +115,7 @@ class C3(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
         """
