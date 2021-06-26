@@ -34,7 +34,14 @@ def test_couplings() -> None:
     assert list(model.couplings.keys()) == ["Q1-Q2", "Q4-Q6", "d1", "d2"]
 
 
+@pytest.mark.unit
 def test_tasks() -> None:
+    """Task creation is tested separately in the absence of Von Neumann eqn
+    """
+    model = Model()
+    model.read_config("test/test_model_spam.cfg")
+    pmap = ParameterMap(model=model, generator=gen)
+    pmap.read_config("test/instructions.cfg")
     assert list(model.tasks.keys()) == ["init_ground", "conf_matrix", "meas_rescale"]
 
 
