@@ -136,7 +136,6 @@ class C3(Optimizer):
             )
         self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "model_learn.log"
-        # shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
