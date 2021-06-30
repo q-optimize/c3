@@ -6,7 +6,6 @@ optional arguments.
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
-import warnings
 from typing import Callable
 import adaptive
 import copy
@@ -339,22 +338,7 @@ def tf_adam(
         SciPy OptimizeResult type object with final parameters
     """
     # TODO Update maxfun->maxiters, default hyperparameters and error handling
-    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
-
-    iters = options["maxfun"]
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_adam = tf.keras.optimizers.Adam(learning_rate=0.001, epsilon=0.1)
-
-    for step in range(iters):
-        step_count = opt_adam.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 def tf_rmsprop(
@@ -386,25 +370,7 @@ def tf_rmsprop(
         SciPy OptimizeResult type object with final parameters
     """
     # TODO Update maxfun->maxiters, default hyperparameters and error handling
-    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
-
-    iters = options["maxfun"]
-
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_rmsprop = tf.keras.optimizers.RMSprop(
-        learning_rate=0.1, epsilon=1e-2, centered=True
-    )
-
-    for step in range(iters):
-        step_count = opt_rmsprop.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 @algo_reg_deco
@@ -437,25 +403,7 @@ def tf_adadelta(
         SciPy OptimizeResult type object with final parameters
     """
     # TODO Update maxfun->maxiters, default hyperparameters and error handling
-    warnings.warn("The integration of this algorithm is incomplete and incorrect.")
-
-    iters = options["maxfun"]
-
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_adadelta = tf.keras.optimizers.Adadelta(
-        learning_rate=0.1, rho=0.95, epsilon=1e-2
-    )
-
-    for step in range(iters):
-        step_count = opt_adadelta.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 @algo_reg_deco
