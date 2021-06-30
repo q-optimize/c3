@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from typing import Any, Dict
+from typing import Any, Dict, Iterator, Tuple
 from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
 from c3.utils.tf_utils import (
     tf_super,
@@ -12,8 +12,31 @@ from c3.utils.tf_utils import (
 from c3.parametermap import ParameterMap
 from c3.generator.generator import Generator
 from c3.generator.devices import Crosstalk
+from c3.libraries.constants import Id, X, Y, Z
 from c3.c3objs import Quantity
 import pytest
+
+
+@pytest.fixture()
+def get_exp_problem() -> Iterator[Tuple[np.ndarray, np.ndarray]]:
+    theta = 2 * np.pi * np.random.rand(1)
+    """Testing that exponentiation methods are almost equal in the numpy sense.
+    Check that, given P = a*X+b*Y+c*Z with a, b, c random normalized numbers,
+    exp(i theta P) = cos(theta)*Id + sin(theta)*P"""
+    a = np.random.rand(1)
+    b = np.random.rand(1)
+    c = np.random.rand(1)
+    norm = np.sqrt(a ** 2 + b ** 2 + c ** 2)
+    # Normalized random coefficients
+    a = a / norm
+    b = b / norm
+    c = c / norm
+
+    P = a * X + b * Y + c * Z
+    theta = 2 * np.pi * np.random.rand(1)
+    rot = theta * P
+    res = np.cos(theta) * Id + 1j * np.sin(theta) * P
+    yield rot, res
 
 
 @pytest.fixture()
@@ -196,3 +219,10 @@ def get_test_signal() -> Dict:
         "TC1": {"values": tf.linspace(0, 100, 101)},
         "TC2": {"values": tf.linspace(100, 200, 101)},
     }
+
+
+@pytest.fixture()
+def get_test_dimensions() -> list:
+    """Functions in qt_utils that allow arbitrary numbers of dimensions will be tested for all dimensions in this
+    list."""
+    return [3, 5, 10, 50]

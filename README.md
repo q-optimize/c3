@@ -1,6 +1,6 @@
 # C3 - An integrated tool-set for Control, Calibration and Characterization
 
-[![codecov](https://codecov.io/gh/q-optimize/c3/branch/master/graph/badge.svg)](https://codecov.io/gh/q-optimize/c3)
+[![codecov](https://codecov.io/gh/q-optimize/c3/branch/dev/graph/badge.svg)](https://codecov.io/gh/q-optimize/c3)
 [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/q-optimize/c3.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/q-optimize/c3/context:python)
 <a href="https://codeclimate.com/github/q-optimize/c3/maintainability"><img src="https://api.codeclimate.com/v1/badges/a090831b106f863dc223/maintainability" /></a>
 [![Documentation Status](https://readthedocs.org/projects/c3-toolset/badge/?version=latest)](https://c3-toolset.readthedocs.io/en/latest/?badge=latest)

@@ -12,6 +12,7 @@ from qiskit.providers.models import QasmBackendConfiguration
 from qiskit.result import Result
 from qiskit.compiler import assemble
 from qiskit.qobj.qasm_qobj import QasmQobjExperiment
+from qiskit.qobj.pulse_qobj import PulseQobj
 
 from c3.experiment import Experiment
 
@@ -130,7 +131,7 @@ class C3QasmSimulator(Backend, ABC):
         if isinstance(qobj, (QuantumCircuit, list)):
             qobj = assemble(qobj, self, **backend_options)
             qobj_options = qobj.config
-        elif isinstance(qobj, qobj.PulseQobj):
+        elif isinstance(qobj, PulseQobj):
             raise QiskitError("Pulse jobs are not accepted")
         else:
             qobj_options = qobj.config

@@ -116,6 +116,7 @@ class C3(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
         """
@@ -136,7 +137,6 @@ class C3(Optimizer):
             )
         self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "model_learn.log"
-        # shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
@@ -196,10 +196,8 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + "best_point_" + self.logname, "r") as file:
-            best_params = hjson.loads(
-                file.readlines()[1], object_pairs_hook=hjson_decode
-            )["params"]
+        with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
+            best_params = hjson.load(file, object_pairs_hook=hjson_decode)["optim_status"]["params"]
         self.pmap.set_parameters(best_params)
         self.pmap.model.update_model()
         self.end_log()
@@ -247,14 +245,11 @@ class C3(Optimizer):
     ) -> None:
         seqs_pp = self.seqs_per_point
         m_vals = data_set["results"][:seqs_pp]
-        m_stds = np.array(data_set["result_stds"][:seqs_pp])
+        m_stds = np.array(data_set["results_std"][:seqs_pp])
         m_shots = data_set["shots"][:seqs_pp]
         sequences = data_set["seqs"][:seqs_pp]
         with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write(
-                f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n"
-                f"{str(self.exp.pmap)}\n"
-            )
+            logfile.write(f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n")
             logfile.write(
                 "Sequence    Simulation  Experiment  Std           Shots" "    Diff\n"
             )
@@ -312,7 +307,7 @@ class C3(Optimizer):
                 count += 1
                 data_set = self.learn_from[ipar]
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = data_set["result_stds"][:seqs_pp]
+                m_stds = data_set["results_std"][:seqs_pp]
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
@@ -391,7 +386,7 @@ class C3(Optimizer):
 
                 seqs_pp = self.seqs_per_point
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = np.array(data_set["result_stds"][:seqs_pp])
+                m_stds = np.array(data_set["results_std"][:seqs_pp])
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)

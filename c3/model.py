@@ -9,6 +9,7 @@ import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 from c3.c3objs import hjson_encode, hjson_decode
 from c3.libraries.chip import device_lib, Drive, Coupling
+from c3.libraries.tasks import task_lib
 from typing import Dict, List, Tuple, Union
 
 
@@ -207,6 +208,15 @@ class Model:
             this_dev = device_lib[dev_type](**props)
             couplings.append(this_dev)
 
+        if "Tasks" in cfg:
+            tasks = []
+            for name, props in cfg["Tasks"].items():
+                props.update({"name": name})
+                task_type = props.pop("c3type")
+                task = task_lib[task_type](**props)
+                tasks.append(task)
+            self.set_tasks(tasks)
+
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
         self.set_components(subsystems, couplings)
@@ -233,13 +243,10 @@ class Model:
         couplings = {}
         for name, coup in self.couplings.items():
             couplings[name] = coup.asdict()
-
-        cfg = {
-            "Qubits": qubits,
-            "Couplings": couplings,
-            "max_excitations": self.max_excitations,
-        }
-        return cfg
+        tasks = {}
+        for name, task in self.tasks.items():
+            tasks[name] = task.asdict()
+        return {"Qubits": qubits, "Couplings": couplings, "Tasks": tasks, "max_excitations": self.max_excitations}
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)

@@ -19,16 +19,16 @@ from c3.generator.generator import Generator as Gnr
 
 # Building blocks
 import c3.generator.devices as devices
-import c3.libraries.chip as chip
 import c3.signal.pulse as pulse
 import c3.signal.gates as gates
-import c3.libraries.tasks as tasks
 
 # Libs and helpers
 import c3.libraries.algorithms as algorithms
-import c3.libraries.hamiltonians as hamiltonians
-import c3.libraries.fidelities as fidelities
+import c3.libraries.chip as chip
 import c3.libraries.envelopes as envelopes
+import c3.libraries.fidelities as fidelities
+import c3.libraries.hamiltonians as hamiltonians
+import c3.libraries.tasks as tasks
 
 from c3.optimizers.c1 import C1
 
@@ -356,6 +356,7 @@ def test_optim_tf_sgd() -> None:
     """
     check if optimization result is below 1e-2
     """
+    opt.store_unitaries = True
     opt.optimize_controls()
     assert opt.current_best_goal < 0.01
 

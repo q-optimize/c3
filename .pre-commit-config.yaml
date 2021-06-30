@@ -16,7 +16,7 @@ repos:
       additional_dependencies: [cma==3.0.3,
                                 numpy==1.19.5, 
                                 scipy==1.5.2,
-                                tensorflow==2.4.1, 
+                                tensorflow==2.4.2, 
                                 tensorflow-probability==0.12.1, 
                                 tensorflow-estimator==2.4.0
                                 ]
