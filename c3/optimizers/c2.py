@@ -6,6 +6,7 @@ import hjson
 import pickle
 import inspect
 from c3.optimizers.optimizer import Optimizer
+from c3.libraries.algorithms import algorithms
 from c3.utils.utils import log_setup
 
 
@@ -40,6 +41,8 @@ class C2(Optimizer):
         options={},
         run_name=None,
     ):
+        if type(algorithm) is str:
+            algorithm = algorithms[algorithm]
         super().__init__(pmap=pmap, algorithm=algorithm)
         self.set_eval_func(eval_func, exp_type)
         self.options = options
