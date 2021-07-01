@@ -111,6 +111,7 @@ class Sensitivity(Optimizer):
         self.same_dyn = same_dyn
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.run = self.sensitivity  # alias for legacy method
 
     def log_setup(self, dir_path, run_name) -> None:
         """
