@@ -165,7 +165,7 @@ We first import algorithms and the correct optimizer object.
     from c3.parametermap import ParameterMap as PMap
     from c3.libraries import algorithms, envelopes
     from c3.signal import gates, pulse
-    from c3.optimizers.c2 import C2
+    from c3.optimizers.calibration import C2
 
 Representation of the experiment within :math:`C^3`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

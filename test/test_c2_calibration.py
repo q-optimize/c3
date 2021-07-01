@@ -21,7 +21,7 @@ from c3.c3objs import Quantity
 from c3.experiment import Experiment
 from c3.libraries import algorithms
 from c3.main import run_cfg
-from c3.optimizers.c2 import C2
+from c3.optimizers.calibration import Calibration
 from c3.parametermap import ParameterMap
 from c3.utils.qt_utils import single_length_RB
 
@@ -85,7 +85,7 @@ def test_calibration_cmaes() -> None:
     algo_options = cfg.pop("options")
     run_name = cfg.pop("run_name")
 
-    opt = C2(
+    opt = Calibration(
         dir_path=LOGDIR,
         run_name=run_name,
         eval_func=mock_ORBIT,

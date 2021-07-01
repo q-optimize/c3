@@ -10,7 +10,7 @@ from c3.libraries.algorithms import algorithms
 from c3.utils.utils import log_setup
 
 
-class C2(Optimizer):
+class Calibration(Optimizer):
     """
     Object that deals with the closed loop optimal control.
 

@@ -12,7 +12,7 @@ C1 - Optimal control
 C2 - Calibration
 ----------------
 
-.. automodule:: c3.optimizers.c2
+.. automodule:: c3.optimizers.calibration
    :members:
    :undoc-members:
    :show-inheritance:
