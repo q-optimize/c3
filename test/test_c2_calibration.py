@@ -1,3 +1,15 @@
+"""
+Integration Testing module for C2 style Optimization tasks
+This checks for integration of the whole C2 calibration workflow with a mock function
+that mimics communication with a hardware. It also checks the integrity of the example
+config file. However this doesn't check if the optimization algorithms used (eg CMA-ES)
+are working as expected in minimizing the goal function.
+
+Notes on pytest specific points:
+We could have used monkeypatch type implementations or moved the mock_ORBIT to a fixture
+However, unless the mock_ORBIT sees usage in other tests, it is left in this module.
+"""
+
 from typing import List, Tuple
 import tempfile
 import hjson
