@@ -8,6 +8,7 @@ import os
 from c3.c3objs import Quantity
 from c3.experiment import Experiment
 from c3.libraries import algorithms
+from c3.main import run_cfg
 from c3.optimizers.c2 import C2
 from c3.parametermap import ParameterMap
 from c3.utils.qt_utils import single_length_RB
@@ -84,3 +85,16 @@ def test_calibration_cmaes() -> None:
 
     opt.run()
     assert opt.current_best_goal == RESULT_VAL
+
+
+@pytest.mark.integration
+def test_run_c2_config() -> None:
+    """Run a C2 style Optimization task from a config file.
+    This checks for the integrity of the c2 style config file
+    The eval_func is set at run time to mock_ORBIT
+    """
+    with open(OPT_CONFIG_FILE_NAME, "r") as cfg_file:
+        cfg = hjson.load(cfg_file)
+        cfg.pop("eval_func")
+        cfg["eval_func"] = mock_ORBIT
+    run_cfg(cfg, "test/c2.cfg", debug=False)
