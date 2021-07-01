@@ -1,12 +1,12 @@
 import time
 import hjson
 import tensorflow as tf
-from c3.optimizers.c1 import C1
+from c3.optimizers.optimalcontrol import OptimalControl
 from c3.utils.utils import jsonify_list
 import numpy as np
 
 
-class C1_robust(C1):
+class C1_robust(OptimalControl):
     """
     Object that deals with the open loop optimal control.
 

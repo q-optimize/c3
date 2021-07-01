@@ -24,7 +24,7 @@ import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
 
-from c3.optimizers.c1_robust import C1_robust
+from c3.optimizers.optimalcontrol_robust import C1_robust
 
 logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 

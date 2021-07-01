@@ -12,7 +12,7 @@ from c3.experiment import Experiment
 from c3.model import Model
 from c3.generator.generator import Generator
 
-from c3.optimizers.c1 import C1
+from c3.optimizers.optimalcontrol import OptimalControl
 from c3.optimizers.c2 import C2
 from c3.optimizers.c3 import C3
 from c3.optimizers.sensitivity import SET
@@ -35,7 +35,7 @@ def run_cfg(cfg, opt_config_filename, debug=False):
     """
     optim_type = cfg.pop("optim_type")
     optim_lib = {
-        "C1": C1,
+        "C1": OptimalControl,
         "C2": C2,
         "C3": C3,
         "C3_confirm": C3,

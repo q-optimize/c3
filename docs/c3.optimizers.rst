@@ -4,7 +4,7 @@ Optimizers
 C1 - Optimal control
 --------------------
 
-.. automodule:: c3.optimizers.c1
+.. automodule:: c3.optimizers.optimalcontrol
    :members:
    :undoc-members:
    :show-inheritance:

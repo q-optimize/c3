@@ -66,7 +66,7 @@ We can look at the parameter values this opt_map specified with
 
 .. code-block:: python
 
-    from c3.optimizers.c1 import C1
+    from c3.optimizers.optimalcontrol import C1
     import c3.libraries.algorithms as algorithms
 
 The C1 object will handle the optimization for us. As a fidelity
