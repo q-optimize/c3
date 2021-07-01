@@ -46,6 +46,7 @@ class C2(Optimizer):
         self.exp_right = exp_right
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.run = self.optimize_controls  # alias for legacy method
 
     def set_eval_func(self, eval_func, exp_type):
         """
