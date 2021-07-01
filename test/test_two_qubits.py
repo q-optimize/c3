@@ -356,6 +356,7 @@ def test_optim_tf_sgd() -> None:
     """
     check if optimization result is below 1e-2
     """
+    opt.store_unitaries = True
     opt.optimize_controls()
     assert opt.current_best_goal < 0.01
 

@@ -115,6 +115,7 @@ class C3(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
         """
@@ -135,7 +136,6 @@ class C3(Optimizer):
             )
         self.logdir = log_setup(self.__dir_path, run_name)
         self.logname = "model_learn.log"
-        # shutil.copy2(self.__real_model_folder, self.logdir)
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
@@ -195,8 +195,8 @@ class C3(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        with open(self.logdir + "best_point_" + self.logname, "r") as file:
-            best_params = hjson.loads(file.readlines()[1])["params"]
+        with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
+            best_params = hjson.load(file)["optim_status"]["params"]
         self.pmap.set_parameters(best_params)
         self.pmap.model.update_model()
         self.end_log()
@@ -244,14 +244,11 @@ class C3(Optimizer):
     ) -> None:
         seqs_pp = self.seqs_per_point
         m_vals = data_set["results"][:seqs_pp]
-        m_stds = np.array(data_set["result_stds"][:seqs_pp])
+        m_stds = np.array(data_set["results_std"][:seqs_pp])
         m_shots = data_set["shots"][:seqs_pp]
         sequences = data_set["seqs"][:seqs_pp]
         with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write(
-                f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n"
-                f"{str(self.exp.pmap)}\n"
-            )
+            logfile.write(f"\n  Parameterset {ipar + 1}, #{count} of {len(indeces)}:\n")
             logfile.write(
                 "Sequence    Simulation  Experiment  Std           Shots" "    Diff\n"
             )
@@ -309,7 +306,7 @@ class C3(Optimizer):
                 count += 1
                 data_set = self.learn_from[ipar]
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = data_set["result_stds"][:seqs_pp]
+                m_stds = data_set["results_std"][:seqs_pp]
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
@@ -388,7 +385,7 @@ class C3(Optimizer):
 
                 seqs_pp = self.seqs_per_point
                 m_vals = data_set["results"][:seqs_pp]
-                m_stds = np.array(data_set["result_stds"][:seqs_pp])
+                m_stds = np.array(data_set["results_std"][:seqs_pp])
                 m_shots = data_set["shots"][:seqs_pp]
                 sequences = data_set["seqs"][:seqs_pp]
                 num_seqs = len(sequences)
@@ -430,70 +427,6 @@ class C3(Optimizer):
         goal = g_LL_prime_combined(goals, seq_weigths)
         grad = dv_g_LL_prime(goals, grads, seq_weigths)
         # print(f"{seq_weigths=}\n{goals=}\n{grads=}\n{goal=}\n{grad=}\n")
-
-        with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write("\nFinished batch with ")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal))
-            for cb_fom in self.callback_foms:
-                val = float(cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy())
-                logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-            logfile.flush()
-
-        self.optim_status["params"] = [
-            par.numpy().tolist() for par in self.pmap.get_parameters()
-        ]
-        self.optim_status["goal"] = goal
-        self.optim_status["gradient"] = list(grad.flatten())
-        self.optim_status["time"] = time.asctime()
-        self.evaluation += 1
-        return goal, grad
-
-    def goal_run_with_grad_no_batch(self, current_params):
-        """
-        Same as goal_run but with gradient. Very resource intensive. Unoptimized at the
-        moment.
-        """
-        exp_values = []
-        sim_values = []
-        exp_stds = []
-        exp_shots = []
-        count = 0
-        seqs_pp = self.seqs_per_point
-
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            for target, data in self.learn_data.items():
-                self.learn_from = data["seqs_grouped_by_param_set"]
-                self.gateset_opt_map = data["opt_map"]
-                indeces = self.select_from_data(self.batch_sizes[target])
-                for ipar in indeces:
-                    count += 1
-                    data_set = self.learn_from[ipar]
-                    m_vals = data_set["results"][:seqs_pp]
-                    sim_vals = self._one_par_sim_vals(
-                        current_params, data_set, ipar, target
-                    )
-                    sim_values.extend(sim_vals)
-                    exp_values.extend(m_vals)
-
-                    self._log_one_dataset(data_set, ipar, indeces, sim_vals, count)
-
-            if target == "all":
-                goal = neg_loglkh_multinom_norm(
-                    exp_values,
-                    tf.stack(sim_values),
-                    tf.constant(exp_stds, dtype=tf.float64),
-                    tf.constant(exp_shots, dtype=tf.float64),
-                )
-            else:
-                goal = g_LL_prime(
-                    exp_values,
-                    tf.stack(sim_values),
-                    tf.constant(exp_stds, dtype=tf.float64),
-                    tf.constant(exp_shots, dtype=tf.float64),
-                )
-            grad = t.gradient(goal, current_params).numpy()
-            goal = goal.numpy()
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")
