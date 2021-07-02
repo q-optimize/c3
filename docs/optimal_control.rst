@@ -66,10 +66,10 @@ We can look at the parameter values this opt_map specified with
 
 .. code-block:: python
 
-    from c3.optimizers.optimalcontrol import C1
+    from c3.optimizers.optimalcontrol import OptimalControl
     import c3.libraries.algorithms as algorithms
 
-The C1 object will handle the optimization for us. As a fidelity
+The OptimalControl object will handle the optimization for us. As a fidelity
 function we choose average fidelity as well as LBFG-S (a wrapper of the
 scipy implementation) from our library. See those libraries for how
 these functions are defined and how to supply your own, if necessary.
@@ -82,7 +82,7 @@ these functions are defined and how to supply your own, if necessary.
     # Create a temporary directory to store logfiles, modify as needed
     log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
-    opt = C1(
+    opt = OptimalControl(
         dir_path=log_dir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
