@@ -118,7 +118,7 @@ def test_np_kron_n(get_test_dimensions) -> None:
 @pytest.mark.unit
 def test_hilbert_space_kron() -> None:
     """Testing dimensions of Kronecker product"""
-    dims = np.random.randint(1, 10, 5)
+    dims = np.random.randint(2, 5, 5)
     index = np.random.randint(0, len(dims))
     op_size = dims[index]
 
@@ -131,7 +131,7 @@ def test_hilbert_space_kron() -> None:
 def test_kron_ids() -> None:
     """Testing Kronecker product with identities"""
     # create Kronecker product for some random dimensions and indices
-    dims = np.random.randint(2, 10, 3)
+    dims = np.random.randint(2, 5, 3)
     indices = np.where(np.random.rand(len(dims)) > 0.5)[0]
     remaining_indices = np.delete(np.arange(len(dims)), indices)
     matrices = [np.random.rand(dim, dim) for dim in dims[indices]]
@@ -150,7 +150,7 @@ def test_kron_ids() -> None:
 def test_projector() -> None:
     """Testing subspace projection matrix"""
     # create projector for some random dimensions and indices
-    dims = np.random.randint(2, 10, 5)
+    dims = np.random.randint(2, 5, 3)
     indices = np.where(np.random.rand(len(dims)) > 0.5)[0]
     result = projector(dims, indices)
 
