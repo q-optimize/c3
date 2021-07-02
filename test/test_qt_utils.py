@@ -26,7 +26,7 @@ from c3.libraries.constants import GATES
 @pytest.mark.unit
 def test_pauli_basis() -> None:
     """Testing dimensions of Pauli basis"""
-    dims = np.random.randint(2, 5, np.random.randint(1, 5))
+    dims = np.random.randint(2, 5, np.random.randint(2, 4))
     result = pauli_basis(dims)
     assert result.shape[0] == result.shape[1]
     assert result.shape[0] == dims.prod() ** 2
