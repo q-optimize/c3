@@ -20,7 +20,7 @@ C2 - Calibration
 C3 - Characterization
 ---------------------
 
-.. automodule:: c3.optimizers.c3
+.. automodule:: c3.optimizers.modellearning
    :members:
    :undoc-members:
    :show-inheritance:

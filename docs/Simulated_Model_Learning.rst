@@ -30,7 +30,7 @@ Imports
     import c3.signal.pulse as pulse
     import c3.libraries.envelopes as envelopes
     import c3.libraries.tasks as tasks
-    from c3.optimizers.c3 import C3
+    from c3.optimizers.modellearning import C3
 
 The Dataset
 -----------

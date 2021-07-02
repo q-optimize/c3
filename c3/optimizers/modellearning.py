@@ -21,7 +21,7 @@ from c3.libraries.estimators import (
 )
 
 
-class C3(Optimizer):
+class ModelLearning(Optimizer):
     """
     Object that deals with the model learning.
 

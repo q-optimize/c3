@@ -24,7 +24,7 @@ import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.fidelities as fidelities
 import c3.libraries.envelopes as envelopes
 
-from c3.optimizers.optimalcontrol_robust import C1_robust
+from c3.optimizers.optimalcontrol_robust import OptimalControl_robust
 
 logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
@@ -234,7 +234,7 @@ pmap.set_opt_map(gateset_opt_map)
 # @pytest.mark.skip(reason="Data needs to be updated")
 def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [("dc_offset", "offset_amp")]]]
-    opt = C1_robust(
+    opt = OptimalControl_robust(
         dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1"],

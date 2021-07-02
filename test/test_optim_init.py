@@ -5,7 +5,7 @@ import hjson
 import pytest
 
 from c3.optimizers.optimalcontrol import OptimalControl
-from c3.optimizers.c3 import C3
+from c3.optimizers.modellearning import ModelLearning
 from c3.experiment import Experiment
 from c3.main import run_cfg
 
@@ -60,4 +60,4 @@ def test_create_c3() -> None:
 
     exp = Experiment()
     exp.read_config(cfg.pop("exp_cfg"))
-    assert isinstance(C3(**cfg, pmap=exp.pmap), C3)
+    assert isinstance(ModelLearning(**cfg, pmap=exp.pmap), ModelLearning)
