@@ -6,7 +6,7 @@ from c3.utils.utils import jsonify_list
 import numpy as np
 
 
-class OptimalControl_robust(OptimalControl):
+class OptimalControlRobust(OptimalControl):
     """
     Object that deals with the open loop optimal control.
 
