@@ -15,7 +15,7 @@ from c3.generator.generator import Generator
 from c3.optimizers.optimalcontrol import OptimalControl
 from c3.optimizers.calibration import Calibration
 from c3.optimizers.modellearning import ModelLearning
-from c3.optimizers.sensitivity import SET
+from c3.optimizers.sensitivity import Sensitivity
 
 
 logging.getLogger("tensorflow").disabled = True
@@ -40,7 +40,7 @@ def run_cfg(cfg, opt_config_filename, debug=False):
         "C3": ModelLearning,
         "C3_confirm": ModelLearning,
         "confirm": ModelLearning,
-        "SET": SET,
+        "SET": Sensitivity,
     }
     if not optim_type in optim_lib:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
