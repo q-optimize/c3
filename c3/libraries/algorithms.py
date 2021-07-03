@@ -9,6 +9,7 @@ import numpy as np
 from typing import Callable
 import adaptive
 import copy
+import warnings
 from scipy.optimize import OptimizeResult
 import tensorflow as tf
 
@@ -183,6 +184,9 @@ def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
         init_point : boolean
             Include the initial point in the sampling
     """
+    warnings.warn(
+        "The Adaptive Scan algorithm is not thoroughly tested and might contain bugs"
+    )
     if "accuracy_goal" in options:
         accuracy_goal = options["accuracy_goal"]
     else:
@@ -591,6 +595,9 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the
     resulting cloud and results are used for the CMA update.
     """
+    warnings.warn(
+        "The GCMA-ES algorithm is not thoroughly tested and might contain bugs"
+    )
     options_cma = options["cmaes"]
 
     if "init_point" in options_cma:
