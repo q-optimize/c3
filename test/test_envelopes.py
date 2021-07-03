@@ -10,6 +10,24 @@ ts = np.linspace(0, 10e-9, 100)
 with open("test/envelopes.pickle", "rb") as filename:
     test_data = pickle.load(filename)
 
+ABS_TOL_FACTOR = 1e-11
+
+
+def get_atol(test_type: str) -> float:
+    """Get the absolute tolerance corresponding to a specific test data
+
+    Parameters
+    ----------
+    test_type : str
+        String representing the test type to be used as a key in the test_data dict
+
+    Returns
+    -------
+    float
+        Absolute tolerance for the desired value of this test type
+    """
+    return ABS_TOL_FACTOR * np.max(test_data[test_type])
+
 
 @pytest.mark.unit
 def test_pwc_shape():
