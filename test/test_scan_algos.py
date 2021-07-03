@@ -1,3 +1,8 @@
+"""Test module for algorithms that scan a function across a given range.
+We use a mock function that appends the parameter passed to it into a global
+list. We then cross check this list against expected values.
+"""
+
 from typing import List
 import numpy as np
 from c3.libraries.algorithms import sweep, grid2D
@@ -5,6 +10,7 @@ from c3.libraries.algorithms import sweep, grid2D
 params = list()
 params2D = list()
 
+# constants for sweep and grid2D parameters
 X_INIT = [5.0]
 POINTS = 5
 BOUNDS = [[0.0, 2.5]]
@@ -27,6 +33,7 @@ def mock_fun2D(inputs: List[float]) -> None:
 
 
 def test_sweep() -> None:
+    """Test c3.libraries.algorithms.sweep()"""
     sweep(
         X_INIT,
         fun=mock_fun,
@@ -36,5 +43,6 @@ def test_sweep() -> None:
 
 
 def test_grid2D() -> None:
+    """Test c3.libraries.algorithms.grid2D()"""
     grid2D(X_INIT, fun=mock_fun2D, options={"points": POINTS, "bounds": BOUNDS_2D})
     np.testing.assert_allclose(params2D, DESIRED_PARAMS_2D)
