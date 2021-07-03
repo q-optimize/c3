@@ -7,32 +7,22 @@ assignees: ''
 
 ---
 
-**Describe the bug**
+## Describe the bug
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+## To Reproduce
+Steps to reproduce the behavior. This can be in the form of a code snippet or some config files or a notebook to produce a minimum viable example of the bug.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected behavior
+A clear and concise description of what you expect(ed) to happen.
 
-**Screenshots**
+## Screenshots
 If applicable, add screenshots to help explain your problem.
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Environment (please complete the following information)
+ - OS: [e.g. MacOS]
+ - Python Version: [e.g. 3.8]
+ - `c3-toolset` Version [e.g. 1.2]
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+## Additional context
+Add any other context about the problem here. You can also suggest possible solutions and relevant implementations & edge case details.
