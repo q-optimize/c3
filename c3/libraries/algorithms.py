@@ -3,6 +3,7 @@ Collection of (optimization) algorithms. All entries share a common signature wi
 optional arguments.
 """
 
+import ast
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
@@ -196,7 +197,7 @@ def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     probe_list = []
     if "probe_list" in options:
         for x in options["probe_list"]:
-            probe_list.append(eval(x))
+            probe_list.append(ast.literal_eval(x))
 
     if "init_point" in options:
         init_point = bool(options.pop("init_point"))
