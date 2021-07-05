@@ -137,7 +137,6 @@ class ModelLearning(Optimizer):
                 [self.algorithm.__name__, self.sampling.__name__, self.fom.__name__]
             )
         self.logdir = log_setup(self.__dir_path, run_name)
-        self.logname = "model_learn.log"
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
