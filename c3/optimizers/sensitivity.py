@@ -106,7 +106,7 @@ class Sensitivity(ModelLearning):
             self.log_setup()
             self.start_log()
             print(f"C3:STATUS:Saving as: {os.path.abspath(self.logdir + self.logname)}")
-            x_init = self.pmap.get_parameters_scaled()
+            x_init = [self.options["init_point"][ii]]
             try:
                 self.algorithm(
                     x_init,
