@@ -31,10 +31,10 @@ class Sensitivity(ModelLearning):
         List of upper and lower bounds for each sweeping variable
     algorithm : str
         Name of the sweeping algorithm from the library
-    estimator : str
-        Name of estimator method from library
-    estimator_list : List[str]
-        List of different estimators to be used
+    estimator : str, optional
+        Name of estimator method from library, by default None
+    estimator_list : List[str], optional
+        List of different estimators to be used, by default None
     dir_path : str, optional
         Path to save sensitivity logs, by default None
     run_name : str, optional
