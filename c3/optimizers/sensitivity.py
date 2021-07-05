@@ -18,7 +18,7 @@ from c3.libraries.estimators import (
 )
 
 
-class SET(Optimizer):
+class Sensitivity(Optimizer):
     """Object that deals with the sensitivity test.
 
     Parameters

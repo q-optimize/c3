@@ -13,7 +13,7 @@ from c3.libraries.algorithms import algorithms
 from c3.libraries.fidelities import fidelities
 
 
-class C1(Optimizer):
+class OptimalControl(Optimizer):
     """
     Object that deals with the open loop optimal control.
 

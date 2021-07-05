@@ -25,7 +25,7 @@ import hjson
 import pytest
 import numpy as np
 
-from c3.optimizers.c3 import C3
+from c3.optimizers.modellearning import ModelLearning
 from c3.experiment import Experiment
 
 OPT_CONFIG_FILE_NAME = "test/c3.cfg"
@@ -46,7 +46,7 @@ def test_model_learning() -> None:
     exp.pmap.set_opt_map(
         [[tuple(par) for par in pset] for pset in cfg.pop("exp_opt_map")]
     )
-    opt = C3(**cfg, pmap=exp.pmap)
+    opt = ModelLearning(**cfg, pmap=exp.pmap)
     opt.set_exp(exp)
     opt.set_created_by(OPT_CONFIG_FILE_NAME)
     opt.run()

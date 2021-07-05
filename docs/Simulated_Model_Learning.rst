@@ -30,7 +30,7 @@ Imports
     import c3.signal.pulse as pulse
     import c3.libraries.envelopes as envelopes
     import c3.libraries.tasks as tasks
-    from c3.optimizers.c3 import C3
+    from c3.optimizers.modellearning import ModelLearning
 
 The Dataset
 -----------
@@ -502,7 +502,7 @@ Optimizer
 
 .. code:: python
 
-    opt = C3(
+    opt = ModelLearning(
         datafiles=datafiles,
         run_name=run_name,
         dir_path=dir_path,

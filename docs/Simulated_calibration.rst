@@ -15,7 +15,7 @@ the previous example in a helper ``single_qubit_blackbox_exp.py``.
 
     blackbox = create_experiment()
 
-This blackbox is constructed the same way as in the C1 example. The
+This blackbox is constructed the same way as in the OptimalControl example. The
 difference will be in how we interact with it. First, we decide on what
 experiment we want to perform and need to specify it as a python
 function. A general, minimal example would be
@@ -165,7 +165,7 @@ We first import algorithms and the correct optimizer object.
     from c3.parametermap import ParameterMap as PMap
     from c3.libraries import algorithms, envelopes
     from c3.signal import gates, pulse
-    from c3.optimizers.c2 import C2
+    from c3.optimizers.calibration import Calibration
 
 Representation of the experiment within :math:`C^3`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -404,7 +404,7 @@ setup:
     # Create a temporary directory to store logfiles, modify as needed
     log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
-    opt = C2(
+    opt = Calibration(
         dir_path=log_dir,
         run_name="ORBIT_cal",
         eval_func=ORBIT_wrapper,
