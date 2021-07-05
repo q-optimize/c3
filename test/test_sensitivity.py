@@ -10,7 +10,7 @@ import hjson
 import pytest
 import numpy as np
 
-from c3.optimizers.sensitivity import SET
+from c3.optimizers.sensitivity import Sensitivity
 from c3.experiment import Experiment
 
 OPT_CONFIG_FILE_NAME = "test/sensitivity.cfg"
@@ -32,17 +32,17 @@ def test_sensitivity() -> None:
 
     # test error handling for estimator
     with pytest.raises(NotImplementedError):
-        opt = SET(**cfg, pmap=exp.pmap)
+        opt = Sensitivity(**cfg, pmap=exp.pmap)
 
     cfg.pop("estimator")
 
     # test error handling for estimator_list
     with pytest.raises(NotImplementedError):
-        opt = SET(**cfg, pmap=exp.pmap)
+        opt = Sensitivity(**cfg, pmap=exp.pmap)
 
     cfg.pop("estimator_list")
 
-    opt = SET(**cfg, pmap=exp.pmap)
+    opt = Sensitivity(**cfg, pmap=exp.pmap)
     opt.set_exp(exp)
     opt.set_created_by(OPT_CONFIG_FILE_NAME)
     opt.run()
