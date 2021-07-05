@@ -1,4 +1,4 @@
-Model Learning with :math:`C_3`
+Model Learning
 =====================================================
 
 In this notebook, we will use a dataset from a simulated experiment,

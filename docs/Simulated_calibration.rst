@@ -1,4 +1,4 @@
-Simulated calibration with :math:`C_2`
+Simulated calibration
 ======================================
 
 Calibration of control pulses is the process of fine-tuning parameters
