@@ -1,3 +1,11 @@
+"""Integration Test module for Sensitivity Analysis on the dataset used for Model Learning
+Please refer to test_model_learning.py for more details on the dataset
+The test checks the integrity of the config file to ensure it creates the necessary optimizer
+object which is then run. It also checks if the sweep goes till the higher end of the bounds, but
+nothing else regarding the actual sweep run.
+The integrity of the sweep algorithm is tested in test_scan_algos
+"""
+
 import hjson
 import pytest
 import numpy as np
