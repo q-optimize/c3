@@ -1,3 +1,7 @@
+"""Module for Sensitivity Analysis. This allows the sweeping of the goal
+function in a given range of parameters to ascertain whether the dataset
+being used is sensitive to changes in the parameters of interest"""
+
 from copy import deepcopy
 import os
 from typing import Any, Dict, List, Tuple
@@ -7,6 +11,43 @@ from c3.utils.utils import flatten
 
 
 class Sensitivity(ModelLearning):
+    """Class for Sensitivity Analysis, subclassed from Model Learning
+
+    Parameters
+    ----------
+    sampling : str
+        Name of the sampling method from library
+    batch_sizes : Dict[str, int]
+        Number of points to select from the dataset
+    pmap : ParameterMap
+        Model parameter map
+    datafiles : Dict[str, str]
+        The datafiles for each of the learning datasets
+    state_labels : Dict[str, List[Any]]
+        The labels for the excited states of the system
+    sweep_map : List[List[List[str]]]
+        Map of variables to be swept in exp_opt_map format
+    sweep_bounds : List[List[int]]
+        List of upper and lower bounds for each sweeping variable
+    algorithm : str
+        Name of the sweeping algorithm from the library
+    estimator : str
+        Name of estimator method from library
+    estimator_list : List[str]
+        List of different estimators to be used
+    dir_path : str, optional
+        Path to save sensitivity logs, by default None
+    run_name : str, optional
+        Name of the experiment run, by default None
+    options : dict, optional
+        Options for the sweeping algorithm, by default {}
+
+    Raises
+    ------
+    NotImplementedError
+        When trying to set the estimator or estimator_list
+    """
+
     def __init__(
         self,
         sampling: str,
