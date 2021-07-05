@@ -226,8 +226,13 @@ class ModelLearning(Optimizer):
         m = self.learn_from[ipar]
         gateset_params = m["params"]
         sequences = m["seqs"][:seqs_pp]
-        self.pmap.set_parameters_scaled(current_params)
-        self.pmap.str_parameters()
+        # Model learning uses scaled parameters but Sensitivity uses
+        # unscaled parameters. This workaround flag allows for code reuse
+        if self.scaling:
+            self.pmap.set_parameters_scaled(current_params)
+        else:
+            self.pmap.set_parameters(current_params)
+
         self.pmap.model.update_model()
         self.pmap.set_parameters(gateset_params, self.gateset_opt_map)
         # We find the unique gates used in the sequence and compute
