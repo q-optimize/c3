@@ -398,3 +398,22 @@ def test_optim_lbfgs() -> None:
 
     lbfgs_opt.optimize_controls()
     assert lbfgs_opt.current_best_goal < 0.01
+
+
+@pytest.mark.optimizers
+@pytest.mark.slow
+@pytest.mark.integration
+def test_optim_lbfgs_grad_free() -> None:
+    lbfgs_grad_free_opt = C1(
+        dir_path=logdir,
+        fid_func=fidelities.average_infid_set,
+        fid_subspace=["Q1", "Q2"],
+        pmap=pmap,
+        algorithm=algorithms.lbfgs_grad_free,
+        options={"maxfun": 5},
+        run_name="grad_free_lbfgs",
+    )
+    lbfgs_grad_free_opt.set_exp(exp)
+
+    lbfgs_grad_free_opt.optimize_controls()
+    assert lbfgs_grad_free_opt.current_best_goal < 0.01

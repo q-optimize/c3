@@ -256,7 +256,7 @@ You can keep your Pull Request as a Draft as long as you feel you still need to 
 
 ## Continuous Integration Checks
 
-As previously discussed, tests are an inherent part of good code. All Pull Requests made to the repository are automatically tested on Windows, MacOS and Ubuntu with Python 3.6, 3.7 and 3.8, which come up in the PR as `Checks`, notifying you whenever a particular check is failing on any platform. Except the `Code Complexity`, all checks should be passing for your PR to be ready for review/merge. The `Codecov` bot will also comment on the PR with a report on the change in the test coverage for that particular PR. If your PR reduces the overall test coverage of the codebase, it is not yet ready and you need to add more tests.
+As previously discussed, tests are an inherent part of good code. All Pull Requests made to the repository are automatically tested on Windows, MacOS and Ubuntu with Python 3.6, 3.7, 3.8 and 3.9, which come up in the PR as `Checks`, notifying you whenever a particular check is failing on any platform. Except the `Code Complexity`, all checks should be passing for your PR to be ready for review/merge. The `Codecov` bot will also comment on the PR with a report on the change in the test coverage for that particular PR. If your PR reduces the overall test coverage of the codebase, it is not yet ready and you need to add more tests.
 
 ## Contributor License Agreement
 
