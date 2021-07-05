@@ -115,6 +115,8 @@ class ModelLearning(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.scaling = True  # interoperability with sensitivity which uses no scaling
+        self.logname = "model_learn.log"  # shared log_setup requires logname
         self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
