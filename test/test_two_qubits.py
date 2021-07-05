@@ -404,7 +404,7 @@ def test_optim_lbfgs() -> None:
 @pytest.mark.slow
 @pytest.mark.integration
 def test_optim_lbfgs_grad_free() -> None:
-    lbfgs_grad_free_opt = C1(
+    lbfgs_grad_free_opt = OptimalControl(
         dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
