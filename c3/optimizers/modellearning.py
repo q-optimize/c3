@@ -68,7 +68,7 @@ class ModelLearning(Optimizer):
         # Consistency checks
 
         if estimator:
-            raise Exception(
+            raise NotImplementedError(
                 "C3:ERROR: Setting estimators is currently not supported."
                 "Only the standard logarithmic likelihood can be used at the moment."
                 "Please remove this setting."
