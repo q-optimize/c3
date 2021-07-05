@@ -4,7 +4,7 @@ import os
 import tempfile
 import numpy as np
 from tensorflow.python.framework import ops
-from typing import Tuple
+from typing import List, Tuple
 import warnings
 
 
@@ -174,3 +174,34 @@ def deprecated(message: str):
         return deprecated_func
 
     return deprecated_decorator
+
+
+def flatten(lis: List, ltypes=(list, tuple)) -> List:
+    """Flatten lists of arbitrary lengths
+    https://rightfootin.blogspot.com/2006/09/more-on-python-flatten.html
+
+    Parameters
+    ----------
+    lis : List
+        The iterable to flatten
+    ltypes : tuple, optional
+        Possibly the datatype of the iterable, by default (list, tuple)
+
+    Returns
+    -------
+    List
+        Flattened list
+    """
+    ltype = type(lis)
+    lis = list(lis)
+    i = 0
+    while i < len(lis):
+        while isinstance(lis[i], ltypes):
+            if not lis[i]:
+                lis.pop(i)
+                i -= 1
+                break
+            else:
+                lis[i : i + 1] = lis[i]
+        i += 1
+    return ltype(lis)

@@ -68,7 +68,7 @@ class ModelLearning(Optimizer):
         # Consistency checks
 
         if estimator:
-            raise Exception(
+            raise NotImplementedError(
                 "C3:ERROR: Setting estimators is currently not supported."
                 "Only the standard logarithmic likelihood can be used at the moment."
                 "Please remove this setting."
@@ -115,6 +115,8 @@ class ModelLearning(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.scaling = True  # interoperability with sensitivity which uses no scaling
+        self.logname = "model_learn.log"  # shared log_setup requires logname
         self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
@@ -135,7 +137,6 @@ class ModelLearning(Optimizer):
                 [self.algorithm.__name__, self.sampling.__name__, self.fom.__name__]
             )
         self.logdir = log_setup(self.__dir_path, run_name)
-        self.logname = "model_learn.log"
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
@@ -225,8 +226,13 @@ class ModelLearning(Optimizer):
         m = self.learn_from[ipar]
         gateset_params = m["params"]
         sequences = m["seqs"][:seqs_pp]
-        self.pmap.set_parameters_scaled(current_params)
-        self.pmap.str_parameters()
+        # Model learning uses scaled parameters but Sensitivity uses
+        # unscaled parameters. This workaround flag allows for code reuse
+        if self.scaling:
+            self.pmap.set_parameters_scaled(current_params)
+        else:
+            self.pmap.set_parameters(current_params)
+
         self.pmap.model.update_model()
         self.pmap.set_parameters(gateset_params, self.gateset_opt_map)
         # We find the unique gates used in the sequence and compute

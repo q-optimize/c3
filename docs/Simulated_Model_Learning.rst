@@ -1,4 +1,4 @@
-Model Learning with :math:`C_3`
+Model Learning
 =====================================================
 
 In this notebook, we will use a dataset from a simulated experiment,
@@ -853,3 +853,149 @@ Goal Function
 
 .. image:: Simulated_Model_Learning_files/Simulated_Model_Learning_78_1.png
 
+Sensitivity Analysis
+====================
+
+Another interesting study to understand if our dataset is indeed helpful
+in improving certain model parameters is to perform a Sensitivity
+Analysis. The purpose of this exercise is to scan the Model Parameters
+of interest (eg, qubit frequency or anharmonicity) across a range of
+values and notice a prominent dip in the Model Learning Goal Function
+around the best-fit values
+
+.. code:: python
+
+    run_name = "Sensitivity"
+    dir_path = "sensi_logs"
+    algorithm = "sweep"
+    options = {"points": 20, "init_point": [-210e6, 5e9]}
+    sweep_bounds = [
+        [-215e6, -205e6],
+        [4.9985e9, 5.0015e9],
+    ]
+
+.. code:: python
+
+    sense_opt = Sensitivity(
+        datafiles=datafiles,
+        run_name=run_name,
+        dir_path=dir_path,
+        algorithm=algorithm,
+        options=options,
+        sampling=sampling,
+        batch_sizes=batch_sizes,
+        state_labels=state_labels,
+        pmap=exp.pmap,
+        sweep_bounds=sweep_bounds,
+        sweep_map=exp_opt_map,
+    )
+    
+    sense_opt.set_exp(exp)
+
+.. code:: python
+
+    sense_opt.run()
+
+
+.. parsed-literal::
+
+    C3:STATUS:Sweeping [['Q1-anhar']]: [-215000000.0, -205000000.0]
+    C3:STATUS:Saving as: /home/users/anurag/c3/examples/sensi_logs/Sensitivity/2021_07_05_T_20_56_46/sensitivity.log
+    C3:STATUS:Sweeping [['Q1-freq']]: [4998500000.0, 5001500000.0]
+    C3:STATUS:Saving as: /home/users/anurag/c3/examples/sensi_logs/Sensitivity/2021_07_05_T_20_57_38/sensitivity.log
+
+
+Anharmonicity
+-------------
+
+.. code:: python
+
+    LOGDIR = sense_opt.logdir_list[0]
+
+.. code:: python
+
+    logfile = os.path.join(LOGDIR, "sensitivity.log")
+    with open(logfile, "r") as f:
+        log = f.readlines()
+
+.. code:: python
+
+    data_list_dict = list()
+    for line in log[9:]:
+        if line[0] == "{":
+            temp_dict = ast.literal_eval(line.strip("\n"))
+            param = temp_dict["params"][0]
+            data_list_dict.append({"param": param, "goal": temp_dict["goal"]})
+
+.. code:: python
+
+    data_df = pd.DataFrame(data_list_dict)
+
+.. code:: python
+
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel("Q1-Anharmonicity [Hz]")
+    ax.set_ylabel("Goal Function")
+    ax.axvline(x=best_point_dict["Q1-anhar"], color="black", linestyle="-.")
+    ax.scatter(data_df["param"], data_df["goal"])
+
+
+
+
+.. parsed-literal::
+
+    <matplotlib.collections.PathCollection at 0x7f917a341d30>
+
+
+
+
+.. image:: Simulated_Model_Learning_files/Simulated_Model_Learning_89_1.png
+
+
+Frequency
+---------
+
+.. code:: python
+
+    LOGDIR = sense_opt.logdir_list[1]
+
+.. code:: python
+
+    logfile = os.path.join(LOGDIR, "sensitivity.log")
+    with open(logfile, "r") as f:
+        log = f.readlines()
+
+.. code:: python
+
+    data_list_dict = list()
+    for line in log[9:]:
+        if line[0] == "{":
+            temp_dict = ast.literal_eval(line.strip("\n"))
+            param = temp_dict["params"][0]
+            data_list_dict.append({"param": param, "goal": temp_dict["goal"]})
+
+.. code:: python
+
+    data_df = pd.DataFrame(data_list_dict)
+
+.. code:: python
+
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111)
+    ax.set_xlabel("Q1-Frequency [Hz]")
+    ax.set_ylabel("Goal Function")
+    ax.axvline(x=best_point_dict["Q1-freq"], color="black", linestyle="-.")
+    ax.scatter(data_df["param"], data_df["goal"])
+
+
+
+
+.. parsed-literal::
+
+    <matplotlib.collections.PathCollection at 0x7f917a203370>
+
+
+
+
+.. image:: Simulated_Model_Learning_files/Simulated_Model_Learning_95_1.png

@@ -126,7 +126,7 @@ def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if "init_point" in options:
         init_point = bool(options["init_point"])
         if init_point:
-            fun([x_init[0].numpy()])
+            fun([x_init[0]])
 
     bounds = options["bounds"][0]
     bound_min = bounds[0]
