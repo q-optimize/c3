@@ -22,6 +22,18 @@ def test_sensitivity() -> None:
     exp = Experiment()
     exp.read_config(cfg.pop("exp_cfg"))
 
+    # test error handling for estimator
+    with pytest.raises(NotImplementedError):
+        opt = SET(**cfg, pmap=exp.pmap)
+
+    cfg.pop("estimator")
+
+    # test error handling for estimator_list
+    with pytest.raises(NotImplementedError):
+        opt = SET(**cfg, pmap=exp.pmap)
+
+    cfg.pop("estimator_list")
+
     opt = SET(**cfg, pmap=exp.pmap)
     opt.set_exp(exp)
     opt.set_created_by(OPT_CONFIG_FILE_NAME)
