@@ -35,6 +35,10 @@ def test_main_c3() -> None:
 def test_main_sens() -> None:
     with open("test/sensitivity.cfg", "r") as cfg_file:
         cfg = hjson.load(cfg_file)
+
+    # pop configs that are not yet supported
+    cfg.pop("estimator")
+    cfg.pop("estimator_list")
     run_cfg(cfg, "test/sensitivity.cfg", debug=True)
 
 
