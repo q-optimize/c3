@@ -93,6 +93,9 @@ class Sensitivity(ModelLearning):
         ] = list()  # list for storing the params and goals at the end of the sweep
         self.scaling = False  # interoperability with model learning which uses scaling
         self.logname = "sensitivity.log"  # shared log_setup requires logname
+        self.logdir_list: List[
+            str
+        ] = list()  # list of logdirs for all the different sweeps
         self.run = self.sensitivity  # alias for legacy method
 
     def sensitivity(self):
@@ -119,3 +122,4 @@ class Sensitivity(ModelLearning):
                 pass
             temp_param_name = "".join(flatten(self.pmap.opt_map))
             self.sweep_end.append({temp_param_name: deepcopy(self.optim_status)})
+            self.logdir_list.append(deepcopy(self.logdir))
