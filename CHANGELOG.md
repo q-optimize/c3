@@ -9,6 +9,10 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Version `1.2.1` - 2 Feb 2021
+
+Hotfix for missing `c3.qiskit` module in the package setup.
+
 ## Version `1.2` - 29 Jan 2021
 
 ### Summary
