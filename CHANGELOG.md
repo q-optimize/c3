@@ -9,6 +9,19 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Version `1.2.2` - 21 Feb 2021
+
+### Summary
+
+Maintenance release with mostly cleanup and update of the dependencies along with some automated vulnerability checks.
+
+### Details
+
+- `added` Support for `tensorflow==2.4.0`, `tensorflow-probability==0.12.1`, `tensorflow-estimator==2.4.0`, `tensorboard==2.4.0`, `numpy==1.19.5`
+- `fixed` Cleaned up dependencies in `requirements.txt` and `setup.py` to remove unused packages
+- `fixed` Pin `qiskit` version in CI
+- `added` CodeQL CI analysis for checking security vulnerabilities
+
 ## Version `1.2.1` - 2 Feb 2021
 
 Hotfix for missing `c3.qiskit` module in the package setup.
