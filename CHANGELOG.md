@@ -9,6 +9,23 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Version `1.2` - 29 Jan 2021
+
+### Summary
+
+Support for simulating many new physical elements as well as signal chains. Preliminary support for Qiskit programming with updated documentation.
+
+### Details
+
+- `added` Tunable Elements
+- `added` Robust Optimal Control
+- `added` Noise Simulation
+- `added` General Signal Generation Chain
+- `added` Updated Tests and Docs
+- `added` Updated Examples
+- `added` OpenQasm Qiskit support
+- `added` SNAIL device
+
 ## Version `1.1.1` - 13 Jan 2021
 
 ### Summary
