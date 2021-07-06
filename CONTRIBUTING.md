@@ -15,6 +15,7 @@
   - [Doc Strings & Documentation](#doc-strings--documentation)
     - [Building and Viewing Documentation Locally](#building-and-viewing-documentation-locally)
   - [Pull Requests](#pull-requests)
+    - [Changelog](#changelog)
   - [Continuous Integration Checks](#continuous-integration-checks)
   - [Contributor License Agreement](#contributor-license-agreement)
   - [Git Flow Development Style](#git-flow-development-style)
@@ -253,6 +254,10 @@ Follow the *What, Why, How, Remarks* structure when writing the description of y
 Make sure you [allow maintainers to edit your branch](https://help.github.com/articles/allowing-changes-to-a-pull-request-branch-created-from-a-fork/) when you are creating a Pull Request from a fork. Then, anyone with Write access to the upstream repository will be able to add commits to your branch. This can make the review process easier for maintainers; sometimes it’s quicker for a maintainer to make a small change themselves instead of asking you to make the change.
 
 You can keep your Pull Request as a Draft as long as you feel you still need to make changes. It is often advisable to open a PR when you are maybe 85% done with the work, which gives maintainers enough time to check what's going on and guide you if something needs correction. When you are ready, request for review on your PR. Your PR must be approved by at least 2 core developers before it can be merged. The Code review might involve suggested changes, which you can incorporate by committing and pushing more code in the same feature. You **DO NOT** need to open a new PR or create a new branch if someone requests for changes on your Pull Request. If your PR is not reviewed by any of the core developers within 3 days, please request politely in the comments with a follow-up.
+
+### Changelog
+
+We use the [CHANGELOG.md](CHANGELOG.md) as a living document that not only records past changes in various releases but also tracks development of bug fixes, new features, API changes etc for the upcoming release. Every Pull Request should update the Changelog with a short note explaining the addition and noting the PR number. When making a new release, this gets updated with the version number and date; and is also included in the description for Github Releases. The next time a PR is opened for merging into `dev`, a new Upcoming Release section should be added to the top of the Changelog.
 
 ## Continuous Integration Checks
 

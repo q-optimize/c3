@@ -19,3 +19,4 @@ Please include and complete the following checklist. Your Pull Request is (in mo
 - [ ] Docstrings - Docstrings have been provided for functions in the `numpydoc` style
 - [ ] Documentation - The tutorial style documentation has been updated to explain changes & new features
 - [ ] Notebooks - Example notebooks have been updated to incorporate changes and new features
+- [ ] Changelog - A short note on this PR has been added to the Upcoming Release section
