@@ -1,6 +1,7 @@
 """Module for testing C3 Integration with Qiskit
 """
 
+import json
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
 from qiskit.quantum_info import Statevector
@@ -93,6 +94,10 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     no_flip_counts = get_result_qiskit[backend]
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
+    result_json = json.dumps(
+        result_sim.to_dict()
+    )  # ensure results can be properly serialised
+    assert json.loads(result_json)["backend_name"] == backend
     assert result_sim.get_counts() == no_flip_counts
 
 

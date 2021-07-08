@@ -27,7 +27,7 @@ This section tracks development for the upcoming release.
 - `removed` Tensorflow Optimizers that don't have correct integration #104 #124
 - `added` `fixed` Hamiltonian generation and a lot more #84
 - `added` Links to use binder #86 #37
-- `added` `fixed` Improvements in Qiskit integration #76 #68 #59 #54 #52 #50 #48 #47
+- `added` `fixed` Improvements in Qiskit integration #76 #68 #59 #54 #52 #50 #48 #47 #128
 - `added` Cutting the simulation space by excitation number #75
 - `fixed` Fix counting the relative phase in IQ Mixing #40 
 - `added` Support for Parametric gates in OpenQasm style #57
