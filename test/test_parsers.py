@@ -36,8 +36,7 @@ def test_couplings() -> None:
 
 @pytest.mark.unit
 def test_tasks() -> None:
-    """Task creation is tested separately in the absence of Von Neumann eqn
-    """
+    """Task creation is tested separately in the absence of Von Neumann eqn"""
     model = Model()
     model.read_config("test/test_model_spam.cfg")
     pmap = ParameterMap(model=model, generator=gen)

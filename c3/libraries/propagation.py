@@ -2,7 +2,7 @@
 
 import tensorflow as tf
 from c3.utils.tf_utils import (
-    tf_kron_batch,
+    tf_kron,
     tf_matmul_left,
     tf_spre,
     tf_spost,
@@ -204,15 +204,15 @@ def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
         h = h0
 
     h_id = tf.eye(h.shape[-1], batch_shape=[h.shape[0]], dtype=tf.complex128)
-    l_s = tf_kron_batch(h, h_id)
-    r_s = tf_kron_batch(h_id, tf.linalg.matrix_transpose(h))
+    l_s = tf_kron(h, h_id)
+    r_s = tf_kron(h_id, tf.linalg.matrix_transpose(h))
     lind_op = -1j * (l_s - r_s)
 
     col_ops_id = tf.eye(
         col_ops.shape[-1], batch_shape=[col_ops.shape[0]], dtype=tf.complex128
     )
-    l_col_ops = tf_kron_batch(col_ops, col_ops_id)
-    r_col_ops = tf_kron_batch(col_ops_id, tf.linalg.matrix_transpose(col_ops))
+    l_col_ops = tf_kron(col_ops, col_ops_id)
+    r_col_ops = tf_kron(col_ops_id, tf.linalg.matrix_transpose(col_ops))
 
     super_clp = tf.matmul(l_col_ops, r_col_ops, adjoint_b=True)
     anticom_L_clp = 0.5 * tf.matmul(l_col_ops, l_col_ops, adjoint_a=True)

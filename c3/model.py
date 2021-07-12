@@ -246,7 +246,12 @@ class Model:
         tasks = {}
         for name, task in self.tasks.items():
             tasks[name] = task.asdict()
-        return {"Qubits": qubits, "Couplings": couplings, "Tasks": tasks, "max_excitations": self.max_excitations}
+        return {
+            "Qubits": qubits,
+            "Couplings": couplings,
+            "Tasks": tasks,
+            "max_excitations": self.max_excitations,
+        }
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
