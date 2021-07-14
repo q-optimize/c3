@@ -137,3 +137,5 @@ dmypy.json
 
 # swp files
 *.swp
+.stignore
+okteto.yml
