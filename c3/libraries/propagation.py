@@ -8,6 +8,148 @@ from c3.utils.tf_utils import (
     tf_spost,
 )
 
+propagators = dict()
+
+
+def prop_reg_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    propagators[str(func.__name__)] = func
+    return func
+
+
+@prop_reg_deco
+def propagation_pwc(model, signal: dict):
+    """
+    Solve the equation of motion (Lindblad or Schrödinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    hamiltonian, hctrls = model.get_Hamiltonians()
+    signals = []
+    hks = []
+    for key in signal:
+        signals.append(signal[key]["values"])
+        ts = signal[key]["ts"]
+        hks.append(hctrls[key])
+    signals = tf.cast(signals, tf.complex128)
+    hks = tf.cast(hks, tf.complex128)
+
+    dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+    batch_size = tf.constant(len(hamiltonian), tf.int32)
+
+    dUs = tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size=batch_size)
+
+    U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+    return U, dUs, ts
+
+
+# TODO: Delete later, keep for reference
+# @prop_reg_deco
+# def propagation_legacy(model, signal: dict, gate):
+#     """
+#     Solve the equation of motion (Lindblad or Schrödinger) for a given control
+#     signal and Hamiltonians.
+
+#     Parameters
+#     ----------
+#     signal: dict
+#         Waveform of the control signal per drive line.
+#     gate: str
+#         Identifier for one of the gates.
+
+#     Returns
+#     -------
+#     unitary
+#         Matrix representation of the gate.
+#     """
+#     if self.use_control_fields:
+#         hamiltonian, hctrls = model.get_Hamiltonians()
+#         signals = []
+#         hks = []
+#         for key in signal:
+#             signals.append(signal[key]["values"])
+#             ts = signal[key]["ts"]
+#             hks.append(hctrls[key])
+#         signals = tf.cast(signals, tf.complex128)
+#         hks = tf.cast(hks, tf.complex128)
+#     else:
+#         hamiltonian = model.get_Hamiltonian(signal)
+#         ts_list = [sig["ts"][1:] for sig in signal.values()]
+#         ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+#         signals = None
+#         hks = None
+#         assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0]))
+#         assert np.all(
+#             tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
+#         )
+
+#     # TODO: is this compatible with lindbladian
+#     if model.max_excitations:
+#         cutter = model.ex_cutter
+#         hamiltonian = cutter @ hamiltonian @ cutter.T
+#         if hks is not None:
+#             cutter_tf = tf.cast(cutter, tf.complex128)
+#             hks = tf.matmul(cutter_tf, tf.matmul(hks, cutter_tf, transpose_b=True))
+
+#     dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+#     if model.lindbladian:
+#         col_ops = model.get_Lindbladians()
+#         if model.max_excitations:
+#             cutter = model.ex_cutter
+#             col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
+#         dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
+#     else:
+#         batch_size = (
+#             self.propagate_batch_size if self.propagate_batch_size else len(hamiltonian)
+#         )
+#         batch_size = len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
+#         batch_size = tf.constant(batch_size, tf.int32)
+#         dUs = tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size=batch_size)
+
+#     U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+#     if model.max_excitations:
+#         U = cutter.T @ U @ cutter
+#         ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
+#         if self.stop_partial_propagator_gradient:
+#             self.partial_propagators[gate] = tf.stop_gradient(
+#                 tf.linalg.matmul(
+#                     tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+#                     ex_cutter,
+#                 )
+#             )
+#         else:
+#             self.partial_propagators[gate] = tf.stop_gradient(
+#                 tf.linalg.matmul(
+#                     tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+#                     ex_cutter,
+#                 )
+#             )
+#     else:
+#         self.partial_propagators[gate] = dUs
+
+#     self.ts = ts
+#     return U
+
+
+####################
+# HELPER FUNCTIONS #
+####################
+
 
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
@@ -156,6 +298,7 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     return dUs_array.concat()
 
 
+@prop_reg_deco
 def tf_propagation(h0, hks, cflds, dt):
     """
     Calculate the unitary time evolution of a system controlled by time-dependent
