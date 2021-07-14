@@ -137,5 +137,7 @@ dmypy.json
 
 # swp files
 *.swp
+
+# okteto configs
 .stignore
 okteto.yml
