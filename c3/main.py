@@ -12,10 +12,10 @@ from c3.experiment import Experiment
 from c3.model import Model
 from c3.generator.generator import Generator
 
-from c3.optimizers.c1 import C1
-from c3.optimizers.c2 import C2
-from c3.optimizers.c3 import C3
-from c3.optimizers.sensitivity import SET
+from c3.optimizers.optimalcontrol import OptimalControl
+from c3.optimizers.calibration import Calibration
+from c3.optimizers.modellearning import ModelLearning
+from c3.optimizers.sensitivity import Sensitivity
 
 
 logging.getLogger("tensorflow").disabled = True
@@ -35,12 +35,12 @@ def run_cfg(cfg, opt_config_filename, debug=False):
     """
     optim_type = cfg.pop("optim_type")
     optim_lib = {
-        "C1": C1,
-        "C2": C2,
-        "C3": C3,
-        "C3_confirm": C3,
-        "confirm": C3,
-        "SET": SET,
+        "C1": OptimalControl,
+        "C2": Calibration,
+        "C3": ModelLearning,
+        "C3_confirm": ModelLearning,
+        "confirm": ModelLearning,
+        "SET": Sensitivity,
     }
     if not optim_type in optim_lib:
         raise Exception("C3:ERROR:Unknown optimization type specified.")
