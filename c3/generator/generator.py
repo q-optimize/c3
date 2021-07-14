@@ -10,7 +10,7 @@ are put through via a mixer device to produce an effective modulated signal.
 """
 
 import copy
-from typing import List
+from typing import List, Callable
 import hjson
 import numpy as np
 import tensorflow as tf
@@ -29,11 +29,17 @@ class Generator:
         Physical or abstract devices in the signal processing chain.
     resolution : np.float64
         Resolution at which continuous functions are sampled.
+    callback : Callable
+        Function that is called after each device in the signal line.
 
     """
 
     def __init__(
-        self, devices: dict = None, chains: dict = None, resolution: np.float64 = 0.0
+        self,
+        devices: dict = None,
+        chains: dict = None,
+        resolution: np.float64 = 0.0,
+        callback: Callable = None,
     ):
         self.devices = {}
         if devices:
@@ -44,6 +50,7 @@ class Generator:
             self.__check_signal_chains()
         self.resolution = resolution
         self.gen_stacked_signals: dict = None
+        self.callback = callback
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
@@ -128,6 +135,10 @@ class Generator:
                 outputs = dev.process(instr, chan, *inputs)
                 signal_stack.append(outputs)
                 gen_stacked_signals[chan].append((dev_id, copy.deepcopy(outputs)))
+
+                # call the callback with the current signal
+                if self.callback:
+                    self.callback(chan, dev_id, outputs)
             # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
         self.gen_stacked_signals = gen_stacked_signals
