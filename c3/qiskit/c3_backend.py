@@ -420,7 +420,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # generate shots style readout with no SPAM
         # TODO a more sophisticated readout/measurement routine
-        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32")
+        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32").tolist()
 
         # generate state labels
         output_labels = self.get_labels()

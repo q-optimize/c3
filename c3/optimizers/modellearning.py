@@ -22,7 +22,7 @@ from c3.libraries.estimators import (
 )
 
 
-class C3(Optimizer):
+class ModelLearning(Optimizer):
     """
     Object that deals with the model learning.
 
@@ -69,7 +69,7 @@ class C3(Optimizer):
         # Consistency checks
 
         if estimator:
-            raise Exception(
+            raise NotImplementedError(
                 "C3:ERROR: Setting estimators is currently not supported."
                 "Only the standard logarithmic likelihood can be used at the moment."
                 "Please remove this setting."
@@ -116,6 +116,8 @@ class C3(Optimizer):
         self.fom = g_LL_prime_combined
         self.__dir_path = dir_path
         self.__run_name = run_name
+        self.scaling = True  # interoperability with sensitivity which uses no scaling
+        self.logname = "model_learn.log"  # shared log_setup requires logname
         self.run = self.learn_model  # Alias legacy name for optimization method
 
     def log_setup(self) -> None:
@@ -136,7 +138,6 @@ class C3(Optimizer):
                 [self.algorithm.__name__, self.sampling.__name__, self.fom.__name__]
             )
         self.logdir = log_setup(self.__dir_path, run_name)
-        self.logname = "model_learn.log"
 
     def read_data(self, datafiles: Dict[str, str]) -> None:
         """
@@ -228,8 +229,13 @@ class C3(Optimizer):
         m = self.learn_from[ipar]
         gateset_params = m["params"]
         sequences = m["seqs"][:seqs_pp]
-        self.pmap.set_parameters_scaled(current_params)
-        self.pmap.str_parameters()
+        # Model learning uses scaled parameters but Sensitivity uses
+        # unscaled parameters. This workaround flag allows for code reuse
+        if self.scaling:
+            self.pmap.set_parameters_scaled(current_params)
+        else:
+            self.pmap.set_parameters(current_params)
+
         self.pmap.model.update_model()
         self.pmap.set_parameters(gateset_params, self.gateset_opt_map)
         # We find the unique gates used in the sequence and compute
@@ -430,70 +436,6 @@ class C3(Optimizer):
         goal = g_LL_prime_combined(goals, seq_weigths)
         grad = dv_g_LL_prime(goals, grads, seq_weigths)
         # print(f"{seq_weigths=}\n{goals=}\n{grads=}\n{goal=}\n{grad=}\n")
-
-        with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write("\nFinished batch with ")
-            logfile.write("{}: {}\n".format(self.fom.__name__, goal))
-            for cb_fom in self.callback_foms:
-                val = float(cb_fom(exp_values, sim_values, exp_stds, exp_shots).numpy())
-                logfile.write("{}: {}\n".format(cb_fom.__name__, val))
-            logfile.flush()
-
-        self.optim_status["params"] = [
-            par.numpy().tolist() for par in self.pmap.get_parameters()
-        ]
-        self.optim_status["goal"] = goal
-        self.optim_status["gradient"] = list(grad.flatten())
-        self.optim_status["time"] = time.asctime()
-        self.evaluation += 1
-        return goal, grad
-
-    def goal_run_with_grad_no_batch(self, current_params):
-        """
-        Same as goal_run but with gradient. Very resource intensive. Unoptimized at the
-        moment.
-        """
-        exp_values = []
-        sim_values = []
-        exp_stds = []
-        exp_shots = []
-        count = 0
-        seqs_pp = self.seqs_per_point
-
-        with tf.GradientTape() as t:
-            t.watch(current_params)
-            for target, data in self.learn_data.items():
-                self.learn_from = data["seqs_grouped_by_param_set"]
-                self.gateset_opt_map = data["opt_map"]
-                indeces = self.select_from_data(self.batch_sizes[target])
-                for ipar in indeces:
-                    count += 1
-                    data_set = self.learn_from[ipar]
-                    m_vals = data_set["results"][:seqs_pp]
-                    sim_vals = self._one_par_sim_vals(
-                        current_params, data_set, ipar, target
-                    )
-                    sim_values.extend(sim_vals)
-                    exp_values.extend(m_vals)
-
-                    self._log_one_dataset(data_set, ipar, indeces, sim_vals, count)
-
-            if target == "all":
-                goal = neg_loglkh_multinom_norm(
-                    exp_values,
-                    tf.stack(sim_values),
-                    tf.constant(exp_stds, dtype=tf.float64),
-                    tf.constant(exp_shots, dtype=tf.float64),
-                )
-            else:
-                goal = g_LL_prime(
-                    exp_values,
-                    tf.stack(sim_values),
-                    tf.constant(exp_stds, dtype=tf.float64),
-                    tf.constant(exp_shots, dtype=tf.float64),
-                )
-            grad = t.gradient(goal, current_params).numpy()
-            goal = goal.numpy()
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("\nFinished batch with ")

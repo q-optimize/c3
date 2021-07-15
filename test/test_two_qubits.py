@@ -30,7 +30,7 @@ import c3.libraries.fidelities as fidelities
 import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.tasks as tasks
 
-from c3.optimizers.c1 import C1
+from c3.optimizers.optimalcontrol import OptimalControl
 
 logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
@@ -309,7 +309,7 @@ gateset_opt_map = [
 
 pmap.set_opt_map(gateset_opt_map)
 
-opt = C1(
+opt = OptimalControl(
     dir_path=logdir,
     fid_func=fidelities.average_infid_set,
     fid_subspace=["Q1", "Q2"],
@@ -366,7 +366,7 @@ def test_optim_tf_sgd() -> None:
 @pytest.mark.integration
 @pytest.mark.tensorflow
 def test_bad_tf_sgd() -> None:
-    bad_tf_opt = C1(
+    bad_tf_opt = OptimalControl(
         dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
@@ -385,7 +385,7 @@ def test_bad_tf_sgd() -> None:
 @pytest.mark.slow
 @pytest.mark.integration
 def test_optim_lbfgs() -> None:
-    lbfgs_opt = C1(
+    lbfgs_opt = OptimalControl(
         dir_path=logdir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],
@@ -398,3 +398,22 @@ def test_optim_lbfgs() -> None:
 
     lbfgs_opt.optimize_controls()
     assert lbfgs_opt.current_best_goal < 0.01
+
+
+@pytest.mark.optimizers
+@pytest.mark.slow
+@pytest.mark.integration
+def test_optim_lbfgs_grad_free() -> None:
+    lbfgs_grad_free_opt = OptimalControl(
+        dir_path=logdir,
+        fid_func=fidelities.average_infid_set,
+        fid_subspace=["Q1", "Q2"],
+        pmap=pmap,
+        algorithm=algorithms.lbfgs_grad_free,
+        options={"maxfun": 5},
+        run_name="grad_free_lbfgs",
+    )
+    lbfgs_grad_free_opt.set_exp(exp)
+
+    lbfgs_grad_free_opt.optimize_controls()
+    assert lbfgs_grad_free_opt.current_best_goal < 0.01
