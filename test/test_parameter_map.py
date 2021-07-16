@@ -144,11 +144,49 @@ def test_parameter_get() -> None:
 
 
 @pytest.mark.unit
+def test_get_parameter_dict():
+    par_dict = pmap.get_parameter_dict()
+    ref_dict = {
+        "rx90p[0]-d1-gauss-amp": 0.45,
+        "rx90p[0]-d1-gauss-delta": -1.000,
+        "rx90p[0]-d1-gauss-freq_offset": -50.5e6,
+        "id[0]-d1-carrier-framechange": 5.933185,
+    }
+    assert ref_dict.keys() == par_dict.keys()
+    for k, v in ref_dict.items():
+        np.testing.assert_allclose(par_dict[k], v)
+
+
+@pytest.mark.unit
+def test_get_opt_limits():
+    limits = [
+        (0.4, 0.6),
+        (-5.0, 3.0),
+        (-53000000.0, -46999999.99999999),
+        (-np.pi, 3 * np.pi),
+    ]
+    np.testing.assert_allclose(pmap.get_opt_limits(), limits)
+    assert isinstance(pmap.get_opt_limits()[0], tuple)
+
+
+@pytest.mark.unit
+def test_get_full_params():
+    full_params = pmap.get_full_params()
+    assert 40 == len(full_params)
+    assert str(full_params["id[0]-d1-no_drive-amp"]) == "1.000 V "
+
+
+@pytest.mark.unit
 def test_parameter_get_value() -> None:
     """
     Check that four parameters are set.
     """
     assert str(pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))) == "450.000 mV "
+
+
+@pytest.mark.unit
+def test_update_parameters() -> None:
+    pmap.update_parameters()
 
 
 @pytest.mark.unit
@@ -186,6 +224,15 @@ def test_parameter_set_indepentent() -> None:
     amp1 = pmap.get_parameter(("rx90p[0]", "d1", "gauss", "amp"))
     amp2 = pmap.get_parameter(("rx90m[0]", "d1", "gauss", "amp"))
     assert amp1.get_value() != amp2.get_value()
+
+
+@pytest.mark.unit
+def test_get_key_from_scaled_index():
+    assert pmap.get_key_from_scaled_index(0) == "rx90p[0]-d1-gauss-amp"
+    assert pmap.get_key_from_scaled_index(1) == "rx90p[0]-d1-gauss-delta"
+    assert pmap.get_key_from_scaled_index(2) == "rx90p[0]-d1-gauss-freq_offset"
+    assert pmap.get_key_from_scaled_index(3) == "id[0]-d1-carrier-framechange"
+    assert pmap.get_key_from_scaled_index(4) is None
 
 
 @pytest.mark.unit

@@ -3,6 +3,7 @@
 import time
 import argparse
 import hjson
+from c3.c3objs import hjson_decode
 from c3.utils.utils import num3str
 from rich.console import Console
 from rich.table import Table
@@ -17,7 +18,7 @@ log = None
 
 try:
     with open(args.log_file) as file:
-        log = hjson.load(file)
+        log = hjson.load(file, object_pairs_hook=hjson_decode)
 except FileNotFoundError:
     print("Logfile not found.")
 

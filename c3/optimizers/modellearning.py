@@ -7,6 +7,7 @@ import pickle
 import numpy as np
 import tensorflow as tf
 from typing import List, Dict
+from c3.c3objs import hjson_decode
 from c3.optimizers.optimizer import Optimizer
 from c3.utils.utils import log_setup
 
@@ -197,7 +198,9 @@ class ModelLearning(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
-            best_params = hjson.load(file)["optim_status"]["params"]
+            best_params = hjson.load(file, object_pairs_hook=hjson_decode)[
+                "optim_status"
+            ]["params"]
         self.pmap.set_parameters(best_params)
         self.pmap.model.update_model()
         self.end_log()

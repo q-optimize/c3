@@ -1,12 +1,13 @@
 import os
 import tempfile
+import warnings
 import hjson
 from typing import Callable, Dict, Any
 import tensorflow as tf
 import numpy as np
 from c3.signal.pulse import Envelope, Carrier
 from c3.signal.gates import Instruction
-from c3.c3objs import Quantity, C3obj
+from c3.c3objs import Quantity, C3obj, hjson_encode
 from c3.utils.tf_utils import tf_convolve
 
 devices = dict()
@@ -51,7 +52,7 @@ class Device(C3obj):
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> Dict[str, Any]:
         params = {}
@@ -66,7 +67,7 @@ class Device(C3obj):
         }
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def calc_slice_num(self, t_start: np.float64, t_end: np.float64) -> None:
         """
@@ -469,6 +470,7 @@ class FluxTuningLinear(Device):
         return self.freq
 
 
+# Depreciated use ResponseFFT instead
 @dev_reg_deco
 class Response(Device):
     """Make the AWG signal physical by convolution with a Gaussian to limit bandwith.
@@ -483,6 +485,9 @@ class Response(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
+        warnings.warn(
+            "use ResponseFFT for faster signal generation instead", DeprecationWarning
+        )
 
     def convolve(self, signal: list, resp_shape: list):
         """
@@ -895,7 +900,8 @@ class Additive_Noise(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["noise_amp"] = props.pop("noise_amp")
+        if "noise_amp" in props:
+            self.params["noise_amp"] = props.pop("noise_amp")
 
     def get_noise(self, sig):
         noise_amp = self.params["noise_amp"].get_value()
@@ -1237,6 +1243,6 @@ class AWG(Device):
             signal = {}
             for key in self.signal:
                 signal[key] = self.signal[key].numpy().tolist()
-            logfile.write(hjson.dumps(signal))
+            logfile.write(hjson.dumps(signal, default=hjson_encode))
             logfile.write("\n")
             logfile.flush()

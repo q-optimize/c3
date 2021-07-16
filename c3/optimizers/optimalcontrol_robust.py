@@ -2,7 +2,7 @@ import time
 import hjson
 import tensorflow as tf
 from c3.optimizers.optimalcontrol import OptimalControl
-from c3.utils.utils import jsonify_list
+from c3.c3objs import hjson_encode
 import numpy as np
 
 
@@ -74,6 +74,6 @@ class OptimalControlRobust(OptimalControl):
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write("Robust values ")
             print(len(self.noise_map))
-            logfile.write(hjson.dumps(jsonify_list(self.noise_map)))
+            logfile.write(hjson.dumps(self.noise_map, default=hjson_encode))
             logfile.write("\n")
             logfile.flush()

@@ -1,7 +1,11 @@
 import copy
 import pickle
 
-from c3.c3objs import Quantity
+import hjson
+
+from c3.signal.gates import Instruction
+
+from c3.c3objs import Quantity, hjson_decode, hjson_encode
 from c3.experiment import Experiment
 from c3.generator.generator import Generator
 from c3.libraries.envelopes import envelopes
@@ -14,7 +18,7 @@ import pytest
 model = Model()
 model.read_config("test/test_model.cfg")
 generator = Generator()
-generator.read_config("test/generator.cfg")
+generator.read_config("test/generator2.cfg")
 
 t_final = 7e-9  # Time for single qubit gates
 sideband = 50e6
@@ -90,6 +94,7 @@ instr.add_component(
 instr.add_component(carr, "d1")
 instr.add_component(carr_2, "d2")
 
+instr_dict_str = hjson.dumpsJSON(instr.asdict(), default=hjson_encode)
 pmap = ParameterMap(model=model, generator=generator, instructions=[instr])
 
 exp = Experiment(pmap)
@@ -100,53 +105,74 @@ with open("test/instruction.pickle", "rb") as filename:
 
 @pytest.mark.integration
 def test_extended_pulse():
-    gen_signal = generator.generate_signals(instr)
+    instr_it = instr
+    gen_signal = generator.generate_signals(instr_it)
     ts = gen_signal["d1"]["ts"]
 
-    np.testing.assert_allclose(ts, test_data["ts"])
+    np.testing.assert_allclose(
+        ts,
+        test_data["signal"]["d1"]["ts"],
+        atol=1e-9 * np.max(test_data["signal"]["d1"]["ts"]),
+    )
     np.testing.assert_allclose(
         actual=gen_signal["d1"]["values"].numpy(),
         desired=test_data["signal"]["d1"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d1"]["values"].numpy()),
     )
     np.testing.assert_allclose(
         actual=gen_signal["d2"]["values"].numpy(),
         desired=test_data["signal"]["d2"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d2"]["values"].numpy()),
     )
     np.testing.assert_allclose(
-        instr.get_full_gate_length(), test_data["full_gate_length1"]
+        instr_it.get_full_gate_length(), test_data["full_gate_length1"]
     )
-    instr.auto_adjust_t_end(buffer=0.2)
+    instr_it.auto_adjust_t_end(buffer=0.2)
     np.testing.assert_allclose(
-        instr.get_full_gate_length(), test_data["full_gate_length2"]
+        instr_it.get_full_gate_length(), test_data["full_gate_length2"]
     )
-    np.testing.assert_allclose(instr.t_end, test_data["t_end2"])
+    np.testing.assert_allclose(instr_it.t_end, test_data["t_end2"])
+
     pmap.set_parameters(
         [2 * t_final],
         [[("multi_instruction", "d1", "gaussd1_2", "t_final")]],
         extend_bounds=True,
     )
 
-    gen_signal = generator.generate_signals(instr)
-    ts = gen_signal["d1"]["ts"]
+    gen_signal = generator.generate_signals(instr_it)
     np.testing.assert_allclose(
         actual=gen_signal["d1"]["values"].numpy(),
         desired=test_data["signal2"]["d1"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d1"]["values"].numpy()),
     )
     np.testing.assert_allclose(
         actual=gen_signal["d2"]["values"].numpy(),
         desired=test_data["signal2"]["d2"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d2"]["values"].numpy()),
     )
-    instr.auto_adjust_t_end(0.1)
-    gen_signal = generator.generate_signals(instr)
+    instr_it.auto_adjust_t_end(0.1)
+    gen_signal = generator.generate_signals(instr_it)
     np.testing.assert_allclose(
         actual=gen_signal["d1"]["values"].numpy(),
         desired=test_data["signal3"]["d1"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d1"]["values"].numpy()),
     )
     np.testing.assert_allclose(
         actual=gen_signal["d2"]["values"].numpy(),
         desired=test_data["signal3"]["d2"]["values"].numpy(),
+        atol=1e-9 * np.max(test_data["signal"]["d2"]["values"].numpy()),
     )
 
 
-with open("test/instruction.pickle", "wb") as filename:
-    pickle.dump(test_data, filename)
+@pytest.mark.unit
+def test_save_and_load():
+    global instr, pmap
+    instr = Instruction()
+    instr.from_dict(hjson.loads(instr_dict_str, object_pairs_hook=hjson_decode))
+    pmap = ParameterMap(model=model, generator=generator, instructions=[instr])
+    test_extended_pulse()
+
+
+@pytest.mark.unit
+def test_str_conversion():
+    assert repr(instr) == "Instruction[multi_instruction]"

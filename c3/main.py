@@ -7,6 +7,7 @@ import hjson
 import argparse
 import c3.utils.tf_utils as tf_utils
 import tensorflow as tf
+from c3.c3objs import hjson_decode
 from c3.parametermap import ParameterMap
 from c3.experiment import Experiment
 from c3.model import Model
@@ -31,7 +32,6 @@ def run_cfg(cfg, opt_config_filename, debug=False):
         setup the system and optimization problem.
     debug : bool, optional
         Skip running the actual optimization, by default False
-
     """
     optim_type = cfg.pop("optim_type")
     optim_lib = {
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     opt_config = args.master_config
     with open(opt_config, "r") as cfg_file:
         try:
-            cfg = hjson.load(cfg_file)
+            cfg = hjson.load(cfg_file, object_pairs_hook=hjson_decode)
         except hjson.decoder.HjsonDecodeError:
             raise Exception(f"Config {opt_config} is invalid.")
     run_cfg(cfg, opt_config)

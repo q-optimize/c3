@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 import hjson
 import c3.libraries.algorithms as algorithms
+from c3.c3objs import hjson_encode
 from c3.experiment import Experiment
 from c3.parametermap import ParameterMap
 import copy
@@ -121,13 +122,15 @@ class Optimizer:
             logfile.write("Starting optimization at ")
             logfile.write(start_time_str)
             logfile.write("Optimization parameters:\n")
-            logfile.write(hjson.dumpsJSON(self.pmap.opt_map))
+            logfile.write(hjson.dumpsJSON(self.pmap.opt_map, default=hjson_encode))
             logfile.write("\n")
             logfile.write("Units:\n")
-            logfile.write(hjson.dumpsJSON(self.pmap.get_opt_units()))
+            logfile.write(
+                hjson.dumpsJSON(self.pmap.get_opt_units(), default=hjson_encode)
+            )
             logfile.write("\n")
             logfile.write("Algorithm options:\n")
-            logfile.write(hjson.dumpsJSON(self.options))
+            logfile.write(hjson.dumpsJSON(self.options, default=hjson_encode))
             logfile.write("\n")
             logfile.flush()
 
@@ -174,7 +177,7 @@ class Optimizer:
                     "units": self.pmap.get_opt_units(),
                     "optim_status": self.optim_status,
                 }
-                best_point.write(hjson.dumpsJSON(best_dict))
+                best_point.write(hjson.dumpsJSON(best_dict, default=hjson_encode))
                 best_point.write("\n")
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
@@ -185,7 +188,7 @@ class Optimizer:
                 f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n"
             )
             # logfile.write(hjson.dumpsJSON(self.optim_status, indent=2))
-            logfile.write(hjson.dumpsJSON(self.optim_status))
+            logfile.write(hjson.dumpsJSON(self.optim_status, default=hjson_encode))
             logfile.write("\n")
             logfile.flush()
 
@@ -347,7 +350,11 @@ class TensorBoardLogger(BaseLogger):
             self.write_params(opt.pmap.get_parameters())
             tf.summary.text(
                 "Parameters",
-                hjson.dumpsJSON(opt.pmap.asdict(instructions_only=False), indent=2),
+                hjson.dumpsJSON(
+                    opt.pmap.asdict(instructions_only=False),
+                    indent=2,
+                    default=hjson_encode,
+                ),
                 step=0,
             )
 

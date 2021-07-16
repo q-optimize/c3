@@ -1,6 +1,7 @@
 """
 testing module for Model class
 """
+import pickle
 
 import pytest
 import numpy as np
@@ -103,6 +104,9 @@ model.set_dressed(False)
 
 hdrift, hks = model.get_Hamiltonians()
 
+with open("test/model.pickle", "rb") as filename:
+    test_data = pickle.load(filename)
+
 
 @pytest.mark.unit
 def test_model_eigenfrequencies_1() -> None:
@@ -122,9 +126,36 @@ def test_model_couplings() -> None:
     assert hks["d2"][1, 0] == 1
 
 
-pytest.mark.unit
+@pytest.mark.unit
+def test_model_get_hamiltonian() -> None:
+    ham = model.get_Hamiltonian()
+    np.testing.assert_allclose(ham, hdrift)
+
+    sig = {"d1": {"ts": np.linspace(0, 5e-9, 10), "values": np.linspace(0e9, 20e9, 10)}}
+    hams = model.get_Hamiltonian(sig)
+    np.testing.assert_allclose(hams, test_data["sliced_hamiltonians"])
 
 
+@pytest.mark.unit
+def test_get_qubit_frequency() -> None:
+    np.testing.assert_allclose(
+        model.get_qubit_freqs(), [4999294802.027272, 5600626454.433859]
+    )
+
+
+@pytest.mark.unit
+def test_get_indeces() -> None:
+    assert model.get_state_index((0, 0)) == 0
+    assert model.get_state_index((1, 0)) == 3
+    assert model.get_state_index((1, 1)) == 4
+    assert model.get_state_index((2, 1)) == 7
+
+    actual = model.get_state_indeces([(0, 0), (1, 0), (2, 0), (1, 1)])
+    desired = [0, 3, 6, 4]
+    np.testing.assert_equal(actual=actual, desired=desired)
+
+
+@pytest.mark.unit
 def test_model_update_by_parametermap() -> None:
     pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
     hdrift_a, _ = model.get_Hamiltonians()

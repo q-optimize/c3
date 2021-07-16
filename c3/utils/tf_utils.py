@@ -196,26 +196,23 @@ def tf_diff(l):  # noqa
 
 
 # MATRIX FUNCTIONS
-
-
 @tf.function
 def Id_like(A):
     """Identity of the same size as A."""
-    dim = list(A.shape)[-1]
-    return tf.eye(dim, dtype=tf.complex128)
+    return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
+
+
+# @tf.function
+# def tf_kron(A, B):
+#     """Kronecker product of 2 matrices."""
+#     dims = tf.shape(A) * tf.shape(B)
+#     tensordot = tf.tensordot(A, B, axes=0)
+#     reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
+#     return reshaped
 
 
 @tf.function
 def tf_kron(A, B):
-    """Kronecker product of 2 matrices."""
-    dims = tf.shape(A) * tf.shape(B)
-    tensordot = tf.tensordot(A, B, axes=0)
-    reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
-    return reshaped
-
-
-@tf.function
-def tf_kron_batch(A, B):
     """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
     dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
     res = tf.expand_dims(tf.expand_dims(A, -1), -3) * tf.expand_dims(
@@ -226,34 +223,24 @@ def tf_kron_batch(A, B):
 
 
 # SUPEROPER FUNCTIONS
-# TODO migrate all superoper functions to using tf_kron
-
-
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
     Id = Id_like(A)
-    dim = tf.shape(A)[0]
-    tensordot = tf.tensordot(A, Id, axes=0)
-    reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
-    )
-    return reshaped
+    return tf_kron(A, Id)
 
 
 def tf_spost(A):
     """Superoperator on the right of matrix A."""
     Id = Id_like(A)
-    dim = tf.shape(A)[0]
-    tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
-    reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
-    )
-    return reshaped
+    return tf_kron(Id, tf.linalg.matrix_transpose(A))
 
 
+# @tf.function
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
-    superA = tf.matmul(tf_spre(A), tf_spost(tf.linalg.adjoint(A)))
+    superA = tf.matmul(
+        tf_spre(A), tf_spost(tf.linalg.matrix_transpose(A, conjugate=True))
+    )
     return superA
 
 
