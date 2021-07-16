@@ -5,9 +5,8 @@ import hjson
 import copy
 import numpy as np
 import tensorflow as tf
-from c3.c3objs import Quantity
+from c3.c3objs import Quantity, hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
-from c3.signal.pulse import components as comp_lib
 from typing import Union
 from tensorflow.errors import InvalidArgumentError
 
@@ -76,9 +75,7 @@ class ParameterMap:
 
         """
         with open(init_point) as init_file:
-            best = hjson.load(
-                init_file
-            )  # no hjson: be compatible with optimizer logging
+            best = hjson.load(init_file, object_pairs_hook=hjson_decode)
 
         best_opt_map = best["opt_map"]
         init_p = best["optim_status"]["params"]
@@ -95,7 +92,7 @@ class ParameterMap:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.fromdict(cfg)
 
     def fromdict(self, cfg: dict) -> None:
@@ -108,18 +105,9 @@ class ParameterMap:
                         for par, val in props["params"].items():
                             instr.comps[drive_chan][comp].params[par].set_value(val)
             else:
-                instr = Instruction(
-                    name=key,
-                    t_start=0.0,
-                    t_end=gate["gate_length"],
-                    channels=list(gate["drive_channels"].keys()),
-                )
-                for drive_chan, comps in gate["drive_channels"].items():
-                    for comp, props in comps.items():
-                        ctype = props.pop("c3type")
-                        instr.add_component(
-                            comp_lib[ctype](name=comp, **props), chan=drive_chan
-                        )
+                # TODO: initialize directly by using the constructor.
+                instr = Instruction(ideal=[[1]])  # Set ideal to mute warning
+                instr.from_dict(gate, name=key)
             self.instructions[key] = instr
             self.__initialize_parameters()
 
@@ -128,7 +116,7 @@ class ParameterMap:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self, instructions_only=True) -> dict:
         """
@@ -146,7 +134,7 @@ class ParameterMap:
             return out_dict
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def get_full_params(self) -> Dict[str, Quantity]:
         """

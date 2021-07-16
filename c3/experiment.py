@@ -18,6 +18,7 @@ import tensorflow as tf
 from typing import Dict
 import time
 
+from c3.c3objs import hjson_encode, hjson_decode
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
@@ -94,7 +95,7 @@ class Experiment:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.quick_setup(cfg)
 
     def quick_setup(self, cfg) -> None:
@@ -176,13 +177,22 @@ class Experiment:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
+        self.from_dict(cfg)
+
+    def from_dict(self, cfg: dict) -> None:
+        """
+        Load experiment from dictionary
+        """
         model = Model()
         model.fromdict(cfg["model"])
         generator = Generator()
         generator.fromdict(cfg["generator"])
         pmap = ParameterMap(model=model, generator=generator)
         pmap.fromdict(cfg["instructions"])
+        if "options" in cfg:
+            for k, v in cfg["options"].items():
+                self.__dict__[k] = v
         self.pmap = pmap
 
     def write_config(self, filepath: str) -> None:
@@ -190,7 +200,7 @@ class Experiment:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> dict:
         """
@@ -202,10 +212,16 @@ class Experiment:
             exp_dict["instructions"][name] = instr.asdict()
         exp_dict["model"] = self.pmap.model.asdict()
         exp_dict["generator"] = self.pmap.generator.asdict()
+        exp_dict["options"] = {
+            "propagate_batch_size": self.propagate_batch_size,
+            "use_control_fields": self.use_control_fields,
+            "overwrite_propagators": self.overwrite_propagators,
+            "stop_partial_propagator_gradient": self.stop_partial_propagator_gradient,
+        }
         return exp_dict
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def evaluate_legacy(self, sequences):
         """

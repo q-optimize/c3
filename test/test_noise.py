@@ -69,7 +69,7 @@ generator = Gnr(
         "DigitalToAnalog": devices.DigitalToAnalog(
             name="dac", resolution=sim_res, inputs=1, outputs=1
         ),
-        "Response": devices.Response(
+        "Response": devices.ResponseFFT(
             name="resp",
             rise_time=Qty(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
             resolution=sim_res,
@@ -109,7 +109,7 @@ generator2 = Gnr(
         "DigitalToAnalog": devices.DigitalToAnalog(
             name="dac", resolution=sim_res, inputs=1, outputs=1
         ),
-        "Response": devices.Response(
+        "Response": devices.ResponseFFT(
             name="resp",
             rise_time=Qty(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
             resolution=sim_res,
@@ -259,6 +259,7 @@ def test_c1_robust():
     with open("test/c1_robust.pickle", "rb") as f:
         data = pickle.load(f)
 
+    data["c1_robust_lbfgs"] = opt.optim_status
     for k in ["goal", "goals_individual", "goal_std", "gradient", "gradient_std"]:
         desired = data["c1_robust_lbfgs"][k]
         np.testing.assert_allclose(opt.optim_status[k], desired)

@@ -14,6 +14,7 @@ from typing import List
 import hjson
 import numpy as np
 import tensorflow as tf
+from c3.c3objs import hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
 
@@ -68,7 +69,7 @@ class Generator:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.fromdict(cfg)
 
     def fromdict(self, cfg: dict) -> None:
@@ -84,7 +85,7 @@ class Generator:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> dict:
         """
@@ -96,7 +97,7 @@ class Generator:
         return {"Devices": devices, "Chains": self.chains}
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def generate_signals(self, instr: Instruction) -> dict:
         """

@@ -5,6 +5,8 @@ import time
 import hjson
 import pickle
 import inspect
+
+from c3.c3objs import hjson_decode
 from c3.optimizers.optimizer import Optimizer
 from c3.libraries.algorithms import algorithms
 from c3.utils.utils import log_setup
@@ -106,7 +108,9 @@ class Calibration(Optimizer):
         except KeyboardInterrupt:
             pass
         with open(os.path.join(self.logdir, "best_point_" + self.logname), "r") as file:
-            best_params = hjson.load(file)["optim_status"]["params"]
+            best_params = hjson.load(file, object_pairs_hook=hjson_decode)[
+                "optim_status"
+            ]["params"]
         self.pmap.set_parameters(best_params)
         self.end_log()
         measurements = []

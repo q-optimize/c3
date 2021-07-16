@@ -42,13 +42,13 @@ class C3obj:
                         raise exception
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def asdict(self) -> dict:
         params = {}
         for key, item in self.params.items():
             params[key] = item.asdict()
-        return {"c3type": self.__class__.__name__, "params": params}
+        return {"c3type": self.__class__.__name__, "params": params, "name": self.name}
 
 
 class Quantity:
@@ -308,3 +308,57 @@ class Quantity:
         self.offset = np.array(min_val) * self.pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * self.pref
         self.set_value(val)
+
+
+def jsonify_list(data, transform_arrays=True):
+    # try:
+    if data is None:
+        return
+    if isinstance(data, dict):
+        return {str(k): jsonify_list(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [jsonify_list(v) for v in data]
+    elif isinstance(data, tuple):
+        return tuple(jsonify_list(v) for v in data)
+    elif isinstance(data, np.ndarray) and transform_arrays:
+        return data.tolist()
+    elif isinstance(data, ops.EagerTensor) and transform_arrays:
+        return data.numpy().tolist()
+    elif isinstance(data, C3obj) or isinstance(data, Quantity):
+        return data.asdict()
+    elif (
+        isinstance(data, str)
+        or isinstance(data, bool)
+        or isinstance(data, float)
+        or isinstance(data, int)
+    ):
+        return data
+    else:
+        return data
+
+
+def hjson_encode(z):
+    if isinstance(z, complex):
+        return {"__complex__": str(z)}
+    elif isinstance(z, np.ndarray):
+        return {"__array__": (z.tolist())}
+    elif isinstance(z, tf.Tensor) or isinstance(z, ops.EagerTensor):
+        return {"__array__": (z.numpy().tolist())}
+    elif isinstance(z, Quantity):
+        return {"__quantity__": z.asdict()}
+    elif isinstance(z, C3obj):
+        return z.asdict()
+    elif isinstance(z, dict) and np.any([not isinstance(k, str) for k in z.keys()]):
+        return {str(k): v for k, v in z.items()}
+    return z
+
+
+def hjson_decode(z):
+    if len(z) == 1:
+        if z[0][0] == "__complex__":
+            return complex(z[0][1])
+        elif z[0][0] == "__array__":
+            return np.array(z[0][1])
+        elif z[0][0] == "__quantity__":
+            return Quantity(**z[0][1])
+    return dict(z)

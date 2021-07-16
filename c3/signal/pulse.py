@@ -1,4 +1,4 @@
-from c3.c3objs import C3obj
+from c3.c3objs import C3obj, hjson_encode
 from c3.c3objs import Quantity as Qty
 from c3.libraries.envelopes import envelopes
 import tensorflow as tf
@@ -65,13 +65,14 @@ class Envelope(C3obj):
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> dict:
         params = {}
         for key, item in self.params.items():
             params[key] = item.asdict()
         return {
+            "name": self.name,
             "c3type": self.__class__.__name__,
             "shape": self.shape.__name__,
             "params": params,
@@ -79,7 +80,7 @@ class Envelope(C3obj):
         }
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def __repr__(self) -> str:
         repr_str = self.name + ":: "
@@ -185,13 +186,7 @@ class Carrier(C3obj):
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
-
-    def asdict(self) -> dict:
-        params = {}
-        for key, item in self.params.items():
-            params[key] = item.asdict()
-        return {"c3type": self.__class__.__name__, "params": params}
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def __repr__(self) -> str:
         repr_str = self.name + ":: "

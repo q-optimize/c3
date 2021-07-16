@@ -7,6 +7,7 @@ import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
+from c3.c3objs import hjson_encode, hjson_decode
 from c3.libraries.chip import device_lib, Drive, Coupling
 from c3.libraries.tasks import task_lib
 from typing import Dict, List, Tuple, Union
@@ -181,7 +182,7 @@ class Model:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.fromdict(cfg)
 
     def fromdict(self, cfg: dict) -> None:
@@ -230,7 +231,7 @@ class Model:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> dict:
         """
@@ -245,10 +246,15 @@ class Model:
         tasks = {}
         for name, task in self.tasks.items():
             tasks[name] = task.asdict()
-        return {"Qubits": qubits, "Couplings": couplings, "Tasks": tasks}
+        return {
+            "Qubits": qubits,
+            "Couplings": couplings,
+            "Tasks": tasks,
+            "max_excitations": self.max_excitations,
+        }
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def set_dressed(self, dressed):
         """
@@ -297,7 +303,6 @@ class Model:
         else:
             return self.drift_ham, self.control_hams
 
-    @tf.function
     def get_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
@@ -461,7 +466,14 @@ class Model:
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
-            qubit = self.couplings[line].connected[0]
+            if line in self.couplings:
+                qubit = self.couplings[line].connected[0]
+            elif line in self.subsystems:
+                qubit = line
+            else:
+                raise Exception(
+                    f"Component {line} not found in couplings or subsystems"
+                )
             # TODO extend this to multiple qubits
             ann_oper = self.ann_opers[self.names.index(qubit)]
             num_oper = tf.constant(
