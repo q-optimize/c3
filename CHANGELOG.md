@@ -39,6 +39,12 @@ This section tracks development for the upcoming release.
 - `added` Nightly releases as `c3-toolset-nightly` with post-release checks #42 #62
 - `added` Tests for checking Notebooks #20
 
+## Version `1.2.3` - 16 Jul 2021
+
+### Summary
+
+Bugfix release that addresses the memory leak due to usage of `tf.Variable` highlighted in #38 with the fix in #46.
+
 ## Version `1.2.2` - 21 Feb 2021
 
 ### Summary
