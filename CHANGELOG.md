@@ -15,6 +15,9 @@ This section tracks development for the upcoming release.
 
 ### Details
 
+- `added` Tests, Batch Processing for `tf_utils`, tests for `from_config()` and `asdict()` #89
+- `fixed` Transmon_expanded fitting of EJ EC #89
+- `added` More hjson functionality, including complex numbers #89
 - `added` `fixed` Sensitivity Analysis codebase with docs and examples #125
 - `changed` Names of Optimizers #120
 - `added` Tests and Cleanup of `algorithms`, `qt_utils` #124 #112
