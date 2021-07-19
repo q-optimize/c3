@@ -21,7 +21,14 @@ generator = Generator(
         ),
         "Mixer": devices.Mixer(name="mixer", inputs=2, outputs=1),
     },
-    chains={"d1": ["LO", "AWG", "DigitalToAnalog", "Mixer"]},
+    chains={
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Mixer": ["LO", "DigitalToAnalog"],
+        },
+    },
 )
 
 lo_freq_q1 = 2e9
