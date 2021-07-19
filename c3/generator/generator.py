@@ -17,6 +17,7 @@ import tensorflow as tf
 from c3.c3objs import hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
+from graphlib import TopologicalSorter
 
 
 class Generator:
@@ -45,17 +46,29 @@ class Generator:
         if devices:
             self.devices = devices
         self.chains = {}
+        self.sorted_chains: dict[str, List[str]] = {}
         if chains:
             self.chains = chains
             self.__check_signal_chains()
         self.resolution = resolution
-        self.gen_stacked_signals: dict = None
         self.callback = callback
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
             signals = 0
-            for device_id in chain:
+            for device_id, sources in chain.items():
+                # all source devices need to exist
+                for dev in sources:
+                    if dev not in self.devices:
+                        raise Exception(f"C3:Error: device {dev} not found.")
+
+                # the expected number of inputs must match the connected devices
+                if self.devices[device_id].inputs != len(sources):
+                    raise Exception(
+                        f"C3:Error: device {device_id} expects {self.devices[device_id].inputs} inputs, but {len(sources)} found."
+                    )
+
+                # overall the chain should have exactly 1 output signal
                 signals -= self.devices[device_id].inputs
                 signals += self.devices[device_id].outputs
             if signals != 1:
@@ -64,6 +77,10 @@ class Generator:
                     + channel
                     + "' contains unmatched number of inputs and outputs."
                 )
+
+            # bring chain in topological order
+            sorter = TopologicalSorter(chain)
+            self.sorted_chains[channel] = list(sorter.static_order())
 
     def read_config(self, filepath: str) -> None:
         """
@@ -123,25 +140,36 @@ class Generator:
 
         """
         gen_signal = {}
-        gen_stacked_signals: dict = dict()
         for chan in instr.comps:
-            signal_stack: List[tf.constant] = []
-            gen_stacked_signals[chan] = []
-            for dev_id in self.chains[chan]:
+            chain = self.chains[chan]
+
+            # create list of succeeding devices
+            successors = {}
+            for dev_id in chain:
+                successors[dev_id] = [x for x in chain if dev_id in chain[x]]
+
+            signal_stack: dict[str, tf.constant] = {}
+            for dev_id in self.sorted_chains[chan]:
+                # collect inputs
+                sources = self.chains[chan][dev_id]
+                inputs = [signal_stack[x] for x in sources]
+
+                # calculate the output and store it in the stack
                 dev = self.devices[dev_id]
-                inputs = []
-                for _input_num in range(dev.inputs):
-                    inputs.append(signal_stack.pop())
-                outputs = dev.process(instr, chan, *inputs)
-                signal_stack.append(outputs)
-                gen_stacked_signals[chan].append((dev_id, copy.deepcopy(outputs)))
+                output = dev.process(instr, chan, *inputs)
+                signal_stack[dev_id] = output
+
+                # remove inputs if they are not needed anymore
+                for source in sources:
+                    successors[source].remove(dev_id)
+                    if len(successors[source]) < 1:
+                        del signal_stack[source]
 
                 # call the callback with the current signal
                 if self.callback:
-                    self.callback(chan, dev_id, outputs)
-            # The stack is reused here, thus we need to deepcopy.
-            gen_signal[chan] = copy.deepcopy(signal_stack.pop())
-        self.gen_stacked_signals = gen_stacked_signals
+                    self.callback(chan, dev_id, output)
+
+            gen_signal[chan] = copy.deepcopy(signal_stack[dev_id])
 
         # Hack to use crosstalk. Will be generalized to a post-processing module.
         # TODO: Rework of the signal generation for larger chips, similar to qiskit
