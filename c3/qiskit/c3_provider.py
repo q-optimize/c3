@@ -3,9 +3,9 @@ from qiskit.exceptions import QiskitError
 from qiskit.providers.provider import ProviderV1
 from qiskit.providers.exceptions import QiskitBackendNotFoundError
 
-from .c3_backend import C3QasmSimulator
+from .c3_backend import C3QasmPerfectSimulator, C3QasmPhysicsSimulator
 
-SIMULATORS = [C3QasmSimulator]
+SIMULATORS = [C3QasmPerfectSimulator, C3QasmPhysicsSimulator]
 
 
 class C3Provider(ProviderV1):

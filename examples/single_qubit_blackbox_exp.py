@@ -1,17 +1,17 @@
 import copy
 import numpy as np
-from c3.system.model import Model as Mdl
+from c3.model import Model as Mdl
 from c3.c3objs import Quantity as Qty
 from c3.parametermap import ParameterMap as PMap
 from c3.experiment import Experiment as Exp
 from c3.generator.generator import Generator as Gnr
 import c3.signal.gates as gates
-import c3.system.chip as chip
+import c3.libraries.chip as chip
 import c3.generator.devices as devices
 import c3.libraries.hamiltonians as hamiltonians
 import c3.signal.pulse as pulse
 import c3.libraries.envelopes as envelopes
-import c3.system.tasks as tasks
+import c3.libraries.tasks as tasks
 
 
 def create_experiment():
@@ -146,28 +146,32 @@ def create_experiment():
         params=carrier_parameters,
     )
 
-    X90p = gates.Instruction(name="X90p", t_start=0.0, t_end=t_final, channels=["d1"])
-    QId = gates.Instruction(name="Id", t_start=0.0, t_end=t_final, channels=["d1"])
+    rx90p = gates.Instruction(
+        name="rx90p", t_start=0.0, t_end=t_final, channels=["d1"], targets=[0]
+    )
+    QId = gates.Instruction(
+        name="id", t_start=0.0, t_end=t_final, channels=["d1"], targets=[0]
+    )
 
-    X90p.add_component(gauss_env_single, "d1")
-    X90p.add_component(carr, "d1")
+    rx90p.add_component(gauss_env_single, "d1")
+    rx90p.add_component(carr, "d1")
     QId.add_component(nodrive_env, "d1")
     QId.add_component(copy.deepcopy(carr), "d1")
     QId.comps["d1"]["carrier"].params["framechange"].set_value(
         (-sideband * t_final) % (2 * np.pi)
     )
-    Y90p = copy.deepcopy(X90p)
-    Y90p.name = "Y90p"
-    X90m = copy.deepcopy(X90p)
-    X90m.name = "X90m"
-    Y90m = copy.deepcopy(X90p)
-    Y90m.name = "Y90m"
-    Y90p.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
-    X90m.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
-    Y90m.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
+    ry90p = copy.deepcopy(rx90p)
+    ry90p.name = "ry90p"
+    rx90m = copy.deepcopy(rx90p)
+    rx90m.name = "rx90m"
+    ry90m = copy.deepcopy(rx90p)
+    ry90m.name = "ry90m"
+    ry90p.comps["d1"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
+    rx90m.comps["d1"]["gauss"].params["xy_angle"].set_value(np.pi)
+    ry90m.comps["d1"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
 
     parameter_map = PMap(
-        instructions=[QId, X90p, Y90p, X90m, Y90m], model=model, generator=generator
+        instructions=[QId, rx90p, ry90p, rx90m, ry90m], model=model, generator=generator
     )
 
     # ### MAKE EXPERIMENT

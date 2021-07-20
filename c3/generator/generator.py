@@ -14,6 +14,7 @@ from typing import List
 import hjson
 import numpy as np
 import tensorflow as tf
+from c3.c3objs import hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
 
@@ -42,6 +43,7 @@ class Generator:
             self.chains = chains
             self.__check_signal_chains()
         self.resolution = resolution
+        self.gen_stacked_signals: dict = None
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
@@ -67,7 +69,10 @@ class Generator:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
+        self.fromdict(cfg)
+
+    def fromdict(self, cfg: dict) -> None:
         for name, props in cfg["Devices"].items():
             props["name"] = name
             dev_type = props.pop("c3type")
@@ -80,7 +85,7 @@ class Generator:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
     def asdict(self) -> dict:
         """
@@ -92,9 +97,9 @@ class Generator:
         return {"Devices": devices, "Chains": self.chains}
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
-    def generate_signals(self, instr: Instruction):
+    def generate_signals(self, instr: Instruction) -> dict:
         """
         Perform the signal chain for a specified instruction, including local
         oscillator, AWG generation and IQ mixing.
@@ -111,8 +116,10 @@ class Generator:
 
         """
         gen_signal = {}
+        gen_stacked_signals: dict = dict()
         for chan in instr.comps:
-            signal_stack: List[tf.Variable] = []
+            signal_stack: List[tf.constant] = []
+            gen_stacked_signals[chan] = []
             for dev_id in self.chains[chan]:
                 dev = self.devices[dev_id]
                 inputs = []
@@ -120,6 +127,13 @@ class Generator:
                     inputs.append(signal_stack.pop())
                 outputs = dev.process(instr, chan, *inputs)
                 signal_stack.append(outputs)
+                gen_stacked_signals[chan].append((dev_id, copy.deepcopy(outputs)))
             # The stack is reused here, thus we need to deepcopy.
             gen_signal[chan] = copy.deepcopy(signal_stack.pop())
+        self.gen_stacked_signals = gen_stacked_signals
+
+        # Hack to use crosstalk. Will be generalized to a post-processing module.
+        # TODO: Rework of the signal generation for larger chips, similar to qiskit
+        if "crosstalk" in self.devices:
+            gen_signal = self.devices["crosstalk"].process(signal=gen_signal)
         return gen_signal

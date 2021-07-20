@@ -26,21 +26,22 @@ nested list of tuples that identifies each parameter.
 
 .. code-block:: python
 
-    opt_gates = ["X90p:Id"]
+    opt_gates = ["rx90p[0]"]
     gateset_opt_map=[
         [
-          ("X90p:Id", "d1", "gauss", "amp"),
+          ("rx90p[0]", "d1", "gauss", "amp"),
         ],
         [
-          ("X90p:Id", "d1", "gauss", "freq_offset"),
+          ("rx90p[0]", "d1", "gauss", "freq_offset"),
         ],
         [
-          ("X90p:Id", "d1", "gauss", "xy_angle"),
+          ("rx90p[0]", "d1", "gauss", "xy_angle"),
         ],
         [
-          ("X90p:Id", "d1", "gauss", "delta"),
+          ("RX90p:Id", "d1", "gauss", "delta"),
         ]
     ]
+    parameter_map.set_opt_map(gateset_opt_map)
 
 We can look at the parameter values this opt_map specified with
 
@@ -53,10 +54,11 @@ We can look at the parameter values this opt_map specified with
 
 .. parsed-literal::
 
-    X90p:Id-d1-gauss-amp                  : 500.000 mV
-    X90p:Id-d1-gauss-freq_offset          : -53.000 MHz 2pi
-    X90p:Id-d1-gauss-xy_angle             : -444.089 arad
-    X90p:Id-d1-gauss-delta                : -1.000
+    rx90p[0]-d1-gauss-amp                 : 500.000 mV
+    rx90p[0]-d1-gauss-freq_offset         : -53.000 MHz 2pi
+    rx90p[0]-d1-gauss-xy_angle            : -444.089 arad
+    rx90p[0]-d1-gauss-delta               : -1.000
+
 
 
 
@@ -64,10 +66,10 @@ We can look at the parameter values this opt_map specified with
 
 .. code-block:: python
 
-    from c3.optimizers.c1 import C1
+    from c3.optimizers.optimalcontrol import OptimalControl
     import c3.libraries.algorithms as algorithms
 
-The C1 object will handle the optimization for us. As a fidelity
+The OptimalControl object will handle the optimization for us. As a fidelity
 function we choose average fidelity as well as LBFG-S (a wrapper of the
 scipy implementation) from our library. See those libraries for how
 these functions are defined and how to supply your own, if necessary.
@@ -80,7 +82,7 @@ these functions are defined and how to supply your own, if necessary.
     # Create a temporary directory to store logfiles, modify as needed
     log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
-    opt = C1(
+    opt = OptimalControl(
         dir_path=log_dir,
         fid_func=fidelities.average_infid_set,
         fid_subspace=["Q1", "Q2"],

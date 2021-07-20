@@ -1,0 +1,611 @@
+{
+  instructions:
+  {
+    "id[0]":
+    {
+      gate_length: 7e-09
+      drive_channels:
+      {
+        d1:
+        {
+          no_drive:
+          {
+            c3type: Envelope
+            shape: no_drive
+            params:
+            {
+              amp:
+              {
+                value: 1.0
+                min_val: -1.0
+                max_val: 1.5
+                unit: V
+                symbol: \alpha
+              }
+              delta:
+              {
+                value: 0.0
+                min_val: -5.0
+                max_val: 5.0
+                unit: V
+                symbol: \alpha
+              }
+              freq_offset:
+              {
+                value: 0.0
+                min_val: -1.0
+                max_val: 1.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              xy_angle:
+              {
+                value: 0.0
+                min_val: -1.0
+                max_val: 1.0
+                unit: rad
+                symbol: \alpha
+              }
+              sigma:
+              {
+                value: 4.999999969612645e-09
+                min_val: -2.0
+                max_val: 2.0
+                unit: s
+                symbol: \alpha
+              }
+              t_final:
+              {
+                value: 7e-09
+                min_val: 3.5e-09
+                max_val: 1.05e-08
+                unit: s
+                symbol: \alpha
+              }
+            }
+            drag: false
+          }
+          carrier:
+          {
+            c3type: Carrier
+            params:
+            {
+              freq:
+              {
+                value: 5050000000.0
+                min_val: 4500000000.0
+                max_val: 6000000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              framechange:
+              {
+                value: 5.933185307179587
+                min_val: -3.141592653589793
+                max_val: 9.42477796076938
+                unit: rad
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+    "rx90p[0]":
+    {
+      gate_length: 7e-09
+      drive_channels:
+      {
+        d1:
+        {
+          gauss:
+          {
+            c3type: Envelope
+            shape: gaussian_nonorm
+            params:
+            {
+              amp:
+              {
+                value: 0.45
+                min_val: 0.4
+                max_val: 0.6
+                unit: V
+                symbol: \alpha
+              }
+              delta:
+              {
+                value: -1.0
+                min_val: -5.0
+                max_val: 3.0
+                unit: ""
+                symbol: \alpha
+              }
+              freq_offset:
+              {
+                value: -50500000.00000001
+                min_val: -60000000.0
+                max_val: -40000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              xy_angle:
+              {
+                value: -4.440892098500626e-16
+                min_val: -1.5707963267948966
+                max_val: 7.853981633974483
+                unit: rad
+                symbol: \alpha
+              }
+              sigma:
+              {
+                value: 1.75e-09
+                min_val: 8.75e-10
+                max_val: 3.5e-09
+                unit: s
+                symbol: \alpha
+              }
+              t_final:
+              {
+                value: 7e-09
+                min_val: 3.5e-09
+                max_val: 1.05e-08
+                unit: s
+                symbol: \alpha
+              }
+            }
+            drag: false
+          }
+          carrier:
+          {
+            c3type: Carrier
+            params:
+            {
+              freq:
+              {
+                value: 5050000000.0
+                min_val: 4500000000.0
+                max_val: 6000000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              framechange:
+              {
+                value: 0.0
+                min_val: -3.141592653589793
+                max_val: 9.42477796076938
+                unit: rad
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+    "ry90p[0]":
+    {
+      gate_length: 7e-09
+      drive_channels:
+      {
+        d1:
+        {
+          gauss:
+          {
+            c3type: Envelope
+            shape: gaussian_nonorm
+            params:
+            {
+              amp:
+              {
+                value: 0.45
+                min_val: 0.4
+                max_val: 0.6
+                unit: V
+                symbol: \alpha
+              }
+              delta:
+              {
+                value: -1.0
+                min_val: -5.0
+                max_val: 3.0
+                unit: ""
+                symbol: \alpha
+              }
+              freq_offset:
+              {
+                value: -50500000.00000001
+                min_val: -60000000.0
+                max_val: -40000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              xy_angle:
+              {
+                value: 1.5707963267948966
+                min_val: -1.5707963267948966
+                max_val: 7.853981633974483
+                unit: rad
+                symbol: \alpha
+              }
+              sigma:
+              {
+                value: 1.75e-09
+                min_val: 8.75e-10
+                max_val: 3.5e-09
+                unit: s
+                symbol: \alpha
+              }
+              t_final:
+              {
+                value: 7e-09
+                min_val: 3.5e-09
+                max_val: 1.05e-08
+                unit: s
+                symbol: \alpha
+              }
+            }
+            drag: false
+          }
+          carrier:
+          {
+            c3type: Carrier
+            params:
+            {
+              freq:
+              {
+                value: 5050000000.0
+                min_val: 4500000000.0
+                max_val: 6000000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              framechange:
+              {
+                value: 0.0
+                min_val: -3.141592653589793
+                max_val: 9.42477796076938
+                unit: rad
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+    "rx90m[0]":
+    {
+      gate_length: 7e-09
+      drive_channels:
+      {
+        d1:
+        {
+          gauss:
+          {
+            c3type: Envelope
+            shape: gaussian_nonorm
+            params:
+            {
+              amp:
+              {
+                value: 0.45
+                min_val: 0.4
+                max_val: 0.6
+                unit: V
+                symbol: \alpha
+              }
+              delta:
+              {
+                value: -1.0
+                min_val: -5.0
+                max_val: 3.0
+                unit: ""
+                symbol: \alpha
+              }
+              freq_offset:
+              {
+                value: -50500000.00000001
+                min_val: -60000000.0
+                max_val: -40000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              xy_angle:
+              {
+                value: 3.141592653589793
+                min_val: -1.5707963267948966
+                max_val: 7.853981633974483
+                unit: rad
+                symbol: \alpha
+              }
+              sigma:
+              {
+                value: 1.75e-09
+                min_val: 8.75e-10
+                max_val: 3.5e-09
+                unit: s
+                symbol: \alpha
+              }
+              t_final:
+              {
+                value: 7e-09
+                min_val: 3.5e-09
+                max_val: 1.05e-08
+                unit: s
+                symbol: \alpha
+              }
+            }
+            drag: false
+          }
+          carrier:
+          {
+            c3type: Carrier
+            params:
+            {
+              freq:
+              {
+                value: 5050000000.0
+                min_val: 4500000000.0
+                max_val: 6000000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              framechange:
+              {
+                value: 0.0
+                min_val: -3.141592653589793
+                max_val: 9.42477796076938
+                unit: rad
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+    "ry90m[0]":
+    {
+      gate_length: 7e-09
+      drive_channels:
+      {
+        d1:
+        {
+          gauss:
+          {
+            c3type: Envelope
+            shape: gaussian_nonorm
+            params:
+            {
+              amp:
+              {
+                value: 0.45
+                min_val: 0.4
+                max_val: 0.6
+                unit: V
+                symbol: \alpha
+              }
+              delta:
+              {
+                value: -1.0
+                min_val: -5.0
+                max_val: 3.0
+                unit: ""
+                symbol: \alpha
+              }
+              freq_offset:
+              {
+                value: -50500000.00000001
+                min_val: -60000000.0
+                max_val: -40000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              xy_angle:
+              {
+                value: 4.71238898038469
+                min_val: -1.5707963267948966
+                max_val: 7.853981633974483
+                unit: rad
+                symbol: \alpha
+              }
+              sigma:
+              {
+                value: 1.75e-09
+                min_val: 8.75e-10
+                max_val: 3.5e-09
+                unit: s
+                symbol: \alpha
+              }
+              t_final:
+              {
+                value: 7e-09
+                min_val: 3.5e-09
+                max_val: 1.05e-08
+                unit: s
+                symbol: \alpha
+              }
+            }
+            drag: false
+          }
+          carrier:
+          {
+            c3type: Carrier
+            params:
+            {
+              freq:
+              {
+                value: 5050000000.0
+                min_val: 4500000000.0
+                max_val: 6000000000.0
+                unit: Hz 2pi
+                symbol: \alpha
+              }
+              framechange:
+              {
+                value: 0.0
+                min_val: -3.141592653589793
+                max_val: 9.42477796076938
+                unit: rad
+                symbol: \alpha
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  model:
+  {
+    Qubits:
+    {
+      Q1:
+      {
+        c3type: Qubit
+        params:
+        {
+          freq:
+          {
+            value: 5000100000.0
+            min_val: 4995000000.0
+            max_val: 5005000000.0
+            unit: Hz 2pi
+            symbol: \alpha
+          }
+          anhar:
+          {
+            value: -210001000.0
+            min_val: -380000000.0
+            max_val: -120000000.00000003
+            unit: Hz 2pi
+            symbol: \alpha
+          }
+          temp:
+          {
+            value: 0.0
+            min_val: 0.0
+            max_val: 0.12
+            unit: K
+            symbol: \alpha
+          }
+        }
+        hilbert_dim: 3
+      }
+    }
+    Couplings:
+    {
+      d1:
+      {
+        c3type: Drive
+        params: {}
+        hamiltonian_func: x_drive
+        connected:
+        [
+          Q1
+        ]
+      }
+    }
+      Tasks:
+      {
+        init_ground:
+        {
+          c3type: InitialiseGround
+          params:
+          {
+            init_temp:
+            {
+              value: 0
+              min_val: -0.001
+              max_val: 0.22
+              unit: K
+              symbol: \alpha
+            }
+          }
+        }
+      }
+  }
+  generator:
+  {
+    Devices:
+    {
+      LO:
+      {
+        c3type: LO
+        inputs: 0
+        outputs: 1
+        params: {}
+        resolution: 100000000000.0
+      }
+      AWG:
+      {
+        c3type: AWG
+        inputs: 0
+        outputs: 1
+        params: {}
+        resolution: 2000000000.0
+        options: drag_2
+      }
+      DigitalToAnalog:
+      {
+        c3type: DigitalToAnalog
+        inputs: 1
+        outputs: 1
+        params: {}
+        resolution: 100000000000.0
+      }
+      Response:
+      {
+        c3type: Response
+        inputs: 1
+        outputs: 1
+        params:
+        {
+          rise_time:
+          {
+            value: 3e-10
+            min_val: 5e-11
+            max_val: 6e-10
+            unit: s
+            symbol: \alpha
+          }
+        }
+        resolution: 100000000000.0
+      }
+      Mixer:
+      {
+        c3type: Mixer
+        inputs: 2
+        outputs: 1
+        params: {}
+        resolution: 0
+      }
+      VoltsToHertz:
+      {
+        c3type: VoltsToHertz
+        inputs: 1
+        outputs: 1
+        params:
+        {
+          V_to_Hz:
+          {
+            value: 1000000000.0
+            min_val: 900000000.0
+            max_val: 1100000000.0
+            unit: Hz/V
+            symbol: \alpha
+          }
+        }
+        resolution: 0
+      }
+    }
+    Chains:
+    {
+      d1:
+      [
+        LO
+        AWG
+        DigitalToAnalog
+        Response
+        Mixer
+        VoltsToHertz
+      ]
+    }
+  }
+}

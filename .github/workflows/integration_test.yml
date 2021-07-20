@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  integration_unit_tests:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.6, 3.7, 3.8, 3.9]
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
@@ -29,4 +29,5 @@ jobs:
         pip install -r requirements.txt
     - name: Test with pytest
       run: |
-        pytest -v --cov=c3 test/
+        pytest -v -x -m "not slow" test/
+        pytest -v -x -m "slow" test/

@@ -3,13 +3,14 @@ Collection of (optimization) algorithms. All entries share a common signature wi
 optional arguments.
 """
 
+import ast
 from scipy.optimize import minimize as minimize
 import cma.evolution_strategy as cma
 import numpy as np
-
 from typing import Callable
 import adaptive
 import copy
+import warnings
 from scipy.optimize import OptimizeResult
 import tensorflow as tf
 
@@ -74,36 +75,15 @@ def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         points = 100
 
-    # probe_list = []
-    # if 'probe_list' in options:
-    #     for x in options['probe_list']:
-    #         probe_list.append(eval(x))
-
-    # if 'init_point' in options:
-    #     init_point = bool(options.pop('init_point'))
-    #     if init_point:
-    #         probe_list.append(x_init)
-
     bounds = options["bounds"][0]
     bound_min = bounds[0]
     bound_max = bounds[1]
-    # probe_list_min = np.min(np.array(probe_list)[:,0])
-    # probe_list_max = np.max(np.array(probe_list)[:,0])
-    # bound_min = min(bound_min, probe_list_min)
-    # bound_max = max(bound_max, probe_list_max)
     xs = np.linspace(bound_min, bound_max, points)
 
     bounds = options["bounds"][1]
     bound_min = bounds[0]
     bound_max = bounds[1]
-    # probe_list_min = np.min(np.array(probe_list)[:,1])
-    # probe_list_max = np.max(np.array(probe_list)[:,1])
-    # bound_min = min(bound_min, probe_list_min)
-    # bound_max = max(bound_max, probe_list_max)
     ys = np.linspace(bound_min, bound_max, points)
-
-    # for p in probe_list:
-    #     fun(p)
 
     for x in xs:
         for y in ys:
@@ -146,7 +126,7 @@ def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     if "init_point" in options:
         init_point = bool(options["init_point"])
         if init_point:
-            fun([x_init[0].numpy()])
+            fun([x_init[0]])
 
     bounds = options["bounds"][0]
     bound_min = bounds[0]
@@ -205,6 +185,9 @@ def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
         init_point : boolean
             Include the initial point in the sampling
     """
+    warnings.warn(
+        "The Adaptive Scan algorithm is not thoroughly tested and might contain bugs"
+    )
     if "accuracy_goal" in options:
         accuracy_goal = options["accuracy_goal"]
     else:
@@ -214,7 +197,7 @@ def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     probe_list = []
     if "probe_list" in options:
         for x in options["probe_list"]:
-            probe_list.append(eval(x))
+            probe_list.append(ast.literal_eval(x))
 
     if "init_point" in options:
         init_point = bool(options.pop("init_point"))
@@ -280,16 +263,28 @@ def tf_sgd(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
+
+    if "maxfun" in options.keys():
+        raise KeyError("Tensorflow Optimizers require a maxiters")
+
+    iters = options["maxiters"]  # TF based optimizers use algo iters not fevals
 
     var = tf.Variable(x_init)
 
     def tf_fun():
         return fun(var)
 
-    opt_sgd = tf.keras.optimizers.SGD(learning_rate=0.1, momentum=0.9)
+    learning_rate = 0.1
+    momentum = 0.9
 
-    for step in range(iters):
+    if "learning_rate" in options.keys():
+        learning_rate = options["learning_rate"]
+    if "momentum" in options.keys():
+        momentum = options["momentum"]
+
+    opt_sgd = tf.keras.optimizers.SGD(learning_rate=learning_rate, momentum=momentum)
+
+    for _ in range(iters):
         step_count = opt_sgd.minimize(tf_fun, [var])
         print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
 
@@ -326,21 +321,8 @@ def tf_adam(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
-
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_adam = tf.keras.optimizers.Adam(learning_rate=1, epsilon=0.1)
-
-    for step in range(iters):
-        step_count = opt_adam.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 def tf_rmsprop(
@@ -371,23 +353,8 @@ def tf_rmsprop(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
-
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_rmsprop = tf.keras.optimizers.RMSprop(
-        learning_rate=0.1, epsilon=1e-2, centered=True
-    )
-
-    for step in range(iters):
-        step_count = opt_rmsprop.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 @algo_reg_deco
@@ -419,23 +386,8 @@ def tf_adadelta(
     OptimizeResult
         SciPy OptimizeResult type object with final parameters
     """
-    iters = options["maxfun"]
-
-    var = tf.Variable(x_init)
-
-    def tf_fun():
-        return fun(var)
-
-    opt_adadelta = tf.keras.optimizers.Adadelta(
-        learning_rate=0.1, rho=0.95, epsilon=1e-2
-    )
-
-    for step in range(iters):
-        step_count = opt_adadelta.minimize(tf_fun, [var])
-        print(f"epoch {step_count.numpy()}: func_value: {tf_fun()}")
-
-    result = OptimizeResult(x=var.numpy(), success=True)
-    return result
+    # TODO Update maxfun->maxiters, default hyperparameters and error handling
+    raise NotImplementedError("This algorithm is not yet implemented.")
 
 
 @algo_reg_deco
@@ -468,6 +420,36 @@ def lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return minimize(
         fun_grad, x_init, jac=grad_lookup, method="L-BFGS-B", options=options
     )
+
+
+@algo_reg_deco
+def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
+    """
+    Wrapper for the scipy.optimize.minimize implementation of LBFG-S.
+    We let the algorithm determine the gradient by its own.
+     See also:
+
+    https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html
+
+    Parameters
+    ----------
+    x_init : float
+        Initial point
+    fun : callable
+        Goal function
+    fun_grad : callable
+        Function that computes the gradient of the goal function
+    grad_lookup : callable
+        Lookup a previously computed gradient
+    options : dict
+        Options of scipy.optimize.minimize
+
+    Returns
+    -------
+    Result
+        Scipy result object.
+    """
+    return minimize(fun=fun, x0=x_init, options=options)
 
 
 @algo_reg_deco
@@ -513,8 +495,8 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     else:
         noise = 0
 
-    if 'batch_noise' in options:
-        batch_noise = float(options.pop('batch_noise'))
+    if "batch_noise" in options:
+        batch_noise = float(options.pop("batch_noise"))
     else:
         batch_noise = 0
 
@@ -591,6 +573,19 @@ def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     refinement.
 
     """
+    if "cmaes" not in options:
+        options["cmaes"] = {}
+    if "lbfgs" not in options:
+        options["lbfgs"] = {}
+    for k in options:
+        if k == "cmaes" or k == "lbfgs":
+            continue
+        else:
+            if k not in options["cmaes"]:
+                options["cmaes"][k] = options[k]
+            if k not in options["lbfgs"]:
+                options["lbfgs"][k] = options[k]
+
     x1 = cmaes(x_init, fun, options=options["cmaes"])
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
@@ -601,6 +596,9 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the
     resulting cloud and results are used for the CMA update.
     """
+    warnings.warn(
+        "The GCMA-ES algorithm is not thoroughly tested and might contain bugs"
+    )
     options_cma = options["cmaes"]
 
     if "init_point" in options_cma:
@@ -669,20 +667,6 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
-# def oneplusone(x_init, goal_fun):
-#     optimizer = algo_registry['OnePlusOne'](instrumentation=x_init.shape[0])
-#     while True:
-#         # TODO make this logging happen elsewhere
-#         # self.logfile.write(f"Batch {self.evaluation}\n")
-#         # self.logfile.flush()
-#         tmp = optimizer.ask()
-#         samples = tmp.args
-#         solutions = []
-#         for sample in samples:
-#             goal = goal_fun(sample)
-#             solutions.append(goal)
-#         optimizer.tell(tmp, solutions)
-#
-#     # TODO deal with storing best value elsewhere
-#     # recommendation = optimizer.provide_recommendation()
-#     # return recommendation.args[0]
+@algo_reg_deco
+def oneplusone(x_init, goal_fun):
+    raise NotImplementedError("This algorithm is not yet implemented.")

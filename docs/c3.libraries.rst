@@ -13,6 +13,14 @@ Algorithms module
    :undoc-members:
    :show-inheritance:
 
+Chip module
+--------------------------------
+
+.. automodule:: c3.libraries.chip
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Constants module
 -------------------------------
 
@@ -57,6 +65,14 @@ Sampling module
 ------------------------------
 
 .. automodule:: c3.libraries.sampling
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Tasks module
+--------------------------------
+
+.. automodule:: c3.libraries.tasks
    :members:
    :undoc-members:
    :show-inheritance:

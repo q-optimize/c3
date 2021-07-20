@@ -5,9 +5,10 @@ import hjson
 import copy
 import numpy as np
 import tensorflow as tf
-from c3.c3objs import Quantity
+from c3.c3objs import Quantity, hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
-from c3.signal.pulse import components as comp_lib
+from typing import Union
+from tensorflow.errors import InvalidArgumentError
 
 
 class ParameterMap:
@@ -16,13 +17,15 @@ class ParameterMap:
     representations depending on use.
     """
 
-    def __init__(self, instructions: list = [], generator=None, model=None):
-        self.instructions = {}
-        self.opt_map: List[List[Tuple[str]]] = []
+    def __init__(
+        self, instructions: List[Instruction] = [], generator=None, model=None
+    ):
+        self.instructions: Dict[str, Instruction] = dict()
+        self.opt_map: List[List[Tuple[str]]] = list()
         self.model = model
         self.generator = generator
         for instr in instructions:
-            self.instructions[instr.name] = instr
+            self.instructions[instr.get_key()] = instr
 
         # Collecting model components
         components = {}
@@ -38,24 +41,28 @@ class ParameterMap:
     def __initialize_parameters(self) -> None:
         par_lens = {}
         pars = {}
+        par_ids_model = []
         for comp in self.__components.values():
             for par_name, par_value in comp.params.items():
                 par_id = "-".join([comp.name, par_name])
                 par_lens[par_id] = par_value.length
                 pars[par_id] = par_value
+                par_ids_model.append(par_id)
 
         # Initializing control parameters
         for gate in self.instructions:
             instr = self.instructions[gate]
-            for chan in instr.comps.keys():
-                for comp in instr.comps[chan]:
-                    for par_name, par_value in instr.comps[chan][comp].params.items():
-                        par_id = "-".join([gate, chan, comp, par_name])
-                        par_lens[par_id] = par_value.length
-                        pars[par_id] = par_value
+            for key_elems, par_value in instr.get_optimizable_parameters():
+                par_id = "-".join(key_elems)
+                par_lens[par_id] = par_value.length
+                pars[par_id] = par_value
 
         self.__par_lens = par_lens
-        self.__pars = pars
+        self.__pars: Dict[str, Quantity] = pars
+        self.__par_ids_model = par_ids_model
+
+    def update_parameters(self):
+        self.__initialize_parameters()
 
     def load_values(self, init_point):
         """
@@ -68,9 +75,9 @@ class ParameterMap:
 
         """
         with open(init_point) as init_file:
-            best = hjson.load(init_file)
+            best = hjson.load(init_file, object_pairs_hook=hjson_decode)
 
-        best_opt_map = [[tuple(par) for par in pset] for pset in best["opt_map"]]
+        best_opt_map = best["opt_map"]
         init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
@@ -85,7 +92,10 @@ class ParameterMap:
 
         """
         with open(filepath, "r") as cfg_file:
-            cfg = hjson.loads(cfg_file.read())
+            cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
+        self.fromdict(cfg)
+
+    def fromdict(self, cfg: dict) -> None:
         for key, gate in cfg.items():
             if "mapto" in gate.keys():
                 instr = copy.deepcopy(self.instructions[gate["mapto"]])
@@ -95,18 +105,9 @@ class ParameterMap:
                         for par, val in props["params"].items():
                             instr.comps[drive_chan][comp].params[par].set_value(val)
             else:
-                instr = Instruction(
-                    name=key,
-                    t_start=0.0,
-                    t_end=gate["gate_length"],
-                    channels=list(gate["drive_channels"].keys()),
-                )
-                for drive_chan, comps in gate["drive_channels"].items():
-                    for comp, props in comps.items():
-                        ctype = props.pop("c3type")
-                        instr.add_component(
-                            comp_lib[ctype](name=comp, **props), chan=drive_chan
-                        )
+                # TODO: initialize directly by using the constructor.
+                instr = Instruction(ideal=[[1]])  # Set ideal to mute warning
+                instr.from_dict(gate, name=key)
             self.instructions[key] = instr
             self.__initialize_parameters()
 
@@ -115,19 +116,25 @@ class ParameterMap:
         Write dictionary to a HJSON file.
         """
         with open(filepath, "w") as cfg_file:
-            hjson.dump(self.asdict(), cfg_file)
+            hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
-    def asdict(self) -> dict:
+    def asdict(self, instructions_only=True) -> dict:
         """
         Return a dictionary compatible with config files.
         """
         instructions = {}
         for name, instr in self.instructions.items():
             instructions[name] = instr.asdict()
-        return instructions
+        if instructions_only:
+            return instructions
+        else:
+            out_dict = dict()
+            out_dict["instructions"] = instructions
+            out_dict["model"] = self.model.asdict()
+            return out_dict
 
     def __str__(self) -> str:
-        return hjson.dumps(self.asdict())
+        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def get_full_params(self) -> Dict[str, Quantity]:
         """
@@ -135,17 +142,50 @@ class ParameterMap:
         """
         return self.__pars
 
+    def get_not_opt_params(self, opt_map=None) -> Dict[str, Quantity]:
+        opt_map = self.get_opt_map(opt_map)
+        out_dict = copy.copy(self.__pars)
+        for equiv_ids in opt_map:
+            for key in equiv_ids:
+                del out_dict[key]
+        return out_dict
+
     def get_opt_units(self) -> List[str]:
         """
         Returns a list of the units of the optimized quantities.
         """
         units = []
-        for equiv_ids in self.opt_map:
-            key = "-".join(equiv_ids[0])
+        for equiv_ids in self.get_opt_map():
+            key = equiv_ids[0]
             units.append(self.__pars[key].unit)
         return units
 
-    def get_parameter(self, par_id: Tuple[str]) -> Quantity:
+    def get_opt_limits(self):
+        limits = []
+        for equiv_ids in self.get_opt_map():
+            key = equiv_ids[0]
+            limits.append((self.__pars[key].get_limits()))
+        return limits
+
+    def check_limits(self, opt_map):
+        """
+        Check if all elements of equal ids have the same limits. This has to be checked against if setting values optimizer friendly.
+
+        Parameters
+        ----------
+        opt_map
+
+        Returns
+        -------
+
+        """
+        for equiv_ids in self.get_opt_map():
+            if len(equiv_ids) > 1:
+                limit = self.__pars[equiv_ids[0]].get_limits()
+                for key in equiv_ids[1:]:
+                    assert self.__pars[key].get_limits() == limit
+
+    def get_parameter(self, par_id: Tuple[str, ...]) -> Quantity:
         """
         Return one the current parameters.
 
@@ -181,14 +221,33 @@ class ParameterMap:
 
         """
         values = []
-        if opt_map is None:
-            opt_map = self.opt_map
+        opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
-            key = "-".join(equiv_ids[0])
+            key = equiv_ids[0]
             values.append(self.__pars[key])
         return values
 
-    def set_parameters(self, values: list, opt_map=None) -> None:
+    def get_parameter_dict(self, opt_map=None) -> Dict[str, Quantity]:
+        """
+        Return the current parameters in a dictionary including keys.
+        Parameters
+        ----------
+        opt_map
+
+        Returns
+        -------
+        Dictionary with Quantities
+        """
+        value_dict = dict()
+        opt_map = self.get_opt_map(opt_map)
+        for equiv_ids in opt_map:
+            key = equiv_ids[0]
+            value_dict[key] = self.__pars[key]
+        return value_dict
+
+    def set_parameters(
+        self, values: Union[List, np.ndarray], opt_map=None, extend_bounds=False
+    ) -> None:
         """Set the values in the original instruction class.
 
         Parameters
@@ -197,30 +256,43 @@ class ParameterMap:
             List of parameter values. Can be nested, if a parameter is matrix valued.
         opt_map: list
             Corresponding identifiers for the parameter values.
+        extend_bounds: bool
+            If true bounds of quantity objects will be extended.
 
         """
+        model_updated = False
         val_indx = 0
-        if opt_map is None:
-            opt_map = self.opt_map
+        opt_map = self.get_opt_map(opt_map)
+        assert len(values) == len(
+            opt_map
+        ), "Different number of elements in values and opt_map"
         for equiv_ids in opt_map:
-            for par_id in equiv_ids:
-                key = "-".join(par_id)
+            for key in equiv_ids:
+                # We check if a model parameter has changed
+                model_updated = key in self.__par_ids_model or model_updated
                 try:
                     par = self.__pars[key]
                 except ValueError as ve:
                     raise Exception(f"C3:ERROR:{key} not defined.") from ve
                 try:
-                    par.set_value(values[val_indx])
-                except ValueError as ve:
-                    raise Exception(
-                        f"C3:ERROR:Trying to set {'-'.join(par_id)} "
-                        f"to value {values[val_indx]} "
-                        f"but has to be within {par.offset:.3} .."
-                        f" {(par.offset + par.scale):.3}."
-                    ) from ve
+                    par.set_value(values[val_indx], extend_bounds=extend_bounds)
+                except (ValueError, InvalidArgumentError) as ve:
+                    try:
+                        raise Exception(
+                            f"C3:ERROR:Trying to set {key} "
+                            f"to value {values[val_indx]} "
+                            f"but has to be within {par.offset} .."
+                            f" {(par.offset + par.scale)}."
+                        ) from ve
+                    except TypeError:
+                        raise ve
             val_indx += 1
 
-    def get_parameters_scaled(self) -> np.ndarray:
+        # TODO: This check is too simple. Not every model parameter requires an update.
+        if model_updated and self.model:
+            self.model.update_model()
+
+    def get_parameters_scaled(self, opt_map=None) -> np.ndarray:
         """
         Return the current parameters. This fuction should only be called by an
         optimizer. Are you an optimizer?
@@ -236,13 +308,17 @@ class ParameterMap:
 
         """
         values = []
-        for equiv_ids in self.opt_map:
-            key = "-".join(equiv_ids[0])
+        opt_map = self.get_opt_map(opt_map)
+        for equiv_ids in opt_map:
+            key = equiv_ids[0]
             par = self.__pars[key]
             values.append(par.get_opt_value())
-        return np.array(values).flatten()
+        # TODO is there a reason to not return a tensorflow array
+        return np.concatenate(values, axis=0).flatten()
 
-    def set_parameters_scaled(self, values: tf.Variable) -> None:
+    def set_parameters_scaled(
+        self, values: Union[tf.constant, tf.Variable], opt_map=None
+    ) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
         called by an optimizer. Are you an optimizer?
@@ -251,35 +327,77 @@ class ParameterMap:
         ----------
         values: list
             List of parameter values. Matrix valued parameters need to be flattened.
-        opt_map: list
-            Corresponding identifiers for the parameter values.
 
         """
+        model_updated = False
         val_indx = 0
-        for equiv_ids in self.opt_map:
-            key = "-".join(equiv_ids[0])
+        opt_map = self.get_opt_map(opt_map)
+        for equiv_ids in opt_map:
+            key = equiv_ids[0]
             par_len = self.__pars[key].length
             for par_id in equiv_ids:
-                key = "-".join(par_id)
+                key = par_id
+                model_updated = True if key in self.__par_ids_model else model_updated
                 par = self.__pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
+        if model_updated:
+            self.model.update_model()
+
+    def get_key_from_scaled_index(self, idx, opt_map=None) -> str:
+        """
+        Get the key of the value at position `ìdx` of the scaled_parameters output
+        Parameters
+        ----------
+        idx
+        opt_map
+
+        Returns
+        -------
+
+        """
+        opt_map = self.get_opt_map(opt_map)
+        curr_indx = 0
+        for equiv_ids in opt_map:
+            key = equiv_ids[0]
+            par_len = self.__pars[key].length
+            curr_indx += par_len
+            if idx < curr_indx:
+                return key
+        return None
 
     def set_opt_map(self, opt_map) -> None:
         """
         Set the opt_map, i.e. which parameters will be optimized.
         """
+        opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
             for pid in equiv_ids:
-                key = "-".join(pid)
+                key = pid
                 if key not in self.__pars:
                     par_strings = "\n".join(self.__pars.keys())
                     raise Exception(
                         f"C3:ERROR:Parameter {key} not defined in {par_strings}"
                     )
+        self.check_limits(opt_map)
         self.opt_map = opt_map
 
-    def str_parameters(self, opt_map: List[List[Tuple[str]]] = None) -> str:
+    def get_opt_map(self, opt_map=None) -> List[List[str]]:
+        if opt_map is None:
+            opt_map = self.opt_map
+
+        for i, equiv_ids in enumerate(opt_map):
+            for j, par_id in enumerate(equiv_ids):
+                if type(par_id) is str:
+                    continue
+                key = "-".join(par_id)
+                opt_map[i][j] = key
+
+        return opt_map
+
+    def str_parameters(
+        self, opt_map: Union[List[List[Tuple[str]]], List[List[str]]] = None
+    ) -> str:
         """
         Return a multi-line human-readable string of the optmization parameter names and
         current values.
@@ -294,25 +412,23 @@ class ParameterMap:
         str
             Parameters and their values
         """
-        if opt_map is None:
-            opt_map = self.opt_map
+        opt_map = self.get_opt_map(opt_map)
         ret = []
         for equiv_ids in opt_map:
             par_id = equiv_ids[0]
-            key = "-".join(par_id)
+            key = par_id
             par = self.__pars[key]
             ret.append(f"{key:38}: {par}\n")
             if len(equiv_ids) > 1:
                 for eid in equiv_ids[1:]:
-                    ret.append("-".join(eid))
+                    ret.append(eid)
                     ret.append("\n")
                 ret.append("\n")
         return "".join(ret)
 
-    def print_parameters(self, opt_map = None) -> None:
+    def print_parameters(self, opt_map=None) -> None:
         """
         Print current parameters to stdout.
         """
-        if opt_map is None:
-            opt_map = self.opt_map
+        opt_map = self.get_opt_map(opt_map)
         print(self.str_parameters(opt_map))

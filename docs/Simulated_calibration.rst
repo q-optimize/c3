@@ -1,4 +1,4 @@
-Simulated calibration with :math:`C^2`
+Simulated calibration
 ======================================
 
 Calibration of control pulses is the process of fine-tuning parameters
@@ -15,7 +15,7 @@ the previous example in a helper ``single_qubit_blackbox_exp.py``.
 
     blackbox = create_experiment()
 
-This blackbox is constructed the same way as in the C1 example. The
+This blackbox is constructed the same way as in the OptimalControl example. The
 difference will be in how we interact with it. First, we decide on what
 experiment we want to perform and need to specify it as a python
 function. A general, minimal example would be
@@ -49,7 +49,7 @@ helper ``qt_utils`` provides these sequences.
 .. code-block:: python
 
     qt_utils.single_length_RB(
-                RB_number=1, RB_length=5,
+                RB_number=1, RB_length=5, target=0
         )
 
 
@@ -57,26 +57,16 @@ helper ``qt_utils`` provides these sequences.
 
 .. parsed-literal::
 
-    [['X90p',
-      'Y90m',
-      'X90p',
-      'Id',
-      'Y90m',
-      'X90p',
-      'X90p',
-      'Id',
-      'Y90m',
-      'X90p',
-      'Id',
-      'Id',
-      'X90p',
-      'X90p',
-      'Y90p',
-      'Y90p',
-      'Y90p',
-      'X90p',
-      'Id',
-      'Id']]
+    [['ry90m[0]',
+      'rx90p[0]',
+      'rx90m[0]',
+      'rx90p[0]',
+      'ry90p[0]',
+      'ry90p[0]',
+      'ry90p[0]',
+      'rx90p[0]',
+      'ry90m[0]',
+      'rx90p[0]']]
 
 
 
@@ -116,7 +106,7 @@ to wrap the blackbox by defining the target states and the ``opt_map``.
 
             # Creating the RB sequences #
             seqs = qt_utils.single_length_RB(
-                    RB_number=RB_number, RB_length=RB_length
+                    RB_number=RB_number, RB_length=RB_length, target=0
             )
 
             # Transmitting the parameters to the experiment #
@@ -124,7 +114,7 @@ to wrap the blackbox by defining the target states and the ``opt_map``.
             exp.set_opt_gates_seq(seqs)
 
             # Simulating the gates #
-            U_dict = exp.get_gates()
+            U_dict = exp.compute_propagators()
 
             # Running the RB sequences and read-out the results #
             pops = exp.evaluate(seqs)
@@ -175,47 +165,12 @@ We first import algorithms and the correct optimizer object.
     from c3.parametermap import ParameterMap as PMap
     from c3.libraries import algorithms, envelopes
     from c3.signal import gates, pulse
-    from c3.optimizers.c2 import C2
-
-Next, we define the parameters we whish to calibrate. See how these gate
-instructions are defined in the experiment setup example or in
-``single_qubit_blackbox_exp.py``. Our gate-set is made up of 4 gates,
-rotations of 90 degrees around the :math:`x` and :math:`y`-axis in
-positive and negative direction. While it is possible to optimize each
-parameters of each gate individually, in this example all four gates
-share parameters. They only differ in the phase :math:`\phi_{xy}` that
-is set in the definitions.
-
-.. code-block:: python
-
-    gateset_opt_map =   [
-        [
-          ("X90p", "d1", "gauss", "amp"),
-          ("Y90p", "d1", "gauss", "amp"),
-          ("X90m", "d1", "gauss", "amp"),
-          ("Y90m", "d1", "gauss", "amp")
-        ],
-        [
-          ("X90p", "d1", "gauss", "delta"),
-          ("Y90p", "d1", "gauss", "delta"),
-          ("X90m", "d1", "gauss", "delta"),
-          ("Y90m", "d1", "gauss", "delta")
-        ],
-        [
-          ("X90p", "d1", "gauss", "freq_offset"),
-          ("Y90p", "d1", "gauss", "freq_offset"),
-          ("X90m", "d1", "gauss", "freq_offset"),
-          ("Y90m", "d1", "gauss", "freq_offset")
-        ],
-        [
-          ("Id", "d1", "carrier", "framechange")
-        ]
-      ]
+    from c3.optimizers.calibration import Calibration
 
 Representation of the experiment within :math:`C^3`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-At this point we have to make sure that the gates (“X90p”, etc.) and
+At this point we have to make sure that the gates (“RX90p”, etc.) and
 drive line (“d1”) are compatible to the experiment controller operating
 the blackbox. We mirror the blackbox by creating an experiment in the
 :math:`C^3` context:
@@ -304,37 +259,37 @@ the blackbox. We mirror the blackbox by creating an experiment in the
         params=carrier_parameters
     )
 
-    X90p = gates.Instruction(
-        name="X90p",
+    rx90p = gates.Instruction(
+        name="rx90p",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
     )
     QId = gates.Instruction(
-        name="Id",
+        name="id",
         t_start=0.0,
         t_end=t_final,
         channels=["d1"]
     )
 
-    X90p.add_component(gauss_env_single, "d1")
-    X90p.add_component(carr, "d1")
+    rx90p.add_component(gauss_env_single, "d1")
+    rx90p.add_component(carr, "d1")
     QId.add_component(nodrive_env, "d1")
     QId.add_component(copy.deepcopy(carr), "d1")
     QId.comps['d1']['carrier'].params['framechange'].set_value(
         (-sideband * t_final * 2 * np.pi) % (2*np.pi)
     )
-    Y90p = copy.deepcopy(X90p)
-    Y90p.name = "Y90p"
-    X90m = copy.deepcopy(X90p)
-    X90m.name = "X90m"
-    Y90m = copy.deepcopy(X90p)
-    Y90m.name = "Y90m"
-    Y90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
-    X90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
-    Y90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
+    ry90p = copy.deepcopy(rx90p)
+    ry90p.name = "ry90p"
+    rx90m = copy.deepcopy(rx90p)
+    rx90m.name = "rx90m"
+    ry90m = copy.deepcopy(rx90p)
+    ry90m.name = "ry90m"
+    ry90p.comps['d1']['gauss'].params['xy_angle'].set_value(0.5 * np.pi)
+    rx90m.comps['d1']['gauss'].params['xy_angle'].set_value(np.pi)
+    ry90m.comps['d1']['gauss'].params['xy_angle'].set_value(1.5 * np.pi)
 
-    parameter_map = PMap(instructions=[QId, X90p, Y90p, X90m, Y90m])
+    parameter_map = PMap(instructions=[QId, rx90p, ry90p, rx90m, ry90m])
 
     # ### MAKE EXPERIMENT
     exp = Exp(pmap=parameter_map)
@@ -352,25 +307,25 @@ is set in the definitions.
 
     gateset_opt_map =   [
         [
-          ("X90p", "d1", "gauss", "amp"),
-          ("Y90p", "d1", "gauss", "amp"),
-          ("X90m", "d1", "gauss", "amp"),
-          ("Y90m", "d1", "gauss", "amp")
+          ("rx90p[0]", "d1", "gauss", "amp"),
+          ("ry90p[0]", "d1", "gauss", "amp"),
+          ("rx90m[0]", "d1", "gauss", "amp"),
+          ("ry90m[0]", "d1", "gauss", "amp")
         ],
         [
-          ("X90p", "d1", "gauss", "delta"),
-          ("Y90p", "d1", "gauss", "delta"),
-          ("X90m", "d1", "gauss", "delta"),
-          ("Y90m", "d1", "gauss", "delta")
+          ("rx90p[0]", "d1", "gauss", "delta"),
+          ("ry90p[0]", "d1", "gauss", "delta"),
+          ("rx90m[0]", "d1", "gauss", "delta"),
+          ("ry90m[0]", "d1", "gauss", "delta")
         ],
         [
-          ("X90p", "d1", "gauss", "freq_offset"),
-          ("Y90p", "d1", "gauss", "freq_offset"),
-          ("X90m", "d1", "gauss", "freq_offset"),
-          ("Y90m", "d1", "gauss", "freq_offset")
+          ("rx90p[0]", "d1", "gauss", "freq_offset"),
+          ("ry90p[0]", "d1", "gauss", "freq_offset"),
+          ("rx90m[0]", "d1", "gauss", "freq_offset"),
+          ("ry90m[0]", "d1", "gauss", "freq_offset")
         ],
         [
-          ("Id", "d1", "carrier", "framechange")
+          ("id[0]", "d1", "carrier", "framechange")
         ]
       ]
 
@@ -386,24 +341,22 @@ value. This leaves 4 values to optimize.
 
 .. parsed-literal::
 
-    X90p-d1-gauss-amp                     : 450.000 mV
-    Y90p-d1-gauss-amp
-    X90m-d1-gauss-amp
-    Y90m-d1-gauss-amp
+    rx90p[0]-d1-gauss-amp                 : 450.000 mV
+    ry90p[0]-d1-gauss-amp
+    rx90m[0]-d1-gauss-amp
+    ry90m[0]-d1-gauss-amp
 
-    X90p-d1-gauss-delta                   : -1.000
-    Y90p-d1-gauss-delta
-    X90m-d1-gauss-delta
-    Y90m-d1-gauss-delta
+    rx90p[0]-d1-gauss-delta               : -1.000
+    ry90p[0]-d1-gauss-delta
+    rx90m[0]-d1-gauss-delta
+    ry90m[0]-d1-gauss-delta
 
-    X90p-d1-gauss-freq_offset             : -50.500 MHz 2pi
-    Y90p-d1-gauss-freq_offset
-    X90m-d1-gauss-freq_offset
-    Y90m-d1-gauss-freq_offset
+    rx90p[0]-d1-gauss-freq_offset         : -50.500 MHz 2pi
+    ry90p[0]-d1-gauss-freq_offset
+    rx90m[0]-d1-gauss-freq_offset
+    ry90m[0]-d1-gauss-freq_offset
 
-    Id-d1-carrier-framechange             : 4.084 rad
-
-
+    id[0]-d1-carrier-framechange          : 4.084 rad
 
 
 It is important to note that in this example, we are transmitting only
@@ -451,11 +404,12 @@ setup:
     # Create a temporary directory to store logfiles, modify as needed
     log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
 
-    opt = C2(
+    opt = Calibration(
         dir_path=log_dir,
         run_name="ORBIT_cal",
         eval_func=ORBIT_wrapper,
         pmap=parameter_map,
+        exp_right=exp,
         algorithm=algorithms.cmaes,
         options=alg_options
     )

@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
-from c3.utils import qt_utils
+from c3.utils.qt_utils import pauli_basis, projector
 
 
 def tf_setup():
@@ -114,287 +114,33 @@ def tf_measure_operator(M, rho):
     return tf.linalg.trace(tf.matmul(M, rho))
 
 
-@tf.function
-def tf_dU_of_t(h0, hks, cflds_t, dt):
-    """
-    Compute H(t) = H_0 + sum_k c_k H_k and matrix exponential exp(i H(t) dt).
-
-    Parameters
-    ----------
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    cflds_t : array of tf.float
-        Vector of control field values at time t.
-    dt : float
-        Length of one time slice.
-
-    Returns
-    -------
-    tf.tensor
-        dU = exp(-i H(t) dt)
-
-    """
-    h = h0
-    ii = 0
-    while ii < len(hks):
-        h += cflds_t[ii] * hks[ii]
-        ii += 1
-    terms = int(1e12 * dt) + 2
-    # dU = tf_expm(-1j * h * dt, terms)
-    # TODO Make an option for the exponentation method
-    dU = tf.linalg.expm(-1j * h * dt)
-    return dU
-
-
-# @tf.function
-def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
-    """
-    Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
-
-    Parameters
-    ----------
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    col_ops : list of tf.tensor
-        List of collapse operators.
-    cflds_t : array of tf.float
-        Vector of control field values at time t.
-    dt : float
-        Length of one time slice.
-
-    Returns
-    -------
-    tf.tensor
-        dU = exp(L(t) dt)
-
-    """
-    h = h0
-    for ii in range(len(hks)):
-        h += cflds_t[ii] * hks[ii]
-    lind_op = -1j * (tf_spre(h) - tf_spost(h))
-    for col_op in col_ops:
-        super_clp = tf.matmul(tf_spre(col_op), tf_spost(tf.linalg.adjoint(col_op)))
-        anticomm_L_clp = 0.5 * tf.matmul(
-            tf_spre(tf.linalg.adjoint(col_op)), tf_spre(col_op)
-        )
-        anticomm_R_clp = 0.5 * tf.matmul(
-            tf_spost(col_op), tf_spost(tf.linalg.adjoint(col_op))
-        )
-        lind_op = lind_op + super_clp - anticomm_L_clp - anticomm_R_clp
-    # terms = int(1e12 * dt) # Eyeball number of terms in expm
-#     print('terms in exponential: ', terms)
-    # dU = tf_expm(lind_op * dt, terms)
-    # Built-in tensorflow exponential below
-    dU = tf.linalg.expm(lind_op * dt)
-    return dU
-
-
-def tf_propagation(h0, hks, cflds, dt):
-    """
-    Calculate the unitary time evolution of a system controlled by time-dependent
-    fields.
-
-    Parameters
-    ----------
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    cflds : list
-        List of control fields, one per control Hamiltonian.
-    dt : float
-        Length of one time slice.
-
-    Returns
-    -------
-    list
-        List of incremental propagators dU.
-
-    """
-    dUs = []
-
-    for ii in range(cflds[0].shape[0]):
-        cf_t = []
-        for fields in cflds:
-            cf_t.append(tf.cast(fields[ii], tf.complex128))
-        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-    return dUs
-
-
-# def tf_propagation(h0, hks, cflds, dt):
-#    """
-#    Time evolution of a system controlled by time-dependent fields.
-#
-#    Parameters
-#    ----------
-#    h0 : tf.tensor
-#        Drift Hamiltonian.
-#    hks : list of tf.tensor
-#        List of control Hamiltonians.
-#    cflds : list
-#        List of control fields, one per control Hamiltonian.
-#    dt : float
-#        Length of one time slice.
-#
-#    Returns
-#    -------
-#    type
-#        Description of returned object.
-#
-#    """
-#    def tf_time_slice(cf_t):
-#        return tf_dU_of_t(h0, hks, cf_t, dt)
-#
-#    cflds = tf.cast(tf.transpose(tf.stack(cflds)), tf.complex128)
-#    return tf.map_fn(tf_time_slice, cflds)
-
-# EXPERIMENTAL BATCH PROPAGATION BELOW
-
-# def tf_propagation(h0, hks, cflds, dt):
-#     """
-#     Calculate the time evolution of a system controlled by time-dependent
-#     fields.
-#
-#     Parameters
-#     ----------
-#     h0 : tf.tensor
-#         Drift Hamiltonian.
-#     hks : list of tf.tensor
-#         List of control Hamiltonians.
-#     cflds : list
-#         List of control fields, one per control Hamiltonian.
-#     dt : float
-#         Length of one time slice.
-#
-#     Returns
-#     -------
-#     type
-#         Description of returned object.
-#
-#     """
-#     dUs = []
-#     batch_size = 4
-#     for ii in range(cflds[0].shape[0]//batch_size):
-#         dUs.extend(
-#             tf_propagation_batch(h0, hks, cflds, dt, ii)
-#         )
-#     return dUs
-#
-#
-#
-# def tf_propagation_batch(h0, hks, cflds, dt, left):
-#     """
-#     """
-#     dUs = []
-#     for ii in range(left, left+4):
-#         cf_t = []
-#         for fields in cflds:
-#             cf_t.append(tf.cast(fields[ii], tf.complex128))
-#         dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
-#     return dUs
-
-
-def tf_propagation_lind(h0, hks, col_ops, cflds, dt, history=False):
-    """
-    Calculate the time evolution of an open system controlled by time-dependent
-    fields.
-
-    Parameters
-    ----------
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    col_ops : list of tf.tensor
-        List of collapse operators.
-    cflds : list
-        List of control fields, one per control Hamiltonian.
-    dt : float
-        Length of one time slice.
-
-    Returns
-    -------
-    list
-        List of incremental propagators dU.
-
-    """
-    with tf.name_scope("Propagation"):
-        dUs = []
-        for ii in range(len(cflds[0])):
-            cf_t = []
-            for fields in cflds:
-                cf_t.append(tf.cast(fields[ii], tf.complex128))
-            dUs.append(tf_dU_of_t_lind(h0, hks, col_ops, cf_t, dt))
-        return dUs
-
-
 # MATRIX MULTIPLICATION FUNCTIONS
 
 
-def evaluate_sequences(U_dict: dict, sequences: list):
+@tf.function
+def tf_matmul_left(dUs: tf.Tensor):
     """
-    Compute the total propagator of a sequence of gates.
-
-    Parameters
-    ----------
-    U_dict : dict
-        Dictionary of unitary representation of gates.
-    
-    sequences : list
-        List of keys from U_dict specifying a gate sequence.
-        The sequence is multiplied from the left, i.e.
-            sequence = [U0, U1, U2, ...]
-        is applied as
-            ... U2 * U1 * U0
-    
-    Returns
-    -------
-    tf.tensor
-        Propagator of the sequence.
-
-    """
-    gates = U_dict
-    # get dims to deal with the case where a sequence is empty
-    dim = list(gates.values())[0].shape[0]
-    dtype = list(gates.values())[0].dtype
-    # TODO deal with the case where you only evaluate one sequence
-    U = []
-    for sequence in sequences:
-        if len(sequence) == 0:
-            U.append(tf.linalg.eye(dim,dtype=dtype))
-        else:
-            Us = []
-            for gate in sequence:
-                Us.append(gates[gate])
-            U.append(tf_matmul_left(Us))
-            # ### WARNING WARNING ^^ look there, it says left WARNING
-    return U
-
-
-def tf_matmul_left(dUs):
-    """
+    Parameters:
+        dUs: tf.Tensor
+            Tensorlist of shape (N, n,m)
+            with number N matrices of size nxm
     Multiplies a list of matrices from the left.
 
     """
-    U = dUs[0]
-    for ii in range(1, len(dUs)):
-        U = tf.matmul(dUs[ii], U, name="timestep_" + str(ii))
-    return U
+    return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
 
 
+@tf.function
 def tf_matmul_right(dUs):
     """
+    Parameters:
+        dUs: tf.Tensor
+            Tensorlist of shape (N, n,m)
+            with number N matrices of size nxm
     Multiplies a list of matrices from the right.
 
     """
-    U = dUs[0]
-    for ii in range(1, len(dUs)):
-        U = tf.matmul(U, dUs[ii], name="timestep_" + str(ii))
-    return U
+    return tf.foldl(lambda a, x: tf.matmul(a, x), dUs)
 
 
 def tf_matmul_n(tensor_list):
@@ -417,7 +163,7 @@ def tf_matmul_n(tensor_list):
 def tf_log10(x):
     """Tensorflow had no logarithm with base 10. This is ours."""
     numerator = tf.log(x)
-    denominator = tf.log(tf.Variable(10, dtype=numerator.dtype))
+    denominator = tf.log(tf.constant(10, dtype=numerator.dtype))
     return numerator / denominator
 
 
@@ -437,147 +183,65 @@ def tf_ave(x: list):
     return tf.add_n(x) / len(x)
 
 
-def tf_diff(l):
+def tf_diff(l):  # noqa
     """
     Running difference of the input list l. Equivalent to np.diff, except it
     returns the same shape by adding a 0 in the last entry.
     """
     dim = l.shape[0] - 1
-    diagonal = tf.Variable([-1] * dim + [0], dtype=l.dtype)
-    offdiagonal = tf.Variable([1] * dim, dtype=l.dtype)
+    diagonal = tf.constant([-1] * dim + [0], dtype=l.dtype)
+    offdiagonal = tf.constant([1] * dim, dtype=l.dtype)
     proj = tf.linalg.diag(diagonal) + tf.linalg.diag(offdiagonal, k=1)
     return tf.linalg.matvec(proj, l)
 
 
 # MATRIX FUNCTIONS
-
-
-def tf_expm(A, terms):
-    """
-    Matrix exponential by the series method.
-
-    Parameters
-    ----------
-    A : tf.tensor
-        Matrix to be exponentiated.
-    terms : int
-        Number of terms in the series.
-
-    Returns
-    -------
-    tf.tensor
-        expm(A)
-
-    """
-    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
-    A_powers = A
-    r += A
-
-    for ii in range(2, terms):
-        A_powers = tf.matmul(A_powers, A) / tf.cast(ii, tf.complex128)
-        ii += 1
-        r += A_powers
-    return r
-
-
-def tf_expm_dynamic(A, acc=1e-4):
-    """
-    Matrix exponential by the series method with specified accuracy.
-
-    Parameters
-    ----------
-    A : tf.tensor
-        Matrix to be exponentiated.
-    acc : float
-        Accuracy. Stop when the maximum matrix entry reaches
-
-    Returns
-    -------
-    tf.tensor
-        expm(A)
-
-    """
-    r = tf.eye(int(A.shape[0]), dtype=A.dtype)
-    A_powers = A
-    r += A
-
-    ii = tf.Variable(2, dtype=tf.complex128)
-    while tf.reduce_max(tf.abs(A_powers)) > acc:
-        A_powers = tf.matmul(A_powers, A) / ii
-        ii += 1
-        r += A_powers
-    return r
-
-
+@tf.function
 def Id_like(A):
     """Identity of the same size as A."""
-    shape = tf.shape(A)
-    dim = shape[0]
-    return tf.eye(dim, dtype=tf.complex128)
+    return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
 
 
+# @tf.function
+# def tf_kron(A, B):
+#     """Kronecker product of 2 matrices."""
+#     dims = tf.shape(A) * tf.shape(B)
+#     tensordot = tf.tensordot(A, B, axes=0)
+#     reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
+#     return reshaped
+
+
+@tf.function
 def tf_kron(A, B):
-    """Kronecker product of 2 matrices."""
-    # TODO make kronecker product general to different dimensions
-    dims = tf.shape(A) * tf.shape(B)
-    tensordot = tf.tensordot(A, B, axes=0)
-    reshaped = tf.reshape(tf.transpose(tensordot, perm=[0, 2, 1, 3]), dims)
-    return reshaped
+    """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
+    dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
+    res = tf.expand_dims(tf.expand_dims(A, -1), -3) * tf.expand_dims(
+        tf.expand_dims(B, -2), -4
+    )
+    dims = res.shape[:-4] + dims
+    return tf.reshape(res, dims)
 
 
 # SUPEROPER FUNCTIONS
-# TODO migrate all superoper functions to using tf_kron
-
-
 def tf_spre(A):
     """Superoperator on the left of matrix A."""
     Id = Id_like(A)
-    dim = tf.shape(A)[0]
-    tensordot = tf.tensordot(A, Id, axes=0)
-    reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
-    )
-    return reshaped
+    return tf_kron(A, Id)
 
 
 def tf_spost(A):
     """Superoperator on the right of matrix A."""
     Id = Id_like(A)
-    dim = tf.shape(A)[0]
-    tensordot = tf.tensordot(Id, tf.transpose(A), axes=0)
-    reshaped = tf.reshape(
-        tf.transpose(tensordot, perm=[0, 2, 1, 3]), [dim ** 2, dim ** 2]
-    )
-    return reshaped
+    return tf_kron(Id, tf.linalg.matrix_transpose(A))
 
 
+# @tf.function
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
-    superA = tf.matmul(tf_spre(A), tf_spost(tf.linalg.adjoint(A)))
-    return superA
-
-
-def tf_choi_to_chi(U, dims=None):
-    """
-    Convert the choi representation of a process to chi representation.
-
-    """
-    if dims is None:
-        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
-    B = tf.Variable(qt_utils.pauli_basis([2] * len(dims)), dtype=tf.complex128)
-    return tf.linalg.adjoint(B) @ U @ B
-
-
-def super_to_choi(A):
-    """
-    Convert a super operator to choi representation.
-
-    """
-    sqrt_shape = int(np.sqrt(A.shape[0]))
-    A_choi = tf.reshape(
-        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
+    superA = tf.matmul(
+        tf_spre(A), tf_spost(tf.linalg.matrix_transpose(A, conjugate=True))
     )
-    return A_choi
+    return superA
 
 
 def tf_state_to_dm(psi_ket):
@@ -645,8 +309,8 @@ def tf_unitary_overlap(A: tf.Tensor, B: tf.Tensor, lvls: tf.Tensor = None) -> tf
     try:
         if lvls is None:
             lvls = tf.cast(B.shape[0], B.dtype)
-        overlap = (
-            tf_abs(tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls) ** 2
+        overlap = tf_abs_squared(
+            tf.linalg.trace(tf.matmul(A, tf.linalg.adjoint(B))) / lvls
         )
     except TypeError:
         raise TypeError("Possible Inconsistent Dimensions while casting tensors")
@@ -671,11 +335,8 @@ def tf_superoper_unitary_overlap(A, B, lvls=None):
 def tf_average_fidelity(A, B, lvls=None):
     """A very useful but badly named fidelity measure."""
     if lvls is None:
-        lvls = tf.cast(B.shape[0], B.dtype)
-    Lambda = tf.matmul(
-        tf.linalg.adjoint(tf_project_to_comp(A, lvls, to_super=False)),
-        B
-    )
+        lvls = [tf.cast(B.shape[0], B.dtype)]
+    Lambda = tf.matmul(tf.linalg.adjoint(A), B)
     return tf_super_to_fid(tf_super(Lambda), lvls)
 
 
@@ -695,19 +356,73 @@ def tf_super_to_fid(err, lvls):
     return tf_abs((lambda_chi[0, 0] / d + 1) / (d + 1))
 
 
-def tf_project_to_comp(A, dims, to_super=False):
+def tf_choi_to_chi(U, dims=None):
+    """
+    Convert the choi representation of a process to chi representation.
+
+    """
+    if dims is None:
+        dims = [tf.sqrt(tf.cast(U.shape[0], U.dtype))]
+    B = tf.constant(pauli_basis([2] * len(dims)), dtype=tf.complex128)
+    return tf.linalg.adjoint(B) @ U @ B
+
+
+def super_to_choi(A):
+    """
+    Convert a super operator to choi representation.
+
+    """
+    sqrt_shape = int(np.sqrt(A.shape[0]))
+    A_choi = tf.reshape(
+        tf.transpose(tf.reshape(A, [sqrt_shape] * 4), perm=[3, 1, 2, 0]), A.shape
+    )
+    return A_choi
+
+
+def tf_project_to_comp(A, dims, index=None, to_super=False):
     """Project an operator onto the computational subspace."""
-    # TODO projection to computational subspace can be done more efficiently than this
-    proj_list = []
-    for dim in dims:
-        p = np.zeros([dim, 2])
-        p[0, 0] = 1
-        p[1, 1] = 1
-        if to_super:
-            p = np.kron(p, p)
-        proj_list.append(p)
-    proj = proj_list.pop()
-    while not proj_list == []:
-        proj = np.kron(proj_list.pop(), proj)
-    P = tf.Variable(proj, dtype=A.dtype)
+    if not index:
+        index = list(range(len(dims)))
+    proj = projector(dims, index)
+    if to_super:
+        proj = np.kron(proj, proj)
+    P = tf.constant(proj, dtype=A.dtype)
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
+
+
+@tf.function
+def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
+    """
+    Compute the convolution with a time response.
+
+    Parameters
+    ----------
+    sig : tf.Tensor
+        Signal which will be convoluted, shape: [N]
+    resp : tf.Tensor
+        Response function to be convoluted with signal, shape: [M]
+
+    Returns
+    -------
+    tf.Tensor
+        convoluted signal of shape [N]
+
+    """
+    sig = tf.cast(sig, dtype=tf.complex128)
+    resp = tf.cast(resp, dtype=tf.complex128)
+
+    sig_len = len(sig)
+    resp_len = len(resp)
+
+    signal_pad = tf.expand_dims(
+        tf.concat([sig, tf.zeros(resp_len, dtype=tf.complex128)], axis=0), 0
+    )
+    resp_pad = tf.expand_dims(
+        tf.concat([resp, tf.zeros(sig_len, dtype=tf.complex128)], axis=0), 0
+    )
+    sig_resp = tf.concat([signal_pad, resp_pad], axis=0)
+
+    fft_sig_resp = tf.signal.fft(sig_resp)
+    fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
+    convolution = tf.signal.ifft(fft_conv)
+    return convolution[:sig_len]

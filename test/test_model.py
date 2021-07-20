@@ -1,14 +1,16 @@
 """
 testing module for Model class
 """
+import pickle
 
 import pytest
 import numpy as np
 from c3.c3objs import Quantity
-from c3.system.chip import Qubit, Coupling, Drive
-from c3.system.tasks import InitialiseGround, ConfusionMatrix
-from c3.system.model import Model
+from c3.libraries.chip import Qubit, Coupling, Drive
+from c3.libraries.tasks import InitialiseGround, ConfusionMatrix
+from c3.model import Model
 import c3.libraries.hamiltonians as hamiltonians
+from c3.parametermap import ParameterMap
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -55,7 +57,6 @@ q1q2 = Coupling(
     hamiltonian_func=hamiltonians.int_XX,
 )
 
-
 drive = Drive(
     name="d1",
     desc="Drive 1",
@@ -98,9 +99,13 @@ model = Model(
     [conf_matrix, init_ground],  # SPAM processing
 )
 
+pmap = ParameterMap(model=model)
 model.set_dressed(False)
 
 hdrift, hks = model.get_Hamiltonians()
+
+with open("test/model.pickle", "rb") as filename:
+    test_data = pickle.load(filename)
 
 
 @pytest.mark.unit
@@ -119,3 +124,44 @@ def test_model_eigenfrequencies_2() -> None:
 def test_model_couplings() -> None:
     assert hks["d1"][3, 0] == 1
     assert hks["d2"][1, 0] == 1
+
+
+@pytest.mark.unit
+def test_model_get_hamiltonian() -> None:
+    ham = model.get_Hamiltonian()
+    np.testing.assert_allclose(ham, hdrift)
+
+    sig = {"d1": {"ts": np.linspace(0, 5e-9, 10), "values": np.linspace(0e9, 20e9, 10)}}
+    hams = model.get_Hamiltonian(sig)
+    np.testing.assert_allclose(hams, test_data["sliced_hamiltonians"])
+
+
+@pytest.mark.unit
+def test_get_qubit_frequency() -> None:
+    np.testing.assert_allclose(
+        model.get_qubit_freqs(), [4999294802.027272, 5600626454.433859]
+    )
+
+
+@pytest.mark.unit
+def test_get_indeces() -> None:
+    assert model.get_state_index((0, 0)) == 0
+    assert model.get_state_index((1, 0)) == 3
+    assert model.get_state_index((1, 1)) == 4
+    assert model.get_state_index((2, 1)) == 7
+
+    actual = model.get_state_indeces([(0, 0), (1, 0), (2, 0), (1, 1)])
+    desired = [0, 3, 6, 4]
+    np.testing.assert_equal(actual=actual, desired=desired)
+
+
+@pytest.mark.unit
+def test_model_update_by_parametermap() -> None:
+    pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
+    hdrift_a, _ = model.get_Hamiltonians()
+
+    pmap.set_parameters([freq_q1 * 1.0005], [[("Q1", "freq")]])
+    hdrift_b, _ = model.get_Hamiltonians()
+
+    assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
+    assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi

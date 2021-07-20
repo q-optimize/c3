@@ -11,14 +11,6 @@ C3objs
    :show-inheritance:
 
 
-Parameter map
--------------
-
- .. automodule:: c3.parametermap
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 Experiment module
 -----------------
 
@@ -26,6 +18,22 @@ Experiment module
    :members:
    :undoc-members:
    :show-inheritance:
+
+Model module
+-----------------
+
+.. automodule:: c3.model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Parameter map
+-------------
+
+ .. automodule:: c3.parametermap
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 Main module
 -----------
@@ -53,6 +61,5 @@ Subpackages
    c3.libraries
    c3.optimizers
    c3.signal
-   c3.system
    c3.utils
    c3.qiskit
