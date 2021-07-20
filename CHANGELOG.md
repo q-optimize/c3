@@ -9,12 +9,16 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
-## Upcoming Release
+## Version `1.3` - 20 Jul 2021
 
-This section tracks development for the upcoming release.
+### Summary
+
+Reduced coupling among different sections of the codebase by increasing the use of library style modules for all the sub-parts of the `c3-toolset`. Clean-ups also
+involved renaming the Optimizers to more intuitive names. Several performance improvements were introduced by vectorized and batched operations.
 
 ### Details
 
+- `added` A Changelog as a central location for tracking releases, new features and API breaking changes
 - `added` Tests, Batch Processing for `tf_utils`, tests for `from_config()` and `asdict()` #89
 - `fixed` Transmon_expanded fitting of EJ EC #89
 - `added` More hjson functionality, including complex numbers #89
