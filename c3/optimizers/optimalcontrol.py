@@ -170,29 +170,15 @@ class OptimalControl(Optimizer):
             Value of the goal function
         """
         self.pmap.set_parameters_scaled(current_params)
-        dims = self.pmap.model.dims
-        propagators = self.exp.compute_propagators()
 
-        goal = self.fid_func(
-            propagators=propagators,
-            instructions=self.pmap.instructions,
-            index=self.index,
-            dims=dims,
-            n_eval=self.evaluation + 1,
-            **self.fid_func_kwargs,
-        )
+        result = self.exp.compute_states()
+        goal = self.fid_func(result, n_eval=self.evaluation + 1)
 
         with open(self.logdir + self.logname, "a") as logfile:
             logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
             logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
             for cal in self.callback_fids:
-                val = cal(
-                    propagators=propagators,
-                    instructions=self.pmap.instructions,
-                    index=self.index,
-                    dims=dims,
-                    n_eval=self.evaluation + 1,
-                )
+                val = cal(result, n_eval=self.evaluation + 1)
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
                 logfile.write("{}: {}\n".format(cal.__name__, val))
