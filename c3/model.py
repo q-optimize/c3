@@ -26,6 +26,9 @@ class Model:
         """
         raise NotImplementedError()
 
+    def get_init_state(self):
+        raise NotImplementedError()
+
     def asdict(self) -> Dict:
         raise NotImplementedError()
 

@@ -1,6 +1,8 @@
 "A library for propagators and closely related functions"
 
 import tensorflow as tf
+from typing import Dict, List
+from c3.model import Model
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
@@ -8,19 +10,28 @@ from c3.utils.tf_utils import (
     tf_spost,
 )
 
-propagators = dict()
+unitary_provider = dict()
+state_provider = dict()
 
 
-def prop_reg_deco(func):
+def unitary_deco(func):
     """
     Decorator for making registry of functions
     """
-    propagators[str(func.__name__)] = func
+    unitary_provider[str(func.__name__)] = func
     return func
 
 
-@prop_reg_deco
-def propagation_pwc(model, signal: dict):
+def state_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    state_provider[str(func.__name__)] = func
+    return func
+
+
+@unitary_deco
+def pwc(model, signal: Dict) -> Dict:
     """
     Solve the equation of motion (Lindblad or Schrödinger) for a given control
     signal and Hamiltonians.
@@ -54,7 +65,30 @@ def propagation_pwc(model, signal: dict):
     dUs = tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size=batch_size)
 
     U = tf_matmul_left(tf.cast(dUs, tf.complex128))
-    return U, dUs, ts
+    return {"U": U, "dUs": dUs, "ts": ts}
+
+
+@state_deco
+def rk4(model: Model, signal: Dict) -> Dict[str, List[tf.Tensor]]:
+    key = list(signal.keys())[0]
+    ts = signal[key]["ts"]
+    dt = ts[1] - ts[0]
+
+    states = [model.get_init_state()]
+    for i in range(len(ts)):
+        signals = []
+        for key in signal:
+            signals.append(signal[key]["values"][i])
+        states.append(rk4_solver_step(model, signals, dt, states[-1]))
+    return {"states": states}
+
+
+def rk4_solver_step(model: Model, signal, dt: float, state) -> tf.Tensor:
+    k1 = model.eom(state, signal)
+    k2 = model.eom(state + dt * k1 / 2.0, signal)
+    k3 = model.eom(state + dt * k2 / 2.0, signal)
+    k4 = model.eom(state + dt * k3, signal)
+    return state + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
 
 
 # TODO: Delete later, keep for reference
@@ -298,7 +332,7 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     return dUs_array.concat()
 
 
-@prop_reg_deco
+@unitary_deco
 def tf_propagation(h0, hks, cflds, dt):
     """
     Calculate the unitary time evolution of a system controlled by time-dependent
@@ -369,7 +403,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
     return dU
 
 
-def evaluate_sequences(propagators: dict, sequences: list):
+def evaluate_sequences(propagators: Dict, sequences: list):
     """
     Compute the total propagator of a sequence of gates.
 
