@@ -14,6 +14,26 @@ from typing import Dict, List, Tuple, Union
 
 
 class Model:
+    """Physical model of the system with information about components and equation of motion."""
+
+    def eom(self, state: tf.Tensor, signal: tf.Tensor):
+        """Return the righthandside of the equation of motion for this system.
+
+        Raises
+        ------
+        NotImplementedError
+            [description]
+        """
+        raise NotImplementedError()
+
+    def asdict(self) -> Dict:
+        raise NotImplementedError()
+
+    def __str__(self) -> str:
+        return hjson.dumps(self.asdict(), default=hjson_encode)
+
+
+class QuantumModel(Model):
     """
     What the theorist thinks about from the system.
 
@@ -46,9 +66,9 @@ class Model:
         self.use_FR = True
         self.dephasing_strength = 0.0
         self.params = {}
-        self.subsystems: dict = dict()
+        self.subsystems: Dict = Dict()
         self.couplings: Dict[str, Union[Drive, Coupling]] = {}
-        self.tasks: dict = dict()
+        self.tasks: Dict = Dict()
         self.drift_ham = None
         self.dressed_drift_ham = None
         self.__hamiltonians = None
@@ -58,7 +78,7 @@ class Model:
         if tasks:
             self.set_tasks(tasks)
 
-    def get_ground_state(self) -> tf.constant:
+    def get_ground_state(self) -> tf.Tensor:
         gs = [[0] * self.tot_dim]
         gs[0][0] = 1
         return tf.transpose(tf.constant(gs, dtype=tf.complex128))
@@ -185,7 +205,7 @@ class Model:
             cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.fromdict(cfg)
 
-    def fromdict(self, cfg: dict) -> None:
+    def fromdict(self, cfg: Dict) -> None:
         """
         Load a file and parse it to create a Model object.
 
@@ -233,7 +253,7 @@ class Model:
         with open(filepath, "w") as cfg_file:
             hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
-    def asdict(self) -> dict:
+    def asdict(self) -> Dict:
         """
         Return a dictionary compatible with config files.
         """
@@ -252,9 +272,6 @@ class Model:
             "Tasks": tasks,
             "max_excitations": self.max_excitations,
         }
-
-    def __str__(self) -> str:
-        return hjson.dumps(self.asdict(), default=hjson_encode)
 
     def set_dressed(self, dressed):
         """
@@ -347,8 +364,8 @@ class Model:
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_hams = dict()
-        hamiltonians = dict()
+        control_hams = Dict()
+        hamiltonians = Dict()
         for key, sub in self.subsystems.items():
             hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
