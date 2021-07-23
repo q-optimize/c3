@@ -15,21 +15,21 @@ import itertools
 import hjson
 import numpy as np
 import tensorflow as tf
-from typing import Callable, Dict
+from typing import Dict, List
 import time
 
 from c3.c3objs import hjson_encode, hjson_decode
 from c3.generator.generator import Generator
 from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
-from c3.model import Model
+from c3.model import Model, QuantumModel
 from c3.utils.tf_utils import (
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
 )
 
-from c3.libraries.propagation import propagators
+from c3.libraries.propagation import unitary_provider, state_provider
 
 from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
@@ -58,9 +58,9 @@ class Experiment:
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
-        self.partial_propagators: dict = {}
+        self.partial_propagators: Dict = {}
         self.created_by = None
-        self.logdir: str = None
+        self.logdir: str = ""
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_propagators = True  # Keep only currently computed propagators
@@ -75,10 +75,13 @@ class Experiment:
         looking it up in the library.
         """
         if prop_method is None:
-            self.propagation = propagators["propagation_pwc"]
-        elif type(prop_method) is str:
-            self.propagation = propagators[prop_method]
-        elif type(prop_method) is Callable:
+            self.propagation = unitary_provider["pwc"]
+        elif isinstance(prop_method, str):
+            try:
+                self.propagation = unitary_provider[prop_method]
+            except KeyError:
+                self.propagation = state_provider[prop_method]
+        elif callable(prop_method):
             self.propagation = prop_method
 
     def enable_qasm(self) -> None:
@@ -118,7 +121,7 @@ class Experiment:
             Configuration options
 
         """
-        model = Model()
+        model = QuantumModel()
         model.read_config(cfg["model"])
         gen = Generator()
         gen.read_config(cfg["generator"])
@@ -190,7 +193,7 @@ class Experiment:
             cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.from_dict(cfg)
 
-    def from_dict(self, cfg: dict) -> None:
+    def from_dict(self, cfg: Dict) -> None:
         """
         Load experiment from dictionary
         """
@@ -212,11 +215,11 @@ class Experiment:
         with open(filepath, "w") as cfg_file:
             hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
-    def asdict(self) -> dict:
+    def asdict(self) -> Dict:
         """
         Return a dictionary compatible with config files.
         """
-        exp_dict: Dict[str, dict] = {}
+        exp_dict: Dict[str, Dict] = {}
         exp_dict["instructions"] = {}
         for name, instr in self.pmap.instructions.items():
             exp_dict["instructions"][name] = instr.asdict()
@@ -400,6 +403,38 @@ class Experiment:
 
         return gates
 
+    def compute_states(self) -> Dict[Instruction, List[tf.Tensor]]:
+        """Employ a state solver to compute the trajectory of the system.
+
+        Returns
+        -------
+        List[tf.tensor]
+            List of states of the system from simulation.
+
+        """
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
+        states = {}
+
+        gate_ids = self.opt_gates
+        if gate_ids is None:
+            gate_ids = instructions.keys()
+
+        for gate in gate_ids:
+            try:
+                instr = instructions[gate]
+            except KeyError:
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            signal = generator.generate_signals(instr)
+            result = self.propagation(model, signal)
+            states[instr] = result["states"]
+        self.states = states
+        return states
+
     def compute_propagators(self):
         """
         Compute the unitary representation of operations. If no operations are
@@ -428,7 +463,9 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             signal = generator.generate_signals(instr)
-            U, dUs, ts = self.propagation(model, signal)
+            result = self.propagation(model, signal)
+            U = result["U"]
+            dUs = result["dUs"]
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}

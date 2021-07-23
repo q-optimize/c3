@@ -32,6 +32,9 @@ class Model:
     def asdict(self) -> Dict:
         raise NotImplementedError()
 
+    def fromdict(self, dict: Dict) -> None:
+        raise NotImplementedError()
+
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
 
