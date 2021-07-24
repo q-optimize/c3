@@ -102,12 +102,15 @@ class OptimalControl(Optimizer):
         else:
             cb_fids = callback_fids
         for cb_fid in cb_fids:
-            try:
-                cb_fid_func = fidelities[cb_fid]
-            except KeyError:
-                raise Exception(f"C3:ERROR:Unkown goal function: {cb_fid}")
-            print(f"C3:STATUS:Found {cb_fid} in libraries.")
-            self.callback_fids.append(cb_fid_func)
+            if callable(cb_fid):
+                self.callback_fids.append(cb_fid)
+            else:
+                try:
+                    cb_fid_func = fidelities[cb_fid]
+                except KeyError:
+                    raise Exception(f"C3:ERROR:Unkown goal function: {cb_fid}")
+                print(f"C3:STATUS:Found {cb_fid} in libraries.")
+                self.callback_fids.append(cb_fid_func)
 
     def log_setup(self) -> None:
         """
