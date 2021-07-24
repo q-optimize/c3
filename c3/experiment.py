@@ -433,7 +433,7 @@ class Experiment:
             result = self.propagation(model, signal)
             states[instr] = result["states"]
         self.states = states
-        return states
+        return result
 
     def compute_propagators(self):
         """
