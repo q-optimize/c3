@@ -6,7 +6,6 @@ import copy
 import numpy as np
 import tensorflow as tf
 from c3.c3objs import Quantity, hjson_decode, hjson_encode
-from c3.model import QuantumModel
 from c3.signal.gates import Instruction
 from typing import Union
 from tensorflow.errors import InvalidArgumentError
@@ -30,10 +29,7 @@ class ParameterMap:
 
         # Collecting model components
         components = {}
-        if isinstance(model, QuantumModel):
-            components.update(model.couplings)
-            components.update(model.subsystems)
-            components.update(model.tasks)
+        components.update(model.get_components())
         if generator:
             components.update(generator.devices)
         self.__components = components

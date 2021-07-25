@@ -29,6 +29,9 @@ class Model:
     def get_init_state(self):
         raise NotImplementedError()
 
+    def get_components(self) -> Dict:
+        raise NotImplementedError()
+
     def asdict(self) -> Dict:
         raise NotImplementedError()
 
@@ -98,6 +101,13 @@ class QuantumModel(Model):
                     f"Tried to connect {comp.name}"
                     f" to non-existent device {self.subsystems[connect].name}."
                 )
+
+    def get_components(self) -> Dict:
+        comps = {}
+        comps.update(self.subsystems)
+        comps.update(self.couplings)
+        comps.update(self.tasks)
+        return comps
 
     def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
         for comp in subsystems:
