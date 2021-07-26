@@ -146,13 +146,12 @@ class Calibration(Optimizer):
         params = self.pmap.get_parameters()
 
         goal, results, results_std, seqs, shots = self.eval_func(params)
-        self.optim_status["params"] = [
-            par.numpy().tolist() for par in self.pmap.get_parameters()
-        ]
+        param_list = [par.numpy().tolist() for par in self.pmap.get_parameters()]
+        self.optim_status["params"] = param_list
         self.optim_status["goal"] = float(goal)
         self.optim_status["time"] = time.asctime()
         self.evaluation += 1
-        self.log_pickle(params, seqs, results, results_std, shots)
+        self.log_pickle(param_list, seqs, results, results_std, shots)
         return goal
 
     def log_pickle(self, params, seqs, results, results_std, shots):
@@ -176,7 +175,7 @@ class Calibration(Optimizer):
         data_entry = {
             "params": params,
             "seqs": seqs,
-            "results": results,
+            "results": [r.numpy() for r in results],
             "results_std": results_std,
             "shots": shots,
         }
