@@ -62,6 +62,7 @@ class ModelLearning(Optimizer):
         state_labels=None,
         callback_foms=[],
         algorithm=None,
+        fidelity=None,
         run_name=None,
         options={},
     ):
@@ -87,9 +88,12 @@ class ModelLearning(Optimizer):
 
         super().__init__(pmap=pmap, algorithm=algorithm)
 
+        self.set_fid_func(fidelity)
+
         self.state_labels = {"all": None}
-        for target, labels in state_labels.items():
-            self.state_labels[target] = [tuple(lab) for lab in labels]
+        if state_labels:
+            for target, labels in state_labels.items():
+                self.state_labels[target] = [tuple(lab) for lab in labels]
 
         self.callback_foms = []
         for cb_fom in callback_foms:
@@ -225,10 +229,10 @@ class ModelLearning(Optimizer):
     def _one_par_sim_vals(
         self, current_params: tf.constant, m: dict, ipar: int, target: str
     ) -> tf.float64:
-        seqs_pp = self.seqs_per_point
+        # seqs_pp = self.seqs_per_point
         m = self.learn_from[ipar]
         gateset_params = m["params"]
-        sequences = m["seqs"][:seqs_pp]
+        # sequences = m["seqs"][:seqs_pp]
         # Model learning uses scaled parameters but Sensitivity uses
         # unscaled parameters. This workaround flag allows for code reuse
         if self.scaling:
@@ -236,17 +240,21 @@ class ModelLearning(Optimizer):
         else:
             self.pmap.set_parameters(current_params)
 
-        self.pmap.model.update_model()
         self.pmap.set_parameters(gateset_params, self.gateset_opt_map)
+
+        # TODO: Specific code below, to be generalized
         # We find the unique gates used in the sequence and compute
         # only those.
-        self.exp.set_opt_gates_seq(sequences)
-        self.exp.compute_propagators()
-        pops = self.exp.evaluate(sequences)
-        sim_vals, pops = self.exp.process(
-            labels=self.state_labels[target], populations=pops
-        )
-        return sim_vals
+        # self.exp.set_opt_gates_seq(sequences)
+        # self.exp.compute_propagators()
+        # pops = self.exp.evaluate(sequences)
+        # sim_vals, pops = self.exp.process(
+        #     labels=self.state_labels[target], populations=pops
+        # )
+
+        result = self.exp.compute_states()
+        goal = self.fid_func(result)
+        return [goal]
 
     def _log_one_dataset(
         self, data_set: dict, ipar: int, indeces: list, sim_vals: list, count: int
@@ -268,15 +276,25 @@ class ModelLearning(Optimizer):
             shots = np.array(m_shots[iseq])
             sim_val = sim_vals[iseq].numpy()
             with open(self.logdir + self.logname, "a") as logfile:
-                for ii in range(len(sim_val)):
+                if sim_val.shape == ():
                     logfile.write(
                         f"{iseq + 1:8}    "
-                        f"{float(sim_val[ii]):8.6f}    "
-                        f"{float(m_val[ii]):8.6f}    "
-                        f"{float(m_std[ii]):8.6f}    "
-                        f"{float(shots[0]):8}     "
-                        f"{float(m_val[ii]-sim_val[ii]): 8.6f}\n"
+                        f"{float(sim_val):8.6f}    "
+                        f"{float(m_val):8.6f}    "
+                        f"{float(m_std):8.6f}    "
+                        f"{float(shots):8}     "
+                        f"{float(m_val-sim_val): 8.6f}\n"
                     )
+                else:
+                    for ii in range(len(sim_val)):
+                        logfile.write(
+                            f"{iseq + 1:8}    "
+                            f"{float(sim_val[ii]):8.6f}    "
+                            f"{float(m_val[ii]):8.6f}    "
+                            f"{float(m_std[ii]):8.6f}    "
+                            f"{float(shots[0]):8}     "
+                            f"{float(m_val[ii]-sim_val[ii]): 8.6f}\n"
+                        )
                 logfile.flush()
 
     def goal_run(self, current_params: tf.constant) -> tf.float64:
@@ -427,7 +445,12 @@ class ModelLearning(Optimizer):
                 seq_weigths.append(num_seqs)
 
                 goals.append(one_goal.numpy())
-                grads.append(t.gradient(one_goal, current_params).numpy())
+                tf_grad = t.gradient(one_goal, current_params)
+                if tf_grad is not None:
+                    one_grad = tf_grad.numpy()
+                else:
+                    one_grad = 0
+                grads.append(one_grad)
 
                 sim_values.extend(sim_vals)
                 exp_values.extend(m_vals)
