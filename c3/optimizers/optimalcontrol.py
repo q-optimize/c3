@@ -82,20 +82,6 @@ class OptimalControl(Optimizer):
         )  # Alias the legacy name for the method running the
         # optimization
 
-    def set_fid_func(self, fid_func) -> None:
-        if type(fid_func) is str:
-            if self.pmap.model.lindbladian:
-                fid = "lindbladian_" + fid_func
-            else:
-                fid = fid_func
-            try:
-                self.fid_func = fidelities[fid]
-            except KeyError:
-                raise Exception(f"C3:ERROR:Unkown goal function: {fid} ")
-            print(f"C3:STATUS:Found {fid} in libraries.")
-        else:
-            self.fid_func = fid_func
-
     def set_callback_fids(self, callback_fids) -> None:
         if self.pmap.model.lindbladian:
             cb_fids = ["lindbladian_" + f for f in callback_fids]

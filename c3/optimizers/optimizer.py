@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 import hjson
 import c3.libraries.algorithms as algorithms
+from c3.libraries.fidelities import fidelities
 from c3.c3objs import hjson_encode
 from c3.experiment import Experiment
 from c3.parametermap import ParameterMap
@@ -52,6 +53,20 @@ class Optimizer:
         self.logger = []
         if logger is not None:
             self.logger = logger
+
+    def set_fid_func(self, fid_func) -> None:
+        if type(fid_func) is str:
+            if self.pmap.model.lindbladian:
+                fid = "lindbladian_" + fid_func
+            else:
+                fid = fid_func
+            try:
+                self.fid_func = fidelities[fid]
+            except KeyError:
+                raise Exception(f"C3:ERROR:Unkown goal function: {fid} ")
+            print(f"C3:STATUS:Found {fid} in libraries.")
+        else:
+            self.fid_func = fid_func
 
     def set_algorithm(self, algorithm: Callable) -> None:
         if algorithm:
