@@ -153,7 +153,8 @@ def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
 
 @estimator_reg_deco
 def g_LL_prime(exp_values, sim_values, exp_stds, shots):
-    std = tf.sqrt(sim_values * (1 - sim_values) / shots)
+    std = exp_stds
+    # std = tf.sqrt(sim_values * (1 - sim_values) / shots)
     return tf.reduce_mean(((exp_values - sim_values) ** 2 / std ** 2 - 1) / 2)
 
 
