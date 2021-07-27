@@ -170,7 +170,7 @@ class OptimalControl(Optimizer):
                 val = cal(result, n_eval=self.evaluation + 1)
                 if isinstance(val, tf.Tensor):
                     val = float(val.numpy())
-                logfile.write("{}: {}\n".format(cal.__name__, val))
+                # logfile.write("{}: {}\n".format(cal.__name__, val))
                 self.optim_status[cal.__name__] = val
             logfile.flush()
 
