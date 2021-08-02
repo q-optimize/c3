@@ -10,14 +10,13 @@ are put through via a mixer device to produce an effective modulated signal.
 """
 
 import copy
-from typing import List, Callable
+from typing import List, Callable, Dict
 import hjson
 import numpy as np
 import tensorflow as tf
 from c3.c3objs import hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
-from graphlib import TopologicalSorter
 
 
 class Generator:
@@ -46,7 +45,7 @@ class Generator:
         if devices:
             self.devices = devices
         self.chains = {}
-        self.sorted_chains: dict[str, List[str]] = {}
+        self.sorted_chains: Dict[str, List[str]] = {}
         if chains:
             self.chains = chains
             self.__check_signal_chains()
@@ -79,8 +78,46 @@ class Generator:
                 )
 
             # bring chain in topological order
-            sorter = TopologicalSorter(chain)
-            self.sorted_chains[channel] = list(sorter.static_order())
+            self.sorted_chains[channel] = self.__topological_ordering(
+                self.chains[channel]
+            )
+
+    def __topological_ordering(self, predecessors: Dict[str, List[str]]) -> List[str]:
+        """
+        Computes the topological ordering of a directed acyclic graph.
+
+        Parameters
+        ----------
+        predecessors : dict
+            list of preceding nodes for each node
+
+        Returns
+        -------
+            a list of all nodes in topological ordering
+
+        Raises
+        ------
+        ValueError
+            if the graph contains a cycle
+        """
+        stack = [x for x in predecessors if len(predecessors[x]) == 0]
+        num_sources = {node: len(predecessors[node]) for node in predecessors}
+        successors = {}
+        for node in predecessors:
+            successors[node] = [x for x in predecessors if node in predecessors[x]]
+        ordered = []
+
+        while stack:
+            src = stack.pop()
+            for node in successors[src]:
+                num_sources[node] -= 1
+                if num_sources[node] == 0:
+                    stack.append(node)
+            ordered.append(src)
+
+        if len(ordered) != len(successors):
+            raise Exception("C3:ERROR: Device chain contains a cycle")
+        return ordered
 
     def read_config(self, filepath: str) -> None:
         """
@@ -148,7 +185,7 @@ class Generator:
             for dev_id in chain:
                 successors[dev_id] = [x for x in chain if dev_id in chain[x]]
 
-            signal_stack: dict[str, tf.constant] = {}
+            signal_stack: Dict[str, tf.constant] = {}
             for dev_id in self.sorted_chains[chan]:
                 # collect inputs
                 sources = self.chains[chan][dev_id]
