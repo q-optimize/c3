@@ -9,7 +9,7 @@ from rich.console import Console
 from c3.c3objs import hjson_decode
 from c3.utils.log_reader import show_table
 
-SAMPLE_LOG = "test/sample_optim_log.log"
+SAMPLE_LOG = "test/sample_optim_log.c3log"
 
 
 @pytest.mark.unit

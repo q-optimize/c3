@@ -30,7 +30,7 @@ Using the example log from the test folder:
 
 .. code:: bash
 
-    c3/utils/log_reader.py test/sample_optim_log.log
+    c3/utils/log_reader.py test/sample_optim_log.c3log
 
 
 .. parsed-literal::
