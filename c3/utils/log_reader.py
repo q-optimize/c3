@@ -1,15 +1,25 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python3
 
 import time
 import argparse
 import hjson
-from c3.c3objs import hjson_decode
+from typing import Any, Dict
+
 from c3.utils.utils import num3str
 from rich.console import Console
 from rich.table import Table
 
 
-def show_table(log, console) -> None:
+def show_table(log: Dict[str, Any], console: Console) -> None:
+    """Generate a rich table from an optimization status and display it on the console.
+
+    Parameters
+    ----------
+    log : Dict
+        Dictionary read from a json log file containing a c3-toolset optimization status.
+    console : Console
+        Rich console for output.
+    """
     if log:
         opt_map = log["opt_map"]
         optim_status = log["optim_status"]
@@ -42,20 +52,24 @@ def show_table(log, console) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("log_file")
-    parser.add_argument("-w", "--watch", action="store_true")
+    parser.add_argument(
+        "-w",
+        "--watch",
+        type=int,
+        default=0,
+        help="Update the table every WATCH seconds.",
+    )
     args = parser.parse_args()
-    log = None
 
     try:
         with open(args.log_file) as file:
-            log = hjson.load(file, object_pairs_hook=hjson_decode)
-    except FileNotFoundError:
-        print("Logfile not found.")
-
-    console = Console()
-    if args.watch:
-        while True:
+            log = hjson.load(file)
+        console = Console()
+        if args.watch:
+            while True:
+                show_table(log, console)
+                time.sleep(args.watch)
+        else:
             show_table(log, console)
-            time.sleep(5)
-    else:
-        show_table(log, console)
+    except FileNotFoundError:
+        print("Logfile not found. Quiting...")
