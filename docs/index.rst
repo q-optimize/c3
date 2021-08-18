@@ -32,6 +32,7 @@ When combined in sequence, these three procedures represent a recipe for system 
    optimal_control
    Simulated_calibration
    Simulated_Model_Learning
+   log_reader
    c3_qiskit_example
    c3
 
