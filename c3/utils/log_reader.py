@@ -1,29 +1,25 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python3
 
 import time
 import argparse
 import hjson
-from c3.c3objs import hjson_decode
+from typing import Any, Dict
+
 from c3.utils.utils import num3str
 from rich.console import Console
 from rich.table import Table
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("log_file")
-parser.add_argument("-w", "--watch", action="store_true")
-args = parser.parse_args()
+def show_table(log: Dict[str, Any], console: Console) -> None:
+    """Generate a rich table from an optimization status and display it on the console.
 
-log = None
-
-try:
-    with open(args.log_file) as file:
-        log = hjson.load(file, object_pairs_hook=hjson_decode)
-except FileNotFoundError:
-    print("Logfile not found.")
-
-
-def show_table():
+    Parameters
+    ----------
+    log : Dict
+        Dictionary read from a json log file containing a c3-toolset optimization status.
+    console : Console
+        Rich console for output.
+    """
     if log:
         opt_map = log["opt_map"]
         optim_status = log["optim_status"]
@@ -35,19 +31,16 @@ def show_table():
         table.add_column("Parameter")
         table.add_column("Value", justify="right")
         table.add_column("Gradient", justify="right")
-        for ii in range(len(opt_map)):
-            equiv_ids = opt_map[ii]
+        for ii, equiv_ids in enumerate(opt_map):
             par = params[ii]
             grad = grads[ii]
             par = num3str(par)
             grad = num3str(grad)
             par_id = equiv_ids[0]
-            nice_id = "-".join(par_id)
-            table.add_row(nice_id, par + units[ii], grad + units[ii])
+            table.add_row(par_id, par + units[ii], grad + units[ii])
             if len(equiv_ids) > 1:
                 for par_id in equiv_ids[1:]:
-                    nice_id = "-".join(par_id)
-                    table.add_row(nice_id, "''", "''")
+                    table.add_row(par_id, "''", "''")
 
         console.clear()
         print(
@@ -56,10 +49,27 @@ def show_table():
         console.print(table)
 
 
-console = Console()
-if args.watch:
-    while True:
-        show_table()
-        time.sleep(5)
-else:
-    show_table()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("log_file")
+    parser.add_argument(
+        "-w",
+        "--watch",
+        type=int,
+        default=0,
+        help="Update the table every WATCH seconds.",
+    )
+    args = parser.parse_args()
+
+    try:
+        with open(args.log_file) as file:
+            log = hjson.load(file)
+        console = Console()
+        if args.watch:
+            while True:
+                show_table(log, console)
+                time.sleep(args.watch)
+        else:
+            show_table(log, console)
+    except FileNotFoundError:
+        print("Logfile not found. Quiting...")
