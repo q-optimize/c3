@@ -177,7 +177,7 @@ class Optimizer:
                     "units": self.pmap.get_opt_units(),
                     "optim_status": self.optim_status,
                 }
-                best_point.write(hjson.dumpsJSON(best_dict, default=hjson_encode))
+                best_point.write(hjson.dumps(best_dict, default=hjson_encode))
                 best_point.write("\n")
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
