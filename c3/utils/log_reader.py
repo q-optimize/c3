@@ -20,38 +20,31 @@ def show_table(log: Dict[str, Any], console: Console) -> None:
     console : Console
         Rich console for output.
     """
-    if log:
-        opt_map = log["opt_map"]
-        optim_status = log["optim_status"]
-        units = log["units"]
-        params = optim_status["params"]
-        grads = optim_status.pop("gradient", None)
+    opt_map = log["opt_map"]
+    optim_status = log["optim_status"]
+    units = log["units"]
+    params = optim_status["params"]
+    if "gradient" not in optim_status:
+        grads = [0] * len(params)
+    else:
+        grads = optim_status["gradient"]
+    table = Table(show_header=True, header_style="bold magenta")
+    table.add_column("Parameter")
+    table.add_column("Value", justify="right")
+    table.add_column("Gradient", justify="right")
+    for ii, equiv_ids in enumerate(opt_map):
+        par = params[ii]
+        par = num3str(par)
+        par_id = equiv_ids[0]
+        table.add_row(par_id, par + units[ii], num3str(grads[ii]) + units[ii])
+        for par_id in equiv_ids[1:]:
+            table.add_row(par_id, "''", "''")
 
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Parameter")
-        table.add_column("Value", justify="right")
-        if grads is not None:
-            table.add_column("Gradient", justify="right")
-        for ii, equiv_ids in enumerate(opt_map):
-            par = params[ii]
-            par = num3str(par)
-            par_id = equiv_ids[0]
-            if grads is not None:
-                table.add_row(par_id, par + units[ii], num3str(grads[ii]) + units[ii])
-                if len(equiv_ids) > 1:
-                    for par_id in equiv_ids[1:]:
-                        table.add_row(par_id, "''", "''")
-            else:
-                table.add_row(par_id, par + units[ii])
-                if len(equiv_ids) > 1:
-                    for par_id in equiv_ids[1:]:
-                        table.add_row(par_id, "''")
-
-        console.clear()
-        print(
-            f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n"
-        )
-        console.print(table)
+    console.clear()
+    print(
+        f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n"
+    )
+    console.print(table)
 
 
 if __name__ == "__main__":
