@@ -47,7 +47,7 @@ def fid_reg_deco(func):
 
 @fid_reg_deco
 def state_transfer_infid_set(
-    propagators: dict, instructions: dict, index, dims, n_eval=-1, psi_0=None, proj=True
+    propagators: dict, instructions: dict, index, dims, psi_0, n_eval=-1, proj=True
 ):
     """
     Mean state transfer infidelity.
