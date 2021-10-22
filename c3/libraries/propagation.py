@@ -9,6 +9,63 @@ from c3.utils.tf_utils import (
 )
 
 
+def step_vonNeumann_psi(psi, h, dt):
+    return -1j * dt * tf.linalg.matvec(h, psi)
+
+
+def gen_dUs_RK4(h0, hks, cflds_t, dt):
+    U = []
+    tot_dim = tf.shape(h0)
+    dim = tot_dim[1]
+    temp = []
+    if hks is not None:
+        h = h0
+        ii = 0
+        while ii < len(hks):
+            h += cflds_t[ii] * hks[ii]
+            ii += 1
+
+    else:
+        h = h0
+
+    for jj in range(0, len(h) - 2, 2):
+        dU = []
+        for ii in range(dim):
+            psi = tf.one_hot(ii, dim, dtype=tf.complex128)
+
+            k1 = step_vonNeumann_psi(psi, h[jj], dt)
+            k2 = step_vonNeumann_psi(psi + k1 / 2.0, h[jj + 1], dt)
+            k3 = step_vonNeumann_psi(psi + k2 / 2.0, h[jj + 1], dt)
+            k4 = step_vonNeumann_psi(psi + k3, h[jj + 2], dt)
+
+            psi += (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
+            dU.append(psi)
+        temp = tf.stack(dU)
+        U.append(temp)
+    return U
+
+
+def gen_U_RK4(h, dt):
+
+    dU = []
+    tot_dim = tf.shape(h)
+    dim = tot_dim[1]
+    for ii in range(dim):
+        psi = tf.one_hot(ii, dim, dtype=tf.complex128)
+
+        for jj in range(len(h), 2):
+
+            k1 = step_vonNeumann_psi(psi, h[jj], dt)
+            k2 = step_vonNeumann_psi(psi + k1 / 2.0, h[jj + 1], dt)
+            k3 = step_vonNeumann_psi(psi + k2 / 2.0, h[jj + 1], dt)
+            k4 = step_vonNeumann_psi(psi + k3, h[jj + 2], dt)
+
+            psi += (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
+        dU.append(psi)
+    dU = tf.stack(dU)
+    return tf.transpose(dU)
+
+
 @tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     """
@@ -39,7 +96,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     # terms = int(1e12 * dt) + 2
     # dU = tf_expm(-1j * h * dt, terms)
     # TODO Make an option for the exponentation method
-    dU = tf.linalg.expm(-1j * h * dt)
+    dU = gen_U_RK4(h, dt)  # tf.linalg.expm(-1j * h * dt)
     return dU
 
 
@@ -106,6 +163,23 @@ def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     return tf.linalg.expm(dh)
 
 
+def pwc_trott_drift(h0, hks, cflds_t, dt):
+    dt = tf.cast(dt, dtype=tf.complex128)
+    cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
+    hks = tf.cast(hks, dtype=tf.complex128)
+    e, v = tf.linalg.eigh(h0)
+    ort = tf.cast(v, dtype=tf.complex128)
+    dE = tf.math.exp(-1.0j * tf.math.real(e) * dt)
+    dU0 = ort @ tf.linalg.diag(dE) @ ort.T
+    prod = cflds_t * hks
+    ht = tf.reduce_sum(prod, axis=0)
+    comm = h0 @ ht - ht @ h0
+    dh = -1.0j * ht * dt
+    dcomm = -comm * dt ** 2 / 2.0
+    dUs = dU0 @ tf.linalg.expm(dh) @ (tf.identity(dU0) - dcomm)
+    return dUs
+
+
 def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     """
     Propagate signal in batches
@@ -135,6 +209,7 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
             batch_array = batch_array.write(
                 i, signals[i * batch_size : i * batch_size + batch_size]
             )
+
     else:
         batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
         batch_array = tf.TensorArray(
@@ -149,9 +224,9 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     for i in range(batches):
         x = batch_array.read(i)
         if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
+            result = tf_propagation(hamiltonian, hks, x, dt)
         else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+            result = tf_propagation(x, None, None, dt)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 
@@ -184,7 +259,7 @@ def tf_propagation(h0, hks, cflds, dt):
         cf_t = []
         for fields in cflds:
             cf_t.append(tf.cast(fields[ii], tf.complex128))
-        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
+        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))  #
     return dUs
 
 
