@@ -15,7 +15,7 @@ import itertools
 import hjson
 import numpy as np
 import tensorflow as tf
-from typing import Dict
+from typing import Dict, List
 import time
 
 from c3.c3objs import hjson_encode, hjson_decode
@@ -24,16 +24,13 @@ from c3.parametermap import ParameterMap
 from c3.signal.gates import Instruction
 from c3.model import Model
 from c3.utils.tf_utils import (
-    tf_matmul_left,
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
 )
 
-from c3.libraries.propagation import (
-    tf_batch_propagate,
-    tf_propagation_lind,
-)
+from c3.libraries.propagation import unitary_provider, state_provider
+
 from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
 
@@ -57,19 +54,35 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None):
+    def __init__(self, pmap: ParameterMap = None, prop_method = None):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
-        self.partial_propagators: dict = {}
+        self.partial_propagators: Dict = {}
         self.created_by = None
-        self.logdir: str = None
+        self.logdir: str = ""
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_propagators = True  # Keep only currently computed propagators
         self.compute_propagators_timestamp = 0
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
+        self.set_prop_method(prop_method)
+
+    def set_prop_method(self, prop_method=None) -> None:
+        """
+        Configure the selected propagation method by either linking the function handle or
+        looking it up in the library.
+        """
+        if prop_method is None:
+            self.propagation = unitary_provider["pwc"]
+        elif isinstance(prop_method, str):
+            try:
+                self.propagation = unitary_provider[prop_method]
+            except KeyError:
+                self.propagation = state_provider[prop_method]
+        elif callable(prop_method):
+            self.propagation = prop_method
 
     def enable_qasm(self) -> None:
         """
@@ -180,7 +193,7 @@ class Experiment:
             cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
         self.from_dict(cfg)
 
-    def from_dict(self, cfg: dict) -> None:
+    def from_dict(self, cfg: Dict) -> None:
         """
         Load experiment from dictionary
         """
@@ -202,11 +215,11 @@ class Experiment:
         with open(filepath, "w") as cfg_file:
             hjson.dump(self.asdict(), cfg_file, default=hjson_encode)
 
-    def asdict(self) -> dict:
+    def asdict(self) -> Dict:
         """
         Return a dictionary compatible with config files.
         """
-        exp_dict: Dict[str, dict] = {}
+        exp_dict: Dict[str, Dict] = {}
         exp_dict["instructions"] = {}
         for name, instr in self.pmap.instructions.items():
             exp_dict["instructions"][name] = instr.asdict()
@@ -390,20 +403,20 @@ class Experiment:
 
         return gates
 
-    def compute_propagators(self):
-        """
-        Compute the unitary representation of operations. If no operations are
-        specified in self.opt_gates the complete gateset is computed.
+    def compute_states(self) -> Dict[Instruction, List[tf.Tensor]]:
+        """Employ a state solver to compute the trajectory of the system.
 
         Returns
         -------
-        dict
-            A dictionary of gate names and their unitary representation.
+        List[tf.tensor]
+            List of states of the system from simulation.
+
         """
         model = self.pmap.model
         generator = self.pmap.generator
         instructions = self.pmap.instructions
-        gates = {}
+        states = {}
+
         gate_ids = self.opt_gates
         if gate_ids is None:
             gate_ids = instructions.keys()
@@ -417,7 +430,41 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             signal = generator.generate_signals(instr)
-            U = self.propagation(signal, gate)
+            result = self..pyagation(model, signal)
+            states[instr] = result["states"]
+        self.states = states
+        return result
+
+    def compute_propagators(self):
+        """
+        Compute the unitary representation of operations. If no operations are
+        specified in self.opt_gates the complete gateset is computed.
+
+        Returns
+        -------
+        dict
+            A dictionary of gate names and their unitary representation.
+        """
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
+        propagators = {}
+        partial_propagators = {}
+        gate_ids = self.opt_gates
+        if gate_ids is None:
+            gate_ids = instructions.keys()
+
+        for gate in gate_ids:
+            try:
+                instr = instructions[gate]
+            except KeyError:
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            result = self.propagation(model, generator, instr)
+            U = result["U"]
+            dUs = result["dUs"]
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
@@ -459,111 +506,18 @@ class Experiment:
                     )
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
-            gates[gate] = U
+            propagators[gate] = U
+            partial_propagators[gate] = dUs
 
         # TODO we might want to move storing of the propagators to the instruction object
         if self.overwrite_propagators:
-            self.propagators = gates
+            self.propagators = propagators
+            self.partial_propagators = partial_propagators
         else:
-            self.propagators.update(gates)
+            self.propagators.update(propagators)
+            self.partial_propagators.update(partial_propagators)
         self.compute_propagators_timestamp = time.time()
-        return gates
-
-    def propagation(self, signal: dict, gate):
-        """
-        Solve the equation of motion (Lindblad or Schrödinger) for a given control
-        signal and Hamiltonians.
-
-        Parameters
-        ----------
-        signal: dict
-            Waveform of the control signal per drive line.
-        gate: str
-            Identifier for one of the gates.
-
-        Returns
-        -------
-        unitary
-            Matrix representation of the gate.
-        """
-        model = self.pmap.model
-
-        if self.use_control_fields:
-            hamiltonian, hctrls = model.get_Hamiltonians()
-            signals = []
-            hks = []
-            for key in signal:
-                signals.append(signal[key]["values"])
-                ts = signal[key]["ts"]
-                hks.append(hctrls[key])
-            signals = tf.cast(signals, tf.complex128)
-            hks = tf.cast(hks, tf.complex128)
-        else:
-            hamiltonian = model.get_Hamiltonian(signal)
-            ts_list = [sig["ts"][1:] for sig in signal.values()]
-            ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-            signals = None
-            hks = None
-            assert np.all(
-                tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-            )
-            assert np.all(
-                tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
-            )
-
-        # TODO: is this compatible with lindbladian
-        if model.max_excitations:
-            cutter = model.ex_cutter
-            hamiltonian = cutter @ hamiltonian @ cutter.T
-            if hks is not None:
-                cutter_tf = tf.cast(cutter, tf.complex128)
-                hks = tf.matmul(cutter_tf, tf.matmul(hks, cutter_tf, transpose_b=True))
-
-        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
-
-        if model.lindbladian:
-            col_ops = model.get_Lindbladians()
-            if model.max_excitations:
-                cutter = model.ex_cutter
-                col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
-            dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
-        else:
-            batch_size = (
-                self.propagate_batch_size
-                if self.propagate_batch_size
-                else len(hamiltonian)
-            )
-            batch_size = (
-                len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
-            )
-            batch_size = tf.constant(batch_size, tf.int32)
-            dUs = tf_batch_propagate(
-                hamiltonian, hks, signals, dt, batch_size=batch_size
-            )
-
-        U = tf_matmul_left(tf.cast(dUs, tf.complex128))
-        if model.max_excitations:
-            U = cutter.T @ U @ cutter
-            ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
-            if self.stop_partial_propagator_gradient:
-                self.partial_propagators[gate] = tf.stop_gradient(
-                    tf.linalg.matmul(
-                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
-                        ex_cutter,
-                    )
-                )
-            else:
-                self.partial_propagators[gate] = tf.stop_gradient(
-                    tf.linalg.matmul(
-                        tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
-                        ex_cutter,
-                    )
-                )
-        else:
-            self.partial_propagators[gate] = dUs
-
-        self.ts = ts
-        return U
+        return propagators
 
     def set_opt_gates(self, gates):
         """
