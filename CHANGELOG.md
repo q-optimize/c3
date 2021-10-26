@@ -9,6 +9,12 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Upcoming Version
+
+### Details
+
+- `changed` The generator now can handle any list of devices that forms a directed graph #129
+
 ## Version `1.3` - 20 Jul 2021
 
 ### Summary
