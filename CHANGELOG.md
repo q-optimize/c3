@@ -9,6 +9,12 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Upcoming Version
+
+### Details
+
+- `fixed` handling of anharmonicity in transmons with two levels #145
+
 ## Version `1.3` - 20 Jul 2021
 
 ### Summary
