@@ -386,7 +386,7 @@ class ParameterMap:
             curr_indx += par_len
             if idx < curr_indx:
                 return key
-        return None
+        return ""
 
     def set_opt_map(self, opt_map) -> None:
         """

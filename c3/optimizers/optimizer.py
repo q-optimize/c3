@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import Callable, Union, List, Dict, Any
+from typing import Callable, Union, List, Dict, Optional, Any
 import numpy as np
 import tensorflow as tf
 import hjson
@@ -44,16 +44,16 @@ class Optimizer:
         self.evaluation = 0
         self.store_unitaries = store_unitaries
         self.created_by = None
-        self.logname: str = None
+        self.logname: str = ""
         self.options = None
-        self.__dir_path: str = None
-        self.logdir: str = None
+        self.__dir_path: str = ""
+        self.logdir: str = ""
         self.set_algorithm(algorithm)
         self.logger = []
         if logger is not None:
             self.logger = logger
 
-    def set_algorithm(self, algorithm: Callable) -> None:
+    def set_algorithm(self, algorithm: Optional[Callable]) -> None:
         if algorithm:
             self.algorithm = algorithm
         else:
