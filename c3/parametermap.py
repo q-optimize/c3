@@ -81,6 +81,26 @@ class ParameterMap:
         init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
+    def write_values(self, path: str) -> None:
+        """
+        Write current parameter values to file.
+
+        Parameters
+        ----------
+        path : str
+            Location of the resulting logfile.
+        """
+        with open(path, "w") as value_file:
+            val_dict = {
+                "opt_map": self.get_opt_map(),
+                "units": self.get_opt_units(),
+                "optim_status": {
+                    "params": [par.numpy().tolist() for par in self.get_parameters()]
+                },
+            }
+            value_file.write(hjson.dumps(val_dict, default=hjson_encode))
+            value_file.write("\n")
+
     def read_config(self, filepath: str) -> None:
         """
         Load a file and parse it to create a ParameterMap object.
