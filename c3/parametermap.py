@@ -91,9 +91,9 @@ class ParameterMap:
             Location of the resulting logfile.
         """
         if optim_status is None:
-            optim_status = (
-                {"params": [par.numpy().tolist() for par in self.get_parameters()]},
-            )
+            optim_status = {
+                "params": [par.numpy().tolist() for par in self.get_parameters()]
+            }
         with open(path, "w") as value_file:
             val_dict = {
                 "opt_map": self.get_opt_map(),
