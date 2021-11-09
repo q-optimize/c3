@@ -171,14 +171,10 @@ class Optimizer:
         if self.optim_status["goal"] < self.current_best_goal:
             self.current_best_goal = self.optim_status["goal"]
             self.current_best_params = self.optim_status["params"]
-            with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
-                best_dict = {
-                    "opt_map": self.pmap.get_opt_map(),
-                    "units": self.pmap.get_opt_units(),
-                    "optim_status": self.optim_status,
-                }
-                best_point.write(hjson.dumpsJSON(best_dict, default=hjson_encode))
-                best_point.write("\n")
+            self.pmap.write_values(
+                path=self.logdir + "best_point_" + self.logname,
+                optim_status=self.optim_status,
+            )
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1
