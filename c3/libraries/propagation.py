@@ -1,6 +1,10 @@
 "A library for propagators and closely related functions"
-
+import numpy as np
 import tensorflow as tf
+from typing import Dict
+from c3.model import Model
+from c3.generator.generator import Generator
+from c3.signal.gates import Instruction
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
@@ -8,12 +12,46 @@ from c3.utils.tf_utils import (
     tf_spost,
 )
 
+unitary_provider = dict()
+state_provider = dict()
+
 
 def step_vonNeumann_psi(psi, h, dt):
     return -1j * dt * tf.linalg.matvec(h, psi)
 
 
-def gen_dUs_RK4(h0, hks, cflds_t, dt):
+def unitary_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    unitary_provider[str(func.__name__)] = func
+    return func
+
+
+def state_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    state_provider[str(func.__name__)] = func
+    return func
+
+
+@unitary_deco
+def gen_dUs_RK4(model: Model, gen: Generator, instr: Instruction, init_state=None):
+    h0, hctrls = model.get_Hamiltonians()
+    gen.resolution = 2 * gen.resolution
+    signal = gen.generate_signals(instr)
+    signals = []
+    hks = []
+    for key in signal:
+        signals.append(signal[key]["values"])
+        ts = signal[key]["ts"]
+        hks.append(hctrls[key])
+    signals = tf.cast(signals, tf.complex128)
+    hks = tf.cast(hks, tf.complex128)
+
+    dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
     U = []
     tot_dim = tf.shape(h0)
     dim = tot_dim[1]
@@ -22,12 +60,11 @@ def gen_dUs_RK4(h0, hks, cflds_t, dt):
         h = h0
         ii = 0
         while ii < len(hks):
-            h += cflds_t[ii] * hks[ii]
+            h += signals[ii] * hks[ii]
             ii += 1
 
     else:
         h = h0
-
     for jj in range(0, len(h) - 2, 2):
         dU = []
         for ii in range(dim):
@@ -45,15 +82,44 @@ def gen_dUs_RK4(h0, hks, cflds_t, dt):
     return U
 
 
-def gen_U_RK4(h, dt):
+@unitary_deco
+def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None):
+    gen.resolution = 2 * gen.resolution
+    signal = gen.generate_signals(instr)
+    if model.controllability:
+        h0, hctrls = model.get_Hamiltonians()
 
-    dU = []
+        signals = []
+        hks = []
+        for key in signal:
+            signals.append(signal[key]["values"])
+            ts = signal[key]["ts"]
+            hks.append(hctrls[key])
+        signals = tf.cast(signals, tf.complex128)
+        hks = tf.cast(hks, tf.complex128)
+
+        dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+        U = []
+        tot_dim = tf.shape(h0)
+        dim = tot_dim[1]
+
+        if hks is not None:
+            h = h0
+            ii = 0
+            while ii < len(hks):
+                h += signals[ii] * hks[ii]
+                ii += 1
+
+    else:
+        h = model.get_Hamiltonian(signal)
+
     tot_dim = tf.shape(h)
     dim = tot_dim[1]
     for ii in range(dim):
         psi = tf.one_hot(ii, dim, dtype=tf.complex128)
 
-        for jj in range(len(h), 2):
+        for jj in range(0, len(h) - 2, 2):
 
             k1 = step_vonNeumann_psi(psi, h[jj], dt)
             k2 = step_vonNeumann_psi(psi + k1 / 2.0, h[jj + 1], dt)
@@ -61,9 +127,150 @@ def gen_U_RK4(h, dt):
             k4 = step_vonNeumann_psi(psi + k3, h[jj + 2], dt)
 
             psi += (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
-        dU.append(psi)
-    dU = tf.stack(dU)
-    return tf.transpose(dU)
+        U.append(psi)
+    U = tf.stack(U)
+    return tf.transpose(U)
+
+
+@unitary_deco
+def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrödinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    signal = gen.generate_signals(instr)
+    if model.controllability:
+        h0, hctrls = model.get_Hamiltonians()
+        signals = []
+        hks = []
+        for key in signal:
+            signals.append(signal[key]["values"])
+            ts = signal[key]["ts"]
+            hks.append(hctrls[key])
+        signals = tf.cast(signals, tf.complex128)
+        hks = tf.cast(hks, tf.complex128)
+    else:
+        h0 = model.get_Hamiltonian(signal)
+        ts_list = [sig["ts"][1:] for sig in signal.values()]
+        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+        signals = None
+        hks = None
+        assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0]))
+        assert np.all(
+            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
+        )
+
+    dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+    batch_size = tf.constant(len(h0), tf.int32)
+
+    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+
+    U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+
+    if model.max_excitations:
+        U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
+        dUs = tf.vectorized_map(model.blowup_excitations, dUs)
+
+    return {"U": U, "dUs": dUs, "ts": ts}
+
+
+# Reference for cutting excitations:
+# if model.max_excitations:
+#     cutter = model.ex_cutter
+#     hamiltonian = cutter @ hamiltonian @ cutter.T
+#     if hks is not None:
+#         cutter_tf = tf.cast(cutter, tf.complex128)
+#         hks = tf.matmul(cutter_tf, tf.matmul(hks, cutter_tf, transpose_b=True))
+
+# dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+
+# if model.lindbladian:
+#     col_ops = model.get_Lindbladians()
+#     if model.max_excitations:
+#         cutter = model.ex_cutter
+#         col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
+#     dUs = tf_propagation_lind(hamiltonian, hks, col_ops, signals, dt)
+# else:
+#     batch_size = (
+#         self.propagate_batch_size
+#         if self.propagate_batch_size
+#         else len(hamiltonian)
+#     )
+#     batch_size = (
+#         len(hamiltonian) if batch_size > len(hamiltonian) else batch_size
+#     )
+#     batch_size = tf.constant(batch_size, tf.int32)
+#     dUs = tf_batch_propagate(
+#         hamiltonian, hks, signals, dt, batch_size=batch_size
+#     )
+
+# U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+# if model.max_excitations:
+#     U = cutter.T @ U @ cutter
+#     ex_cutter = tf.cast(tf.expand_dims(model.ex_cutter, 0), tf.complex128)
+#     if self.stop_partial_propagator_gradient:
+#         self.partial_propagators[gate] = tf.stop_gradient(
+#             tf.linalg.matmul(
+#                 tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+#                 ex_cutter,
+#             )
+#         )
+#     else:
+#         self.partial_propagators[gate] = tf.stop_gradient(
+#             tf.linalg.matmul(
+#                 tf.linalg.matmul(tf.linalg.matrix_transpose(ex_cutter), dUs),
+#                 ex_cutter,
+#             )
+#         )
+# else:
+#     self.partial_propagators[gate] = dUs
+
+# self.ts = ts
+# return U
+
+
+# @state_deco
+# def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None) -> Dict[str, List[tf.Tensor]]:
+#     if init_state is None:
+#         init_state = model.get_ground_state()
+
+#     key = list(signal.keys())[0]
+#     ts = signal[key]["ts"]
+#     dt = ts[1] - ts[0]
+
+#     states = [init_state]
+#     for i in range(len(ts)):
+#         signals = []
+#         for key in signal:
+#             signals.append(signal[key]["values"][i])
+#         states.append(rk4_solver_step(model, signals, dt, states[-1]))
+#     return {"states": states}
+
+
+# def rk4_solver_step(model: Model, signal, dt: float, state) -> tf.Tensor:
+#     k1 = model.eom(state, signal)
+#     k2 = model.eom(state + dt * k1 / 2.0, signal)
+#     k3 = model.eom(state + dt * k2 / 2.0, signal)
+#     k4 = model.eom(state + dt * k3, signal)
+#     return state + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
+
+
+####################
+# HELPER FUNCTIONS #
+####################
 
 
 @tf.function
@@ -96,7 +303,7 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     # terms = int(1e12 * dt) + 2
     # dU = tf_expm(-1j * h * dt, terms)
     # TODO Make an option for the exponentation method
-    dU = gen_U_RK4(h, dt)  # tf.linalg.expm(-1j * h * dt)
+    dU = tf.linalg.expm(-1j * h * dt)
     return dU
 
 
@@ -209,7 +416,6 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
             batch_array = batch_array.write(
                 i, signals[i * batch_size : i * batch_size + batch_size]
             )
-
     else:
         batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
         batch_array = tf.TensorArray(
@@ -224,13 +430,14 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     for i in range(batches):
         x = batch_array.read(i)
         if signals is not None:
-            result = tf_propagation(hamiltonian, hks, x, dt)
+            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
         else:
-            result = tf_propagation(x, None, None, dt)
+            result = tf_propagation_vectorized(x, None, None, dt)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 
 
+@unitary_deco
 def tf_propagation(h0, hks, cflds, dt):
     """
     Calculate the unitary time evolution of a system controlled by time-dependent
@@ -259,7 +466,7 @@ def tf_propagation(h0, hks, cflds, dt):
         cf_t = []
         for fields in cflds:
             cf_t.append(tf.cast(fields[ii], tf.complex128))
-        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))  #
+        dUs.append(tf_dU_of_t(h0, hks, cf_t, dt))
     return dUs
 
 
@@ -301,7 +508,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
     return dU
 
 
-def evaluate_sequences(propagators: dict, sequences: list):
+def evaluate_sequences(propagators: Dict, sequences: list):
     """
     Compute the total propagator of a sequence of gates.
 
