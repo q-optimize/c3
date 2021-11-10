@@ -327,7 +327,8 @@ with open("test/two_qubit_data.pickle", "rb") as filename:
 gen_signal = generator.generate_signals(pmap.instructions["rx90p[0]"])
 ts = gen_signal["d1"]["ts"]
 hdrift, hks = model.get_Hamiltonians()
-propagator = exp.propagation(gen_signal, "rx90p[0]")
+result = exp.propagation(model, generator, pmap.instructions["rx90p[0]"])
+propagator = result["U"]
 
 
 def test_signals() -> None:
