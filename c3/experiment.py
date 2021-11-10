@@ -54,7 +54,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None, prop_method = None):
+    def __init__(self, pmap: ParameterMap = None, prop_method=None):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
@@ -430,7 +430,7 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             signal = generator.generate_signals(instr)
-            result = self..pyagation(model, signal)
+            result = self.propagation(model, signal)
             states[instr] = result["states"]
         self.states = states
         return result
@@ -462,6 +462,8 @@ class Experiment:
                     f"C3:Error: Gate '{gate}' is not defined."
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
+
+            model.controllability = self.use_control_fields
             result = self.propagation(model, generator, instr)
             U = result["U"]
             dUs = result["dUs"]
