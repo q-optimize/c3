@@ -49,8 +49,7 @@ def test_create_c1() -> None:
     cfg.pop("optim_type")
     cfg.pop("gateset_opt_map")
     cfg.pop("opt_gates")
-
-    exp = Experiment()
+    exp = Experiment(prop_method=cfg.pop("propagation_method", None))
     exp.read_config(cfg.pop("exp_cfg"))
     OptimalControl(**cfg, pmap=exp.pmap)
 
