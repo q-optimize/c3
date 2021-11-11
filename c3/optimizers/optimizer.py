@@ -171,7 +171,7 @@ class Optimizer:
         if self.optim_status["goal"] < self.current_best_goal:
             self.current_best_goal = self.optim_status["goal"]
             self.current_best_params = self.optim_status["params"]
-            self.pmap.write_values(
+            self.pmap.store_values(
                 path=self.logdir + "best_point_" + self.logname,
                 optim_status=self.optim_status,
             )

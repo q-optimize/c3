@@ -81,7 +81,7 @@ class ParameterMap:
         init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
-    def write_values(self, path: str, optim_status=None) -> None:
+    def store_values(self, path: str, optim_status=None) -> None:
         """
         Write current parameter values to file.
 
