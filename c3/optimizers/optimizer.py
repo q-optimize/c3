@@ -2,7 +2,7 @@
 
 import os
 import time
-from typing import Callable, Union, List, Dict, Any
+from typing import Callable, Union, List, Dict, Optional, Any
 import numpy as np
 import tensorflow as tf
 import hjson
@@ -44,16 +44,16 @@ class Optimizer:
         self.evaluation = 0
         self.store_unitaries = store_unitaries
         self.created_by = None
-        self.logname: str = None
+        self.logname: str = ""
         self.options = None
-        self.__dir_path: str = None
-        self.logdir: str = None
+        self.__dir_path: str = ""
+        self.logdir: str = ""
         self.set_algorithm(algorithm)
         self.logger = []
         if logger is not None:
             self.logger = logger
 
-    def set_algorithm(self, algorithm: Callable) -> None:
+    def set_algorithm(self, algorithm: Optional[Callable]) -> None:
         if algorithm:
             self.algorithm = algorithm
         else:
@@ -171,14 +171,10 @@ class Optimizer:
         if self.optim_status["goal"] < self.current_best_goal:
             self.current_best_goal = self.optim_status["goal"]
             self.current_best_params = self.optim_status["params"]
-            with open(self.logdir + "best_point_" + self.logname, "w") as best_point:
-                best_dict = {
-                    "opt_map": self.pmap.get_opt_map(),
-                    "units": self.pmap.get_opt_units(),
-                    "optim_status": self.optim_status,
-                }
-                best_point.write(hjson.dumps(best_dict, default=hjson_encode))
-                best_point.write("\n")
+            self.pmap.store_values(
+                path=self.logdir + "best_point_" + self.logname,
+                optim_status=self.optim_status,
+            )
         if self.store_unitaries:
             self.exp.store_Udict(self.optim_status["goal"])
             self.exp.store_unitaries_counter += 1

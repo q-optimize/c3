@@ -81,6 +81,32 @@ class ParameterMap:
         init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
+    def store_values(self, path: str, optim_status=None) -> None:
+        """
+        Write current parameter values to file. Stores the numeric values, as well as the names
+        in form of the opt_map and physical units. If an optim_status is given that will be
+        used.
+
+        Parameters
+        ----------
+        path : str
+            Location of the resulting logfile.
+        optim_status: dict
+            Dictionary containing current parameters and goal function value.
+        """
+        if optim_status is None:
+            optim_status = {
+                "params": [par.numpy().tolist() for par in self.get_parameters()]
+            }
+        with open(path, "w") as value_file:
+            val_dict = {
+                "opt_map": self.get_opt_map(),
+                "units": self.get_opt_units(),
+                "optim_status": optim_status,
+            }
+            value_file.write(hjson.dumps(val_dict, default=hjson_encode))
+            value_file.write("\n")
+
     def read_config(self, filepath: str) -> None:
         """
         Load a file and parse it to create a ParameterMap object.
@@ -364,7 +390,7 @@ class ParameterMap:
             curr_indx += par_len
             if idx < curr_indx:
                 return key
-        return None
+        return ""
 
     def set_opt_map(self, opt_map) -> None:
         """
