@@ -83,12 +83,16 @@ class ParameterMap:
 
     def store_values(self, path: str, optim_status=None) -> None:
         """
-        Write current parameter values to file.
+        Write current parameter values to file. Stores the numeric values, as well as the names
+        in form of the opt_map and physical units. If an optim_status is given that will be
+        used.
 
         Parameters
         ----------
         path : str
             Location of the resulting logfile.
+        optim_status: dict
+            Dictionary containing current parameters and goal function value.
         """
         if optim_status is None:
             optim_status = {
