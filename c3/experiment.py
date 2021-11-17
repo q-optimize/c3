@@ -467,6 +467,7 @@ class Experiment:
             result = self.propagation(model, generator, instr)
             U = result["U"]
             dUs = result["dUs"]
+            self.ts = result["ts"]
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
