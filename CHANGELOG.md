@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `removed` official support for Python 3.6 #156
 - `added` a method to HJSON dump current parameter values #149
 - `added` example for the log reader CLI #137
 - `added` human readable saving of current best point for the optimizer #140 
