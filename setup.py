@@ -28,7 +28,6 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
         "Topic :: Scientific/Engineering :: Physics",
     ],
@@ -46,5 +45,5 @@ setup(
         "tensorflow-estimator>=2.4.0",
         "tensorflow-probability>=0.12.1",
     ],
-    python_requires="~=3.6",
+    python_requires="~=3.7",
 )
