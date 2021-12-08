@@ -31,6 +31,7 @@ When combined in sequence, these three procedures represent a recipe for system 
    Parametermap
    two_qubits
    optimal_control
+   two_qubit_entangling_gate
    Simulated_calibration
    Simulated_Model_Learning
    log_reader
