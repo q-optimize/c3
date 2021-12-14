@@ -63,7 +63,7 @@ class Experiment:
         self.propagators: Dict[str, tf.Tensor] = {}
         self.partial_propagators: dict = {}
         self.created_by = None
-        self.logdir: str = None
+        self.logdir: str = ""
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_propagators = True  # Keep only currently computed propagators
