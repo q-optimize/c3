@@ -273,13 +273,12 @@ class Quantity:
             self.set_limits(min_val, max_val)
             tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
 
-        tf.debugging.assert_less_equal(
-            tf.math.abs(tmp),
-            tf.constant(1.0, tf.float64),
-            f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
-            f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
-            f"max_val: {num3str(self.get_limits()[1])}{self.unit}",
-        )
+        if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
+            raise Exception(
+                f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
+                f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
+                f"max_val: {num3str(self.get_limits()[1])}{self.unit}",
+            )
 
         self.value = tf.cast(tmp, tf.float64)
 
