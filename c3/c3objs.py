@@ -123,57 +123,57 @@ class Quantity:
 
     def __add__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() + other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() + other)
         return out_val
 
     def __radd__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() + other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() + other)
         return out_val
 
     def __sub__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() - other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() - other)
         return out_val
 
     def __rsub__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(other - self.get_value(), extend_bounds=True)
+        out_val._set_value_extend(other - self.get_value())
         return out_val
 
     def __mul__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() * other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() * other)
         return out_val
 
     def __rmul__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() * other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() * other)
         return out_val
 
     def __pow__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() ** other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() ** other)
         return out_val
 
     def __rpow__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(other ** self.get_value(), extend_bounds=True)
+        out_val._set_value_extend(other ** self.get_value())
         return out_val
 
     def __truediv__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() / other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() / other)
         return out_val
 
     def __rtruediv__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(other / self.get_value(), extend_bounds=True)
+        out_val._set_value_extend(other / self.get_value())
         return out_val
 
     def __mod__(self, other):
         out_val = copy.deepcopy(self)
-        out_val.set_value(self.get_value() % other, extend_bounds=True)
+        out_val._set_value_extend(self.get_value() % other)
         return out_val
 
     def __lt__(self, other):
@@ -253,7 +253,13 @@ class Quantity:
         value = self.scale * (val + 1) / 2 + self.offset
         return tf.cast(value, dtype)
 
-    def set_value(self, val, extend_bounds=False) -> None:
+    def set_value(self, val, extend_bounds=False):
+        if extend_bounds:
+            self._set_value_extend(val)
+        else:
+            self._set_value(val)
+
+    def _set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
@@ -264,15 +270,6 @@ class Quantity:
 
         tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
 
-        if extend_bounds and tf.math.abs(tmp) > 1:
-            min_val, max_val = self.get_limits()
-            # Extra bounds included to not be directly at border due to differentiability
-            minmax = [val * 0.9, val * 1.1, min_val, max_val]
-            min_val = tf.math.reduce_min(minmax)
-            max_val = tf.math.reduce_max(minmax)
-            self.set_limits(min_val, max_val)
-            tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
-
         if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
             raise Exception(
                 f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
@@ -281,6 +278,16 @@ class Quantity:
             )
 
         self.value = tf.cast(tmp, tf.float64)
+
+    def _set_value_extend(self, val) -> None:
+        """Set the value of this quantity as tensorflow. If needed, limits will be extended."""
+        min_val, max_val = self.get_limits()
+        # Extra bounds included to not be directly at border due to differentiability
+        minmax = [val * 0.9, val * 1.1, min_val, max_val]
+        min_val = tf.math.reduce_min(minmax)
+        max_val = tf.math.reduce_max(minmax)
+        self.set_limits(min_val, max_val)
+        self._set_value(val)
 
     def get_opt_value(self) -> np.ndarray:
         """Get an optimizer friendly representation of the value."""
