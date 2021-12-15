@@ -321,7 +321,10 @@ class TensorBoardLogger(BaseLogger):
         self.best_iteration = np.inf
 
     def write_params(self, params, step=0):
-        assert len(self.opt_map) == len(params)
+        if not len(self.opt_map) == len(params):
+            raise Exception(
+                f"C3:Error: Different number of elements in opt_map and params. {len(self.opt_map)} vs {len(params)}"
+            )
         for i in range(len(self.opt_map)):
             for key in self.opt_map[i]:
                 if type(params[i]) is float:
