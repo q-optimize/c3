@@ -209,7 +209,10 @@ class ParameterMap:
             if len(equiv_ids) > 1:
                 limit = self.__pars[equiv_ids[0]].get_limits()
                 for key in equiv_ids[1:]:
-                    assert self.__pars[key].get_limits() == limit
+                    if not self.__pars[key].get_limits() == limit:
+                        raise Exception(
+                            "C3:Error:Limits for {key} are not equivalent to {equiv_ids}."
+                        )
 
     def get_parameter(self, par_id: Tuple[str, ...]) -> Quantity:
         """
@@ -289,9 +292,10 @@ class ParameterMap:
         model_updated = False
         val_indx = 0
         opt_map = self.get_opt_map(opt_map)
-        assert len(values) == len(
-            opt_map
-        ), "Different number of elements in values and opt_map"
+        if not len(values) == len(opt_map):
+            raise Exception(
+                f"C3:Error: Different number of elements in values and opt_map. {len(values)} vs {len(opt_map)}"
+            )
         for equiv_ids in opt_map:
             for key in equiv_ids:
                 # We check if a model parameter has changed

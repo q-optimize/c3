@@ -63,7 +63,7 @@ class Experiment:
         self.propagators: Dict[str, tf.Tensor] = {}
         self.partial_propagators: dict = {}
         self.created_by = None
-        self.logdir: str = None
+        self.logdir: str = ""
         self.propagate_batch_size = None
         self.use_control_fields = True
         self.overwrite_propagators = True  # Keep only currently computed propagators
@@ -504,12 +504,14 @@ class Experiment:
             ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
             signals = None
             hks = None
-            assert np.all(
+            if not np.all(
                 tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-            )
-            assert np.all(
+            ):
+                raise Exception("C3Error:Something with the times happend.")
+            if not np.all(
                 tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
-            )
+            ):
+                raise Exception("C3Error:Something with the times happend.")
 
         # TODO: is this compatible with lindbladian
         if model.max_excitations:

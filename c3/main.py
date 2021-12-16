@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 """Base script to run the C3 code from a main config file."""
 
 import logging

@@ -32,6 +32,7 @@ class Optimizer:
     def __init__(
         self,
         pmap: ParameterMap,
+        initial_point: str = "",
         algorithm: Callable = None,
         store_unitaries: bool = False,
         logger: List = None,
@@ -49,6 +50,8 @@ class Optimizer:
         self.__dir_path: str = ""
         self.logdir: str = ""
         self.set_algorithm(algorithm)
+        if not initial_point == "":
+            self.load_best(initial_point)
         self.logger = []
         if logger is not None:
             self.logger = logger
@@ -313,12 +316,15 @@ class TensorBoardLogger(BaseLogger):
     def __init__(self):
         super().__init__()
         self.opt_map = []
-        self.writer = None
+        self.writer: None
         self.store_better_iterations_only = True
         self.best_iteration = np.inf
 
     def write_params(self, params, step=0):
-        assert len(self.opt_map) == len(params)
+        if not len(self.opt_map) == len(params):
+            raise Exception(
+                f"C3:Error: Different number of elements in opt_map and params. {len(self.opt_map)} vs {len(params)}"
+            )
         for i in range(len(self.opt_map)):
             for key in self.opt_map[i]:
                 if type(params[i]) is float:

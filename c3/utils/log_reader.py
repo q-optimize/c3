@@ -42,7 +42,7 @@ def show_table(log: Dict[str, Any], console: Console) -> None:
 
     console.clear()
     print(
-        f"Optimization reached {optim_status['goal']:0.3g} at {optim_status['time']}\n"
+        f"Optimization reached {optim_status.pop('goal', -1):0.3g} at {optim_status.pop('time', 0)}\n"
     )
     console.print(table)
 

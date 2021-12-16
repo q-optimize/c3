@@ -452,13 +452,13 @@ def cosine_flattop(t, params):
 
     """
     t_rise = tf.cast(params["t_rise"].get_value(), tf.float64)
-    dt = t[1] - t[0]
+    dt = tf.reshape(t[1] - t[0], ())
     n_rise = tf.cast(t_rise / dt, tf.int32)
     n_flat = len(t) - 2 * n_rise
     cos_flt = tf.concat(
         [
             0.5 * (1 - tf.cos(np.pi * t[:n_rise] / t_rise)),
-            tf.ones(n_flat, dtype=tf.float64),
+            tf.ones((n_flat, 1), dtype=tf.float64),
             0.5 * (1 + tf.cos(np.pi * t[:n_rise] / t_rise)),
         ],
         axis=0,
