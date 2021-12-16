@@ -50,6 +50,7 @@ class OptimalControl(Optimizer):
         dir_path=None,
         callback_fids=None,
         algorithm=None,
+        initial_point: str = "",
         store_unitaries=False,
         options={},
         run_name=None,
@@ -63,6 +64,7 @@ class OptimalControl(Optimizer):
         super().__init__(
             pmap=pmap,
             algorithm=algorithm,
+            initial_point=initial_point,
             store_unitaries=store_unitaries,
             logger=logger,
         )
@@ -117,7 +119,7 @@ class OptimalControl(Optimizer):
         if run_name is None:
             run_name = "c1_" + self.fid_func.__name__ + "_" + self.algorithm.__name__
         self.logdir = log_setup(self.__dir_path, run_name)
-        self.logname = "open_loop.log"
+        self.logname = "open_loop.c3log"
         if isinstance(self.exp.created_by, str):
             shutil.copy2(self.exp.created_by, self.logdir)
         if isinstance(self.created_by, str):
@@ -126,7 +128,7 @@ class OptimalControl(Optimizer):
     def load_model_parameters(self, adjust_exp: str) -> None:
         self.pmap.load_values(adjust_exp)
         self.pmap.model.update_model()
-        shutil.copy(adjust_exp, os.path.join(self.logdir, "adjust_exp.log"))
+        shutil.copy(adjust_exp, os.path.join(self.logdir, "adjust_exp.c3log"))
 
     def optimize_controls(self, setup_log: bool = True) -> None:
         """

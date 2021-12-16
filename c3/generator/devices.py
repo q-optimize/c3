@@ -112,12 +112,10 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
-        np.testing.assert_almost_equal(
-            np.mod(t_end, dt),
-            0,
-            decimal=7,
-            err_msg="Given length of is not a multiple of the resolution",
-        )
+        if np.mod(t_end, dt) > 1e-7:
+            raise Exception(
+                "C3:Error:Given length of is not a multiple of the resolution"
+            )
 
         # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
@@ -603,9 +601,11 @@ class ResponseFFT(Device):
             Bandwidth limited IQ signal.
 
         """
-        np.testing.assert_almost_equal(
-            actual=iq_signal["ts"][1] - iq_signal["ts"][0], desired=1 / self.resolution
-        )
+        res_diff = (iq_signal["ts"][1] - iq_signal["ts"][0]) / self.resolution - 1
+        if res_diff > 1e-8:
+            raise Exception(
+                "C3:Error:Actual time resolution differs from desired by {res_diff:1.3g}."
+            )
         n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
@@ -1056,7 +1056,8 @@ class LO(Device):
                 self.signal["inphase"] = cos
                 self.signal["quadrature"] = sin
                 self.signal["ts"] = ts
-        assert "inphase" in self.signal, f"Probably no carrier proviced for {self.name}"
+        if "inphase" not in self.signal:
+            raise Exception(f"C3:Error: Probably no carrier proviced for {self.name}")
         return self.signal
 
 

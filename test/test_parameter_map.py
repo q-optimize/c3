@@ -232,7 +232,7 @@ def test_get_key_from_scaled_index():
     assert pmap.get_key_from_scaled_index(1) == "rx90p[0]-d1-gauss-delta"
     assert pmap.get_key_from_scaled_index(2) == "rx90p[0]-d1-gauss-freq_offset"
     assert pmap.get_key_from_scaled_index(3) == "id[0]-d1-carrier-framechange"
-    assert pmap.get_key_from_scaled_index(4) is None
+    assert pmap.get_key_from_scaled_index(4) == ""
 
 
 @pytest.mark.unit
