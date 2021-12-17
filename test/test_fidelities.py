@@ -2,7 +2,13 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_array_almost_equal as almost_equal
-from c3.libraries.fidelities import unitary_infid, average_infid
+from c3.signal.gates import Instruction
+from c3.libraries.fidelities import (
+    unitary_infid,
+    average_infid,
+    unitary_infid_set,
+    state_transfer_infid_set,
+)
 from c3.libraries.constants import GATES
 
 
@@ -128,3 +134,33 @@ def test_average_infid_projection_5() -> None:
         Id,
     )
     almost_equal(average_infid(ideal=X, actual=actual, index=[0], dims=[3, 2]), 0)
+
+
+@pytest.mark.unit
+def test_set_unitary() -> None:
+    propagators = {"rxp": X, "ryp": Y}
+    instructions = {"rxp": Instruction("rxp"), "ryp": Instruction("ryp")}
+    goal = unitary_infid_set(
+        propagators=propagators,
+        instructions=instructions,
+        index=[0],
+        dims=[2],
+        n_eval=136,
+    )
+    almost_equal(goal, 0)
+
+
+@pytest.mark.unit
+def test_set_states() -> None:
+    propagators = {"rxp": X, "ryp": Y}
+    instructions = {"rxp": Instruction("rxp"), "ryp": Instruction("ryp")}
+    psi_0 = np.array([[1], [0]])
+    goal = state_transfer_infid_set(
+        propagators=propagators,
+        instructions=instructions,
+        index=[0],
+        dims=[2],
+        psi_0=psi_0,
+        n_eval=136,
+    )
+    almost_equal(goal, 0)
