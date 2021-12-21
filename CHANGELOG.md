@@ -19,6 +19,7 @@ This Changelog tracks all past changes to this project as well as details about 
 - `added` human readable saving of current best point for the optimizer #140 
 - `fixed` handling of anharmonicity in transmons with two levels #146
 - `added` an example notebook with entangling two-qubit gates #154
+- `fixed` Broken State Fidelity #135
 
 ## Version `1.3` - 20 Jul 2021
 
