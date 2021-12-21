@@ -372,7 +372,7 @@ class Experiment:
             populations_final.append(pops)
         return populations_final, populations_no_rescale
 
-    def get_perfect_gates(self, gate_keys: list = None) -> Dict[str, np.array]:
+    def get_perfect_gates(self, gate_keys: list = None) -> Dict[str, np.ndarray]:
         """Return a perfect gateset for the gate_keys.
 
         Parameters
