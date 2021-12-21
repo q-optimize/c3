@@ -37,7 +37,7 @@ def state_deco(func):
 
 
 @unitary_deco
-def gen_dUs_RK4(h, dt, dim=None):
+def gen_dus_rk4(h, dt, dim=None):
     dUs = []
     dU = []
     if dim is None:
@@ -45,12 +45,12 @@ def gen_dUs_RK4(h, dt, dim=None):
         dim = tot_dim[1]
 
     for jj in range(0, len(h) - 2, 2):
-        dU = gen_dU_rk4(h[jj : jj + 3], dt, dim)
+        dU = gen_du_rk4(h[jj : jj + 3], dt, dim)
         dUs.append(dU)
     return dUs
 
 
-def gen_dU_rk4(h, dt, dim):
+def gen_du_rk4(h, dt, dim):
     temp = []
     for ii in range(dim):
         psi = tf.one_hot(ii, dim, dtype=tf.complex128)
@@ -69,7 +69,17 @@ def rk4_step(h, psi, dt):
     return psi
 
 
-def get_Hs_of_t_ts(
+def get_hs_of_t_ts(
+    model: Model, gen: Generator, instr: Instruction, prop_res=1
+) -> Dict:
+    if model.controllability:
+        hs_of_ts = _get_hs_of_t_ts_controlled(model, gen, instr, prop_res)
+    else:
+        hs_of_ts = _get_hs_of_t_ts(model, gen, instr, prop_res)
+    return hs_of_ts
+
+
+def _get_hs_of_t_ts_controlled(
     model: Model, gen: Generator, instr: Instruction, prop_res=1
 ) -> Dict:
     """
@@ -100,31 +110,64 @@ def get_Hs_of_t_ts(
     ts = []
     gen.resolution = prop_res * gen.resolution
     signal = gen.generate_signals(instr)
-    if model.controllability:
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
-        cflds = tf.cast(signals, tf.complex128)
-        hks = tf.cast(hks, tf.complex128)
-        for ii in range(cflds[0].shape[0]):
-            cf_t = []
-            for fields in cflds:
-                cf_t.append(tf.cast(fields[ii], tf.complex128))
-            Hs.append(sum_h0_hks(h0, hks, cf_t))
-    else:
-        Hs = model.get_Hamiltonian(signal)
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        signals = None
-        hks = None
-        assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0]))
-        assert np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
-        )
+    h0, hctrls = model.get_Hamiltonians()
+    signals = []
+    hks = []
+    for key in signal:
+        signals.append(signal[key]["values"])
+        ts = signal[key]["ts"]
+        hks.append(hctrls[key])
+    cflds = tf.cast(signals, tf.complex128)
+    hks = tf.cast(hks, tf.complex128)
+    for ii in range(cflds[0].shape[0]):
+        cf_t = []
+        for fields in cflds:
+            cf_t.append(tf.cast(fields[ii], tf.complex128))
+        Hs.append(sum_h0_hks(h0, hks, cf_t))
+
+    dt = tf.constant(ts[1 * prop_res].numpy() - ts[0].numpy(), dtype=tf.complex128)
+    return {"Hs": Hs, "ts": ts[::prop_res], "dt": dt}
+
+
+def _get_hs_of_t_ts(
+    model: Model, gen: Generator, instr: Instruction, prop_res=1
+) -> Dict:
+    """
+    Return a Dict containing:
+
+    - a list of
+
+      H(t) = H_0 + sum_k c_k H_k.
+
+    - time slices ts
+
+    - timestep dt
+
+    Parameters
+    ----------
+    prop_res : tf.float
+        resolution required by the propagation method
+    h0 : tf.tensor
+        Drift Hamiltonian.
+    hks : list of tf.tensor
+        List of control Hamiltonians.
+    cflds_t : array of tf.float
+        Vector of control field values at time t.
+    ts : float
+        Length of one time slice.
+    """
+    Hs = []
+    ts = []
+    gen.resolution = prop_res * gen.resolution
+    signal = gen.generate_signals(instr)
+    Hs = model.get_Hamiltonian(signal)
+    ts_list = [sig["ts"][1:] for sig in signal.values()]
+    ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+    if not np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])):
+        raise Exception("C3Error:Something with the times happend.")
+    if not np.all(tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])):
+        raise Exception("C3Error:Something with the times happend.")
+
     dt = tf.constant(ts[1 * prop_res].numpy() - ts[0].numpy(), dtype=tf.complex128)
     return {"Hs": Hs, "ts": ts[::prop_res], "dt": dt}
 
@@ -150,14 +193,14 @@ def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None) -> Di
     Hs = []
     ts = []
     dUs = []
-    dict_vals = get_Hs_of_t_ts(model, gen, instr, prop_res)
+    dict_vals = get_hs_of_t_ts(model, gen, instr, prop_res)
     Hs = dict_vals["Hs"]
     ts = dict_vals["ts"]
     dt = dict_vals["dt"]
 
-    dUs = gen_dUs_RK4(Hs, dt, dim)
+    dUs = gen_dus_rk4(Hs, dt, dim)
 
-    U = gen_U_RK4(Hs, dt, dim)
+    U = gen_u_rk4(Hs, dt, dim)
 
     if model.max_excitations:
         U = model.blowup_excitations(U)
@@ -166,7 +209,7 @@ def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None) -> Di
     return {"U": U, "dUs": dUs, "ts": ts}
 
 
-def gen_U_RK4(h, dt, dim):
+def gen_u_rk4(h, dt, dim):
     U = []
     for ii in range(dim):
         psi = tf.one_hot(ii, dim, dtype=tf.complex128)
@@ -213,12 +256,15 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
         h0 = model.get_Hamiltonian(signal)
         ts_list = [sig["ts"][1:] for sig in signal.values()]
         ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        signals = None
-        hks = None
-        assert np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0]))
-        assert np.all(
+        if not np.all(
+            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        if not np.all(
             tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
-        )
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+
     dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
 
     batch_size = tf.constant(len(h0), tf.int32)
@@ -232,32 +278,6 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
     return {"U": U, "dUs": dUs, "ts": ts}
-
-
-# @state_deco
-# def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None) -> Dict[str, List[tf.Tensor]]:
-#     if init_state is None:
-#         init_state = model.get_ground_state()
-
-#     key = list(signal.keys())[0]
-#     ts = signal[key]["ts"]
-#     dt = ts[1] - ts[0]
-
-#     states = [init_state]
-#     for i in range(len(ts)):
-#         signals = []
-#         for key in signal:
-#             signals.append(signal[key]["values"][i])
-#         states.append(rk4_solver_step(model, signals, dt, states[-1]))
-#     return {"states": states}
-
-
-# def rk4_solver_step(model: Model, signal, dt: float, state) -> tf.Tensor:
-#     k1 = model.eom(state, signal)
-#     k2 = model.eom(state + dt * k1 / 2.0, signal)
-#     k3 = model.eom(state + dt * k2 / 2.0, signal)
-#     k4 = model.eom(state + dt * k3, signal)
-#     return state + dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
 
 
 ####################

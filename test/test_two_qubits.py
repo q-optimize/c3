@@ -24,6 +24,7 @@ import c3.signal.gates as gates
 
 # Libs and helpers
 import c3.libraries.algorithms as algorithms
+from c3.libraries.propagation import rk4
 import c3.libraries.chip as chip
 import c3.libraries.envelopes as envelopes
 import c3.libraries.fidelities as fidelities
@@ -423,3 +424,9 @@ def test_optim_lbfgs_grad_free() -> None:
 
     lbfgs_grad_free_opt.optimize_controls()
     assert lbfgs_grad_free_opt.current_best_goal < 0.01
+
+
+def test_rk4() -> None:
+    """Testing that RK4 exists and runs."""
+    exp.set_prop_method(rk4)
+    exp.propagation(model, generator, pmap.instructions["rx90p[0]"])

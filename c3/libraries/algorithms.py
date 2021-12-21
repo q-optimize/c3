@@ -236,7 +236,7 @@ def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
 
 @algo_reg_deco
 def tf_sgd(
-    x_init: np.array,
+    x_init: np.ndarray,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -247,7 +247,7 @@ def tf_sgd(
 
     Parameters
     ----------
-    x_init : np.array
+    x_init : np.ndarray
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -294,7 +294,7 @@ def tf_sgd(
 
 @algo_reg_deco
 def tf_adam(
-    x_init: np.array,
+    x_init: np.ndarray,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -305,7 +305,7 @@ def tf_adam(
 
     Parameters
     ----------
-    x_init : np.array
+    x_init : np.ndarray
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -326,7 +326,7 @@ def tf_adam(
 
 
 def tf_rmsprop(
-    x_init: np.array,
+    x_init: np.ndarray,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -337,7 +337,7 @@ def tf_rmsprop(
 
     Parameters
     ----------
-    x_init : np.array
+    x_init : np.ndarray
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -359,7 +359,7 @@ def tf_rmsprop(
 
 @algo_reg_deco
 def tf_adadelta(
-    x_init: np.array,
+    x_init: np.ndarray,
     fun: Callable = None,
     fun_grad: Callable = None,
     grad_lookup: Callable = None,
@@ -370,7 +370,7 @@ def tf_adadelta(
 
     Parameters
     ----------
-    x_init : np.array
+    x_init : np.ndarray
         starting value of parameter(s)
     fun : Callable, optional
         function to minimize, by default None
@@ -487,7 +487,7 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
     Returns
     -------
-    np.array
+    np.ndarray
         Parameters of the best point.
     """
     if "noise" in options:
