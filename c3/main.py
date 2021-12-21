@@ -50,6 +50,7 @@ def run_cfg(cfg, opt_config_filename, debug=False):
         model = None
         gen = None
         exp = None
+        prop_meth = cfg.pop("propagation_method", None)
         if "model" in cfg:
             model = Model()
             model.read_config(cfg.pop("model"))
@@ -59,13 +60,13 @@ def run_cfg(cfg, opt_config_filename, debug=False):
         if "instructions" in cfg:
             pmap = ParameterMap(model=model, generator=gen)
             pmap.read_config(cfg.pop("instructions"))
-            exp = Experiment(pmap)
+            exp = Experiment(pmap, prop_method=prop_meth)
         if "exp_cfg" in cfg:
-            exp = Experiment()
+            exp = Experiment(prop_method=prop_meth)
             exp.read_config(cfg.pop("exp_cfg"))
         if exp is None:
             print("C3:STATUS: No instructions specified. Performing quick setup.")
-            exp = Experiment()
+            exp = Experiment(prop_method=prop_meth)
             exp.quick_setup(cfg)
 
         exp.set_opt_gates(cfg.pop("opt_gates", None))

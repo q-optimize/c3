@@ -57,6 +57,7 @@ class Model:
             self.set_components(subsystems, couplings, max_excitations)
         if tasks:
             self.set_tasks(tasks)
+        self.controllability = True
 
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
@@ -111,6 +112,7 @@ class Model:
             comp_state_labels.append([0, 1])
         self.names = names
         self.dims = dims
+        self.tot_dim = int(np.prod(dims))
         self.state_labels = list(itertools.product(*state_labels))
         self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
@@ -166,10 +168,18 @@ class Model:
                     proj.append(line)
                 ii += 1
             excitation_cutter = np.array(proj)
-            self.ex_cutter = excitation_cutter
-        else:
-            self.ex_cutter = np.eye(self.tot_dim)
+            self.ex_cutter = tf.convert_to_tensor(
+                excitation_cutter, dtype=tf.complex128
+            )
         self.max_excitations = max_excitations
+
+    def cut_excitations(self, op):
+        cutter = self.ex_cutter
+        return cutter @ op @ tf.transpose(cutter)
+
+    def blowup_excitations(self, op):
+        cutter = self.ex_cutter
+        return tf.transpose(cutter) @ op @ cutter
 
     def read_config(self, filepath: str) -> None:
         """
@@ -298,39 +308,68 @@ class Model:
         return ids
 
     def get_Hamiltonians(self):
+        drift = []
+        controls = []
+
         if self.dressed:
-            return self.dressed_drift_ham, self.dressed_control_hams
+            drift = self.dressed_drift_ham
+            controls = self.dressed_control_hams
         else:
-            return self.drift_ham, self.control_hams
+            drift = self.drift_ham
+            controls = self.control_hams
+        if self.max_excitations:
+            drift = self.cut_excitations(drift)
+            controls = self.cut_excitations(controls)
+        return drift, controls
+
+    def get_sparse_Hamiltonians(self):
+        drift, controls = self.get_Hamiltonians
+        sparse_drift = self.blowup_excitations(drift)
+        sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
+        return sparse_drift, sparse_controls
 
     def get_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
-        Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible"""
+        Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
+        If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
         if signal is None:
             if self.dressed:
-                return self.dressed_drift_ham
+                signal_hamiltonian = self.dressed_drift_ham
             else:
-                return self.drift_ham
-        if self.dressed:
-            hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
-            transform = self.transform
+                signal_hamiltonian = self.drift_ham
         else:
-            hamiltonians = copy.deepcopy(self.__hamiltonians)
-            transform = None
-        for key, sig in signal.items():
-            if key in self.subsystems:
-                hamiltonians[key] = self.subsystems[key].get_Hamiltonian(sig, transform)
-            elif key in self.couplings:
-                hamiltonians[key] = self.couplings[key].get_Hamiltonian(sig, transform)
+            if self.dressed:
+                hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
+                transform = self.transform
             else:
-                raise Exception(f"Signal channel {key} not in model systems")
-        signal_hamiltonian = sum(
-            [
-                tf.expand_dims(h, 0) if len(h.shape) == 2 else h
-                for h in hamiltonians.values()
-            ]
-        )
+                hamiltonians = copy.deepcopy(self.__hamiltonians)
+                transform = None
+            for key, sig in signal.items():
+                if key in self.subsystems:
+                    hamiltonians[key] = self.subsystems[key].get_Hamiltonian(
+                        sig, transform
+                    )
+                elif key in self.couplings:
+                    hamiltonians[key] = self.couplings[key].get_Hamiltonian(
+                        sig, transform
+                    )
+                else:
+                    raise Exception(f"Signal channel {key} not in model systems")
+
+            signal_hamiltonian = sum(
+                [
+                    tf.expand_dims(h, 0) if len(h.shape) == 2 else h
+                    for h in hamiltonians.values()
+                ]
+            )
+
+        if self.max_excitations:
+            signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
+
         return signal_hamiltonian
+
+    def get_sparse_Hamiltonian(self, signal=None):
+        return self.blowup_excitations(self.get_Hamiltonian(signal))
 
     def get_Lindbladians(self):
         if self.dressed:
