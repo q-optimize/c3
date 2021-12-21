@@ -256,6 +256,8 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
         h0 = model.get_Hamiltonian(signal)
         ts_list = [sig["ts"][1:] for sig in signal.values()]
         ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+        hks = None
+        signals = None
         if not np.all(
             tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
         ):
