@@ -112,6 +112,7 @@ class Model:
             comp_state_labels.append([0, 1])
         self.names = names
         self.dims = dims
+        self.tot_dim = int(np.prod(dims))
         self.state_labels = list(itertools.product(*state_labels))
         self.comp_state_labels = list(itertools.product(*comp_state_labels))
 
