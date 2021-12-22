@@ -56,10 +56,16 @@ class Generator:
         for channel, chain in self.chains.items():
             signals = 0
             for device_id, sources in chain.items():
-                # all source devices need to exist
+                # all source devices need to exist and have the same resolution
+                if sources:
+                    res = self.devices[sources[0]].resolution
                 for dev in sources:
                     if dev not in self.devices:
                         raise Exception(f"C3:Error: device {dev} not found.")
+                    if res != self.devices[dev].resolution:
+                        raise Exception(
+                            f"C3:Error: Different resolution of inputs in {channel} {device_id}:{sources}."
+                        )
 
                 # the expected number of inputs must match the connected devices
                 if self.devices[device_id].inputs != len(sources):
