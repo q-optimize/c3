@@ -97,14 +97,14 @@ generator = Generator(
             "awg": [],
             "dac": ["awg"],
             "resp": ["dac"],
-            "mixer": ["lo", "awg"],
+            "mixer": ["lo", "resp"],
         },
         "Qubit2": {
             "lo": [],
             "awg": [],
             "dac": ["awg"],
             "resp": ["dac"],
-            "mixer": ["lo", "awg"],
+            "mixer": ["lo", "resp"],
         },
     },
 )
