@@ -362,6 +362,11 @@ def test_propagation() -> None:
     almost_equal(propagator, test_data["propagator"])
 
 
+def test_init_point() -> None:
+    """Check that a previous best point can be loaded as an initial point."""
+    opt.load_best("test/best_point_open_loop.c3log")
+
+
 @pytest.mark.slow
 @pytest.mark.tensorflow
 @pytest.mark.optimizers

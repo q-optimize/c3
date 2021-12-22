@@ -408,7 +408,6 @@ class Transmon(PhysicalComponent):
     ):
         Hs = self.get_transformed_hamiltonians(transform)
         H_freq = Hs["freq"]
-        H_anhar = Hs["anhar"]
 
         if isinstance(signal, dict):
             sig = signal["values"]
@@ -420,7 +419,7 @@ class Transmon(PhysicalComponent):
 
         h = freq * H_freq
         if self.hilbert_dim > 2:
-            h += self.get_anhar() * H_anhar
+            h += self.get_anhar() * Hs["anhar"]
         return h
 
     def get_Lindbladian(self, dims):
