@@ -90,7 +90,14 @@ def create_experiment():
             ),
         },
         chains={
-            "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"]
+            "d1": {
+                "LO": [],
+                "AWG": [],
+                "DigitalToAnalog": ["AWG"],
+                "Response": ["DigitalToAnalog"],
+                "Mixer": ["LO", "Response"],
+                "VoltsToHertz": ["Mixer"],
+            }
         },
     )
     generator.devices["AWG"].enable_drag_2()

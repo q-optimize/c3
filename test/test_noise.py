@@ -90,15 +90,15 @@ generator = Gnr(
         ),
     },
     chains={
-        "d1": [
-            "LO",
-            "AWG",
-            "DigitalToAnalog",
-            "Response",
-            "Mixer",
-            "DCOffset",
-            "VoltsToHertz",
-        ],
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Response": ["DigitalToAnalog"],
+            "Mixer": ["LO", "Response"],
+            "DCOffset": ["Mixer"],
+            "VoltsToHertz": ["DCOffset"],
+        },
     },
 )
 
@@ -152,19 +152,19 @@ generator2 = Gnr(
         ),
     },
     chains={
-        "d1": [
-            "LO",
-            "AWG",
-            "AWGNoise",
-            "DigitalToAnalog",
-            "Response",
-            "Highpass",
-            "Mixer",
-            "DCNoise",
-            "PinkNoise",
-            "DCOffset",
-            "VoltsToHertz",
-        ],
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "AWGNoise": ["AWG"],
+            "DigitalToAnalog": ["AWGNoise"],
+            "Response": ["DigitalToAnalog"],
+            "Highpass": ["Response"],
+            "Mixer": ["LO", "Highpass"],
+            "DCNoise": ["Mixer"],
+            "PinkNoise": ["DCNoise"],
+            "DCOffset": ["PinkNoise"],
+            "VoltsToHertz": ["DCOffset"],
+        },
     },
 )
 

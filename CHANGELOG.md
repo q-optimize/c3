@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `changed` The generator now can handle any list of devices that forms a directed graph #129
 - `removed` official support for Python 3.6 #156
 - `added` a method to HJSON dump current parameter values #149
 - `added` example for the log reader CLI #137

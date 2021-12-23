@@ -356,8 +356,22 @@ signal chain to each control line.
                 )
             },
             chains= {
-                "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
-                "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"]
+                "d1": {
+                    "LO": [],
+                    "AWG": [],
+                    "DigitalToAnalog": ["AWG"],
+                    "Response": ["DigitalToAnalog"],
+                    "Mixer": ["LO", "Response"],
+                    "VoltsToHertz": ["Mixer"]
+                },
+                "d2": {
+                    "LO": [],
+                    "AWG": [],
+                    "DigitalToAnalog": ["AWG"],
+                    "Response": ["DigitalToAnalog"],
+                    "Mixer": ["LO", "Response"],
+                    "VoltsToHertz": ["Mixer"]
+                }
             }
         )
 

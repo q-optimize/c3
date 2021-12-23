@@ -92,8 +92,20 @@ device_dict = {dev.name: dev for dev in [lo, awg, mixer, dig_to_an, resp]}
 generator = Generator(
     devices=device_dict,
     chains={
-        "Qubit1": ["lo", "awg", "dac", "resp", "mixer"],
-        "Qubit2": ["lo", "awg", "dac", "resp", "mixer"],
+        "Qubit1": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+        },
+        "Qubit2": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+        },
     },
 )
 

@@ -200,14 +200,14 @@
     Chains:
     {
       d1:
-      [
-        lo
-        awg
-        dac
-        resp
-        mixer
-        v2hz
-      ]
+      {
+        "lo": [],
+        "awg": [],
+        "dac": ["awg"],
+        "resp": ["dac"],
+        "mixer": ["lo", "resp"],
+        v2hz: ["mixer"]
+      }
     }
   }
 }
