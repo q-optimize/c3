@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `added` experimental support for Runge Kutta 4 solving of EOM #144
 - `changed` the experiment and model classes for handling different propagation methods #144
 - `changed` The generator now can handle any list of devices that forms a directed graph #129
 - `removed` official support for Python 3.6 #156
