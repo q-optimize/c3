@@ -9,7 +9,11 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
-## Upcoming Version
+## Version `1.4` - 23 Dec 2021
+
+### Summary
+
+Maintenance updates to code quality and implementation along with some useful utility functions and example notebooks.
 
 ### Details
 
