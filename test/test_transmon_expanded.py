@@ -92,8 +92,20 @@ device_dict = {dev.name: dev for dev in [lo, awg, mixer, dig_to_an, resp]}
 generator = Generator(
     devices=device_dict,
     chains={
-        "Qubit1": ["lo", "awg", "dac", "resp", "mixer"],
-        "Qubit2": ["lo", "awg", "dac", "resp", "mixer"],
+        "Qubit1": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+        },
+        "Qubit2": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+        },
     },
 )
 
@@ -216,6 +228,7 @@ def test_chip_hamiltonians():
 
 @pytest.mark.integration
 def test_hamiltonians():
+    model.max_excitations = 0
     test_data["hamiltonians_q1"] = model.get_Hamiltonian(gen_signal1)
     test_data["hamiltonians_q2"] = model.get_Hamiltonian(gen_signal2)
 
@@ -234,6 +247,7 @@ def test_hamiltonians():
 
 @pytest.mark.integration
 def test_propagation():
+    model.max_excitations = cut_excitations
     exp.set_opt_gates("instr1")
     exp.compute_propagators()
     test_data["propagators_q1"] = exp.propagators["instr1"]

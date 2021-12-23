@@ -56,7 +56,14 @@ generator = Generator(
         "VoltsToHertz": v_to_hz,
     },
     chains={
-        "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"]
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Response": ["DigitalToAnalog"],
+            "Mixer": ["LO", "Response"],
+            "VoltsToHertz": ["Mixer"],
+        },
     },
 )
 
@@ -195,8 +202,22 @@ def test_crosstalk() -> None:
             "crosstalk": xtalk,
         },
         chains={
-            "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
-            "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+            "d1": {
+                "LO": [],
+                "AWG": [],
+                "DigitalToAnalog": ["AWG"],
+                "Response": ["DigitalToAnalog"],
+                "Mixer": ["LO", "Response"],
+                "VoltsToHertz": ["Mixer"],
+            },
+            "d2": {
+                "LO": [],
+                "AWG": [],
+                "DigitalToAnalog": ["AWG"],
+                "Response": ["DigitalToAnalog"],
+                "Mixer": ["LO", "Response"],
+                "VoltsToHertz": ["Mixer"],
+            },
         },
     )
     RX90p_q1 = Instruction(

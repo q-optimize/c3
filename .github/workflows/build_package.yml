@@ -1,4 +1,4 @@
-name: Python Package Build
+name: Build and Test
 
 on:
   push:
@@ -8,12 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-20.04, ubuntu-18.04, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}

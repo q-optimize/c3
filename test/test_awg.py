@@ -21,7 +21,14 @@ generator = Generator(
         ),
         "Mixer": devices.Mixer(name="mixer", inputs=2, outputs=1),
     },
-    chains={"d1": ["LO", "AWG", "DigitalToAnalog", "Mixer"]},
+    chains={
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Mixer": ["LO", "DigitalToAnalog"],
+        },
+    },
 )
 
 lo_freq_q1 = 2e9
@@ -56,7 +63,6 @@ def test_AWG_phase_shift() -> None:
     sigs = generator.generate_signals(rectangle)
     correct_signal = np.cos(2 * np.pi * lo_freq_q1 * sigs["d1"]["ts"] + phase * np.pi)
     print(sigs["d1"]["values"])
-    print(generator.gen_stacked_signals)
     np.testing.assert_allclose(
         sigs["d1"]["values"].numpy(),
         correct_signal,

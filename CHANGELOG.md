@@ -9,6 +9,25 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Version `1.4` - 23 Dec 2021
+
+### Summary
+
+Maintenance updates to code quality and implementation along with some useful utility functions and example notebooks.
+
+### Details
+
+- `added` experimental support for Runge Kutta 4 solving of EOM #144
+- `changed` the experiment and model classes for handling different propagation methods #144
+- `changed` The generator now can handle any list of devices that forms a directed graph #129
+- `removed` official support for Python 3.6 #156
+- `added` a method to HJSON dump current parameter values #149
+- `added` example for the log reader CLI #137
+- `added` human readable saving of current best point for the optimizer #140 
+- `fixed` handling of anharmonicity in transmons with two levels #146
+- `added` an example notebook with entangling two-qubit gates #154
+- `fixed` Broken State Fidelity #135
+
 ## Version `1.3` - 20 Jul 2021
 
 ### Summary

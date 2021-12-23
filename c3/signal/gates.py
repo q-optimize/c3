@@ -344,11 +344,10 @@ class Instruction:
                 elif "pwc" in options and options["pwc"]:
                     inphase = comp.params["inphase"].get_value()
                     quadrature = comp.params["quadrature"].get_value()
-                    tf.debugging.assert_shapes(
-                        inphase,
-                        quadrature,
-                        message="inphase and quadrature are of different lengths.",
-                    )
+                    if not inphase.shape == quadrature.shape:
+                        raise Exception(
+                            "C3:Error:inphase and quadrature are of different lengths."
+                        )
                     env = tf.complex(inphase, quadrature)
                     len_diff = len(ts) - len(env)
                     if len_diff > 0:

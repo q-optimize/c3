@@ -598,14 +598,14 @@
     Chains:
     {
       d1:
-      [
-        LO
-        AWG
-        DigitalToAnalog
-        Response
-        Mixer
-        VoltsToHertz
-      ]
+      {
+        LO: []
+        AWG: []
+        DigitalToAnalog: ["AWG"]
+        Response: ["DigitalToAnalog"]
+        Mixer: ["LO", "Response"]
+        VoltsToHertz: ["Mixer"]
+      }
     }
   }
 }

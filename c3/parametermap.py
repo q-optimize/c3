@@ -81,6 +81,32 @@ class ParameterMap:
         init_p = best["optim_status"]["params"]
         self.set_parameters(init_p, best_opt_map)
 
+    def store_values(self, path: str, optim_status=None) -> None:
+        """
+        Write current parameter values to file. Stores the numeric values, as well as the names
+        in form of the opt_map and physical units. If an optim_status is given that will be
+        used.
+
+        Parameters
+        ----------
+        path : str
+            Location of the resulting logfile.
+        optim_status: dict
+            Dictionary containing current parameters and goal function value.
+        """
+        if optim_status is None:
+            optim_status = {
+                "params": [par.numpy().tolist() for par in self.get_parameters()]
+            }
+        with open(path, "w") as value_file:
+            val_dict = {
+                "opt_map": self.get_opt_map(),
+                "units": self.get_opt_units(),
+                "optim_status": optim_status,
+            }
+            value_file.write(hjson.dumps(val_dict, default=hjson_encode))
+            value_file.write("\n")
+
     def read_config(self, filepath: str) -> None:
         """
         Load a file and parse it to create a ParameterMap object.
@@ -183,7 +209,10 @@ class ParameterMap:
             if len(equiv_ids) > 1:
                 limit = self.__pars[equiv_ids[0]].get_limits()
                 for key in equiv_ids[1:]:
-                    assert self.__pars[key].get_limits() == limit
+                    if not self.__pars[key].get_limits() == limit:
+                        raise Exception(
+                            "C3:Error:Limits for {key} are not equivalent to {equiv_ids}."
+                        )
 
     def get_parameter(self, par_id: Tuple[str, ...]) -> Quantity:
         """
@@ -263,9 +292,10 @@ class ParameterMap:
         model_updated = False
         val_indx = 0
         opt_map = self.get_opt_map(opt_map)
-        assert len(values) == len(
-            opt_map
-        ), "Different number of elements in values and opt_map"
+        if not len(values) == len(opt_map):
+            raise Exception(
+                f"C3:Error: Different number of elements in values and opt_map. {len(values)} vs {len(opt_map)}"
+            )
         for equiv_ids in opt_map:
             for key in equiv_ids:
                 # We check if a model parameter has changed
@@ -364,7 +394,7 @@ class ParameterMap:
             curr_indx += par_len
             if idx < curr_indx:
                 return key
-        return None
+        return ""
 
     def set_opt_map(self, opt_map) -> None:
         """

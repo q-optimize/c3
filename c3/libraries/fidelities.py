@@ -21,9 +21,7 @@ from c3.utils.tf_utils import (
     tf_state_to_dm,
 )
 
-from c3.libraries.propagation import (
-    evaluate_sequences,
-)
+from c3.libraries.propagation import evaluate_sequences
 
 from c3.utils.qt_utils import (
     basis,
@@ -34,6 +32,12 @@ from c3.utils.qt_utils import (
     cliffords_string,
 )
 
+state_providers = dict()
+unitary_providers = dict()
+set_providers = dict()
+super_providers = dict()
+
+# Compatibility for legacy, i.e. not sorted yet
 fidelities = dict()
 
 
@@ -45,9 +49,42 @@ def fid_reg_deco(func):
     return func
 
 
+def state_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    state_providers[str(func.__name__)] = func
+    return func
+
+
+def unitary_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    unitary_providers[str(func.__name__)] = func
+    return func
+
+
+def set_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    set_providers[str(func.__name__)] = func
+    return func
+
+
+def open_system_deco(func):
+    """
+    Decorator for making registry of functions
+    """
+    super_providers[str(func.__name__)] = func
+    return func
+
+
 @fid_reg_deco
+@state_deco
 def state_transfer_infid_set(
-    propagators: dict, instructions: dict, index, dims, psi_0, proj=True
+    propagators: dict, instructions: dict, index, dims, psi_0, n_eval=-1, proj=True
 ):
     """
     Mean state transfer infidelity.
@@ -79,14 +116,15 @@ def state_transfer_infid_set(
 
 
 @fid_reg_deco
-def state_transfer_infid(ideal: np.array, actual: tf.constant, index, dims, psi_0):
+@state_deco
+def state_transfer_infid(ideal: np.ndarray, actual: tf.constant, index, dims, psi_0):
     """
     Single gate state transfer infidelity. The dimensions of psi_0 and ideal need to be
     compatible and index and dims need to project actual to these same dimensions.
 
     Parameters
     ----------
-    ideal: np.array
+    ideal: np.ndarray
         Contains ideal unitary representations of the gate
     actual: tf.Tensor
         Contains actual unitary representations of the gate
@@ -112,17 +150,18 @@ def state_transfer_infid(ideal: np.array, actual: tf.constant, index, dims, psi_
 
 
 @fid_reg_deco
+@unitary_deco
 def unitary_infid(
-    ideal: np.array, actual: tf.Tensor, index: List[int] = None, dims=None
+    ideal: np.ndarray, actual: tf.Tensor, index: List[int] = None, dims=None
 ) -> tf.Tensor:
     """
     Unitary overlap between ideal and actually performed gate.
 
     Parameters
     ----------
-    ideal : np.array
+    ideal : np.ndarray
         Ideal or goal unitary representation of the gate.
-    actual : np.array
+    actual : np.ndarray
         Actual, physical unitary representation of the gate.
     index : List[int]
         Index of the qubit(s) in the Hilbert space to be evaluated
@@ -145,6 +184,8 @@ def unitary_infid(
 
 
 @fid_reg_deco
+@unitary_deco
+@set_deco
 def unitary_infid_set(propagators: dict, instructions: dict, index, dims, n_eval=-1):
     """
     Mean unitary overlap between ideal and actually performed gate for the gates in
@@ -178,15 +219,16 @@ def unitary_infid_set(propagators: dict, instructions: dict, index, dims, n_eval
 
 
 @fid_reg_deco
+@open_system_deco
 def lindbladian_unitary_infid(
-    ideal: np.array, actual: tf.constant, index=[0], dims=[2]
+    ideal: np.ndarray, actual: tf.constant, index=[0], dims=[2]
 ) -> tf.constant:
     """
     Variant of the unitary fidelity for the Lindbladian propagator.
 
     Parameters
     ----------
-    ideal: np.array
+    ideal: np.ndarray
         Contains ideal unitary representations of the gate
     actual: tf.Tensor
         Contains actual unitary representations of the gate
@@ -208,6 +250,8 @@ def lindbladian_unitary_infid(
 
 
 @fid_reg_deco
+@open_system_deco
+@set_deco
 def lindbladian_unitary_infid_set(
     propagators: dict, instructions: Dict[str, Instruction], index, dims, n_eval
 ):
@@ -242,8 +286,9 @@ def lindbladian_unitary_infid_set(
 
 
 @fid_reg_deco
+@open_system_deco
 def average_infid(
-    ideal: np.array, actual: tf.Tensor, index: List[int] = [0], dims=[2]
+    ideal: np.ndarray, actual: tf.Tensor, index: List[int] = [0], dims=[2]
 ) -> tf.constant:
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
@@ -251,7 +296,7 @@ def average_infid(
 
     Parameters
     ----------
-    ideal: np.array
+    ideal: np.ndarray
         Contains ideal unitary representations of the gate
     actual: tf.Tensor
         Contains actual unitary representations of the gate
@@ -267,6 +312,8 @@ def average_infid(
 
 
 @fid_reg_deco
+@open_system_deco
+@set_deco
 def average_infid_set(
     propagators: dict, instructions: dict, index: List[int], dims, n_eval=-1
 ):
@@ -298,6 +345,8 @@ def average_infid_set(
 
 
 @fid_reg_deco
+@open_system_deco
+@set_deco
 def average_infid_seq(propagators: dict, instructions: dict, index, dims, n_eval=-1):
     """
     Average sequence fidelity over all gates in propagators.
@@ -326,8 +375,9 @@ def average_infid_seq(propagators: dict, instructions: dict, index, dims, n_eval
 
 
 @fid_reg_deco
+@open_system_deco
 def lindbladian_average_infid(
-    ideal: np.array, actual: tf.constant, index=[0], dims=[2]
+    ideal: np.ndarray, actual: tf.constant, index=[0], dims=[2]
 ) -> tf.constant:
     """
     Average fidelity uses the Pauli basis to compare. Thus, perfect gates are
@@ -335,7 +385,7 @@ def lindbladian_average_infid(
 
     Parameters
     ----------
-    ideal: np.array
+    ideal: np.ndarray
         Contains ideal unitary representations of the gate
     actual: tf.Tensor
         Contains actual unitary representations of the gate
@@ -351,6 +401,8 @@ def lindbladian_average_infid(
 
 
 @fid_reg_deco
+@open_system_deco
+@set_deco
 def lindbladian_average_infid_set(
     propagators: dict, instructions: Dict[str, Instruction], index, dims, n_eval
 ):

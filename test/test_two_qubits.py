@@ -24,6 +24,7 @@ import c3.signal.gates as gates
 
 # Libs and helpers
 import c3.libraries.algorithms as algorithms
+from c3.libraries.propagation import rk4
 import c3.libraries.chip as chip
 import c3.libraries.envelopes as envelopes
 import c3.libraries.fidelities as fidelities
@@ -151,8 +152,22 @@ generator = Gnr(
         ),
     },
     chains={
-        "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
-        "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
+        "d1": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Response": ["DigitalToAnalog"],
+            "Mixer": ["LO", "Response"],
+            "VoltsToHertz": ["Mixer"],
+        },
+        "d2": {
+            "LO": [],
+            "AWG": [],
+            "DigitalToAnalog": ["AWG"],
+            "Response": ["DigitalToAnalog"],
+            "Mixer": ["LO", "Response"],
+            "VoltsToHertz": ["Mixer"],
+        },
     },
 )
 
@@ -327,7 +342,8 @@ with open("test/two_qubit_data.pickle", "rb") as filename:
 gen_signal = generator.generate_signals(pmap.instructions["rx90p[0]"])
 ts = gen_signal["d1"]["ts"]
 hdrift, hks = model.get_Hamiltonians()
-propagator = exp.propagation(gen_signal, "rx90p[0]")
+result = exp.propagation(model, generator, pmap.instructions["rx90p[0]"])
+propagator = result["U"]
 
 
 def test_signals() -> None:
@@ -346,6 +362,11 @@ def test_hamiltonians() -> None:
 
 def test_propagation() -> None:
     almost_equal(propagator, test_data["propagator"])
+
+
+def test_init_point() -> None:
+    """Check that a previous best point can be loaded as an initial point."""
+    opt.load_best("test/best_point_open_loop.c3log")
 
 
 @pytest.mark.slow
@@ -417,3 +438,9 @@ def test_optim_lbfgs_grad_free() -> None:
 
     lbfgs_grad_free_opt.optimize_controls()
     assert lbfgs_grad_free_opt.current_best_goal < 0.01
+
+
+def test_rk4() -> None:
+    """Testing that RK4 exists and runs."""
+    exp.set_prop_method(rk4)
+    exp.propagation(model, generator, pmap.instructions["rx90p[0]"])

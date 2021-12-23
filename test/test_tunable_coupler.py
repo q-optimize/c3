@@ -190,9 +190,30 @@ device_dict = {
 generator = Gnr(
     devices=device_dict,
     chains={
-        "TC": ["lo", "awg", "dac", "resp", "mixer", "fluxbias"],
-        "Q1": ["lo", "awg", "dac", "resp", "mixer", "v2hz"],
-        "Q2": ["lo", "awg", "dac", "resp", "mixer", "v2hz"],
+        "TC": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+            "fluxbias": ["mixer"],
+        },
+        "Q1": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+            "v2hz": ["mixer"],
+        },
+        "Q2": {
+            "lo": [],
+            "awg": [],
+            "dac": ["awg"],
+            "resp": ["dac"],
+            "mixer": ["lo", "resp"],
+            "v2hz": ["mixer"],
+        },
     },
 )
 

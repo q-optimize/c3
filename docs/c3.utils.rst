@@ -1,14 +1,6 @@
 Utilities package
 ==================
 
-Parsers module
---------------
-
-.. automodule:: c3.utils.parsers
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Qutip utilities module
 -----------------------
 
@@ -21,6 +13,14 @@ Tensorflow utilities module
 ----------------------------
 
 .. automodule:: c3.utils.tf_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Log Reader utilities module
+----------------------------
+
+.. automodule:: c3.utils.log_reader
    :members:
    :undoc-members:
    :show-inheritance:

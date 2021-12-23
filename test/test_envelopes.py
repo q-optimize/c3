@@ -282,10 +282,15 @@ def test_cosine():
     }
 
     np.testing.assert_allclose(
-        actual=envelopes["cosine_flattop"](t=ts, params=params),
+        actual=np.reshape(
+            envelopes["cosine_flattop"](t=np.reshape(ts, (-1, 1)), params=params), (-1,)
+        ),
         desired=test_data["cosine_flattop"],
         atol=get_atol("cosine_flattop"),
     )
+    # Nico: to be consistent with the signal generation code, the resphapes above are necessary. Somewhere in the
+    # masking the time vector gets an additional dimension. It all works fine since it's elementwise, but the
+    # flattop implementation has a concat in it that is strict about shapes. This should be investigated.
 
 
 @pytest.mark.unit

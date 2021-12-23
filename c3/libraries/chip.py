@@ -249,7 +249,7 @@ class Resonator(PhysicalComponent):
 
     Parameters
     ----------
-    freq: np.float64
+    freq: Quantity
         frequency of the resonator
 
     """
@@ -294,11 +294,11 @@ class Transmon(PhysicalComponent):
 
     Parameters
     ----------
-    freq: np.float64
+    freq: Quantity
         base frequency of the Transmon
-    phi_0: np.float64
+    phi_0: Quantity
         half period of the phase dependant function
-    phi: np.float64
+    phi: Quantity
         flux position
 
     """
@@ -408,7 +408,6 @@ class Transmon(PhysicalComponent):
     ):
         Hs = self.get_transformed_hamiltonians(transform)
         H_freq = Hs["freq"]
-        H_anhar = Hs["anhar"]
 
         if isinstance(signal, dict):
             sig = signal["values"]
@@ -420,7 +419,7 @@ class Transmon(PhysicalComponent):
 
         h = freq * H_freq
         if self.hilbert_dim > 2:
-            h += self.get_anhar() * H_anhar
+            h += self.get_anhar() * Hs["anhar"]
         return h
 
     def get_Lindbladian(self, dims):
@@ -570,10 +569,10 @@ class CShuntFluxQubitCos(Qubit):
         phi_0: Quantity = None,
         gamma: Quantity = None,
         d: Quantity = None,
-        t1: np.float64 = None,
-        t2star: np.float64 = None,
-        temp: np.float64 = None,
-        anhar: np.float64 = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
+        anhar: Quantity = None,
         params=None,
     ):
         super().__init__(
@@ -688,7 +687,7 @@ class CShuntFluxQubit(Qubit):
         t1: Quantity = None,
         t2star: Quantity = None,
         temp: Quantity = None,
-        anhar: np.float64 = None,
+        anhar: Quantity = None,
         params=dict(),
         resolution=None,
     ):
@@ -943,9 +942,9 @@ class Fluxonium(CShuntFluxQubit):
         phi: Quantity = None,
         phi_0: Quantity = None,
         gamma: Quantity = None,
-        t1: np.float64 = None,
-        t2star: np.float64 = None,
-        temp: np.float64 = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
         params=None,
     ):
         super().__init__(
@@ -1025,17 +1024,17 @@ class SNAIL(Qubit):
     Reference: https://arxiv.org/pdf/1702.00869.pdf
     Parameters
     ----------
-    freq: np.float64
+    freq: Quantity
         frequency of the qubit
-    anhar: np.float64
+    anhar: Quantity
         anharmonicity of the qubit. defined as w01 - w12
-    beta: np.float64
+    beta: Quantity
         third order non_linearity of the qubit.
-    t1: np.float64
+    t1: Quantity
         t1, the time decay of the qubit due to dissipation
-    t2star: np.float64
+    t2star: Quantity
         t2star, the time decay of the qubit due to pure dephasing
-    temp: np.float64
+    temp: Quantity
         temperature of the qubit, used to determine the Boltzmann distribution
         of energy level populations
     Class is mostly an exact copy of the Qubit class. The only difference is the added third order non linearity with a prefactor beta.
@@ -1049,12 +1048,12 @@ class SNAIL(Qubit):
         desc: str = " ",
         comment: str = " ",
         hilbert_dim: int = 4,
-        freq: np.float64 = None,
-        anhar: np.float64 = None,
-        beta: np.float64 = None,
-        t1: np.float64 = None,
-        t2star: np.float64 = None,
-        temp: np.float64 = None,
+        freq: Quantity = None,
+        anhar: Quantity = None,
+        beta: Quantity = None,
+        t1: Quantity = None,
+        t2star: Quantity = None,
+        temp: Quantity = None,
         params: dict = None,
     ):
         super().__init__(
