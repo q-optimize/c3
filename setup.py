@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="c3-toolset",
-    version="1.3",
+    version="1.4",
     description="Toolset for control, calibration and characterization of physical systems",
     url="http://www.q-optimize.org",
     author="q-optimize",
