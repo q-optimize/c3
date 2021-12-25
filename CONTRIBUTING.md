@@ -8,6 +8,9 @@
   - [Setting up the development environment](#setting-up-the-development-environment)
     - [Using conda](#using-conda)
     - [Using virtualenv](#using-virtualenv)
+    - [Development on Apple Silicon](#development-on-apple-silicon)
+      - [Developer Setup](#developer-setup)
+      - [User Setup](#user-setup)
   - [Coding Standards](#coding-standards)
   - [Tests and Test Coverage](#tests-and-test-coverage)
     - [Running Tests Locally](#running-tests-locally)
@@ -116,6 +119,26 @@ pip install -e .
 ```
 
 This will create an editable installation of `c3-toolset` in the `c3-dev` or `env` environment which is linked to your local `c3/` directory making sure that any changes you make to the code are automatically included. For development purposes, you will probably want to additionally install `jupyter`, `notebook`,  `matplotlib`, `pytest`, `pytest-xdist` and `pytest-cov`. If you wish to use Qiskit with C3, you must also install `qiskit`. The `requirements.txt` file lists out these dependencies with their versions.
+
+### Development on Apple Silicon
+
+If you are planning to use or develop `c3-toolset` on Apple Silicon devices (eg, the M1 Macs), you need to follow a slightly more involved setup process. This is because several python packages do not distribute pre-built binaries for Apple Silicon using standard `pip`/`conda` repositories and must be obtained separately. This is true eg, for `tensorflow` which is a hard dependency or for `qiskit` which is required if you want to run circuits. 
+
+#### Developer Setup
+
+1. Install and setup Miniforge on your Apple Silicon Mac from [here](https://github.com/conda-forge/miniforge)
+2. Create a new conda environment (`conda create --name=c3-dev python=3.8`)
+3. Install the latest tensorflow from conda-forge `conda install tensorflow -c conda-forge`
+4. Use `pip` to install the corresponding version of `tensorflow-probability` that matches the version of `tensorflow` from the previous step
+4. Install separately the different qiskit submodules (instead of the metapackage). Instructions [here](https://github.com/Qiskit/qiskit/issues/1201) 
+4. Use `pip` to install the rest of the requirements from the `requirements.txt` file after relaxing all the pinned versions 
+5. Edit the `setup.py` file to remove all the package dependencies by removing the `install_requires` argument 
+6. Install `c3-toolset` in development mode using `pip install -e .` from the root of the repository
+
+#### User Setup
+1. Follow steps 1 to 4 from the Developer Setup above
+2. Use `pip install c3-toolset` to install the package
+3. If you need to run `qiskit` specific functionalities, follow step 5 above
 
 ## Coding Standards
 

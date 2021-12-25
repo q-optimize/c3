@@ -25,6 +25,8 @@ If you want to try out the bleeding edge (possibly buggy) version under developm
 pip install c3-toolset-nightly
 ```
 
+There is no official support for `c3-toolset` on Apple Silicon devices, but you can check the [`CONTRIBUTING.md`](CONTRIBUTING.md#development-on-apple-silicon) for instructions on setting up an experimental version.
+
 ## Usage
 
 C3  provides a simple Python API through which it may integrate with virtually any experimental setup.
