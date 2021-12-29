@@ -551,7 +551,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         exp.enable_qasm()
         exp.compute_propagators()
         pmap = exp.pmap
-        model = pmap.model  # noqa
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
@@ -575,23 +574,16 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         pops = exp.evaluate([instructions_list])
         pop1s, _ = exp.process(pops)
-        # C3 stores labels in exp.pmap.model.state_labels
-        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
-
-        # TODO get_init_ground_state(), compute_propagators(), evaluate(), process()
 
         # generate shots style readout with no SPAM
         # TODO a sophisticated readout/measurement routine
-
-        # TODO generate state labels using get_labels()
-
-        # TODO create results dict and remove empty states
-        counts = {}  # type: ignore
+        # C3 stores labels in exp.pmap.model.state_labels
+        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
-        if self._flip_labels:
-            counts = flip_labels(counts)
+        # if self._flip_labels:
+        #     counts = flip_labels(counts)
 
         end = time.time()
 
