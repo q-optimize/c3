@@ -328,6 +328,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         # TEMP
         self._sample_measure = False
         self._flip_labels = True
+        self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -368,7 +369,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         start = time.time()
 
         # setup C3 Experiment
-        exp = Experiment()
+        exp = self.c3_exp
         exp.load_quick_setup(self._device_config)
         pmap = exp.pmap
         instructions = pmap.instructions
@@ -505,6 +506,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self._qobj_config = None
         # TEMP
         self._sample_measure = False
+        self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -545,7 +547,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         # setup C3 Experiment
-        exp = Experiment()
+        exp = self.c3_exp
         exp.load_quick_setup(self._device_config)
         exp.enable_qasm()
         exp.compute_propagators()  # TODO only simulate qubits used in circuit
