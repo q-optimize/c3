@@ -65,12 +65,12 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.slow
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_result(get_3_qubit_circuit, backend, get_result_qiskit):  # noqa
-    """Test the counts from running a 6 qubit Circuit
+    """Test the counts from running a 3 qubit Circuit
 
     Parameters
     ----------
-    get_6_qubit_circuit : callable
-        pytest fixture for a 6 qubit circuit
+    get_3_qubit_circuit : callable
+        pytest fixture for a 3 qubit circuit
     backend : str
         name of the backend which is to be tested
     simulation_type: str
@@ -126,6 +126,7 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
 
 
 def test_qiskit_physics():
+    """API test for qiskit physics simulation"""
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
@@ -144,6 +145,13 @@ def test_qiskit_physics():
     ],
 )
 def test_too_many_qubits(backend):
+    """Check that error is raised when circuit has more qubits than device
+
+    Parameters
+    ----------
+    backend : tuple
+        name and device config of the backend to be tested
+    """
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend[0])
     received_backend.set_device_config(backend[1])
