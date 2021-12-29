@@ -22,7 +22,9 @@ def test_backends():
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
+@pytest.mark.parametrize(
+    "backend", ["c3_qasm_perfect_simulator", "c3_qasm_physics_simulator"]
+)
 def test_get_backend(backend):
     """Test get_backend() which returns the backend with matching name
 
@@ -134,12 +136,18 @@ def test_qiskit_physics():
     print(job_sim.result().get_counts())
 
 
-@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        ("c3_qasm_perfect_simulator", "test/quickstart.hjson"),
+        ("c3_qasm_physics_simulator", "test/qiskit.cfg"),
+    ],
+)
 def test_too_many_qubits(backend):
     c3_qiskit = C3Provider()
-    backend = c3_qiskit.get_backend(backend)
-    backend.set_device_config("test/quickstart.hjson")
+    received_backend = c3_qiskit.get_backend(backend[0])
+    received_backend.set_device_config(backend[1])
     qc = QuantumCircuit(4, 4)
     qc.x(1)
     with pytest.raises(C3QiskitError):
-        execute(qc, backend, shots=1000)
+        execute(qc, received_backend, shots=1000)
