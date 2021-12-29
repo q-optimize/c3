@@ -62,7 +62,7 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.qiskit
 @pytest.mark.slow
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
-def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
+def test_get_result(get_3_qubit_circuit, backend, get_result_qiskit):  # noqa
     """Test the counts from running a 6 qubit Circuit
 
     Parameters
@@ -80,7 +80,7 @@ def test_get_result(get_6_qubit_circuit, backend, get_result_qiskit):  # noqa
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_device_config("test/quickstart.hjson")
     received_backend.disable_flip_labels()
-    qc = get_6_qubit_circuit
+    qc = get_3_qubit_circuit
     job_sim = execute(qc, received_backend, shots=1000)
     result_sim = job_sim.result()
 
