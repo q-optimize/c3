@@ -569,6 +569,10 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         # TODO set simulator seed, check qiskit python qasm simulator
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         seed_simulator = 2441129
+        instructions_list = [
+            instruction.to_dict() for instruction in experiment.instructions
+        ]
+        exp.evaluate_qasm([instructions_list])
 
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)  # noqa
