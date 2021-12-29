@@ -375,7 +375,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits != experiment.config.n_qubits:
+        if self._number_of_qubits < experiment.config.n_qubits:
             raise C3QiskitError("Number of qubits in Circuit & Device don't match")
 
         shots = self._shots
@@ -550,8 +550,8 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits != experiment.config.n_qubits:
-            raise C3QiskitError("Number of qubits in Circuit & Device dont match")
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
 
         shots = self._shots  # noqa
 
