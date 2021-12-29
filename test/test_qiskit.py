@@ -128,4 +128,5 @@ def test_qiskit_physics(get_test_circuit):
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
     qc = get_test_circuit
-    job_sim = execute(qc, physics_backend, shots=1000)  # noqa
+    job_sim = execute(qc, physics_backend, shots=1000)
+    print(job_sim.result().get_counts())
