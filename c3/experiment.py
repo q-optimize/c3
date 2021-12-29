@@ -152,7 +152,7 @@ class Experiment:
             qubit_1 = model.subsystems[props["qubit_1"]]
             qubit_2 = model.subsystems[props["qubit_2"]]
             instr = Instruction(
-                name=gate_name,
+                name=props["name"],
                 targets=[
                     model.names.index(props["qubit_1"]),
                     model.names.index(props["qubit_2"]),
