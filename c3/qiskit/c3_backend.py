@@ -572,7 +572,11 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
-        exp.evaluate_qasm([instructions_list])
+
+        pops = exp.evaluate([instructions_list])
+        pop1s, _ = exp.process(pops)
+        # C3 stores labels in exp.pmap.model.state_labels
+        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
 
         # TODO get_init_ground_state(), compute_propagators(), evaluate(), process()
 
