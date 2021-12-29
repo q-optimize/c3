@@ -474,9 +474,9 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "open_pulse": False,
         "memory": False,
         "max_shots": 65536,
-        "coupling_map": None,
+        "coupling_map": None,  # TODO Coupling map from config file
         "description": "A physics based c3 simulator for qasm experiments",
-        "basis_gates": [
+        "basis_gates": [  # TODO Basis gates from config file
             "cx",
             "x",
         ],
@@ -549,7 +549,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         exp = Experiment()
         exp.load_quick_setup(self._device_config)
         exp.enable_qasm()
-        exp.compute_propagators()
+        exp.compute_propagators()  # TODO only simulate qubits used in circuit
         pmap = exp.pmap
 
         # initialise parameters
@@ -575,8 +575,8 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         pops = exp.evaluate([instructions_list])
         pop1s, _ = exp.process(pops)
 
-        # generate shots style readout with no SPAM
-        # TODO a sophisticated readout/measurement routine
+        # TODO generate shots style readout ref Perfect Simulator
+        # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
         counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
 
