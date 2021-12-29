@@ -121,3 +121,11 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
 
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
+
+
+def test_qiskit_physics(get_test_circuit):
+    c3_qiskit = C3Provider()
+    physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
+    physics_backend.set_device_config("test/qiskit.cfg")
+    qc = get_test_circuit
+    job_sim = execute(qc, physics_backend, shots=1000)  # noqa
