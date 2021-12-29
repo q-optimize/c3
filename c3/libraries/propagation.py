@@ -165,7 +165,7 @@ def _get_hs_of_t_ts(
     ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
     if not np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])):
         raise Exception("C3Error:Something with the times happend.")
-    if not np.all(tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])):
+    if not np.all(tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])):  # type: ignore
         raise Exception("C3Error:Something with the times happend.")
 
     dt = tf.constant(ts[1 * prop_res].numpy() - ts[0].numpy(), dtype=tf.complex128)
@@ -263,7 +263,7 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
         ):
             raise Exception("C3Error:Something with the times happend.")
         if not np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])
+            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
         ):
             raise Exception("C3Error:Something with the times happend.")
 
