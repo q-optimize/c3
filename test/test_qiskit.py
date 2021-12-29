@@ -132,3 +132,14 @@ def test_qiskit_physics():
     qc.cx(0, 1)
     job_sim = execute(qc, physics_backend)
     print(job_sim.result().get_counts())
+
+
+@pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
+def test_too_many_qubits(backend):
+    c3_qiskit = C3Provider()
+    backend = c3_qiskit.get_backend(backend)
+    backend.set_device_config("test/quickstart.hjson")
+    qc = QuantumCircuit(4, 4)
+    qc.x(1)
+    with pytest.raises(C3QiskitError):
+        execute(qc, backend, shots=1000)
