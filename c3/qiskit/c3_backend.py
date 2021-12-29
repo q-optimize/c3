@@ -453,7 +453,6 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
 
 class C3QasmPhysicsSimulator(C3QasmSimulator):
-    # TODO Boilerplate code. This simulator is not yet implemented.
     """A C3-based perfect gates simulator for Qiskit
 
     Parameters
