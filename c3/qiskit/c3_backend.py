@@ -476,7 +476,10 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,
         "description": "A physics based c3 simulator for qasm experiments",
-        "basis_gates": [],  # TODO add basis gates
+        "basis_gates": [
+            "cx",
+            "x",
+        ],
         "gates": [],
     }
 
