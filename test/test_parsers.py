@@ -26,12 +26,16 @@ def test_name_collision() -> None:
 
 @pytest.mark.unit
 def test_subsystems() -> None:
-    assert list(model.subsystems.keys()) == ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"]
+    assert list(model.subsystems.keys()) == [
+        "Q1",
+        "Q2",
+        "Q3",
+    ]
 
 
 @pytest.mark.unit
 def test_couplings() -> None:
-    assert list(model.couplings.keys()) == ["Q1-Q2", "Q4-Q6", "d1", "d2"]
+    assert list(model.couplings.keys()) == ["Q1-Q2", "d1", "d2"]
 
 
 @pytest.mark.unit
@@ -45,8 +49,8 @@ def test_tasks() -> None:
 
 
 @pytest.mark.unit
-def test_q6_freq() -> None:
-    assert str(model.subsystems["Q6"].params["freq"]) == "4.600 GHz 2pi "
+def test_q3_freq() -> None:
+    assert str(model.subsystems["Q3"].params["freq"]) == "5.000 GHz 2pi "
 
 
 @pytest.mark.unit

@@ -375,8 +375,8 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits != experiment.config.n_qubits:
-            raise C3QiskitError("Number of qubits in Circuit & Device don't match")
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
 
         shots = self._shots
 
@@ -453,7 +453,6 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
 
 
 class C3QasmPhysicsSimulator(C3QasmSimulator):
-    # TODO Boilerplate code. This simulator is not yet implemented.
     """A C3-based perfect gates simulator for Qiskit
 
     Parameters
@@ -474,9 +473,12 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "open_pulse": False,
         "memory": False,
         "max_shots": 65536,
-        "coupling_map": None,
+        "coupling_map": None,  # TODO Coupling map from config file
         "description": "A physics based c3 simulator for qasm experiments",
-        "basis_gates": [],  # TODO add basis gates
+        "basis_gates": [  # TODO Basis gates from config file
+            "cx",
+            "x",
+        ],
         "gates": [],
     }
 
@@ -544,14 +546,15 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # setup C3 Experiment
         exp = Experiment()
-        exp.quick_setup(self._device_config)
+        exp.load_quick_setup(self._device_config)
+        exp.enable_qasm()
+        exp.compute_propagators()  # TODO only simulate qubits used in circuit
         pmap = exp.pmap
-        model = pmap.model  # noqa
 
         # initialise parameters
         self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits != experiment.config.n_qubits:
-            raise C3QiskitError("Number of qubits in Circuit & Device dont match")
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
 
         shots = self._shots  # noqa
 
@@ -564,24 +567,22 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         # TODO set simulator seed, check qiskit python qasm simulator
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         seed_simulator = 2441129
+        instructions_list = [
+            instruction.to_dict() for instruction in experiment.instructions
+        ]
 
-        # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions)  # noqa
+        pops = exp.evaluate([instructions_list])
+        pop1s, _ = exp.process(pops)
 
-        # TODO get_init_ground_state(), compute_propagators(), evaluate(), process()
-
-        # generate shots style readout with no SPAM
-        # TODO a sophisticated readout/measurement routine
-
-        # TODO generate state labels using get_labels()
-
-        # TODO create results dict and remove empty states
-        counts = {}  # type: ignore
+        # TODO generate shots style readout ref Perfect Simulator
+        # TODO a sophisticated readout/measurement routine (w/ SPAM)
+        # C3 stores labels in exp.pmap.model.state_labels
+        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
-        if self._flip_labels:
-            counts = flip_labels(counts)
+        # if self._flip_labels:
+        #     counts = flip_labels(counts)
 
         end = time.time()
 

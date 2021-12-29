@@ -9,6 +9,12 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` for any bug fixes.
 - `security` in case of vulnerabilities.
 
+## Upcoming Version
+
+### Details
+
+- `added` proper physics simulation of circuits using qiskit interface #165
+
 ## Version `1.4` - 23 Dec 2021
 
 ### Summary
