@@ -143,6 +143,8 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
         execute(qc, received_backend, shots=1000)
 
 
+@pytest.mark.unit
+@pytest.mark.qiskit
 def test_qiskit_physics():
     """API test for qiskit physics simulation"""
     c3_qiskit = C3Provider()
@@ -162,6 +164,8 @@ def test_qiskit_physics():
         ("c3_qasm_physics_simulator", "test/qiskit.cfg"),
     ],
 )
+@pytest.mark.unit
+@pytest.mark.qiskit
 def test_too_many_qubits(backend):
     """Check that error is raised when circuit has more qubits than device
 
