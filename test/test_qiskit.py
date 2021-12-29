@@ -7,7 +7,7 @@ from c3.qiskit.c3_exceptions import C3QiskitError
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import execute
+from qiskit import execute, QuantumCircuit
 import pytest
 
 
@@ -123,10 +123,12 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
         execute(qc, received_backend, shots=1000)
 
 
-def test_qiskit_physics(get_test_circuit):
+def test_qiskit_physics():
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
-    qc = get_test_circuit
-    job_sim = execute(qc, physics_backend, shots=1000)
+    qc = QuantumCircuit(2, 2)
+    qc.x(0)
+    qc.cx(0, 1)
+    job_sim = execute(qc, physics_backend)
     print(job_sim.result().get_counts())
