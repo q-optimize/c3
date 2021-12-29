@@ -90,19 +90,29 @@ def get_bad_circuit() -> QuantumCircuit:
 
 
 @pytest.fixture()
-def get_6_qubit_circuit() -> QuantumCircuit:
-    """fixture for 6 qubit Quantum Circuit
+def get_3_qubit_circuit() -> QuantumCircuit:
+    """fixture for 3 qubit Quantum Circuit
 
     Returns
     -------
     QuantumCircuit
-        A circuit with an X on qubit 1
     """
-    qc = QuantumCircuit(6, 6)
+    qc = QuantumCircuit(3, 3)
     qc.rx(np.pi / 2, 0)
     qc.rx(np.pi / 2, 1)
 
-    qc.measure([0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5])
+    qc.measure(
+        [
+            0,
+            1,
+            2,
+        ],
+        [
+            0,
+            1,
+            2,
+        ],
+    )
     return qc
 
 
@@ -132,7 +142,7 @@ def get_result_qiskit() -> Dict[str, Dict[str, Any]]:
 
     """
     # Result of physics based sim for applying X on qubit 0 in 6 qubits
-    perfect_counts = {"000000": 250, "010000": 250, "100000": 250, "110000": 250}
+    perfect_counts = {"000": 250, "010": 250, "100": 250, "110": 250}
 
     counts_dict = {
         "c3_qasm_perfect_simulator": perfect_counts,
