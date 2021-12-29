@@ -547,7 +547,9 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # setup C3 Experiment
         exp = Experiment()
-        exp.quick_setup(self._device_config)
+        exp.load_quick_setup(self._device_config)
+        exp.enable_qasm()
+        exp.compute_propagators()
         pmap = exp.pmap
         model = pmap.model  # noqa
 
