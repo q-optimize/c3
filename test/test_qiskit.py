@@ -3,6 +3,7 @@
 
 import json
 from c3.libraries.constants import GATES
+from c3.experiment import Experiment
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
 from c3.qiskit.c3_gates import (
@@ -240,3 +241,15 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     np.testing.assert_allclose(
         c3_gate.to_matrix(), desired=GATES[c3_gate.name], atol=1e-3
     )
+
+
+def test_user_provided_c3_exp():
+    """Test for checking user provided C3 Experiment object is correctly assigned
+    when supplied through the **kwargs in get_backend()
+    """
+    test_exp = Experiment()
+    c3_qiskit = C3Provider()
+    received_backend = c3_qiskit.get_backend(
+        "c3_qasm_physics_simulator", c3_exp=test_exp
+    )
+    assert isinstance(received_backend.c3_exp, Experiment)
