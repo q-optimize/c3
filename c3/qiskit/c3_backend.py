@@ -506,7 +506,10 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self._qobj_config = None
         # TEMP
         self._sample_measure = False
-        self.c3_exp = Experiment()
+        if "c3_exp" in fields:
+            self.c3_exp = fields.get("c3_exp")
+        else:
+            self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
