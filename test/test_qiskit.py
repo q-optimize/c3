@@ -18,11 +18,13 @@ from c3.qiskit.c3_gates import (
     CRGate,
     CR90Gate,
 )
-from qiskit.quantum_info import Statevector
+from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate, RZXGate
+from qiskit.quantum_info import Statevector, Operator
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import Aer, execute, QuantumCircuit
+from qiskit import execute, QuantumCircuit
 import pytest
+import numpy as np
 
 
 @pytest.mark.unit
