@@ -13,6 +13,8 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `added` examples and documentation showing qiskit visualisations in optimal control workflows #169
+- `added` option to get and set c3 experiment object for qiskit simulations #169
 - `added` support for c3 custom gates in qiskit circuits #168
 - `added` proper physics simulation of circuits using qiskit interface #165
 
