@@ -180,14 +180,15 @@ def test_too_many_qubits(backend):
 # TODO parameterize test for all custom gates
 @pytest.mark.unit
 @pytest.mark.qiskit
-def test_custom_c3_qiskit_gates():
+def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     # TODO configure and test on c3 perfect simulator
 
-    qiskit_backend = Aer.get_backend("qasm_simulator")
+    qc_c3 = QuantumCircuit(2, 2)
+    qc_qiskit = QuantumCircuit(2, 2)
 
-    qc = QuantumCircuit(2, 2)
-    # TODO append gate to circuit
+    qc_c3.append(c3_gate, c3_qubits)
+    op_c3 = Operator(qc_c3)
+    qc_qiskit.append(qiskit_gate, qiskit_qubits)
+    op_qiskit = Operator(qc_qiskit)
 
-    qc.measure_all()
-    execute(qc, qiskit_backend)
-    # TODO assert result matches with expected value
+    assert op_c3.equiv(op_qiskit)
