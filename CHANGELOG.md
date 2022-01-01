@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `added` support for c3 custom gates in qiskit circuits #168
 - `added` proper physics simulation of circuits using qiskit interface #165
 
 ## Version `1.4` - 23 Dec 2021
