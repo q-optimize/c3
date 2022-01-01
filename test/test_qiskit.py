@@ -19,7 +19,7 @@ from c3.qiskit.c3_gates import (
     CRGate,
     CR90Gate,
 )
-from qiskit.circuit.library import RXGate, RYGate, RZGate
+from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import Statevector, Operator
 from qiskit import transpile
@@ -191,6 +191,15 @@ def test_too_many_qubits(backend):
         pytest.param(RZ90pGate(), [0], RZGate(phi=np.pi / 2.0), [0], id="rz90p"),
         pytest.param(RZ90mGate(), [0], RZGate(phi=-np.pi / 2.0), [0], id="rz90m"),
         pytest.param(RZpGate(), [0], RZGate(phi=np.pi), [0], id="rzp"),
+        # TODO Fix this dummy test for CRXp once matrix is resolved in c3_gates
+        pytest.param(
+            CRXpGate,
+            [0, 1],
+            CRXGate(theta=np.pi),
+            [0, 1],
+            marks=pytest.mark.xfail,
+            id="crxp",
+        ),
         pytest.param(CRGate(), [0, 1], UnitaryGate(data=GATES["cr"]), [0, 1], id="cr"),
         pytest.param(
             CR90Gate(), [0, 1], UnitaryGate(data=GATES["cr90"]), [0, 1], id="cr90"
