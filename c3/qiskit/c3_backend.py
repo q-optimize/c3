@@ -72,27 +72,46 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
-    def get_labels(self) -> List[str]:
+    def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
+
+        Parameters
+        ----------
+        format : str, optional
+            How to format the state labels, by default "qiskit"
 
         Returns
         -------
         List[str]
-            A list of state labels in hex format ::
+            A list of state labels in hex if qiskit format
+            and decimal if c3 format ::
 
                 labels = ['0x1', ...]
 
+                labels = ['01', '02', ...]
+
+        Raises
+        ------
+        C3QiskitError
+            When an supported format is passed
         """
-        labels = [
-            hex(i)
-            for i in range(
-                0,
-                pow(
-                    self._number_of_levels,
-                    self._number_of_qubits,
-                ),
-            )
-        ]
+        if format == "qiskit":
+            labels = [
+                hex(i)
+                for i in range(
+                    0,
+                    pow(
+                        self._number_of_levels,
+                        self._number_of_qubits,
+                    ),
+                )
+            ]
+        elif format == "c3":
+            labels = [
+                "".join(str(label)) for label in self.c3_exp.pmap.model.state_labels
+            ]
+        else:
+            raise C3QiskitError("Incorrect format specifier for get_labels")
         return labels
 
     def disable_flip_labels(self) -> None:
