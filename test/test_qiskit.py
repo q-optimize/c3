@@ -144,8 +144,9 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
         execute(qc, received_backend, shots=1000)
 
 
-@pytest.mark.unit
+@pytest.mark.integration
 @pytest.mark.qiskit
+@pytest.mark.slow
 def test_qiskit_physics():
     """API test for qiskit physics simulation"""
     c3_qiskit = C3Provider()
@@ -243,6 +244,8 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     )
 
 
+@pytest.mark.unit
+@pytest.mark.qiskit
 def test_user_provided_c3_exp():
     """Test for checking user provided C3 Experiment object is correctly assigned
     when supplied through the **kwargs in get_backend()
