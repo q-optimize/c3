@@ -4,6 +4,7 @@ from qiskit.extensions import UnitaryGate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES
 import numpy as np
+import warnings
 
 
 class BaseC3QiskitGate(Gate):
@@ -77,5 +78,6 @@ class CRGate(BaseC3QiskitGate):
 
 class CR90Gate(UnitaryGate):
     def __init__(self, label: Optional[str] = None):
+        warnings.warn("This is not equivalent to the RZX(pi/2) gate in qiskit")
         super().__init__(data=GATES["cr90"], label=label)
         self.name = "cr90"
