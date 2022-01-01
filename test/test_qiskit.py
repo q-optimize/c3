@@ -4,10 +4,24 @@
 import json
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
+from c3.qiskit.c3_gates import (
+    RX90pGate,
+    RX90mGate,
+    RXpGate,
+    RY90pGate,
+    RY90mGate,
+    RYpGate,
+    RZ90pGate,
+    RZ90mGate,
+    RZpGate,
+    CRXpGate,
+    CRGate,
+    CR90Gate,
+)
 from qiskit.quantum_info import Statevector
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import execute, QuantumCircuit
+from qiskit import Aer, execute, QuantumCircuit
 import pytest
 
 
@@ -159,3 +173,19 @@ def test_too_many_qubits(backend):
     qc.x(1)
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
+
+
+# TODO parameterize test for all custom gates
+@pytest.mark.unit
+@pytest.mark.qiskit
+def test_custom_c3_qiskit_gates():
+    # TODO configure and test on c3 perfect simulator
+
+    qiskit_backend = Aer.get_backend("qasm_simulator")
+
+    qc = QuantumCircuit(2, 2)
+    # TODO append gate to circuit
+
+    qc.measure_all()
+    execute(qc, qiskit_backend)
+    # TODO assert result matches with expected value
