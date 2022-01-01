@@ -2,6 +2,7 @@
 """
 
 import json
+from c3.libraries.constants import GATES
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
 from c3.qiskit.c3_gates import (
@@ -198,3 +199,4 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     op_qiskit = Operator(qc_qiskit)
 
     assert op_c3.equiv(op_qiskit)
+    np.testing.assert_allclose(c3_gate.to_matrix(), desired=GATES[c3_gate.name])
