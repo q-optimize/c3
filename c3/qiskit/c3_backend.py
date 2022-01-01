@@ -59,6 +59,17 @@ class C3QasmSimulator(Backend, ABC):
             for all device parameters for simulation
         """
         self._device_config = config_file
+        self.c3_exp.load_quick_setup(self._device_config)
+
+    def set_c3_experiment(self, exp: Experiment) -> None:
+        """Set user-provided c3 experiment object for backend
+
+        Parameters
+        ----------
+        exp : Experiment
+            C3 experiment object
+        """
+        self.c3_exp = exp
 
     def get_labels(self) -> List[str]:
         """Return state labels for the system
@@ -504,12 +515,8 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self._memory = False
         self._initial_statevector = self.options.get("initial_statevector")
         self._qobj_config = None
-        # TEMP
         self._sample_measure = False
-        if "c3_exp" in fields:
-            self.c3_exp = fields.get("c3_exp")
-        else:
-            self.c3_exp = Experiment()
+        self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -551,7 +558,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
 
         # setup C3 Experiment
         exp = self.c3_exp
-        exp.load_quick_setup(self._device_config)
         exp.enable_qasm()
         exp.compute_propagators()  # TODO only simulate qubits used in circuit
         pmap = exp.pmap
