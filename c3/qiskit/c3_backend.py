@@ -638,7 +638,9 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         # TODO generate shots style readout when there is 'measure' (ref Perfect Simulator)
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
-        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
+        pops_list = pop1s[0].numpy().tolist()
+        counts = dict(zip(self.get_labels(format="qiskit"), pops_list))
+        state_pops = dict(zip(self.get_labels(format="c3"), pops_list))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
@@ -656,8 +658,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             "success": True,
             "data": {
                 "counts": counts,
-                "pops": pop1s[0].numpy().tolist(),
-                "state_labels": exp.pmap.model.state_labels,
+                "state_pops": state_pops,
             },
             "time_taken": (end - start),
         }
