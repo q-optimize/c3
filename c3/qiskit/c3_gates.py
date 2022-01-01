@@ -2,53 +2,53 @@ from qiskit.circuit import Gate
 from c3.libraries.constants import GATES
 
 
-class C3BaseQiskitGate(Gate):
+class BaseC3QiskitGate(Gate):
     pass
 
 
-class RX90pGate(C3BaseQiskitGate):
+class RX90pGate(BaseC3QiskitGate):
     pass
 
 
-class RX90mGate(C3BaseQiskitGate):
+class RX90mGate(BaseC3QiskitGate):
     pass
 
 
-class RXpGate(C3BaseQiskitGate):
+class RXpGate(BaseC3QiskitGate):
     pass
 
 
-class RY90pGate(C3BaseQiskitGate):
+class RY90pGate(BaseC3QiskitGate):
     pass
 
 
-class RY90mGate(C3BaseQiskitGate):
+class RY90mGate(BaseC3QiskitGate):
     pass
 
 
-class RYpGate(C3BaseQiskitGate):
+class RYpGate(BaseC3QiskitGate):
     pass
 
 
-class RZ90pGate(C3BaseQiskitGate):
+class RZ90pGate(BaseC3QiskitGate):
     pass
 
 
-class RZ90mGate(C3BaseQiskitGate):
+class RZ90mGate(BaseC3QiskitGate):
     pass
 
 
-class RZpGate(C3BaseQiskitGate):
+class RZpGate(BaseC3QiskitGate):
     pass
 
 
-class CRXpGate(C3BaseQiskitGate):
+class CRXpGate(BaseC3QiskitGate):
     pass
 
 
-class CRGate(C3BaseQiskitGate):
+class CRGate(BaseC3QiskitGate):
     pass
 
 
-class CR90Gate(C3BaseQiskitGate):
+class CR90Gate(BaseC3QiskitGate):
     pass
