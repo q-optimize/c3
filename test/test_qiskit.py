@@ -177,7 +177,10 @@ def test_too_many_qubits(backend):
         execute(qc, received_backend, shots=1000)
 
 
-# TODO parameterize test for all custom gates
+@pytest.mark.parametrize(
+    ["c3_gate", "c3_qubits", "qiskit_gate", "qiskit_qubits"],
+    [pytest.param(RX90pGate(), [0], RXGate(theta=np.pi / 2.0), [0], id="rx90p")],
+)
 @pytest.mark.unit
 @pytest.mark.qiskit
 def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
