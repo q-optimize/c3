@@ -1,15 +1,9 @@
 from typing import Optional
-from qiskit.circuit import Gate
 from qiskit.extensions import UnitaryGate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES
 import numpy as np
 import warnings
-
-
-class BaseC3QiskitGate(Gate):
-    def __array__(self, dtype=complex):
-        return GATES[self.name]
 
 
 class RX90pGate(RXGate):
