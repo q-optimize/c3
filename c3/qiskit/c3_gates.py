@@ -1,13 +1,23 @@
+from typing import Optional
 from qiskit.circuit import Gate
+from qiskit import QuantumCircuit
 from c3.libraries.constants import GATES
+import numpy as np
 
 
 class BaseC3QiskitGate(Gate):
-    pass
+    def __array__(self, dtype=complex):
+        return GATES[self.name]
 
 
 class RX90pGate(BaseC3QiskitGate):
-    pass
+    def __init__(self, label: Optional[str] = None):
+        super().__init__("rx90p", 1, [], label=label)
+
+    def _define(self):
+        qc = QuantumCircuit(1)
+        qc.rx(np.pi / 2.0, [0])
+        self.definition = qc
 
 
 class RX90mGate(BaseC3QiskitGate):
