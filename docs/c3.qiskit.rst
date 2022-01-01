@@ -33,6 +33,14 @@ C3 Exceptions module
    :undoc-members:
    :show-inheritance:
 
+C3 Gates module
+------------------------
+
+.. automodule:: c3.qiskit.c3_gates
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 C3 Backend Utilities module
 ----------------------------
 
