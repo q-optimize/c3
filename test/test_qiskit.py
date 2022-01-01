@@ -2,13 +2,31 @@
 """
 
 import json
+from c3.libraries.constants import GATES
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
-from qiskit.quantum_info import Statevector
+from c3.qiskit.c3_gates import (
+    RX90pGate,
+    RX90mGate,
+    RXpGate,
+    RY90pGate,
+    RY90mGate,
+    RYpGate,
+    RZ90pGate,
+    RZ90mGate,
+    RZpGate,
+    CRXpGate,
+    CRGate,
+    CR90Gate,
+)
+from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
+from qiskit.extensions import UnitaryGate
+from qiskit.quantum_info import Statevector, Operator
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
 from qiskit import execute, QuantumCircuit
 import pytest
+import numpy as np
 
 
 @pytest.mark.unit
@@ -131,9 +149,9 @@ def test_qiskit_physics():
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
     qc = QuantumCircuit(3, 3)
-    qc.x(0)
-    qc.cx(0, 1)
-    job_sim = execute(qc, physics_backend)
+    qc.append(RX90pGate(), [0])
+    qc.append(CR90Gate(), [0, 1])
+    job_sim = physics_backend.run(qc)
     print(job_sim.result().get_counts())
 
 
@@ -159,3 +177,62 @@ def test_too_many_qubits(backend):
     qc.x(1)
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
+
+
+@pytest.mark.parametrize(
+    ["c3_gate", "c3_qubits", "qiskit_gate", "qiskit_qubits"],
+    [
+        pytest.param(RX90pGate(), [0], RXGate(theta=np.pi / 2.0), [0], id="rx90p"),
+        pytest.param(RX90mGate(), [0], RXGate(theta=-np.pi / 2.0), [0], id="rx90m"),
+        pytest.param(RXpGate(), [0], RXGate(theta=np.pi), [0], id="rxp"),
+        pytest.param(RY90pGate(), [0], RYGate(theta=np.pi / 2.0), [0], id="ry90p"),
+        pytest.param(RY90mGate(), [0], RYGate(theta=-np.pi / 2.0), [0], id="ry90m"),
+        pytest.param(RYpGate(), [0], RYGate(theta=np.pi), [0], id="ryp"),
+        pytest.param(RZ90pGate(), [0], RZGate(phi=np.pi / 2.0), [0], id="rz90p"),
+        pytest.param(RZ90mGate(), [0], RZGate(phi=-np.pi / 2.0), [0], id="rz90m"),
+        pytest.param(RZpGate(), [0], RZGate(phi=np.pi), [0], id="rzp"),
+        # TODO Fix this dummy test for CRXp once matrix is resolved in c3_gates
+        pytest.param(
+            CRXpGate,
+            [0, 1],
+            CRXGate(theta=np.pi),
+            [0, 1],
+            marks=pytest.mark.xfail,
+            id="crxp",
+        ),
+        pytest.param(CRGate(), [0, 1], UnitaryGate(data=GATES["cr"]), [0, 1], id="cr"),
+        pytest.param(
+            CR90Gate(), [0, 1], UnitaryGate(data=GATES["cr90"]), [0, 1], id="cr90"
+        ),
+    ],
+)
+@pytest.mark.unit
+@pytest.mark.qiskit
+def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
+    """Test custom c3 gates for qiskit have correct matrix representations
+
+    Parameters
+    ----------
+    c3_gate : Gate
+        A qiskit Gate object for c3 custom gates
+    c3_qubits : List
+        List containing the target qubits
+    qiskit_gate : Gate
+        Gate object for native qiskit gates
+    qiskit_qubits : List
+        List containing the target qubits
+    """
+    # TODO configure and test on c3 perfect simulator
+
+    qc_c3 = QuantumCircuit(2, 2)
+    qc_qiskit = QuantumCircuit(2, 2)
+
+    qc_c3.append(c3_gate, c3_qubits)
+    op_c3 = Operator(qc_c3)
+    qc_qiskit.append(qiskit_gate, qiskit_qubits)
+    op_qiskit = Operator(qc_qiskit)
+
+    assert op_c3.equiv(op_qiskit)
+    np.testing.assert_allclose(
+        c3_gate.to_matrix(), desired=GATES[c3_gate.name], atol=1e-3
+    )

@@ -477,7 +477,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "description": "A physics based c3 simulator for qasm experiments",
         "basis_gates": [  # TODO Basis gates from config file
             "cx",
-            "x",
+            "rx",
         ],
         "gates": [],
     }
@@ -571,6 +571,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             instruction.to_dict() for instruction in experiment.instructions
         ]
 
+        # TODO Handle "measure" and "barrier" instructions
         pops = exp.evaluate([instructions_list])
         pop1s, _ = exp.process(pops)
 
