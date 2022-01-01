@@ -200,4 +200,6 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     op_qiskit = Operator(qc_qiskit)
 
     assert op_c3.equiv(op_qiskit)
-    np.testing.assert_allclose(c3_gate.to_matrix(), desired=GATES[c3_gate.name])
+    np.testing.assert_allclose(
+        c3_gate.to_matrix(), desired=GATES[c3_gate.name], atol=1e-3
+    )
