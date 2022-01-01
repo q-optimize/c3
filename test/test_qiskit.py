@@ -160,15 +160,17 @@ def test_qiskit_physics():
 
 
 @pytest.mark.parametrize(
-    "backend",
+    ["backend", "config_file"],
     [
-        ("c3_qasm_perfect_simulator", "test/quickstart.hjson"),
-        ("c3_qasm_physics_simulator", "test/qiskit.cfg"),
+        pytest.param(
+            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
+        ),
+        pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
     ],
 )
 @pytest.mark.unit
 @pytest.mark.qiskit
-def test_too_many_qubits(backend):
+def test_too_many_qubits(backend, config_file):
     """Check that error is raised when circuit has more qubits than device
 
     Parameters
@@ -177,8 +179,8 @@ def test_too_many_qubits(backend):
         name and device config of the backend to be tested
     """
     c3_qiskit = C3Provider()
-    received_backend = c3_qiskit.get_backend(backend[0])
-    received_backend.set_device_config(backend[1])
+    received_backend = c3_qiskit.get_backend(backend)
+    received_backend.set_device_config(config_file)
     qc = QuantumCircuit(4, 4)
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
