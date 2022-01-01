@@ -150,7 +150,7 @@ def test_qiskit_physics():
     physics_backend.set_device_config("test/qiskit.cfg")
     qc = QuantumCircuit(3, 3)
     qc.append(RX90pGate(), [0])
-    qc.cx(0, 1)
+    qc.append(CR90Gate(), [0, 1])
     job_sim = physics_backend.run(qc)
     print(job_sim.result().get_counts())
 
