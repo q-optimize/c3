@@ -3,6 +3,7 @@
 
 import json
 from c3.libraries.constants import GATES
+from c3.experiment import Experiment
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
 from c3.qiskit.c3_gates import (
@@ -143,6 +144,9 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
         execute(qc, received_backend, shots=1000)
 
 
+@pytest.mark.integration
+@pytest.mark.qiskit
+@pytest.mark.slow
 def test_qiskit_physics():
     """API test for qiskit physics simulation"""
     c3_qiskit = C3Provider()
@@ -151,18 +155,23 @@ def test_qiskit_physics():
     qc = QuantumCircuit(3, 3)
     qc.append(RX90pGate(), [0])
     qc.append(CR90Gate(), [0, 1])
+    qc.measure_all()
     job_sim = physics_backend.run(qc)
     print(job_sim.result().get_counts())
 
 
 @pytest.mark.parametrize(
-    "backend",
+    ["backend", "config_file"],
     [
-        ("c3_qasm_perfect_simulator", "test/quickstart.hjson"),
-        ("c3_qasm_physics_simulator", "test/qiskit.cfg"),
+        pytest.param(
+            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
+        ),
+        pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
     ],
 )
-def test_too_many_qubits(backend):
+@pytest.mark.unit
+@pytest.mark.qiskit
+def test_too_many_qubits(backend, config_file):
     """Check that error is raised when circuit has more qubits than device
 
     Parameters
@@ -171,10 +180,9 @@ def test_too_many_qubits(backend):
         name and device config of the backend to be tested
     """
     c3_qiskit = C3Provider()
-    received_backend = c3_qiskit.get_backend(backend[0])
-    received_backend.set_device_config(backend[1])
+    received_backend = c3_qiskit.get_backend(backend)
+    received_backend.set_device_config(config_file)
     qc = QuantumCircuit(4, 4)
-    qc.x(1)
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
 
@@ -236,3 +244,24 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
     np.testing.assert_allclose(
         c3_gate.to_matrix(), desired=GATES[c3_gate.name], atol=1e-3
     )
+
+
+@pytest.mark.unit
+@pytest.mark.qiskit
+@pytest.mark.parametrize(
+    ["backend", "config_file"],
+    [
+        pytest.param(
+            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
+        ),
+        pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
+    ],
+)
+def test_user_provided_c3_exp(backend, config_file):
+    """Test for checking user provided C3 Experiment object is correctly assigned"""
+    test_exp = Experiment()
+    test_exp.load_quick_setup(config_file)
+    c3_qiskit = C3Provider()
+    received_backend = c3_qiskit.get_backend(backend)
+    received_backend.set_c3_experiment(test_exp)
+    assert received_backend.c3_exp is test_exp

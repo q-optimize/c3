@@ -57,6 +57,7 @@ GATES = {
     "ryp": np.array([[0, -1], [1, 0]], dtype=np.complex128),
     "x": X,
     "y": Y,
+    "h": (1 / np.sqrt(2)) * np.array([[1, 1], [1, -1]]),
     "rz90p": np.array([[1 - 1j, 0], [0, 1 + 1j]], dtype=np.complex128) / np.sqrt(2),
     "rz90m": np.array([[1 + 1j, 0], [0, 1 - 1j]], dtype=np.complex128) / np.sqrt(2),
     "rzp": np.array([[-1.0j, 0], [0, 1.0j]], dtype=np.complex128),

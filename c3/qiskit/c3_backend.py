@@ -2,6 +2,7 @@ import uuid
 import time
 import numpy as np
 import logging
+import warnings
 
 from qiskit import qobj
 from qiskit import QuantumCircuit
@@ -59,28 +60,58 @@ class C3QasmSimulator(Backend, ABC):
             for all device parameters for simulation
         """
         self._device_config = config_file
+        self.c3_exp.load_quick_setup(self._device_config)
 
-    def get_labels(self) -> List[str]:
+    def set_c3_experiment(self, exp: Experiment) -> None:
+        """Set user-provided c3 experiment object for backend
+
+        Parameters
+        ----------
+        exp : Experiment
+            C3 experiment object
+        """
+        self.c3_exp = exp
+
+    def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
+
+        Parameters
+        ----------
+        format : str, optional
+            How to format the state labels, by default "qiskit"
 
         Returns
         -------
         List[str]
-            A list of state labels in hex format ::
+            A list of state labels in hex if qiskit format
+            and decimal if c3 format ::
 
                 labels = ['0x1', ...]
 
+                labels = ['01', '02', ...]
+
+        Raises
+        ------
+        C3QiskitError
+            When an supported format is passed
         """
-        labels = [
-            hex(i)
-            for i in range(
-                0,
-                pow(
-                    self._number_of_levels,
-                    self._number_of_qubits,
-                ),
-            )
-        ]
+        if format == "qiskit":
+            labels = [
+                hex(i)
+                for i in range(
+                    0,
+                    pow(
+                        self._number_of_levels,
+                        self._number_of_qubits,
+                    ),
+                )
+            ]
+        elif format == "c3":
+            labels = [
+                "".join(str(label)) for label in self.c3_exp.pmap.model.state_labels
+            ]
+        else:
+            raise C3QiskitError("Incorrect format specifier for get_labels")
         return labels
 
     def disable_flip_labels(self) -> None:
@@ -90,6 +121,56 @@ class C3QasmSimulator(Backend, ABC):
         This function allows disabling of the flip
         """
         self._flip_labels = False
+
+    def locate_measurements(self, instructions_list: List[Dict]) -> List[int]:
+        """Locate the indices of measurement operations in circuit
+
+        Parameters
+        ----------
+        instructions_list : List[Dict]
+            Instructions List in Qasm style
+
+        Returns
+        -------
+        List[int]
+            The indices where measurement operations occur
+        """
+        meas_index: List[int] = []
+        meas_index = [
+            index
+            for index, instruction in enumerate(instructions_list)
+            if instruction["name"] == "measure"
+        ]
+        return meas_index
+
+    def sanitize_instructions_list(self, instructions_list: List[Dict]) -> List[Dict]:
+        """Sanitize instructions list by removing unsupported operations
+
+        Parameters
+        ----------
+        instructions_list : List[Dict]
+            Qasm style list of instructions represented by dicts
+
+        Returns
+        -------
+        List[Dict]
+            Sanitized instruction list
+
+        Raises
+        -------
+        UserWarning
+            Warns user about unsupported operations in circuit
+        """
+        sanitized_instructions = [
+            instruction
+            for instruction in instructions_list
+            if instruction["name"] not in self.UNSUPPORTED_OPERATIONS
+        ]
+        if sanitized_instructions != instructions_list:
+            warnings.warn(
+                f"The following operations are not supported yet: {self.UNSUPPORTED_OPERATIONS}"
+            )
+        return sanitized_instructions
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
@@ -312,7 +393,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
                 configuration or QasmBackendConfiguration.from_dict(self._configuration)
             ),
             provider=provider,
-            **fields
+            **fields,
         )
         # Define attributes in __init__.
         self._local_random = np.random.RandomState()
@@ -328,6 +409,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         # TEMP
         self._sample_measure = False
         self._flip_labels = True
+        self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -368,8 +450,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         start = time.time()
 
         # setup C3 Experiment
-        exp = Experiment()
-        exp.load_quick_setup(self._device_config)
+        exp = self.c3_exp
         pmap = exp.pmap
         instructions = pmap.instructions
 
@@ -490,7 +571,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
                 configuration or QasmBackendConfiguration.from_dict(self._configuration)
             ),
             provider=provider,
-            **fields
+            **fields,
         )
         # Define attributes in __init__.
         self._local_random = np.random.RandomState()
@@ -503,8 +584,9 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self._memory = False
         self._initial_statevector = self.options.get("initial_statevector")
         self._qobj_config = None
-        # TEMP
         self._sample_measure = False
+        self.UNSUPPORTED_OPERATIONS = ["measure", "barrier"]
+        self.c3_exp = Experiment()
 
     @classmethod
     def _default_options(cls) -> Options:
@@ -545,8 +627,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         # setup C3 Experiment
-        exp = Experiment()
-        exp.load_quick_setup(self._device_config)
+        exp = self.c3_exp
         exp.enable_qasm()
         exp.compute_propagators()  # TODO only simulate qubits used in circuit
         pmap = exp.pmap
@@ -570,15 +651,21 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
+        sanitized_instructions = self.sanitize_instructions_list(instructions_list)
 
-        # TODO Handle "measure" and "barrier" instructions
-        pops = exp.evaluate([instructions_list])
+        pops = exp.evaluate([sanitized_instructions])
         pop1s, _ = exp.process(pops)
 
-        # TODO generate shots style readout ref Perfect Simulator
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
-        counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
+        meas_index = self.locate_measurements(instructions_list)
+        pops_array = pop1s[0].numpy()
+        if meas_index:
+            counts_data = (np.round(pops_array * shots)).astype("int32")
+        else:
+            counts_data = pops_array.tolist()
+        counts = dict(zip(self.get_labels(format="qiskit"), counts_data))
+        state_pops = dict(zip(self.get_labels(format="c3"), pops_array.tolist()))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
@@ -594,7 +681,10 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             "seed": seed_simulator,
             "status": "DONE",
             "success": True,
-            "data": {"counts": counts},
+            "data": {
+                "counts": counts,
+                "state_pops": state_pops,
+            },
             "time_taken": (end - start),
         }
 
