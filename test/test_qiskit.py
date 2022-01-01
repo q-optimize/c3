@@ -184,6 +184,7 @@ def test_too_many_qubits(backend):
         pytest.param(RX90pGate(), [0], RXGate(theta=np.pi / 2.0), [0], id="rx90p"),
         pytest.param(RX90mGate(), [0], RXGate(theta=-np.pi / 2.0), [0], id="rx90m"),
         pytest.param(RXpGate(), [0], RXGate(theta=np.pi), [0], id="rxp"),
+        pytest.param(RY90pGate(), [0], RYGate(theta=np.pi / 2.0), [0], id="ry90p"),
     ],
 )
 @pytest.mark.unit
