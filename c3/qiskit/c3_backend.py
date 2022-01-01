@@ -616,7 +616,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         pops = exp.evaluate([instructions_list])
         pop1s, _ = exp.process(pops)
 
-        # TODO generate proper(?) state labels for states with more than 2 levels
         # TODO generate shots style readout when there is 'measure' (ref Perfect Simulator)
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
@@ -636,7 +635,11 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             "seed": seed_simulator,
             "status": "DONE",
             "success": True,
-            "data": {"counts": counts},
+            "data": {
+                "counts": counts,
+                "pops": pop1s[0].numpy().tolist(),
+                "state_labels": exp.pmap.model.state_labels,
+            },
             "time_taken": (end - start),
         }
 
