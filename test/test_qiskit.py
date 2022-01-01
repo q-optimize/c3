@@ -245,13 +245,20 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-def test_user_provided_c3_exp():
-    """Test for checking user provided C3 Experiment object is correctly assigned
-    when supplied through the **kwargs in get_backend()
-    """
+@pytest.mark.parametrize(
+    ["backend", "config_file"],
+    [
+        pytest.param(
+            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
+        ),
+        pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
+    ],
+)
+def test_user_provided_c3_exp(backend, config_file):
+    """Test for checking user provided C3 Experiment object is correctly assigned"""
     test_exp = Experiment()
+    test_exp.load_quick_setup(config_file)
     c3_qiskit = C3Provider()
-    received_backend = c3_qiskit.get_backend(
-        "c3_qasm_physics_simulator", c3_exp=test_exp
-    )
-    assert isinstance(received_backend.c3_exp, Experiment)
+    received_backend = c3_qiskit.get_backend(backend)
+    received_backend.set_c3_experiment(test_exp)
+    assert received_backend.c3_exp is test_exp
