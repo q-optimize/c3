@@ -16,8 +16,10 @@ class RX90pGate(RXGate):
         self.name = "rx90p"
 
 
-class RX90mGate(BaseC3QiskitGate):
-    pass
+class RX90mGate(RXGate):
+    def __init__(self, label: Optional[str] = None):
+        super().__init__(-np.pi / 2.0, label=label)
+        self.name = "rx90m"
 
 
 class RXpGate(BaseC3QiskitGate):
