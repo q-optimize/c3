@@ -191,6 +191,7 @@ def test_too_many_qubits(backend):
         pytest.param(RZ90pGate(), [0], RZGate(phi=np.pi / 2.0), [0], id="rz90p"),
         pytest.param(RZ90mGate(), [0], RZGate(phi=-np.pi / 2.0), [0], id="rz90m"),
         pytest.param(RZpGate(), [0], RZGate(phi=np.pi), [0], id="rzp"),
+        pytest.param(CRGate(), [0, 1], UnitaryGate(data=GATES["cr"]), [0, 1], id="cr"),
         pytest.param(
             CR90Gate(), [0, 1], UnitaryGate(data=GATES["cr90"]), [0, 1], id="cr90"
         ),
