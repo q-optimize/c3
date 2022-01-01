@@ -40,8 +40,10 @@ class RY90mGate(RYGate):
         self.name = "ry90m"
 
 
-class RYpGate(BaseC3QiskitGate):
-    pass
+class RYpGate(RYGate):
+    def __init__(self, label: Optional[str] = None):
+        super().__init__(np.pi, label=label)
+        self.name = "ryp"
 
 
 class RZ90pGate(BaseC3QiskitGate):
