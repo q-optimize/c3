@@ -1,6 +1,6 @@
 from typing import Optional
 from qiskit.circuit import Gate
-from qiskit.circuit.library import RXGate
+from qiskit.circuit.library import RXGate, RYGate
 from c3.libraries.constants import GATES
 import numpy as np
 
@@ -28,8 +28,10 @@ class RXpGate(RXGate):
         self.name = "rxp"
 
 
-class RY90pGate(BaseC3QiskitGate):
-    pass
+class RY90pGate(RYGate):
+    def __init__(self, label: Optional[str] = None):
+        super().__init__(np.pi / 2.0, label=label)
+        self.name = "ry90p"
 
 
 class RY90mGate(BaseC3QiskitGate):
