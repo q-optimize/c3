@@ -179,7 +179,10 @@ def test_too_many_qubits(backend):
 
 @pytest.mark.parametrize(
     ["c3_gate", "c3_qubits", "qiskit_gate", "qiskit_qubits"],
-    [pytest.param(RX90pGate(), [0], RXGate(theta=np.pi / 2.0), [0], id="rx90p")],
+    [
+        pytest.param(RX90pGate(), [0], RXGate(theta=np.pi / 2.0), [0], id="rx90p"),
+        pytest.param(RX90mGate(), [0], RXGate(theta=-np.pi / 2.0), [0], id="rx90m"),
+    ],
 )
 @pytest.mark.unit
 @pytest.mark.qiskit
