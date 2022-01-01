@@ -209,6 +209,19 @@ def test_too_many_qubits(backend):
 @pytest.mark.unit
 @pytest.mark.qiskit
 def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
+    """Test custom c3 gates for qiskit have correct matrix representations
+
+    Parameters
+    ----------
+    c3_gate : Gate
+        A qiskit Gate object for c3 custom gates
+    c3_qubits : List
+        List containing the target qubits
+    qiskit_gate : Gate
+        Gate object for native qiskit gates
+    qiskit_qubits : List
+        List containing the target qubits
+    """
     # TODO configure and test on c3 perfect simulator
 
     qc_c3 = QuantumCircuit(2, 2)
