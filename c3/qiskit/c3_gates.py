@@ -67,9 +67,10 @@ class RZpGate(RZGate):
 
 
 class CRXpGate(CRXGate):
-    raise NotImplementedError(
-        "Not implemented due to inconsistent matrix representation in C3 and Qiskit"
-    )
+    def __init__(self):
+        raise NotImplementedError(
+            "Not implemented due to inconsistent matrix representation in C3 and Qiskit"
+        )
 
 
 class CRGate(UnitaryGate):
