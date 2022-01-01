@@ -122,6 +122,27 @@ class C3QasmSimulator(Backend, ABC):
         """
         self._flip_labels = False
 
+    def locate_measurements(self, instructions_list: List[Dict]) -> List[int]:
+        """Locate the indices of measurement operations in circuit
+
+        Parameters
+        ----------
+        instructions_list : List[Dict]
+            Instructions List in Qasm style
+
+        Returns
+        -------
+        List[int]
+            The indices where measurement operations occur
+        """
+        meas_index: List[int] = []
+        meas_index = [
+            index
+            for index, instruction in enumerate(instructions_list)
+            if instruction["name"] == "measure"
+        ]
+        return meas_index
+
     def sanitize_instructions_list(self, instructions_list: List[Dict]) -> List[Dict]:
         """Sanitize instructions list by removing unsupported operations
 
