@@ -1,5 +1,6 @@
 from typing import Optional
 from qiskit.circuit import Gate
+from qiskit.extensions import UnitaryGate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES
 import numpy as np
@@ -74,5 +75,7 @@ class CRGate(BaseC3QiskitGate):
     pass
 
 
-class CR90Gate(BaseC3QiskitGate):
-    pass
+class CR90Gate(UnitaryGate):
+    def __init__(self, label: Optional[str] = None):
+        super().__init__(data=GATES["cr90"], label=label)
+        self.name = "cr90"
