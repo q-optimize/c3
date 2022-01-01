@@ -1,3 +1,5 @@
+"""Library for interoperability of c3 gates with qiskit
+"""
 from typing import Optional
 from qiskit.extensions import UnitaryGate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
