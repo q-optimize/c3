@@ -630,17 +630,19 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
-        instructions_list = self.sanitize_instructions_list(instructions_list)
+        sanitized_instructions = self.sanitize_instructions_list(instructions_list)
 
-        pops = exp.evaluate([instructions_list])
+        pops = exp.evaluate([sanitized_instructions])
         pop1s, _ = exp.process(pops)
 
         # TODO generate shots style readout when there is 'measure' (ref Perfect Simulator)
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
-        pops_list = pop1s[0].numpy().tolist()
-        counts = dict(zip(self.get_labels(format="qiskit"), pops_list))
-        state_pops = dict(zip(self.get_labels(format="c3"), pops_list))
+        pops_array = pop1s[0].numpy()
+        shots_data = (np.round(pops_array * shots)).astype("int32")
+        counts = dict(zip(self.get_labels(format="qiskit"), pops_array.tolist()))
+        state_pops = dict(zip(self.get_labels(format="c3"), pops_array.tolist()))
+        breakpoint()
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
