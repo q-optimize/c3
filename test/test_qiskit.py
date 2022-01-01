@@ -180,7 +180,6 @@ def test_too_many_qubits(backend):
     received_backend = c3_qiskit.get_backend(backend[0])
     received_backend.set_device_config(backend[1])
     qc = QuantumCircuit(4, 4)
-    qc.x(1)
     with pytest.raises(C3QiskitError):
         execute(qc, received_backend, shots=1000)
 
