@@ -20,6 +20,7 @@ Imports
     import tensorflow as tf
     import tensorflow_probability as tfp
     from typing import List
+    from pprint import pprint
     
     # Main C3 objects
     from c3.c3objs import Quantity as Qty
@@ -42,7 +43,12 @@ Imports
     import c3.libraries.envelopes as envelopes
     import c3.utils.qt_utils as qt_utils
     import c3.utils.tf_utils as tf_utils
-
+    
+    # Qiskit related modules
+    from c3.qiskit import C3Provider
+    from c3.qiskit.c3_gates import RX90pGate
+    from qiskit import QuantumCircuit, Aer, execute
+    from qiskit.tools.visualization import plot_histogram
 
 Model components
 ^^^^^^^^^^^^^^^^
@@ -84,7 +90,6 @@ different parameters:
         t2star=Qty(value=t2star_q2, min_val=10e-6, max_val=90e-6, unit='s'),
         temp=Qty(value=qubit_temp, min_val=0.0, max_val=0.12, unit='K')
     )
-
 
 There is a static coupling in x-direction between them:
 :math:`(b_1+b_1^\dagger)(b_2+b_2^\dagger)`
@@ -138,7 +143,7 @@ at a non-vanishing temperature.
     model = Mdl(
         [q1, q2], # Individual, self-contained components
         [drive1, drive2, q1q2],  # Interactions between components
-        [init_ground] # SPAM processing
+        # [init_ground] # SPAM processing
     )
     model.set_lindbladian(False)
     model.set_dressed(True)
@@ -183,8 +188,22 @@ signal chain to each control line.
                 "VoltsToHertz": v_to_hz
             },
             chains={
-                "d1": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"],
-                "d2": ["LO", "AWG", "DigitalToAnalog", "Response", "Mixer", "VoltsToHertz"]
+                "d1": {
+                    "LO": [],
+                    "AWG": [],
+                    "DigitalToAnalog": ["AWG"],
+                    "Response": ["DigitalToAnalog"],
+                    "Mixer": ["LO", "Response"],
+                    "VoltsToHertz": ["Mixer"],
+                },
+                "d2": {
+                    "LO": [],
+                    "AWG": [],
+                    "DigitalToAnalog": ["AWG"],
+                    "Response": ["DigitalToAnalog"],
+                    "Mixer": ["LO", "Response"],
+                    "VoltsToHertz": ["Mixer"],
+                }
             }
         )
 
@@ -198,48 +217,121 @@ with a higher amplitude to compensate for the reduced Rabi frequency.
 
 .. code:: ipython3
 
-    t_final = 45e-9
+    t_final_2Q = 45e-9
     sideband = 50e6
-    gauss_params_single_1 = {
+    gauss_params_2Q_1 = {
         'amp': Qty(value=0.8, min_val=0.2, max_val=3, unit="V"),
-        't_final': Qty(value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"),
-        'sigma': Qty(value=t_final / 4, min_val=t_final / 8, max_val=t_final / 2, unit="s"),
+        't_final': Qty(value=t_final_2Q, min_val=0.5 * t_final_2Q, max_val=1.5 * t_final_2Q, unit="s"),
+        'sigma': Qty(value=t_final_2Q / 4, min_val=t_final_2Q / 8, max_val=t_final_2Q / 2, unit="s"),
         'xy_angle': Qty(value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit='rad'),
         'freq_offset': Qty(value=-sideband - 3e6, min_val=-56 * 1e6, max_val=-52 * 1e6, unit='Hz 2pi'),
         'delta': Qty(value=-1, min_val=-5, max_val=3, unit="")
     }
     
-    gauss_params_single_2 = {
+    gauss_params_2Q_2 = {
         'amp': Qty(value=0.03, min_val=0.02, max_val=0.6, unit="V"),
-        't_final': Qty(value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"),
-        'sigma': Qty(value=t_final / 4, min_val=t_final / 8, max_val=t_final / 2, unit="s"),
+        't_final': Qty(value=t_final_2Q, min_val=0.5 * t_final_2Q, max_val=1.5 * t_final_2Q, unit="s"),
+        'sigma': Qty(value=t_final_2Q / 4, min_val=t_final_2Q / 8, max_val=t_final_2Q / 2, unit="s"),
         'xy_angle': Qty(value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit='rad'),
         'freq_offset': Qty(value=-sideband - 3e6, min_val=-56 * 1e6, max_val=-52 * 1e6, unit='Hz 2pi'),
         'delta': Qty(value=-1, min_val=-5, max_val=3, unit="")
     }
     
-    gauss_env_single_1 = pulse.Envelope(
+    gauss_env_2Q_1 = pulse.Envelope(
         name="gauss1",
         desc="Gaussian envelope on drive 1",
-        params=gauss_params_single_1,
+        params=gauss_params_2Q_1,
         shape=envelopes.gaussian_nonorm
     )
-    gauss_env_single_2 = pulse.Envelope(
+    gauss_env_2Q_2 = pulse.Envelope(
         name="gauss2",
         desc="Gaussian envelope on drive 2",
-        params=gauss_params_single_2,
+        params=gauss_params_2Q_2,
         shape=envelopes.gaussian_nonorm
     )
 
-The carrier signal of each drive is set to the resonance frequency of
-the target qubit.
+We choose a single qubit gate time of 7ns and a gaussian envelope shape
+with a list of parameters.
+
+.. code:: ipython3
+
+    t_final_1Q = 7e-9   # Time for single qubit gates
+    sideband = 50e6 
+    gauss_params_single = {
+        'amp': Qty(
+            value=0.5,
+            min_val=0.2,
+            max_val=0.6,
+            unit="V"
+        ),
+        't_final': Qty(
+            value=t_final_1Q,
+            min_val=0.5 * t_final_1Q,
+            max_val=1.5 * t_final_1Q,
+            unit="s"
+        ),
+        'sigma': Qty(
+            value=t_final_1Q / 4,
+            min_val=t_final_1Q / 8,
+            max_val=t_final_1Q / 2,
+            unit="s"
+        ),
+        'xy_angle': Qty(
+            value=0.0,
+            min_val=-0.5 * np.pi,
+            max_val=2.5 * np.pi,
+            unit='rad'
+        ),
+        'freq_offset': Qty(
+            value=-sideband - 3e6 ,
+            min_val=-56 * 1e6 ,
+            max_val=-52 * 1e6 ,
+            unit='Hz 2pi'
+        ),
+        'delta': Qty(
+            value=-1,
+            min_val=-5,
+            max_val=3,
+            unit=""
+        )
+    }
+
+.. code:: ipython3
+
+    gauss_env_1Q = pulse.Envelope(
+        name="gauss",
+        desc="Gaussian comp for single-qubit gates",
+        params=gauss_params_single,
+        shape=envelopes.gaussian_nonorm
+    )
+
+We also define a gate that represents no driving (used for the single
+qubit gates).
+
+.. code:: ipython3
+
+    nodrive_env = pulse.Envelope(
+        name="no_drive",
+        params={
+            't_final': Qty(
+                value=t_final_1Q,
+                min_val=0.5 * t_final_1Q,
+                max_val=1.5 * t_final_1Q,
+                unit="s"
+            )
+        },
+        shape=envelopes.no_drive
+    )
+
+The carrier signal of each drive for the 2 Qubit gates is set to the
+resonance frequency of the target qubit.
 
 .. code:: ipython3
 
     lo_freq_q1 = freq_q1 + sideband
     lo_freq_q2 = freq_q2 + sideband
     
-    carr_1 = pulse.Carrier(
+    carr_2Q_1 = pulse.Carrier(
         name="carrier",
         desc="Carrier on drive 1",
         params={
@@ -248,13 +340,57 @@ the target qubit.
         }
     )
     
-    carr_2 = pulse.Carrier(
+    carr_2Q_2 = pulse.Carrier(
         name="carrier",
         desc="Carrier on drive 2",
         params={
             'freq': Qty(value=lo_freq_q2, min_val=0.9 * lo_freq_q2, max_val=1.1 * lo_freq_q2, unit='Hz 2pi'),
             'framechange': Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit='rad')
         }
+    )
+
+We specify the drive tones for the 1Q gates with an offset from the
+qubit frequencies. As is done in experiment, we will later adjust the
+resonance by modulating the envelope function.
+
+.. code:: ipython3
+
+    carr_1Q_1 = pulse.Carrier(
+        name="carrier",
+        desc="Frequency of the local oscillator",
+        params={
+        'freq': Qty(
+            value=lo_freq_q1,
+            min_val=0.9 * lo_freq_q1 ,
+            max_val=1.1 * lo_freq_q1 ,
+            unit='Hz 2pi'
+        ),
+        'framechange': Qty(
+            value=0.0,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
+            unit='rad'
+        )
+    }
+    )
+    
+    carr_1Q_2 = pulse.Carrier(
+        name="carrier",
+        desc="Frequency of the local oscillator",
+        params={
+        'freq': Qty(
+            value=lo_freq_q2,
+            min_val=0.9 * lo_freq_q2 ,
+            max_val=1.1 * lo_freq_q2 ,
+            unit='Hz 2pi'
+        ),
+        'framechange': Qty(
+            value=0.0,
+            min_val= -np.pi,
+            max_val= 3 * np.pi,
+            unit='rad'
+        )
+    }
     )
 
 Instructions
@@ -266,7 +402,7 @@ The instruction to be optimised is a CNOT gates controlled by qubit 1.
 
     # CNOT comtrolled by qubit 1
     cnot12 = gates.Instruction(
-        name="cnot12", targets=[0, 1], t_start=0.0, t_end=t_final, channels=["d1", "d2"],
+        name="cx", targets=[0, 1], t_start=0.0, t_end=t_final_2Q, channels=["d1", "d2"],
         ideal=np.array([
             [1,0,0,0],
             [0,1,0,0],
@@ -274,12 +410,48 @@ The instruction to be optimised is a CNOT gates controlled by qubit 1.
             [0,0,1,0]
         ])
     )
-    cnot12.add_component(gauss_env_single_1, "d1")
-    cnot12.add_component(carr_1, "d1")
-    cnot12.add_component(gauss_env_single_2, "d2")
-    cnot12.add_component(carr_2, "d2")
+    cnot12.add_component(gauss_env_2Q_1, "d1")
+    cnot12.add_component(carr_2Q_1, "d1")
+    cnot12.add_component(gauss_env_2Q_2, "d2")
+    cnot12.add_component(carr_2Q_2, "d2")
     cnot12.comps["d1"]["carrier"].params["framechange"].set_value(
-        (-sideband * t_final) * 2 * np.pi % (2 * np.pi)
+        (-sideband * t_final_2Q) * 2 * np.pi % (2 * np.pi)
+    )
+
+We also add some typical single qubit gates to the instruction set.
+
+.. code:: ipython3
+
+    rx90p_q1 = gates.Instruction(
+        name="rx90p", targets=[0], t_start=0.0, t_end=t_final_1Q, channels=["d1", "d2"]
+    )
+    rx90p_q2 = gates.Instruction(
+        name="rx90p", targets=[1], t_start=0.0, t_end=t_final_1Q, channels=["d1", "d2"]
+    )
+    
+    rx90p_q1.add_component(gauss_env_1Q, "d1")
+    rx90p_q1.add_component(carr_1Q_1, "d1")
+    
+    
+    rx90p_q2.add_component(gauss_env_1Q, "d2")
+    rx90p_q2.add_component(carr_1Q_2, "d2")
+
+When later compiling gates into sequences, we have to take care of the
+relative rotating frames of the qubits and local oscillators. We do this
+by adding a phase after each gate that realigns the frames.
+
+.. code:: ipython3
+
+    rx90p_q1.add_component(nodrive_env, "d2")
+    rx90p_q1.add_component(copy.deepcopy(carr_1Q_2), "d2")
+    rx90p_q1.comps["d2"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final_1Q) * 2 * np.pi % (2 * np.pi)
+    )
+    
+    rx90p_q2.add_component(nodrive_env, "d1")
+    rx90p_q2.add_component(copy.deepcopy(carr_1Q_1), "d1")
+    rx90p_q2.comps["d1"]["carrier"].params["framechange"].set_value(
+        (-sideband * t_final_1Q) * 2 * np.pi % (2 * np.pi)
     )
 
 The experiment
@@ -290,7 +462,7 @@ set up.
 
 .. code:: ipython3
 
-    parameter_map = PMap(instructions=[cnot12], model=model, generator=generator)
+    parameter_map = PMap(instructions=[cnot12, rx90p_q1, rx90p_q2], model=model, generator=generator)
     exp = Exp(pmap=parameter_map)
 
 Calculate and print the propagator before the optimisation.
@@ -298,57 +470,14 @@ Calculate and print the propagator before the optimisation.
 .. code:: ipython3
 
     unitaries = exp.compute_propagators()
-    print(unitaries[cnot12.get_key()])
+    # print(unitaries[cnot12.get_key()])
+    # print(unitaries[rx90p_q1.get_key()])
 
 
 .. parsed-literal::
 
-    tf.Tensor(
-    [[ 5.38699071e-01-7.17750563e-02j -8.34752005e-01+8.73275022e-02j
-      -6.95346256e-03-2.15875540e-03j -4.35619589e-03+3.35449682e-03j
-      -1.06942994e-02+4.11831376e-03j -6.46672021e-05-3.73989900e-05j
-      -1.67838080e-04-2.08026492e-04j -6.43312053e-05-7.70584828e-07j
-      -3.76227149e-07-6.49845314e-07j]
-     [-8.22954017e-01+1.64865789e-01j -5.35373070e-01+9.17248769e-02j
-      -7.01716357e-03+7.68563193e-03j -1.04194796e-02+4.75452421e-03j
-      -1.61239175e-02-5.34774092e-03j -2.42060738e-04-1.19946128e-05j
-       3.81855912e-05+8.66289943e-06j -1.30621879e-04-2.10380577e-04j
-      -8.82654253e-07-1.33276919e-06j]
-     [-7.61570279e-03+7.68089055e-04j -4.61417534e-03+9.02462832e-03j
-       3.59132066e-01-9.32828470e-01j -9.10153028e-05-6.83262609e-05j
-      -2.24711912e-04+8.79671466e-05j  2.62921224e-02-1.48696337e-03j
-      -4.75883791e-04-4.20508543e-05j  3.46114778e-05+1.64470496e-04j
-       2.10121296e-04+1.48066297e-04j]
-     [ 4.65531318e-03-6.63491197e-05j  8.62792565e-03+8.22022317e-03j
-      -5.58701973e-05+1.08666061e-04j  6.94902895e-02-7.11528641e-01j
-      -6.81737268e-01-1.53183314e-01j -2.09824678e-03-1.43761730e-03j
-       1.48197730e-02-1.51149441e-02j -6.85074400e-03+1.43594091e-03j
-       4.07440635e-05-6.43168354e-05j]
-     [ 9.49155432e-03+6.86731461e-03j  4.92068252e-03+1.60041286e-02j
-       1.71300460e-04+1.83910737e-04j -6.94165643e-01-7.98008223e-02j
-       1.68675369e-01-6.94722446e-01j  2.75768137e-03-5.72343874e-03j
-      -6.67593164e-03+1.87532770e-03j  1.07707017e-02+7.28665794e-03j
-       1.40030301e-04-6.25646793e-05j]
-     [ 3.43460967e-05+8.01438338e-05j  1.86345824e-04+1.52916372e-04j
-      -1.74936595e-02-1.96833938e-02j -2.61695107e-03-5.33671505e-04j
-       1.02116861e-03-6.21800378e-03j -4.07849502e-01+9.12571012e-01j
-       7.51460471e-05-1.15167196e-04j  2.32056836e-04-2.97650209e-04j
-       2.03278960e-04+1.15047574e-02j]
-     [ 2.54853797e-04-1.25904275e-04j  6.64845849e-05-1.08876861e-05j
-       2.38628329e-04-2.95318799e-04j -2.10696691e-02+5.90348860e-05j
-       4.21445291e-03+6.01993253e-03j -1.32690530e-04-2.44975772e-05j
-       5.90859776e-01+4.84056180e-01j -6.08336007e-01-2.14442516e-01j
-       3.13146026e-03+2.83895304e-03j]
-     [ 2.96366741e-05-8.10052801e-05j  2.39607442e-04-8.47647458e-05j
-      -2.60360838e-04+2.04175607e-04j  4.95127881e-03+5.19423708e-03j
-      -5.00047077e-03-1.18242204e-02j -3.71631612e-04-5.78977628e-05j
-      -6.29480118e-01-1.40758384e-01j -7.57820104e-01+9.68476237e-02j
-       1.32060361e-03+7.25998662e-03j]
-     [ 8.28054635e-07-3.59336781e-07j  1.64602058e-06-1.47364829e-06j
-      -2.13361477e-04+2.05358711e-04j -5.70978380e-05+4.73283539e-05j
-      -1.48466829e-04-3.89352221e-06j  1.00811226e-02-5.54615336e-03j
-       4.21887172e-03+1.38103179e-03j  3.74182763e-03+6.21303072e-03j
-      -5.89257172e-01+8.07818774e-01j]], shape=(9, 9), dtype=complex128)
+    2022-01-01 20:55:15.191809: I tensorflow/compiler/mlir/mlir_graph_optimization_pass.cc:185] None of the MLIR Optimization Passes are enabled (registered 2)
+    2022-01-01 20:55:15.193814: W tensorflow/core/platform/profile_utils/cpu_utils.cc:128] Failed to get CPU frequency: 0 Hz
 
 
 Dynamics
@@ -501,11 +630,81 @@ transition to :math:`|1,1\rangle` should be visible.
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_28_0.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_39_0.png
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_28_1.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_39_1.png
+
+
+Visualisation with qiskit circuit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: ipython3
+
+    qc = QuantumCircuit(2, 2)
+    qc.append(RX90pGate(), [0])
+    qc.cx(0, 1)
+    qc.draw()
+
+
+
+
+.. raw:: html
+
+    <pre style="word-wrap: normal;white-space: pre;background: #fff0;line-height: 1.1;font-family: &quot;Courier New&quot;,Courier,monospace">     ┌────────────┐     
+    q_0: ┤ Rx90p(π/2) ├──■──
+         └────────────┘┌─┴─┐
+    q_1: ──────────────┤ X ├
+                       └───┘
+    c: 2/═══════════════════
+                            </pre>
+
+
+
+.. code:: ipython3
+
+    c3_provider = C3Provider()
+    c3_backend = c3_provider.get_backend("c3_qasm_physics_simulator")
+    c3_backend.set_c3_experiment(exp)
+
+.. code:: ipython3
+
+    c3_job_unopt = c3_backend.run(qc)
+    result_unopt = c3_job_unopt.result()
+    res_pops_unopt = result_unopt.data()["state_pops"]
+    print("Result from unoptimized gates:")
+    pprint(res_pops_unopt)
+
+
+.. parsed-literal::
+
+    No measurements in circuit "circuit-0", classical register will remain all zeros.
+
+
+.. parsed-literal::
+
+    Result from unoptimized gates:
+    {'(0, 0)': 0.08793249061599799,
+     '(0, 1)': 0.20140214999016118,
+     '(0, 2)': 1.7916216253388795e-05,
+     '(1, 0)': 0.3507070201094552,
+     '(1, 1)': 0.34492529411056444,
+     '(1, 2)': 5.054006496570894e-06,
+     '(2, 0)': 0.009940433069486916,
+     '(2, 1)': 0.005069321214083548,
+     '(2, 2)': 3.20667334658816e-07}
+
+
+.. code:: ipython3
+
+    plot_histogram(res_pops_unopt, title='Simulation of Qiskit circuit with Unoptimized Gates')
+
+
+
+
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_44_0.png
+
 
 
 Open-loop optimal control
@@ -530,7 +729,7 @@ Now, open-loop optimisation with DRAG enabled is set up.
         [(cnot12.get_key(), "d2", "gauss2", "freq_offset")],
         [(cnot12.get_key(), "d2", "gauss2", "xy_angle")],
         [(cnot12.get_key(), "d2", "gauss2", "delta")],
-        [(cnot12.get_key(), "d2", "carrier", "framechange")]
+        [(cnot12.get_key(), "d2", "carrier", "framechange")],
     ]
     parameter_map.set_opt_map(gateset_opt_map)
     
@@ -539,16 +738,16 @@ Now, open-loop optimisation with DRAG enabled is set up.
 
 .. parsed-literal::
 
-    cnot12[0, 1]-d1-gauss1-amp            : 800.000 mV 
-    cnot12[0, 1]-d1-gauss1-freq_offset    : -53.000 MHz 2pi 
-    cnot12[0, 1]-d1-gauss1-xy_angle       : -444.089 arad 
-    cnot12[0, 1]-d1-gauss1-delta          : -1.000  
-    cnot12[0, 1]-d1-carrier-framechange   : 4.712 rad 
-    cnot12[0, 1]-d2-gauss2-amp            : 30.000 mV 
-    cnot12[0, 1]-d2-gauss2-freq_offset    : -53.000 MHz 2pi 
-    cnot12[0, 1]-d2-gauss2-xy_angle       : -444.089 arad 
-    cnot12[0, 1]-d2-gauss2-delta          : -1.000  
-    cnot12[0, 1]-d2-carrier-framechange   : 0.000 rad 
+    cx[0, 1]-d1-gauss1-amp                : 800.000 mV 
+    cx[0, 1]-d1-gauss1-freq_offset        : -53.000 MHz 2pi 
+    cx[0, 1]-d1-gauss1-xy_angle           : -444.089 arad 
+    cx[0, 1]-d1-gauss1-delta              : -1.000  
+    cx[0, 1]-d1-carrier-framechange       : 4.712 rad 
+    cx[0, 1]-d2-gauss2-amp                : 30.000 mV 
+    cx[0, 1]-d2-gauss2-freq_offset        : -53.000 MHz 2pi 
+    cx[0, 1]-d2-gauss2-xy_angle           : -444.089 arad 
+    cx[0, 1]-d2-gauss2-delta              : -1.000  
+    cx[0, 1]-d2-carrier-framechange       : 0.000 rad 
     
 
 
@@ -585,33 +784,7 @@ Start the optimisation
 
 .. parsed-literal::
 
-    C3:STATUS:Saving as: /tmp/tmpjx66lyg2/c3logs/cnot12/2021_12_08_T_12_27_05/open_loop.log
-    1 0.8790556354859858
-    2 0.9673489008768812
-    3 0.758622722337525
-    4 0.7679637459613755
-    5 0.6962301452070802
-    6 0.541321232138175
-    7 0.5682335581707882
-    8 0.382921410272719
-    9 0.43114251105289114
-    10 0.30099424375388173
-    11 0.32449492775751976
-    12 0.26537726105532744
-    13 0.2653362073570743
-    14 0.25121669688810866
-    15 0.23925168937407626
-    16 0.18551042816386099
-    17 0.1305543307431979
-    18 0.07413739981051659
-    19 0.031551815290153495
-    20 0.017447484467834062
-    21 0.007924221221055072
-    22 0.006483318391815374
-    23 0.005732979353259449
-    24 0.005594385264244273
-    25 0.0055582927728303755
-    26 0.005521343169743842
+    C3:STATUS:Saving as: /var/folders/04/np4lgk2d7sq6w0dpn758sgp80000gn/T/tmpryftkry4/c3logs/cnot12/2022_01_01_T_20_55_19/open_loop.c3log
 
 
 The final parameters and the fidelity are
@@ -624,18 +797,18 @@ The final parameters and the fidelity are
 
 .. parsed-literal::
 
-    cnot12[0, 1]-d1-gauss1-amp            : 2.359 V 
-    cnot12[0, 1]-d1-gauss1-freq_offset    : -53.252 MHz 2pi 
-    cnot12[0, 1]-d1-gauss1-xy_angle       : 587.818 mrad 
-    cnot12[0, 1]-d1-gauss1-delta          : -743.473 m 
-    cnot12[0, 1]-d1-carrier-framechange   : -815.216 mrad 
-    cnot12[0, 1]-d2-gauss2-amp            : 56.719 mV 
-    cnot12[0, 1]-d2-gauss2-freq_offset    : -53.176 MHz 2pi 
-    cnot12[0, 1]-d2-gauss2-xy_angle       : -135.515 mrad 
-    cnot12[0, 1]-d2-gauss2-delta          : -519.864 m 
-    cnot12[0, 1]-d2-carrier-framechange   : 598.919 mrad 
+    cx[0, 1]-d1-gauss1-amp                : 2.359 V 
+    cx[0, 1]-d1-gauss1-freq_offset        : -53.252 MHz 2pi 
+    cx[0, 1]-d1-gauss1-xy_angle           : 587.818 mrad 
+    cx[0, 1]-d1-gauss1-delta              : -743.473 m 
+    cx[0, 1]-d1-carrier-framechange       : -815.216 mrad 
+    cx[0, 1]-d2-gauss2-amp                : 56.719 mV 
+    cx[0, 1]-d2-gauss2-freq_offset        : -53.176 MHz 2pi 
+    cx[0, 1]-d2-gauss2-xy_angle           : -135.515 mrad 
+    cx[0, 1]-d2-gauss2-delta              : -519.864 m 
+    cx[0, 1]-d2-carrier-framechange       : 598.919 mrad 
     
-    0.005521343169743842
+    0.0055213431696764514
 
 
 Results of the optimisation
@@ -650,11 +823,11 @@ Plotting the dynamics with the same initial state:
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_38_0.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_54_0.png
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_38_1.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_54_1.png
 
 
 Now we plot the dynamics for the control in the excited state.
@@ -685,14 +858,139 @@ Now we plot the dynamics for the control in the excited state.
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_40_1.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_56_1.png
 
 
 
-.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_40_2.png
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_56_2.png
 
 
 As intended, the dynamics of the target is dependent on the control
 qubit performing a flip if the control is excited and an identity
 otherwise.
+
+Optimizing the single qubit gate on Qubit 1
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: ipython3
+
+    opt_gates = [rx90p_q1.get_key()]
+    gateset_opt_map=[
+        [
+          (rx90p_q1.get_key(), "d1", "gauss", "amp"),
+        ],
+        [
+          (rx90p_q1.get_key(), "d1", "gauss", "freq_offset"),
+        ],
+        [
+          (rx90p_q1.get_key(), "d1", "gauss", "xy_angle"),
+        ],
+        [
+          (rx90p_q1.get_key(), "d1", "gauss", "delta"),
+        ],   
+        [
+          (rx90p_q1.get_key(), "d1", "carrier", "framechange"),
+        ]
+    ]
+    parameter_map.set_opt_map(gateset_opt_map)
+    parameter_map.print_parameters()
+
+
+.. parsed-literal::
+
+    rx90p[0]-d1-gauss-amp                 : 500.000 mV 
+    rx90p[0]-d1-gauss-freq_offset         : -53.000 MHz 2pi 
+    rx90p[0]-d1-gauss-xy_angle            : -444.089 arad 
+    rx90p[0]-d1-gauss-delta               : -1.000  
+    rx90p[0]-d1-carrier-framechange       : 0.000 rad 
+    
+
+
+.. code:: ipython3
+
+    opt_1Q = OptimalControl(
+        dir_path=log_dir,
+        fid_func=fidelities.unitary_infid_set,
+        fid_subspace=["Q1", "Q2"],
+        pmap=parameter_map,
+        algorithm=algorithms.lbfgs,
+        options={
+            "maxfun": 25
+        },
+        run_name="rx90p_q1"
+    )
+
+.. code:: ipython3
+
+    exp.set_opt_gates(opt_gates)
+    opt_1Q.set_exp(exp)
+    opt_1Q.optimize_controls()
+
+
+.. parsed-literal::
+
+    C3:STATUS:Saving as: /var/folders/04/np4lgk2d7sq6w0dpn758sgp80000gn/T/tmpryftkry4/c3logs/rx90p_q1/2022_01_01_T_20_58_09/open_loop.c3log
+
+
+.. code:: ipython3
+
+    parameter_map.print_parameters()
+    print(opt_1Q.current_best_goal)
+
+
+.. parsed-literal::
+
+    rx90p[0]-d1-gauss-amp                 : 390.140 mV 
+    rx90p[0]-d1-gauss-freq_offset         : -52.986 MHz 2pi 
+    rx90p[0]-d1-gauss-xy_angle            : -195.771 mrad 
+    rx90p[0]-d1-gauss-delta               : -964.376 m 
+    rx90p[0]-d1-carrier-framechange       : -282.109 mrad 
+    
+    0.00575481536619904
+
+
+Before running the qiskit simulation, we must call ``set_opt_gates()``
+to ensure propagators are calculated for all the required gates
+
+.. code:: ipython3
+
+    exp.set_opt_gates([rx90p_q1.get_key(), cnot12.get_key()])
+
+.. code:: ipython3
+
+    c3_job_opt = c3_backend.run(qc)
+    result_opt = c3_job_opt.result()
+    res_pops_opt = result_opt.data()["state_pops"]
+    print("Result from gates:") 
+    pprint(res_pops_opt)
+
+
+.. parsed-literal::
+
+    No measurements in circuit "circuit-0", classical register will remain all zeros.
+
+
+.. parsed-literal::
+
+    Result from gates:
+    {'(0, 0)': 0.522074672738806,
+     '(0, 1)': 0.0009262330305873641,
+     '(0, 2)': 5.58398828418534e-07,
+     '(1, 0)': 0.002148790053836785,
+     '(1, 1)': 0.4695772823691831,
+     '(1, 2)': 3.241481428134574e-05,
+     '(2, 0)': 0.0030096031488172107,
+     '(2, 1)': 0.0022302669196215767,
+     '(2, 2)': 1.7852604795947343e-07}
+
+
+.. code:: ipython3
+
+    plot_histogram(res_pops_opt, title='Simulation of Qiskit circuit with Optimized Gates')
+
+
+
+
+.. image:: two_qubit_entangling_gate_files/two_qubit_entangling_gate_66_0.png
+
 
