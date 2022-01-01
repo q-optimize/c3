@@ -19,7 +19,8 @@ from c3.qiskit.c3_gates import (
     CRGate,
     CR90Gate,
 )
-from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate, RZXGate
+from qiskit.circuit.library import RXGate, RYGate, RZGate
+from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import Statevector, Operator
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
@@ -190,6 +191,9 @@ def test_too_many_qubits(backend):
         pytest.param(RZ90pGate(), [0], RZGate(phi=np.pi / 2.0), [0], id="rz90p"),
         pytest.param(RZ90mGate(), [0], RZGate(phi=-np.pi / 2.0), [0], id="rz90m"),
         pytest.param(RZpGate(), [0], RZGate(phi=np.pi), [0], id="rzp"),
+        pytest.param(
+            CR90Gate(), [0, 1], UnitaryGate(data=GATES["cr90"]), [0, 1], id="cr90"
+        ),
     ],
 )
 @pytest.mark.unit
