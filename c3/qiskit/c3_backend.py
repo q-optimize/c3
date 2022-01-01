@@ -2,6 +2,7 @@ import uuid
 import time
 import numpy as np
 import logging
+import warnings
 
 from qiskit import qobj
 from qiskit import QuantumCircuit
@@ -101,6 +102,35 @@ class C3QasmSimulator(Backend, ABC):
         This function allows disabling of the flip
         """
         self._flip_labels = False
+
+    def sanitize_instructions_list(self, instructions_list: List[Dict]) -> List[Dict]:
+        """Sanitize instructions list by removing unsupported operations
+
+        Parameters
+        ----------
+        instructions_list : List[Dict]
+            Qasm style list of instructions represented by dicts
+
+        Returns
+        -------
+        List[Dict]
+            Sanitized instruction list
+
+        Raises
+        -------
+        UserWarning
+            Warns user about unsupported operations in circuit
+        """
+        sanitized_instructions = [
+            instruction
+            for instruction in instructions_list
+            if instruction["name"] not in self.UNSUPPORTED_OPERATIONS
+        ]
+        if sanitized_instructions != instructions_list:
+            warnings.warn(
+                f"The following operations are not supported yet: {self.UNSUPPORTED_OPERATIONS}"
+            )
+        return sanitized_instructions
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
@@ -323,7 +353,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
                 configuration or QasmBackendConfiguration.from_dict(self._configuration)
             ),
             provider=provider,
-            **fields
+            **fields,
         )
         # Define attributes in __init__.
         self._local_random = np.random.RandomState()
@@ -501,7 +531,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
                 configuration or QasmBackendConfiguration.from_dict(self._configuration)
             ),
             provider=provider,
-            **fields
+            **fields,
         )
         # Define attributes in __init__.
         self._local_random = np.random.RandomState()
@@ -515,6 +545,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self._initial_statevector = self.options.get("initial_statevector")
         self._qobj_config = None
         self._sample_measure = False
+        self.UNSUPPORTED_OPERATIONS = ["measure", "barrier"]
         self.c3_exp = Experiment()
 
     @classmethod
@@ -580,12 +611,13 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
+        instructions_list = self.sanitize_instructions_list(instructions_list)
 
-        # TODO Handle "measure" and "barrier" instructions
         pops = exp.evaluate([instructions_list])
         pop1s, _ = exp.process(pops)
 
-        # TODO generate shots style readout ref Perfect Simulator
+        # TODO generate proper(?) state labels for states with more than 2 levels
+        # TODO generate shots style readout when there is 'measure' (ref Perfect Simulator)
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
         counts = dict(zip(self.get_labels(), pop1s[0].numpy().tolist()))
