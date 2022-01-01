@@ -72,8 +72,11 @@ class CRXpGate(CRXGate):
     )
 
 
-class CRGate(BaseC3QiskitGate):
-    pass
+class CRGate(UnitaryGate):
+    def __init__(self, label: Optional[str] = None):
+        warnings.warn("This is not equivalent to the RZX(pi/2) gate in qiskit")
+        super().__init__(data=GATES["cr"], label=label)
+        self.name = "cr"
 
 
 class CR90Gate(UnitaryGate):
