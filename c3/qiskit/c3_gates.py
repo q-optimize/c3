@@ -1,6 +1,6 @@
 from typing import Optional
 from qiskit.circuit import Gate
-from qiskit.circuit.library import RXGate, RYGate, RZGate
+from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES
 import numpy as np
 
@@ -64,8 +64,10 @@ class RZpGate(RZGate):
         self.name = "rzp"
 
 
-class CRXpGate(BaseC3QiskitGate):
-    pass
+class CRXpGate(CRXGate):
+    raise NotImplementedError(
+        "Not implemented due to inconsistent matrix representation in C3 and Qiskit"
+    )
 
 
 class CRGate(BaseC3QiskitGate):
