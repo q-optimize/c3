@@ -172,6 +172,17 @@ class C3QasmSimulator(Backend, ABC):
             )
         return sanitized_instructions
 
+    def generate_shot_readout(self):
+        """Generate shot style readout from population
+
+        Returns
+        -------
+        List[int]
+            List of shots for each output state
+        """
+        # TODO a sophisticated readout/measurement routine (w/ SPAM)
+        return (np.round(self.pops_array * self._shots)).astype("int32").tolist()
+
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
 
