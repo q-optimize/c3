@@ -152,7 +152,7 @@ def test_qiskit_physics():
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
-    qc = QuantumCircuit(3, 3)
+    qc = QuantumCircuit(3)
     qc.append(RX90pGate(), [0])
     qc.append(CR90Gate(), [0, 1])
     qc.measure_all()
