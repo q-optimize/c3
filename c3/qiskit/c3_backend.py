@@ -88,7 +88,7 @@ class C3QasmSimulator(Backend, ABC):
 
                 labels = ['0x1', ...]
 
-                labels = ['01', '02', ...]
+                labels = ['(0, 0)', '(0, 1)', '(0, 2)', ...]
 
         Raises
         ------
