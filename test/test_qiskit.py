@@ -267,10 +267,19 @@ def test_user_provided_c3_exp(backend, config_file):
     assert received_backend.c3_exp is test_exp
 
 
-def test_experiment_not_initialised():
+@pytest.mark.unit
+@pytest.mark.qiskit
+@pytest.mark.parametrize(
+    ["backend"],
+    [
+        pytest.param("c3_qasm_perfect_simulator", id="perfect_sim"),
+        pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
+    ],
+)
+def test_experiment_not_initialised(backend):
     """Test for checking error is raised if c3 experiment object is not correctly initialised"""
     c3_qiskit = C3Provider()
-    received_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
+    received_backend = c3_qiskit.get_backend(backend)
     qc = QuantumCircuit(1, 1)
     qc.x(0)
     with pytest.raises(C3QiskitError):
