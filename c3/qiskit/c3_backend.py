@@ -474,8 +474,6 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         if self._number_of_qubits < experiment.config.n_qubits:
             raise C3QiskitError("Not enough qubits on device to run circuit")
 
-        shots = self._shots
-
         # TODO (Check) Assume all qubits have same Hilbert dims
         self._number_of_levels = pmap.model.dims[0]
 
@@ -514,9 +512,9 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
             pops = exp.populations(psi_t, False)
             pop_t = np.append(pop_t, pops, axis=1)
 
-        # generate shots style readout with no SPAM
-        # TODO a more sophisticated readout/measurement routine
-        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32").tolist()
+        # generate shots style readout
+        self.pops_array = pop_t.T[-1]
+        shots_data = self.generate_shot_readout()
 
         # generate state labels
         output_labels = self.get_labels()
@@ -652,8 +650,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         if self._number_of_qubits < experiment.config.n_qubits:
             raise C3QiskitError("Not enough qubits on device to run circuit")
 
-        shots = self._shots  # noqa
-
         # TODO (Check) Assume all qubits have same Hilbert dims
         self._number_of_levels = pmap.model.dims[0]
 
@@ -671,16 +667,15 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         pops = exp.evaluate([sanitized_instructions])
         pop1s, _ = exp.process(pops)
 
-        # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
         meas_index = self.locate_measurements(instructions_list)
-        pops_array = pop1s[0].numpy()
+        self.pops_array = pop1s[0].numpy()
         if meas_index:
-            counts_data = (np.round(pops_array * shots)).astype("int32")
+            counts_data = self.generate_shot_readout()
         else:
-            counts_data = pops_array.tolist()
+            counts_data = self.pops_array.tolist()
         counts = dict(zip(self.get_labels(format="qiskit"), counts_data))
-        state_pops = dict(zip(self.get_labels(format="c3"), pops_array.tolist()))
+        state_pops = dict(zip(self.get_labels(format="c3"), self.pops_array.tolist()))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
