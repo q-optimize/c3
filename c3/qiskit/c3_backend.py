@@ -92,7 +92,6 @@ class C3QasmSimulator(Backend, ABC):
         """
         exp = self.c3_exp
         exp.enable_qasm()
-        exp.compute_propagators()
         pmap = exp.pmap
 
         # initialise parameters
@@ -680,6 +679,8 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         exp = self._setup_c3_experiment(experiment)
+        exp.compute_propagators()
+
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
