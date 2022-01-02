@@ -226,6 +226,7 @@ class C3QasmSimulator(Backend, ABC):
         List[int]
             List of shots for each output state
         """
+        # TODO Further harmonize readout generation for perfect and physics simulation
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         return (np.round(self.pops_array * self._shots)).astype("int32").tolist()
 
