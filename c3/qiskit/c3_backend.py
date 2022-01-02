@@ -503,26 +503,8 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        # setup C3 Experiment
-        exp = self.c3_exp
-        pmap = exp.pmap
-        instructions = pmap.instructions
-
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
-
-        # TODO (Check) Assume all qubits have same Hilbert dims
-        self._number_of_levels = pmap.model.dims[0]
-
-        # Validate the dimension of initial statevector if set
-        self._validate_initial_statevector()
-
-        # TODO set simulator seed, check qiskit python qasm simulator
-        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
-        seed_simulator = 2441129
-
+        exp = self._setup_c3_experiment(experiment)
+        instructions = exp.pmap.instructions
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
 
@@ -575,7 +557,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
             "shots": self._shots,
-            "seed": seed_simulator,
+            "seed": self.seed_simulator,
             "status": "DONE",
             "success": True,
             "data": {"counts": counts},
