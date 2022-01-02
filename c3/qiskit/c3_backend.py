@@ -72,6 +72,31 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
+    def _setup_c3_experiment(self, experiment: QasmQobjExperiment) -> Experiment:
+
+        # setup C3 Experiment
+        exp = self.c3_exp
+        exp.enable_qasm()
+        exp.compute_propagators()  # TODO only simulate qubits used in circuit
+        pmap = exp.pmap
+
+        # initialise parameters
+        self._number_of_qubits = len(pmap.model.subsystems)
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
+
+        # TODO (Check) Assume all qubits have same Hilbert dims
+        self._number_of_levels = pmap.model.dims[0]
+
+        # Validate the dimension of initial statevector if set
+        self._validate_initial_statevector()
+
+        # TODO set simulator seed, check qiskit python qasm simulator
+        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
+        self.seed_simulator = 2441129
+
+        return exp
+
     def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
 
@@ -639,26 +664,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        # setup C3 Experiment
-        exp = self.c3_exp
-        exp.enable_qasm()
-        exp.compute_propagators()  # TODO only simulate qubits used in circuit
-        pmap = exp.pmap
-
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
-
-        # TODO (Check) Assume all qubits have same Hilbert dims
-        self._number_of_levels = pmap.model.dims[0]
-
-        # Validate the dimension of initial statevector if set
-        self._validate_initial_statevector()
-
-        # TODO set simulator seed, check qiskit python qasm simulator
-        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
-        seed_simulator = 2441129
+        exp = self._setup_c3_experiment(experiment)
         instructions_list = [
             instruction.to_dict() for instruction in experiment.instructions
         ]
@@ -688,7 +694,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
             "shots": self._shots,
-            "seed": seed_simulator,
+            "seed": self.seed_simulator,
             "status": "DONE",
             "success": True,
             "data": {
