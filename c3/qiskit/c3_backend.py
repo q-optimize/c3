@@ -241,6 +241,10 @@ class C3QasmSimulator(Backend, ABC):
         self._shots = qobj.config.shots
         self._memory = getattr(qobj.config, "memory", False)
         self._qobj_config = qobj.config
+        if not hasattr(self.c3_exp.pmap, "model"):
+            raise C3QiskitError(
+                "Experiment Object has not been correctly initialised. \nUse set_device_config() or set_c3_experiment()"
+            )
         start = time.time()
         for experiment in qobj.experiments:
             result_list.append(self.run_experiment(experiment))
