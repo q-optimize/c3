@@ -157,7 +157,6 @@ def test_qiskit_physics():
     qc.append(CR90Gate(), [0, 1])
     qc.measure_all()
     job_sim = physics_backend.run(qc)
-    print(job_sim.result().get_counts())
     expected_pops = np.array([0, 0, 0.5, 0, 0, 0, 0.5, 0])
     received_pops = np.array(list(job_sim.result().data()["state_pops"].values()))
     np.testing.assert_allclose(received_pops, desired=expected_pops, atol=1e-1)
