@@ -73,11 +73,26 @@ class C3QasmSimulator(Backend, ABC):
         self.c3_exp = exp
 
     def _setup_c3_experiment(self, experiment: QasmQobjExperiment) -> Experiment:
+        """Setup C3 Experiment object for simulation
 
-        # setup C3 Experiment
+        Parameters
+        ----------
+        experiment : QasmQobjExperiment
+            Qasm Experiment object from qiskit
+
+        Returns
+        -------
+        Experiment
+            C3 Experiment object
+
+        Raises
+        ------
+        C3QiskitError
+            When number of qubits are not enough
+        """
         exp = self.c3_exp
         exp.enable_qasm()
-        exp.compute_propagators()  # TODO only simulate qubits used in circuit
+        exp.compute_propagators()
         pmap = exp.pmap
 
         # initialise parameters
