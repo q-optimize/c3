@@ -6,6 +6,7 @@ import warnings
 
 from qiskit import qobj
 from qiskit import QuantumCircuit
+from qiskit.circuit import Instruction
 from qiskit.exceptions import QiskitError
 from qiskit.providers import BackendV1 as Backend
 from qiskit.providers import Options
@@ -21,7 +22,7 @@ from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from abc import ABC, abstractclassmethod, abstractmethod
 
 logger = logging.getLogger(__name__)
@@ -182,24 +183,30 @@ class C3QasmSimulator(Backend, ABC):
         ]
         return meas_index
 
-    def sanitize_instructions_list(self, instructions_list: List[Dict]) -> List[Dict]:
-        """Sanitize instructions list by removing unsupported operations
+    def sanitize_instructions(
+        self, instructions: Instruction
+    ) -> Tuple[List[Any], List[Any]]:
+        """Convert from qiskit instruction object and Sanitize
+        instructions by removing unsupported operations
 
         Parameters
         ----------
-        instructions_list : List[Dict]
-            Qasm style list of instructions represented by dicts
+        instructions : Instruction
+            qasm as Qiskit Instruction object
 
         Returns
         -------
-        List[Dict]
+        Tuple[List[Any], List[Any]]
             Sanitized instruction list
+
+            Qasm style list of instruction represented as dicts
 
         Raises
         -------
         UserWarning
             Warns user about unsupported operations in circuit
         """
+        instructions_list = [instruction.to_dict() for instruction in instructions]
         sanitized_instructions = [
             instruction
             for instruction in instructions_list
@@ -209,7 +216,7 @@ class C3QasmSimulator(Backend, ABC):
             warnings.warn(
                 f"The following operations are not supported yet: {self.UNSUPPORTED_OPERATIONS}"
             )
-        return sanitized_instructions
+        return sanitized_instructions, instructions_list
 
     def generate_shot_readout(self):
         """Generate shot style readout from population
@@ -663,10 +670,9 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         exp = self._setup_c3_experiment(experiment)
         exp.compute_propagators()
 
-        instructions_list = [
-            instruction.to_dict() for instruction in experiment.instructions
-        ]
-        sanitized_instructions = self.sanitize_instructions_list(instructions_list)
+        sanitized_instructions, instructions_list = self.sanitize_instructions(
+            experiment.instructions
+        )
 
         pops = exp.evaluate([sanitized_instructions])
         pop1s, _ = exp.process(pops)
