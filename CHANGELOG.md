@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `fixed` code quality and refactored parts of qiskit backend #170
 - `added` examples and documentation showing qiskit visualisations in optimal control workflows #169
 - `added` option to get and set c3 experiment object for qiskit simulations #169
 - `added` support for c3 custom gates in qiskit circuits #168
