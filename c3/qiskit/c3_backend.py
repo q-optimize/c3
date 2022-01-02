@@ -6,6 +6,7 @@ import warnings
 
 from qiskit import qobj
 from qiskit import QuantumCircuit
+from qiskit.circuit import Instruction
 from qiskit.exceptions import QiskitError
 from qiskit.providers import BackendV1 as Backend
 from qiskit.providers import Options
@@ -21,7 +22,7 @@ from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 from abc import ABC, abstractclassmethod, abstractmethod
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,45 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
+    def _setup_c3_experiment(self, experiment: QasmQobjExperiment) -> Experiment:
+        """Setup C3 Experiment object for simulation
+
+        Parameters
+        ----------
+        experiment : QasmQobjExperiment
+            Qasm Experiment object from qiskit
+
+        Returns
+        -------
+        Experiment
+            C3 Experiment object
+
+        Raises
+        ------
+        C3QiskitError
+            When number of qubits are not enough
+        """
+        exp = self.c3_exp
+        exp.enable_qasm()
+        pmap = exp.pmap
+
+        # initialise parameters
+        self._number_of_qubits = len(pmap.model.subsystems)
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
+
+        # TODO (Check) Assume all qubits have same Hilbert dims
+        self._number_of_levels = pmap.model.dims[0]
+
+        # Validate the dimension of initial statevector if set
+        self._validate_initial_statevector()
+
+        # TODO set simulator seed, check qiskit python qasm simulator
+        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
+        self.seed_simulator = 2441129
+
+        return exp
+
     def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
 
@@ -88,7 +128,7 @@ class C3QasmSimulator(Backend, ABC):
 
                 labels = ['0x1', ...]
 
-                labels = ['01', '02', ...]
+                labels = ['(0, 0)', '(0, 1)', '(0, 2)', ...]
 
         Raises
         ------
@@ -143,24 +183,30 @@ class C3QasmSimulator(Backend, ABC):
         ]
         return meas_index
 
-    def sanitize_instructions_list(self, instructions_list: List[Dict]) -> List[Dict]:
-        """Sanitize instructions list by removing unsupported operations
+    def sanitize_instructions(
+        self, instructions: Instruction
+    ) -> Tuple[List[Any], List[Any]]:
+        """Convert from qiskit instruction object and Sanitize
+        instructions by removing unsupported operations
 
         Parameters
         ----------
-        instructions_list : List[Dict]
-            Qasm style list of instructions represented by dicts
+        instructions : Instruction
+            qasm as Qiskit Instruction object
 
         Returns
         -------
-        List[Dict]
+        Tuple[List[Any], List[Any]]
             Sanitized instruction list
+
+            Qasm style list of instruction represented as dicts
 
         Raises
         -------
         UserWarning
             Warns user about unsupported operations in circuit
         """
+        instructions_list = [instruction.to_dict() for instruction in instructions]
         sanitized_instructions = [
             instruction
             for instruction in instructions_list
@@ -170,7 +216,19 @@ class C3QasmSimulator(Backend, ABC):
             warnings.warn(
                 f"The following operations are not supported yet: {self.UNSUPPORTED_OPERATIONS}"
             )
-        return sanitized_instructions
+        return sanitized_instructions, instructions_list
+
+    def generate_shot_readout(self):
+        """Generate shot style readout from population
+
+        Returns
+        -------
+        List[int]
+            List of shots for each output state
+        """
+        # TODO Further harmonize readout generation for perfect and physics simulation
+        # TODO a sophisticated readout/measurement routine (w/ SPAM)
+        return (np.round(self.pops_array * self._shots)).astype("int32").tolist()
 
     def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
@@ -241,6 +299,10 @@ class C3QasmSimulator(Backend, ABC):
         self._shots = qobj.config.shots
         self._memory = getattr(qobj.config, "memory", False)
         self._qobj_config = qobj.config
+        if not hasattr(self.c3_exp.pmap, "model"):
+            raise C3QiskitError(
+                "Experiment Object has not been correctly initialised. \nUse set_device_config() or set_c3_experiment()"
+            )
         start = time.time()
         for experiment in qobj.experiments:
             result_list.append(self.run_experiment(experiment))
@@ -449,28 +511,8 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        # setup C3 Experiment
-        exp = self.c3_exp
-        pmap = exp.pmap
-        instructions = pmap.instructions
-
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
-
-        shots = self._shots
-
-        # TODO (Check) Assume all qubits have same Hilbert dims
-        self._number_of_levels = pmap.model.dims[0]
-
-        # Validate the dimension of initial statevector if set
-        self._validate_initial_statevector()
-
-        # TODO set simulator seed, check qiskit python qasm simulator
-        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
-        seed_simulator = 2441129
-
+        exp = self._setup_c3_experiment(experiment)
+        instructions = exp.pmap.instructions
         # convert qasm instruction set to c3 sequence
         sequence = get_sequence(experiment.instructions)
 
@@ -499,9 +541,9 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
             pops = exp.populations(psi_t, False)
             pop_t = np.append(pop_t, pops, axis=1)
 
-        # generate shots style readout with no SPAM
-        # TODO a more sophisticated readout/measurement routine
-        shots_data = (np.round(pop_t.T[-1] * shots)).astype("int32").tolist()
+        # generate shots style readout
+        self.pops_array = pop_t.T[-1]
+        shots_data = self.generate_shot_readout()
 
         # generate state labels
         output_labels = self.get_labels()
@@ -523,7 +565,7 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
             "shots": self._shots,
-            "seed": seed_simulator,
+            "seed": self.seed_simulator,
             "status": "DONE",
             "success": True,
             "data": {"counts": counts},
@@ -626,46 +668,25 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        # setup C3 Experiment
-        exp = self.c3_exp
-        exp.enable_qasm()
-        exp.compute_propagators()  # TODO only simulate qubits used in circuit
-        pmap = exp.pmap
+        exp = self._setup_c3_experiment(experiment)
+        exp.compute_propagators()
 
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
-
-        shots = self._shots  # noqa
-
-        # TODO (Check) Assume all qubits have same Hilbert dims
-        self._number_of_levels = pmap.model.dims[0]
-
-        # Validate the dimension of initial statevector if set
-        self._validate_initial_statevector()
-
-        # TODO set simulator seed, check qiskit python qasm simulator
-        # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
-        seed_simulator = 2441129
-        instructions_list = [
-            instruction.to_dict() for instruction in experiment.instructions
-        ]
-        sanitized_instructions = self.sanitize_instructions_list(instructions_list)
+        sanitized_instructions, instructions_list = self.sanitize_instructions(
+            experiment.instructions
+        )
 
         pops = exp.evaluate([sanitized_instructions])
         pop1s, _ = exp.process(pops)
 
-        # TODO a sophisticated readout/measurement routine (w/ SPAM)
         # C3 stores labels in exp.pmap.model.state_labels
         meas_index = self.locate_measurements(instructions_list)
-        pops_array = pop1s[0].numpy()
+        self.pops_array = pop1s[0].numpy()
         if meas_index:
-            counts_data = (np.round(pops_array * shots)).astype("int32")
+            counts_data = self.generate_shot_readout()
         else:
-            counts_data = pops_array.tolist()
+            counts_data = self.pops_array.tolist()
         counts = dict(zip(self.get_labels(format="qiskit"), counts_data))
-        state_pops = dict(zip(self.get_labels(format="c3"), pops_array.tolist()))
+        state_pops = dict(zip(self.get_labels(format="c3"), self.pops_array.tolist()))
 
         # flipping state labels to match qiskit style qubit indexing convention
         # default is to flip labels to qiskit style, use disable_flip_labels()
@@ -678,7 +699,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             "name": experiment.header.name,
             "header": experiment.header.to_dict(),
             "shots": self._shots,
-            "seed": seed_simulator,
+            "seed": self.seed_simulator,
             "status": "DONE",
             "success": True,
             "data": {

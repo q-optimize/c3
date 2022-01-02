@@ -152,12 +152,14 @@ def test_qiskit_physics():
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
-    qc = QuantumCircuit(3, 3)
+    qc = QuantumCircuit(3)
     qc.append(RX90pGate(), [0])
     qc.append(CR90Gate(), [0, 1])
     qc.measure_all()
     job_sim = physics_backend.run(qc)
-    print(job_sim.result().get_counts())
+    expected_pops = np.array([0, 0, 0.5, 0, 0, 0, 0.5, 0])
+    received_pops = np.array(list(job_sim.result().data()["state_pops"].values()))
+    np.testing.assert_allclose(received_pops, desired=expected_pops, atol=1e-1)
 
 
 @pytest.mark.parametrize(
@@ -265,3 +267,22 @@ def test_user_provided_c3_exp(backend, config_file):
     received_backend = c3_qiskit.get_backend(backend)
     received_backend.set_c3_experiment(test_exp)
     assert received_backend.c3_exp is test_exp
+
+
+@pytest.mark.unit
+@pytest.mark.qiskit
+@pytest.mark.parametrize(
+    ["backend"],
+    [
+        pytest.param("c3_qasm_perfect_simulator", id="perfect_sim"),
+        pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
+    ],
+)
+def test_experiment_not_initialised(backend):
+    """Test for checking error is raised if c3 experiment object is not correctly initialised"""
+    c3_qiskit = C3Provider()
+    received_backend = c3_qiskit.get_backend(backend)
+    qc = QuantumCircuit(1, 1)
+    qc.x(0)
+    with pytest.raises(C3QiskitError):
+        received_backend.run(qc)
