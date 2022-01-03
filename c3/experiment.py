@@ -236,7 +236,7 @@ class Experiment:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
 
-    def evaluate_legacy(self, sequences):
+    def evaluate_legacy(self, sequences, psi_init=None):
         """
         Compute the population values for a given sequence of operations.
 
@@ -252,9 +252,10 @@ class Experiment:
 
         """
         model = self.pmap.model
-        psi_init = model.tasks["init_ground"].initialise(
-            model.drift_ham, model.lindbladian
-        )
+        if psi_init is None:
+            psi_init = model.tasks["init_ground"].initialise(
+                model.drift_ham, model.lindbladian
+            )
         self.psi_init = psi_init
         populations = []
         for sequence in sequences:
@@ -266,7 +267,7 @@ class Experiment:
             populations.append(pops)
         return populations
 
-    def evaluate_qasm(self, sequences):
+    def evaluate_qasm(self, sequences, psi_init=None):
         """
         Compute the population values for a given sequence (in QASM format) of
         operations.
@@ -283,12 +284,13 @@ class Experiment:
 
         """
         model = self.pmap.model
-        if "init_ground" in model.tasks:
-            psi_init = model.tasks["init_ground"].initialise(
-                model.drift_ham, model.lindbladian
-            )
-        else:
-            psi_init = model.get_ground_state()
+        if psi_init is None:
+            if "init_ground" in model.tasks:
+                psi_init = model.tasks["init_ground"].initialise(
+                    model.drift_ham, model.lindbladian
+                )
+            else:
+                psi_init = model.get_ground_state()
         self.psi_init = psi_init
         populations = []
         for sequence in sequences:
