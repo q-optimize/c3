@@ -675,7 +675,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             experiment.instructions
         )
 
-        pops = exp.evaluate([sanitized_instructions])
+        pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
         pop1s, _ = exp.process(pops)
 
         # C3 stores labels in exp.pmap.model.state_labels
