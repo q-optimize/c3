@@ -236,7 +236,7 @@ class Experiment:
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
 
-    def evaluate_legacy(self, sequences, psi_init=None):
+    def evaluate_legacy(self, sequences, psi_init: tf.Tensor = None):
         """
         Compute the population values for a given sequence of operations.
 
@@ -244,6 +244,9 @@ class Experiment:
         ----------
         sequences: str list
             A list of control pulses/gates to perform on the device.
+
+        psi_init: tf.Tensor
+            A tensor containing the initial statevector
 
         Returns
         -------
@@ -267,7 +270,7 @@ class Experiment:
             populations.append(pops)
         return populations
 
-    def evaluate_qasm(self, sequences, psi_init=None):
+    def evaluate_qasm(self, sequences, psi_init: tf.Tensor = None):
         """
         Compute the population values for a given sequence (in QASM format) of
         operations.
@@ -276,6 +279,9 @@ class Experiment:
         ----------
         sequences: dict list
             A list of control pulses/gates to perform on the device in QASM format.
+
+        psi_init: tf.Tensor
+            A tensor containing the initial statevector
 
         Returns
         -------
