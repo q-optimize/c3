@@ -288,6 +288,13 @@ def test_experiment_not_initialised(backend, get_test_circuit):
 @pytest.mark.qiskit
 @pytest.mark.unit
 def test_initial_statevector(get_physics_circuit):
+    """Check initial statevector is correctly validated
+
+    Parameters
+    ----------
+    get_physics_circuit : QuantumCircuit
+        Circuit fixture with RX90p and CR90 gates
+    """
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")

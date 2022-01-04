@@ -13,6 +13,7 @@ This Changelog tracks all past changes to this project as well as details about 
 
 ### Details
 
+- `added` support for setting initial statevector using qiskit interface #171
 - `fixed` code quality and refactored parts of qiskit backend #170
 - `added` examples and documentation showing qiskit visualisations in optimal control workflows #169
 - `added` option to get and set c3 experiment object for qiskit simulations #169
