@@ -286,3 +286,25 @@ def test_experiment_not_initialised(backend):
     qc.x(0)
     with pytest.raises(C3QiskitError):
         received_backend.run(qc)
+
+
+def test_initial_statevector():
+    c3_qiskit = C3Provider()
+    physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
+    physics_backend.set_device_config("test/qiskit.cfg")
+    qc = QuantumCircuit(3)
+    qc.append(RX90pGate(), [0])
+    qc.append(CR90Gate(), [0, 1])
+    qc.measure_all()
+    with pytest.raises(C3QiskitError):
+        # incorrect dimension
+        physics_backend.run(qc, initial_statevector=[0, 0, 0, 0, 0, 0, 1])
+
+    with pytest.raises(C3QiskitError):
+        # unnormalised
+        physics_backend.run(qc, initial_statevector=[1, 1, 1, 1, 1, 1, 1, 1])
+
+    result = physics_backend.run(
+        qc, initial_statevector=[0, 1, 0, 0, 0, 0, 0, 0]
+    ).result()
+    print(result.get_counts())
