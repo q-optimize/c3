@@ -530,7 +530,12 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         perfect_gates = exp.get_perfect_gates(gate_keys)
 
         # initialise state
-        psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
+        if self._initial_statevector is None:
+            psi_init = get_init_ground_state(
+                self._number_of_qubits, self._number_of_levels
+            )
+        else:
+            psi_init = self._initial_statevector
         psi_t = psi_init.numpy()
         pop_t = exp.populations(psi_t, False)
 
