@@ -14,6 +14,7 @@ from c3.generator.generator import Generator
 from c3.generator.devices import Crosstalk
 from c3.libraries.constants import Id, X, Y, Z
 from c3.c3objs import Quantity
+from c3.qiskit.c3_gates import RX90pGate, CR90Gate
 import pytest
 
 
@@ -55,19 +56,17 @@ def get_test_circuit() -> QuantumCircuit:
 
 
 @pytest.fixture()
-def get_bell_circuit() -> QuantumCircuit:
-    """fixture for Quantum Circuit to make Bell
-    State |11> + |00>
+def get_physics_circuit() -> QuantumCircuit:
+    """fixture for Quantum Circuit for physics simulation
 
     Returns
     -------
     QuantumCircuit
-        A circuit with a Hadamard, a C-X and 2 Measures
+        A circuit with a RX90p, and a CR90
     """
-    qc = QuantumCircuit(2, 2)
-    qc.h(0)
-    qc.cx(0, 1)
-    qc.measure([0, 1], [0, 1])
+    qc = QuantumCircuit(3)
+    qc.append(RX90pGate(), [0])
+    qc.append(CR90Gate(), [0, 1])
     return qc
 
 
