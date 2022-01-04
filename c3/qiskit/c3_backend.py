@@ -350,34 +350,15 @@ class C3QasmSimulator(Backend, ABC):
                 )
 
     def _validate_initial_statevector(self):
-        """Raise an error when experiment tries to set initial statevector
+        """Check initial statevector has correct dimensions
+        and is normalised
 
         Raises
         ------
         C3QiskitError
-            Error for statevector initialisation not implemented
+            If statevector is not correctly initialised
         """
-        if self._initial_statevector is not None:
-            raise C3QiskitError(
-                "Setting initial statevector is not implemented in this simulator"
-            )
-        else:
-            pass
-
-    def _initialize_statevector(self):
-        """Raise an error when experiment tries to set initial statevector
-
-        Raises
-        ------
-        C3QiskitError
-            Error for statevector initialisation not implemented
-        """
-        if self._initial_statevector is not None:
-            raise C3QiskitError(
-                "Setting initial statevector is not implemented in this simulator"
-            )
-        else:
-            pass
+        pass
 
     def _set_options(self, qobj_config=None, backend_options=None):
         """Qiskit stock method to Set the backend options for all experiments in a qobj"""
@@ -396,14 +377,6 @@ class C3QasmSimulator(Backend, ABC):
             self._initial_statevector = np.array(
                 qobj_config.initial_statevector, dtype=complex
             )
-        if self._initial_statevector is not None:
-            # Check the initial statevector is normalized
-            norm = np.linalg.norm(self._initial_statevector)
-            if round(norm, 12) != 1:
-                raise C3QiskitError(
-                    "initial statevector is not normalized: "
-                    + "norm {} != 1".format(norm)
-                )
 
 
 class C3QasmPerfectSimulator(C3QasmSimulator):
