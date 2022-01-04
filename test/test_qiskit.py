@@ -288,6 +288,8 @@ def test_experiment_not_initialised(backend):
         received_backend.run(qc)
 
 
+@pytest.mark.qiskit
+@pytest.mark.unit
 def test_initial_statevector():
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
@@ -303,8 +305,3 @@ def test_initial_statevector():
     with pytest.raises(C3QiskitError):
         # unnormalised
         physics_backend.run(qc, initial_statevector=[1, 1, 1, 1, 1, 1, 1, 1])
-
-    result = physics_backend.run(
-        qc, initial_statevector=[0, 1, 0, 0, 0, 0, 0, 0]
-    ).result()
-    print(result.get_counts())
