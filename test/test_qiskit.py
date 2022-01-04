@@ -147,14 +147,12 @@ def test_get_exception(get_bad_circuit, backend):  # noqa
 @pytest.mark.integration
 @pytest.mark.qiskit
 @pytest.mark.slow
-def test_qiskit_physics():
+def test_qiskit_physics(get_physics_circuit):
     """API test for qiskit physics simulation"""
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
-    qc = QuantumCircuit(3)
-    qc.append(RX90pGate(), [0])
-    qc.append(CR90Gate(), [0, 1])
+    qc = get_physics_circuit
     qc.measure_all()
     job_sim = physics_backend.run(qc)
     expected_pops = np.array([0, 0, 0.5, 0, 0, 0, 0.5, 0])
@@ -278,11 +276,34 @@ def test_user_provided_c3_exp(backend, config_file):
         pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
     ],
 )
-def test_experiment_not_initialised(backend):
+def test_experiment_not_initialised(backend, get_test_circuit):
     """Test for checking error is raised if c3 experiment object is not correctly initialised"""
     c3_qiskit = C3Provider()
     received_backend = c3_qiskit.get_backend(backend)
-    qc = QuantumCircuit(1, 1)
-    qc.x(0)
+    qc = get_test_circuit
     with pytest.raises(C3QiskitError):
         received_backend.run(qc)
+
+
+@pytest.mark.qiskit
+@pytest.mark.unit
+def test_initial_statevector(get_physics_circuit):
+    """Check initial statevector is correctly validated
+
+    Parameters
+    ----------
+    get_physics_circuit : QuantumCircuit
+        Circuit fixture with RX90p and CR90 gates
+    """
+    c3_qiskit = C3Provider()
+    physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
+    physics_backend.set_device_config("test/qiskit.cfg")
+    qc = get_physics_circuit
+    qc.measure_all()
+    with pytest.raises(C3QiskitError):
+        # incorrect dimension
+        physics_backend.run(qc, initial_statevector=[0, 0, 0, 0, 0, 0, 1])
+
+    with pytest.raises(C3QiskitError):
+        # unnormalised
+        physics_backend.run(qc, initial_statevector=[1, 1, 1, 1, 1, 1, 1, 1])

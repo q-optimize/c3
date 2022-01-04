@@ -15,6 +15,7 @@ from qiskit.result import Result
 from qiskit.compiler import assemble
 from qiskit.qobj.qasm_qobj import QasmQobjExperiment
 from qiskit.qobj.pulse_qobj import PulseQobj
+import tensorflow as tf
 
 from c3.experiment import Experiment
 
@@ -350,34 +351,40 @@ class C3QasmSimulator(Backend, ABC):
                 )
 
     def _validate_initial_statevector(self):
-        """Raise an error when experiment tries to set initial statevector
+        """Check initial statevector has correct dimensions and is normalised.
+        Then transform it to a tf Tensor of correct shape
 
         Raises
         ------
         C3QiskitError
-            Error for statevector initialisation not implemented
+            If statevector is not correctly initialised
         """
         if self._initial_statevector is not None:
-            raise C3QiskitError(
-                "Setting initial statevector is not implemented in this simulator"
-            )
-        else:
-            pass
+            psi_init = self._initial_statevector
 
-    def _initialize_statevector(self):
-        """Raise an error when experiment tries to set initial statevector
-
-        Raises
-        ------
-        C3QiskitError
-            Error for statevector initialisation not implemented
-        """
-        if self._initial_statevector is not None:
-            raise C3QiskitError(
-                "Setting initial statevector is not implemented in this simulator"
+            # check dimensions
+            ref_state = np.squeeze(
+                get_init_ground_state(
+                    self._number_of_qubits, self._number_of_levels
+                ).numpy()
             )
-        else:
-            pass
+            if psi_init.shape != ref_state.shape:
+                raise C3QiskitError(
+                    f"Initial statevector has dimensions {psi_init.shape}, expected {ref_state.shape}"
+                )
+
+            # check normalisation
+            norm = np.linalg.norm(psi_init)
+            if round(norm, 12) != 1:
+                raise C3QiskitError(
+                    f"Initial statevector is not normalized: norm {norm} != 1"
+                )
+
+            # convert numpy array to tf Tensor
+            # reshape to make vector: (8,) -> (8, 1)
+            self._initial_statevector = tf.reshape(
+                tf.constant(psi_init, dtype=tf.complex128), [-1, 1]
+            )
 
     def _set_options(self, qobj_config=None, backend_options=None):
         """Qiskit stock method to Set the backend options for all experiments in a qobj"""
@@ -396,14 +403,6 @@ class C3QasmSimulator(Backend, ABC):
             self._initial_statevector = np.array(
                 qobj_config.initial_statevector, dtype=complex
             )
-        if self._initial_statevector is not None:
-            # Check the initial statevector is normalized
-            norm = np.linalg.norm(self._initial_statevector)
-            if round(norm, 12) != 1:
-                raise C3QiskitError(
-                    "initial statevector is not normalized: "
-                    + "norm {} != 1".format(norm)
-                )
 
 
 class C3QasmPerfectSimulator(C3QasmSimulator):
@@ -531,7 +530,12 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         perfect_gates = exp.get_perfect_gates(gate_keys)
 
         # initialise state
-        psi_init = get_init_ground_state(self._number_of_qubits, self._number_of_levels)
+        if self._initial_statevector is None:
+            psi_init = get_init_ground_state(
+                self._number_of_qubits, self._number_of_levels
+            )
+        else:
+            psi_init = self._initial_statevector
         psi_t = psi_init.numpy()
         pop_t = exp.populations(psi_t, False)
 
@@ -675,7 +679,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             experiment.instructions
         )
 
-        pops = exp.evaluate([sanitized_instructions])
+        pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
         pop1s, _ = exp.process(pops)
 
         # C3 stores labels in exp.pmap.model.state_labels
