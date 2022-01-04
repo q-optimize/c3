@@ -15,6 +15,7 @@ from qiskit.result import Result
 from qiskit.compiler import assemble
 from qiskit.qobj.qasm_qobj import QasmQobjExperiment
 from qiskit.qobj.pulse_qobj import PulseQobj
+import tensorflow as tf
 
 from c3.experiment import Experiment
 
@@ -350,15 +351,40 @@ class C3QasmSimulator(Backend, ABC):
                 )
 
     def _validate_initial_statevector(self):
-        """Check initial statevector has correct dimensions
-        and is normalised
+        """Check initial statevector has correct dimensions and is normalised.
+        Then transform it to a tf Tensor of correct shape
 
         Raises
         ------
         C3QiskitError
             If statevector is not correctly initialised
         """
-        pass
+        if self._initial_statevector is not None:
+            psi_init = self._initial_statevector
+
+            # check dimensions
+            ref_state = np.squeeze(
+                get_init_ground_state(
+                    self._number_of_qubits, self._number_of_levels
+                ).numpy()
+            )
+            if psi_init.shape != ref_state.shape:
+                raise C3QiskitError(
+                    f"Initial statevector has dimensions {psi_init.shape}, expected {ref_state.shape}"
+                )
+
+            # check normalisation
+            norm = np.linalg.norm(psi_init)
+            if round(norm, 12) != 1:
+                raise C3QiskitError(
+                    f"Initial statevector is not normalized: norm {norm} != 1"
+                )
+
+            # convert numpy array to tf Tensor
+            # reshape to make vector: (8,) -> (8, 1)
+            self._initial_statevector = tf.reshape(
+                tf.constant(psi_init, dtype=tf.complex128), [-1, 1]
+            )
 
     def _set_options(self, qobj_config=None, backend_options=None):
         """Qiskit stock method to Set the backend options for all experiments in a qobj"""
