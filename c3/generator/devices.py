@@ -331,15 +331,16 @@ class Filter(Device):
 
     def __init__(self, **props):
         raise Exception("C3:ERROR Not yet implemented.")
-        self.filter_function: Callable = props["filter_function"]
-        super().__init__(**props)
+        # self.filter_function: Callable = props["filter_function"]
+        # super().__init__(**props)
 
     def process(
         self, instr: Instruction, chan: str, Hz_signal: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Apply a filter function to the signal."""
-        self.signal = self.filter_function(Hz_signal)
-        return self.signal
+        raise Exception("C3:ERROR Not yet implemented.")
+        # self.signal = self.filter_function(Hz_signal)
+        # return self.signal
 
 
 @dev_reg_deco
