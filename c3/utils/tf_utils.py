@@ -115,9 +115,6 @@ def tf_measure_operator(M, rho):
 
 
 # MATRIX MULTIPLICATION FUNCTIONS
-
-
-@tf.function
 def tf_matmul_left(dUs: tf.Tensor):
     """
     Parameters:
@@ -130,7 +127,6 @@ def tf_matmul_left(dUs: tf.Tensor):
     return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
 
 
-@tf.function
 def tf_matmul_right(dUs):
     """
     Parameters:
@@ -149,14 +145,17 @@ def tf_matmul_n(tensor_list):
 
     EXPERIMENTAL
     """
-    # TODO does it multiply from the left?
-    ln = len(tensor_list)
-    if ln == 1:
-        return tensor_list[0]
-    else:
-        left_half = tensor_list[0 : int(ln / 2)]
-        right_half = tensor_list[int(ln / 2) : ln]
-        return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
+    while tensor_list.shape[0] > 2:
+        even = tensor_list[0::2]
+        odd = tensor_list[1::2]
+        length = odd.shape[0]
+        if even.shape[0] > odd.shape[0]:
+            even = tensor_list @ even[-1]
+            tensor_list = tf.einsum("bij,bjk->bik", even[:length], odd) @ even[-1]
+        else:
+            tensor_list = tf.einsum("bij,bjk->bik", even, odd)
+
+    return tensor_list[0] @ tensor_list[1]
 
 
 # MATH FUNCTIONS
@@ -196,13 +195,14 @@ def tf_diff(l):  # noqa
 
 
 # MATRIX FUNCTIONS
-@tf.function
+
+
 def Id_like(A):
     """Identity of the same size as A."""
     return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
 
 
-# @tf.function
+#
 # def tf_kron(A, B):
 #     """Kronecker product of 2 matrices."""
 #     dims = tf.shape(A) * tf.shape(B)
@@ -211,7 +211,6 @@ def Id_like(A):
 #     return reshaped
 
 
-@tf.function
 def tf_kron(A, B):
     """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
     dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
@@ -235,7 +234,7 @@ def tf_spost(A):
     return tf_kron(Id, tf.linalg.matrix_transpose(A))
 
 
-# @tf.function
+#
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -390,7 +389,6 @@ def tf_project_to_comp(A, dims, index=None, to_super=False):
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
 
 
-@tf.function
 def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     """
     Compute the convolution with a time response.

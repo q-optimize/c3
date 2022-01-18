@@ -56,7 +56,7 @@ class Instruction:
     ):
         self.name = name
         self.targets = targets
-        self.params = {"use_t_before": False}
+        self.params: dict = {}
         if isinstance(params, dict):
             self.params.update(params)
         if t_start is not None:
@@ -246,26 +246,26 @@ class Instruction:
         if "t_final_cut" in opts:
             t_end = t_start + opts["t_final_cut"].get_value()
         elif isinstance(comp, Envelope):
-            t_end = t_start + comp.params["t_final"]
+            t_end = t_start + comp.params["t_final"].get_value()
         elif minimal_time:
             t_end = t_start
         else:
             t_end = self.t_end
 
-        if t_end > self.t_end:
-            if self.fixed_t_end and not minimal_time:
-                warnings.warn(
-                    f"Length of instruction {self.get_key()} is fixed, but cuts at least one component. {chan}-{name} is should end @ {t_end}, but instruction ends at {self.t_end}"
-                )
-                t_end = self.t_end
-            elif minimal_time:
-                pass
-            else:
-                # TODO make compatible with generator
-                warnings.warn(
-                    f"""T_end of {self.get_key()} has been extended to {t_end}. This will however only take effect on the next signal generation"""
-                )
-                self.t_end = t_end
+        # if t_end > self.t_end:
+        #     if self.fixed_t_end and not minimal_time:
+        #         warnings.warn(
+        #             f"Length of instruction {self.get_key()} is fixed, but cuts at least one component. {chan}-{name} is should end @ {t_end}, but instruction ends at {self.t_end}"
+        #         )
+        #         t_end = self.t_end
+        #     elif minimal_time:
+        #         pass
+        #     else:
+        #         # TODO make compatible with generator
+        #         warnings.warn(
+        #             f"""T_end of {self.get_key()} has been extended to {t_end}. This will however only take effect on the next signal generation"""
+        #         )
+        #         self.t_end = t_end
         self.__timings[key] = (t_start, t_end)
         return t_start, t_end
 
@@ -292,27 +292,12 @@ class Instruction:
         amp_tot_sq = 0
         signal = tf.zeros_like(ts, tf.complex128)
         self.__timings = dict()
-        if self.params["use_t_before"] is True:
-            dt = ts[1] - ts[0]
-            t_before = ts[0] - dt
-        else:
-            t_before = None
 
         for comp_name in self.comps[chan]:
             opts = copy.copy(self.__options[chan][comp_name])
             opts.update(options)
             comp = self.comps[chan][comp_name]
             t_start, t_end = self.get_timings(chan, comp_name)
-            comp_ts = tf.identity(ts)
-            mask = tf.ones_like(ts)
-            if t_start is not None:
-                comp_ts -= t_start
-                mask = tf.where(ts > t_start, mask, tf.zeros_like(ts))
-            if t_end is not None:
-                mask = tf.where(ts < t_end, mask, tf.zeros_like(ts))
-            mask_ids = tf.where(mask)
-            comp_ts = tf.gather(comp_ts, indices=mask_ids)
-
             if isinstance(comp, Envelope):
 
                 amp = comp.params["amp"].get_value(dtype=tf.complex128)
@@ -321,24 +306,20 @@ class Instruction:
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-
-                if freq_offset == 0:
-                    phase = -xy_angle
-                else:
-                    phase = -xy_angle - freq_offset * comp_ts
+                phase = -xy_angle - freq_offset * ts
                 denv = None
                 if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
                     dt = ts[1] - ts[0]
                     delta = comp.params["delta"].get_value()
                     with tf.GradientTape() as t:
-                        t.watch(comp_ts)
-                        env = comp.get_shape_values(ts=comp_ts, t_before=t_before)
+                        t.watch(ts)
+                        env = comp.get_shape_values(ts=ts)
                     denv = t.gradient(
-                        env, comp_ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
+                        env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
                     )  # Derivative W.R.T. to bins
                     if not opts.pop("drag", False):
                         # Use drag_2 definition here
-                        denv = denv * dt  # derivative W.R.T. to time
+                        denv = denv * dt  # derivative W.R.T. time
 
                     env = tf.complex(env, -denv * delta)
                 elif "pwc" in options and options["pwc"]:
@@ -357,16 +338,12 @@ class Instruction:
                         print("C3 Warning: AWG has less timesteps than given PWC bins")
 
                 else:
-                    env = comp.get_shape_values(ts=comp_ts, t_before=t_before)
+                    env = comp.get_shape_values(ts)
                     env = tf.cast(env, tf.complex128)
 
-                comp_sig = (
+                signal += (
                     amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
                 )
-                mask_ids = tf.reshape(mask_ids, comp_ts.shape)
-                comp_sig = tf.reshape(comp_sig, comp_ts.shape[:1])
-
-                signal += tf.scatter_nd(mask_ids, comp_sig, shape=ts.shape[:1])
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
 

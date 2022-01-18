@@ -291,7 +291,7 @@ class Quantity:
 
     def get_opt_value(self) -> np.ndarray:
         """Get an optimizer friendly representation of the value."""
-        return self.value.numpy().flatten()
+        return self.value
 
     def set_opt_value(self, val: float) -> None:
         """Set value optimizer friendly.

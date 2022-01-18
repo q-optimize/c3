@@ -112,10 +112,10 @@ class Device(C3obj):
             num = self.slice_num + 1
         t_start = tf.constant(t_start + offset, dtype=tf.float64)
         t_end = tf.constant(t_end - offset, dtype=tf.float64)
-        if np.mod(t_end, dt) > 1e-7:
-            raise Exception(
-                "C3:Error:Given length of is not a multiple of the resolution"
-            )
+        # if np.mod(t_end, dt) > 1e-7:
+        #     raise Exception(
+        #         "C3:Error:Given length of is not a multiple of the resolution"
+        #     )
 
         # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)

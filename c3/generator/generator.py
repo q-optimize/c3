@@ -9,7 +9,6 @@ Example: A local oscillator and arbitrary waveform generator signal
 are put through via a mixer device to produce an effective modulated signal.
 """
 
-import copy
 from typing import List, Callable, Dict
 import hjson
 import numpy as np
@@ -212,7 +211,7 @@ class Generator:
                 if self.callback:
                     self.callback(chan, dev_id, output)
 
-            gen_signal[chan] = copy.deepcopy(signal_stack[dev_id])
+            gen_signal[chan] = signal_stack[dev_id]
 
         # Hack to use crosstalk. Will be generalized to a post-processing module.
         # TODO: Rework of the signal generation for larger chips, similar to qiskit

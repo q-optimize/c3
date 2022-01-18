@@ -38,6 +38,7 @@ class Envelope(C3obj):
         params: dict = {},
         shape: Union[Callable, str] = None,
         drag=False,
+        use_t_before=False,
     ):
         if isinstance(shape, str):
             self.shape = envelopes[shape]
@@ -53,6 +54,7 @@ class Envelope(C3obj):
         }
         default_params.update(params)
         self.drag = drag
+        self.set_use_t_before(use_t_before)
         super().__init__(
             name=name,
             desc=desc,
@@ -90,26 +92,34 @@ class Envelope(C3obj):
         repr_str += "drag pulse" + str(self.drag) + ", "
         return repr_str
 
-    def get_shape_values(self, ts, t_before=None):
+    def set_use_t_before(self, use_t_before):
+        if use_t_before:
+            self.get_shape_values = self._get_shape_values_before
+        else:
+            self.get_shape_values = self._get_shape_values_just
+
+    def _get_shape_values_before(self, ts):
+        """Return the value of the shape function at the specified times. With the offset, we make sure the
+        signal starts with amplitude zero by subtracting the shape value at time -dt.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        """
+        t_before = 2 * ts[0] - ts[1]  # t[0] - (t[1] - t[0])
+        offset = self.shape(t_before, self.params)
+        return self.shape(ts, self.params) - offset
+
+    def _get_shape_values_just(self, ts):
         """Return the value of the shape function at the specified times.
 
         Parameters
         ----------
         ts : tf.Tensor
             Vector of time samples.
-        t_before : tf.float64
-            Offset the beginning of the shape by this time.
         """
-        t_final = self.params["t_final"]
-        if t_before:
-            offset = self.shape(t_before, self.params)
-            vals = self.shape(ts, self.params) - offset
-            mask = tf.cast(ts < t_final.numpy() - t_before, vals.dtype)
-        else:
-            vals = self.shape(ts, self.params)
-            mask = tf.cast(ts < t_final.numpy(), vals.dtype)
-        # With the offset, we make sure the signal starts with amplitude 0.
-        return vals * mask
+        return self.shape(ts, self.params)
 
 
 @comp_reg_deco

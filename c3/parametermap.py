@@ -343,8 +343,7 @@ class ParameterMap:
             key = equiv_ids[0]
             par = self.__pars[key]
             values.append(par.get_opt_value())
-        # TODO is there a reason to not return a tensorflow array
-        return np.concatenate(values, axis=0).flatten()
+        return values
 
     def set_parameters_scaled(
         self, values: Union[tf.constant, tf.Variable], opt_map=None

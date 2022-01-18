@@ -482,7 +482,7 @@ class Experiment:
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
                     # TODO calculate properly the average frequency that each qubit sees
-                    offset = 0.0
+                    offset = tf.constant(0.0, tf.float64)
                     for ctrl in ctrls.values():
                         if "freq_offset" in ctrl.params.keys():
                             if ctrl.params["amp"] != 0.0:
