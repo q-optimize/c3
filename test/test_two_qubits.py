@@ -408,7 +408,7 @@ def test_bad_tf_sgd() -> None:
 def test_optim_lbfgs() -> None:
     lbfgs_opt = OptimalControl(
         dir_path=logdir,
-        fid_func=fidelities.average_infid_set,
+        fid_func=fidelities.unitary_infid_set,
         fid_subspace=["Q1", "Q2"],
         pmap=pmap,
         algorithm=algorithms.lbfgs,
