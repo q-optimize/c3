@@ -171,25 +171,25 @@ class Optimizer:
         parameters. Call plotting functions as set up.
 
         """
-        if self.optim_status["goal"] < self.current_best_goal:
-            self.current_best_goal = self.optim_status["goal"]
-            self.current_best_params = self.optim_status["params"]
-            self.pmap.store_values(
-                path=self.logdir + "best_point_" + self.logname,
-                optim_status=self.optim_status,
-            )
-        if self.store_unitaries:
-            self.exp.store_Udict(self.optim_status["goal"])
-            self.exp.store_unitaries_counter += 1
+        # if self.optim_status["goal"] < self.current_best_goal:
+        #     self.current_best_goal = self.optim_status["goal"]
+        #     self.current_best_params = self.optim_status["params"]
+        #     self.pmap.store_values(
+        #         path=self.logdir + "best_point_" + self.logname,
+        #         optim_status=self.optim_status,
+        #     )
+        # if self.store_unitaries:
+        #     self.exp.store_Udict(self.optim_status["goal"])
+        #     self.exp.store_unitaries_counter += 1
 
-        with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write(
-                f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n"
-            )
-            # logfile.write(hjson.dumpsJSON(self.optim_status, indent=2))
-            logfile.write(hjson.dumpsJSON(self.optim_status, default=hjson_encode))
-            logfile.write("\n")
-            logfile.flush()
+        # with open(self.logdir + self.logname, "a") as logfile:
+        #     logfile.write(
+        #         f"\nFinished evaluation {self.evaluation} at {time.asctime()}\n"
+        #     )
+        #     # logfile.write(hjson.dumpsJSON(self.optim_status, indent=2))
+        #     logfile.write(hjson.dumpsJSON(self.optim_status, default=hjson_encode))
+        #     logfile.write("\n")
+        #     logfile.flush()
 
         for logger in self.logger:
             logger.log_parameters(self.evaluation, self.optim_status)
