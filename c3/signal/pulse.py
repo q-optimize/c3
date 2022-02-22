@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import types
 import hjson
-from typing import Callable, Union
+from typing import Callable, Union, Dict
 
 components = dict()
 
@@ -35,7 +35,7 @@ class Envelope(C3obj):
         name: str,
         desc: str = " ",
         comment: str = " ",
-        params: dict = {},
+        params: Dict[str, Qty] = {},
         shape: Union[Callable, str] = None,
         drag=False,
         use_t_before=False,
@@ -98,6 +98,23 @@ class Envelope(C3obj):
         else:
             self.get_shape_values = self._get_shape_values_just
 
+    def compute_mask(self, ts) -> tf.Tensor:
+        """Compute a mask to cut out a signal after t_final.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time steps.
+
+        Returns
+        -------
+        tf.Tensor
+            [description]
+        """
+        t_final = self.params["t_final"].get_value()
+        dt = ts[1] - ts[0]
+        return tf.sigmoid((0.999 * t_final - ts) / dt * 1e6)
+
     def _get_shape_values_before(self, ts):
         """Return the value of the shape function at the specified times. With the offset, we make sure the
         signal starts with amplitude zero by subtracting the shape value at time -dt.
@@ -109,7 +126,8 @@ class Envelope(C3obj):
         """
         t_before = 2 * ts[0] - ts[1]  # t[0] - (t[1] - t[0])
         offset = self.shape(t_before, self.params)
-        return self.shape(ts, self.params) - offset
+        mask = self.compute_mask(ts)
+        return mask * (self.shape(ts, self.params) - offset)
 
     def _get_shape_values_just(self, ts):
         """Return the value of the shape function at the specified times.
@@ -119,7 +137,8 @@ class Envelope(C3obj):
         ts : tf.Tensor
             Vector of time samples.
         """
-        return self.shape(ts, self.params)
+        mask = self.compute_mask(ts)
+        return mask * self.shape(ts, self.params)
 
 
 @comp_reg_deco
