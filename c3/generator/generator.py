@@ -181,37 +181,40 @@ class Generator:
             Signal to be applied to the physical device.
 
         """
-        gen_signal = {}
+        gen_signal: Dict[str, Dict[str, tf.constant]] = {}
+        signal_stack: Dict[str, Dict[str, tf.constant]] = {}
         for chan in instr.comps:
             chain = self.chains[chan]
+            signal_stack[chan] = {}
 
             # create list of succeeding devices
             successors = {}
             for dev_id in chain:
                 successors[dev_id] = [x for x in chain if dev_id in chain[x]]
 
-            signal_stack: Dict[str, tf.constant] = {}
             for dev_id in self.sorted_chains[chan]:
                 # collect inputs
                 sources = self.chains[chan][dev_id]
-                inputs = [signal_stack[x] for x in sources]
+                inputs = [signal_stack[chan][x] for x in sources]
 
                 # calculate the output and store it in the stack
                 dev = self.devices[dev_id]
                 output = dev.process(instr, chan, *inputs)
-                signal_stack[dev_id] = output
+                signal_stack[chan][dev_id] = output
 
                 # remove inputs if they are not needed anymore
-                for source in sources:
-                    successors[source].remove(dev_id)
-                    if len(successors[source]) < 1:
-                        del signal_stack[source]
+                # for source in sources:
+                #     successors[source].remove(dev_id)
+                #     if len(successors[source]) < 1:
+                #         del signal_stack[chan][source]
 
                 # call the callback with the current signal
                 if self.callback:
                     self.callback(chan, dev_id, output)
 
-            gen_signal[chan] = signal_stack[dev_id]
+            gen_signal[chan] = {}
+            for key in output.keys():
+                gen_signal[chan][key] = tf.identity(output[key])
 
         # Hack to use crosstalk. Will be generalized to a post-processing module.
         # TODO: Rework of the signal generation for larger chips, similar to qiskit
