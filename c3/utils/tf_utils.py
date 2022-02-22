@@ -199,7 +199,8 @@ def tf_diff(l):  # noqa
 
 def Id_like(A):
     """Identity of the same size as A."""
-    return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
+    length = len(A.shape)  # TF does not like negative pythonic indexing
+    return tf.eye(A.shape[length - 1], batch_shape=A.shape[: length - 2], dtype=A.dtype)
 
 
 #

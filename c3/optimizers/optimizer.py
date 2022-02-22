@@ -225,14 +225,14 @@ class Optimizer:
         """
         key = str(x)
         gradient = self.gradients.pop(key)
-        if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
-            # TODO: is simply a warning sufficient?
-            gradient[
-                np.isnan(gradient)
-            ] = 1e-10  # Most probably at boundary of Quantity
-            gradient[
-                np.isinf(gradient)
-            ] = 1e-10  # Most probably at boundary of Quantity
+        # if np.any(np.isnan(gradient)) or np.any(np.isinf(gradient)):
+        #     # TODO: is simply a warning sufficient?
+        #     gradient[
+        #         np.isnan(gradient)
+        #     ] = 1e-10  # Most probably at boundary of Quantity
+        #     gradient[
+        #         np.isinf(gradient)
+        #     ] = 1e-10  # Most probably at boundary of Quantity
         return gradient
 
     def fct_to_min(
@@ -255,12 +255,14 @@ class Optimizer:
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
+            self.last_goal = float(goal)
             self.log_parameters()
             goal = float(goal)
             return goal
         else:
             current_params = input_parameters
             goal = self.goal_run(current_params)
+            self.last_goal = float(goal)
             self.log_parameters()
             return goal
 
@@ -294,6 +296,7 @@ class Optimizer:
             # par.numpy().tolist() for par in self.pmap.get_parameters()
         ]
         self.optim_status["gradient"] = gradients.tolist()
+        self.last_goal = float(goal)
         self.log_parameters()
         if isinstance(goal, tf.Tensor):
             goal = float(goal)
