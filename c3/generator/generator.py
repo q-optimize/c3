@@ -11,11 +11,11 @@ are put through via a mixer device to produce an effective modulated signal.
 
 from typing import List, Callable, Dict
 import hjson
-import numpy as np
 import tensorflow as tf
 from c3.c3objs import hjson_decode, hjson_encode
 from c3.signal.gates import Instruction
 from c3.generator.devices import devices as dev_lib
+from c3.generator.devices import Device
 
 
 class Generator:
@@ -37,10 +37,10 @@ class Generator:
         self,
         devices: dict = None,
         chains: dict = None,
-        resolution: np.float64 = 0.0,
+        resolution: float = 0.0,
         callback: Callable = None,
     ):
-        self.devices = {}
+        self.devices: Dict[str, Device] = {}
         if devices:
             self.devices = devices
         self.chains = {}
@@ -199,7 +199,7 @@ class Generator:
 
                 # calculate the output and store it in the stack
                 dev = self.devices[dev_id]
-                output = dev.process(instr, chan, *inputs)
+                output = dev.process(instr, chan, inputs)
                 signal_stack[chan][dev_id] = output
 
                 # remove inputs if they are not needed anymore
@@ -219,5 +219,7 @@ class Generator:
         # Hack to use crosstalk. Will be generalized to a post-processing module.
         # TODO: Rework of the signal generation for larger chips, similar to qiskit
         if "crosstalk" in self.devices:
-            gen_signal = self.devices["crosstalk"].process(signal=gen_signal)
+            gen_signal = self.devices["crosstalk"].process(
+                None, None, signals=[gen_signal]
+            )
         return gen_signal

@@ -129,10 +129,12 @@ model.set_dressed(True)
 sim_res = 100e9  # Resolution for numerical simulation
 awg_res = 2e9  # Realistic, limited resolution of an AWG
 
+awg = devices.AWG(name="awg", resolution=awg_res, outputs=1)
+
 generator = Gnr(
     devices={
         "LO": devices.LO(name="lo", resolution=sim_res, outputs=1),
-        "AWG": devices.AWG(name="awg", resolution=awg_res, outputs=1),
+        "AWG": awg,
         "DigitalToAnalog": devices.DigitalToAnalog(
             name="dac", resolution=sim_res, inputs=1, outputs=1
         ),
@@ -303,7 +305,7 @@ pmap = Pmap(single_q_gates, generator, model)
 
 exp = Exp(pmap)
 
-generator.devices["AWG"].enable_drag_2()
+awg.enable_drag_2()
 
 exp.set_opt_gates(["rx90p[0]"])
 
@@ -408,11 +410,11 @@ def test_bad_tf_sgd() -> None:
 def test_optim_lbfgs() -> None:
     lbfgs_opt = OptimalControl(
         dir_path=logdir,
-        fid_func=fidelities.average_infid_set,
+        fid_func=fidelities.unitary_infid_set,
         fid_subspace=["Q1", "Q2"],
         pmap=pmap,
         algorithm=algorithms.lbfgs,
-        options={"maxfun": 2},
+        options={"maxfun": 50},
         run_name="better_X90_lbfgs",
     )
     lbfgs_opt.set_exp(exp)

@@ -116,7 +116,7 @@ with open("test/generator_data.pickle", "rb") as filename:
 
 @pytest.mark.unit
 def test_LO() -> None:
-    lo_sig = lo.process(rx90p_q1, "d1")
+    lo_sig = lo.process(rx90p_q1, "d1", [])
     assert (
         lo_sig["inphase"].numpy() - data["lo_sig"]["values"][0].numpy() < 1e-12
     ).all()
@@ -128,7 +128,7 @@ def test_LO() -> None:
 
 @pytest.mark.unit
 def test_AWG() -> None:
-    awg_sig = awg.process(rx90p_q1, "d1")
+    awg_sig = awg.process(rx90p_q1, "d1", [])
     assert (
         awg_sig["inphase"].numpy() - data["awg_sig"]["inphase"].numpy() < 1e-12
     ).all()
@@ -139,7 +139,7 @@ def test_AWG() -> None:
 
 @pytest.mark.unit
 def test_DAC() -> None:
-    dac_sig = dac.process(rx90p_q1, "d1", data["awg_sig"])
+    dac_sig = dac.process(rx90p_q1, "d1", [data["awg_sig"]])
     assert (
         dac_sig["inphase"].numpy() - data["dig_to_an_sig"]["inphase"].numpy() < 1e-12
     ).all()
@@ -151,7 +151,7 @@ def test_DAC() -> None:
 
 @pytest.mark.unit
 def test_Response() -> None:
-    resp_sig = resp.process(rx90p_q1, "d1", data["dig_to_an_sig"])
+    resp_sig = resp.process(rx90p_q1, "d1", [data["dig_to_an_sig"]])
     assert (
         resp_sig["inphase"].numpy() - data["resp_sig"]["inphase"].numpy() < 1e-12
     ).all()
@@ -168,14 +168,14 @@ def test_mixer() -> None:
         "quadrature": data["lo_sig"]["values"][1],
         "ts": data["lo_sig"]["ts"],
     }
-    mixed_sig = mixer.process(rx90p_q1, "d1", lo_signal, data["resp_sig"])
+    mixed_sig = mixer.process(rx90p_q1, "d1", [lo_signal, data["resp_sig"]])
     assert (mixed_sig["values"].numpy() - data["mixer_sig"].numpy() < 1e-12).all()
 
 
 @pytest.mark.unit
 def test_v2hz() -> None:
     mixer_sig = {"values": data["mixer_sig"], "ts": data["lo_sig"]["ts"]}
-    final_sig = v_to_hz.process(rx90p_q1, "d1", mixer_sig)
+    final_sig = v_to_hz.process(rx90p_q1, "d1", [mixer_sig])
     assert (final_sig["values"].numpy() - data["v2hz_sig"].numpy() < 1).all()
 
 

@@ -47,3 +47,6 @@ def test_envelope_netzero() -> None:
         shape.numpy()
         == np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.0, -1.0, -1.0, -1.0, -1.0, -1.0, -0.0])
     )
+
+
+test_envelope_netzero()

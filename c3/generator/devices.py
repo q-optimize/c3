@@ -2,7 +2,7 @@ import os
 import tempfile
 import warnings
 import hjson
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, List
 import tensorflow as tf
 import numpy as np
 from c3.signal.pulse import Envelope, Carrier
@@ -26,7 +26,7 @@ class Device(C3obj):
 
     Parameters
     ----------
-    resolution: np.float64
+    resolution: float
         Number of samples per second this device operates at.
     """
 
@@ -69,15 +69,15 @@ class Device(C3obj):
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
 
-    def calc_slice_num(self, t_start: np.float64, t_end: np.float64) -> None:
+    def calc_slice_num(self, t_start: float = 0.0, t_end: float = 0.0) -> None:
         """
         Effective number of time slices given start, end and resolution.
 
         Parameters
         ----------
-        t_start: np.float64
+        t_start: float
             Starting time for this device.
-        t_end: np.float64
+        t_end: float
             End time for this device.
         """
         res = self.resolution
@@ -85,16 +85,16 @@ class Device(C3obj):
         # return self.slice_num
 
     def create_ts(
-        self, t_start: np.float64, t_end: np.float64, centered: bool = True
+        self, t_start: float = 0, t_end: float = 0, centered: bool = True
     ) -> tf.constant:
         """
         Compute time samples.
 
         Parameters
         ----------
-        t_start: np.float64
+        t_start: float
             Starting time for this device.
-        t_end: np.float64
+        t_end: float
             End time for this device.
         centered: boolean
             Sample in the middle of an interval, otherwise at the beginning.
@@ -120,6 +120,31 @@ class Device(C3obj):
         # ts = tf.range(t_start, t_end + 1e-16, dt)
         ts = tf.linspace(t_start, t_end, num)
         return ts
+
+    def process(
+        self, instr: Instruction, chan: str, signals: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """To be implemented by inheriting class.
+
+        Parameters
+        ----------
+        instr : Instruction
+            Information about the instruction or gate to be excecuted.
+        chan : str
+            Identifier of the drive line
+        signals : List[Dict[str, Any]]
+            List of potentially multiple input signals to this device.
+
+        Returns
+        -------
+        Dict[str, Any]
+            Output signal of this device.
+
+        Raises
+        ------
+        NotImplementedError
+        """
+        raise NotImplementedError()
 
 
 @dev_reg_deco
@@ -176,7 +201,7 @@ class VoltsToHertz(Device):
         self.outputs = props.pop("outputs", 1)
 
     def process(
-        self, instr: Instruction, chan: str, mixed_signal: Dict[str, Any]
+        self, instr: Instruction, chan: str, mixed_signal: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Transform signal from value of V to Hz.
 
@@ -191,8 +216,8 @@ class VoltsToHertz(Device):
             Waveform as control amplitudes
         """
         v2hz = self.params["V_to_Hz"].get_value()
-        self.signal["values"] = mixed_signal["values"] * v2hz
-        self.signal["ts"] = mixed_signal["ts"]
+        self.signal["values"] = mixed_signal[0]["values"] * v2hz
+        self.signal["ts"] = mixed_signal[0]["ts"]
         return self.signal
 
 
@@ -202,7 +227,7 @@ class Crosstalk(Device):
     Device to phenomenologically include crosstalk in the model by explicitly mixing
     drive lines.
 
-    Parameters
+    Parameters^
     ----------
 
     crosstalk_matrix: tf.constant
@@ -234,7 +259,9 @@ class Crosstalk(Device):
         self.outputs = props.pop("outputs", 1)
         self.params["crosstalk_matrix"] = props.pop("crosstalk_matrix", None)
 
-    def process(self, signal: Dict[str, Any]) -> Dict[str, Any]:
+    def process(
+        self, instr: Instruction, chan: str, signals: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Mix channels in the input signal according to a crosstalk matrix.
 
@@ -258,11 +285,11 @@ class Crosstalk(Device):
 
         """
         xtalk = self.params["crosstalk_matrix"]
-        signals = [signal[ch]["values"] for ch in self.crossed_channels]
-        crossed_signals = xtalk.get_value() @ signals
+        signal = [signals[0][ch]["values"] for ch in self.crossed_channels]
+        crossed_signals = xtalk.get_value() @ signal
         for indx, ch in enumerate(self.crossed_channels):
-            signal[ch]["values"] = crossed_signals[indx]
-        return signal
+            signals[0][ch]["values"] = crossed_signals[indx]
+        return signals[0]
 
 
 @dev_reg_deco
@@ -277,7 +304,7 @@ class DigitalToAnalog(Device):
         self.sampling_method = props.pop("sampling_method", "nearest")
 
     def process(
-        self, instr: Instruction, chan: str, awg_signal: Dict[str, Any]
+        self, instr: Instruction, chan: str, awg_signal: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Resample the awg values to higher resolution.
 
@@ -297,12 +324,12 @@ class DigitalToAnalog(Device):
             Inphase and Quadrature compontent of the upsampled signal.
         """
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
-        old_dim = awg_signal["inphase"].shape[0]
+        old_dim = awg_signal[0]["inphase"].shape[0]
         new_dim = ts.shape[0]
         # TODO add following zeros
         inphase = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["inphase"], shape=[1, old_dim, 1]),
+                tf.reshape(awg_signal[0]["inphase"], shape=[1, old_dim, 1]),
                 size=[1, new_dim],
                 method=self.sampling_method,
             ),
@@ -311,7 +338,7 @@ class DigitalToAnalog(Device):
         inphase = tf.cast(inphase, tf.float64)
         quadrature = tf.reshape(
             tf.image.resize(
-                tf.reshape(awg_signal["quadrature"], shape=[1, old_dim, 1]),
+                tf.reshape(awg_signal[0]["quadrature"], shape=[1, old_dim, 1]),
                 size=[1, new_dim],
                 method=self.sampling_method,
             ),
@@ -335,7 +362,7 @@ class Filter(Device):
         # super().__init__(**props)
 
     def process(
-        self, instr: Instruction, chan: str, Hz_signal: Dict[str, Any]
+        self, instr: Instruction, chan: str, Hz_signal: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Apply a filter function to the signal."""
         raise Exception("C3:ERROR Not yet implemented.")
@@ -560,9 +587,11 @@ class Response(Device):
         offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
         # TODO make sure ratio of risetime and resolution is an integer
         risefun = gauss - offset
-        inphase = self.convolve(iq_signal["inphase"], risefun / tf.reduce_sum(risefun))
+        inphase = self.convolve(
+            iq_signal[0]["inphase"], risefun / tf.reduce_sum(risefun)
+        )
         quadrature = self.convolve(
-            iq_signal["quadrature"], risefun / tf.reduce_sum(risefun)
+            iq_signal[0]["quadrature"], risefun / tf.reduce_sum(risefun)
         )
         self.signal = {
             "inphase": inphase,
@@ -602,7 +631,7 @@ class ResponseFFT(Device):
             Bandwidth limited IQ signal.
 
         """
-        res_diff = (iq_signal["ts"][1] - iq_signal["ts"][0]) / self.resolution - 1
+        res_diff = (iq_signal[0]["ts"][1] - iq_signal[0]["ts"][0]) / self.resolution - 1
         if res_diff > 1e-8:
             raise Exception(
                 "C3:Error:Actual time resolution differs from desired by {res_diff:1.3g}."
@@ -621,9 +650,9 @@ class ResponseFFT(Device):
         offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
 
         risefun = gauss - offset
-        inphase = tf_convolve(iq_signal["inphase"], risefun / tf.reduce_sum(risefun))
+        inphase = tf_convolve(iq_signal[0]["inphase"], risefun / tf.reduce_sum(risefun))
         quadrature = tf_convolve(
-            iq_signal["quadrature"], risefun / tf.reduce_sum(risefun)
+            iq_signal[0]["quadrature"], risefun / tf.reduce_sum(risefun)
         )
 
         inphase = tf.math.real(inphase)
@@ -631,7 +660,7 @@ class ResponseFFT(Device):
         self.signal = {
             "inphase": inphase,
             "quadrature": quadrature,
-            "ts": iq_signal["ts"],
+            "ts": iq_signal[0]["ts"],
         }
         return self.signal
 
@@ -845,7 +874,7 @@ class Mixer(Device):
         self.inputs = props.pop("inputs", 2)
         self.outputs = props.pop("outputs", 1)
 
-    def process(self, instr: Instruction, chan: str, in1: dict, in2: dict):
+    def process(self, instr: Instruction, chan: str, inputs: List[Dict[str, Any]]):
         """Combine signal from AWG and LO.
 
         Parameters
@@ -860,6 +889,7 @@ class Mixer(Device):
         dict
             Mixed signal.
         """
+        in1, in2 = inputs
         i1 = in1["inphase"]
         q1 = in1["quadrature"]
         i2 = in2["inphase"]
@@ -1004,7 +1034,9 @@ class LO(Device):
         self.freq_noise = props.pop("freq_noise", 0)
         self.amp_noise = props.pop("amp_noise", 0)
 
-    def process(self, instr: Instruction, chan: str) -> dict:
+    def process(
+        self, instr: Instruction, chan: str, signal: List[Dict[str, Any]]
+    ) -> dict:
         # TODO check somewhere that there is only 1 carrier per instruction
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         dt = ts[1] - ts[0]
@@ -1099,7 +1131,7 @@ class AWG(Device):
     # TODO create DC function
 
     # TODO make AWG take offset from the previous point
-    def create_IQ(self, instr: Instruction, chan: str) -> dict:
+    def create_IQ(self, instr: Instruction, chan: str, inputs) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
@@ -1137,7 +1169,7 @@ class AWG(Device):
         }
         return self.signal[chan]
 
-    def create_IQ_pwc(self, instr: Instruction, chan: str) -> dict:
+    def create_IQ_pwc(self, instr: Instruction, chan: str, inputs) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
