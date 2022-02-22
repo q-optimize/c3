@@ -202,13 +202,7 @@ class OptimalControl(Optimizer):
                 self.optim_status[cal.__name__] = val
             logfile.flush()
 
-        self.optim_status["params"] = []
         self.optim_status["goal"] = float(goal)
         self.optim_status["time"] = time.asctime()
-        # self.optim_status["params"] = [
-        #     par.numpy().tolist() for par in self.pmap.get_parameters()
-        # ]
-        # self.optim_status["goal"] = float(goal)
-        # self.optim_status["time"] = time.asctime()
         self.evaluation += 1
         return goal
