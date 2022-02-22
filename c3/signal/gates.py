@@ -5,7 +5,7 @@ from c3.c3objs import C3obj, Quantity, hjson_encode
 from c3.signal.pulse import Envelope, Carrier
 from c3.libraries.envelopes import gaussian_nonorm
 import warnings
-from typing import List, Dict
+from typing import List, Dict, Any
 import copy
 from c3.libraries.constants import GATES
 from c3.utils.qt_utils import np_kron_n, insert_mat_kron
@@ -48,10 +48,10 @@ class Instruction:
         name: str = " ",
         targets: list = None,
         params: dict = None,
-        ideal: np.array = None,
+        ideal: np.ndarray = None,
         channels: List[str] = [],
-        t_start: float = None,
-        t_end: float = None,
+        t_start: float = 0.0,
+        t_end: float = 0.0,
         # fixed_t_end: bool = True,
     ):
         self.name = name
@@ -87,7 +87,11 @@ class Instruction:
         self.__timings: Dict[str, tuple] = dict()
 
     def as_openqasm(self) -> dict:
-        asdict = {"name": self.name, "qubits": self.targets, "params": self.params}
+        asdict: Dict[str, Any] = {
+            "name": self.name,
+            "qubits": self.targets,
+            "params": self.params,
+        }
         if self.ideal:
             asdict["ideal"] = self.ideal
         return asdict
