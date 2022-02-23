@@ -67,7 +67,7 @@ class Instruction:
         self.t_start = t_start
         self.t_end = t_end
         self.comps: Dict[str, Dict[str, C3obj]] = dict()
-        self.__options: Dict[str, dict] = dict()
+        self._options: Dict[str, dict] = dict()
         self.fixed_t_end = True
         if ideal is not None:
             self.ideal = ideal
@@ -82,9 +82,9 @@ class Instruction:
             self.ideal = np_kron_n(gate_list)
         for chan in channels:
             self.comps[chan] = dict()
-            self.__options[chan] = dict()
+            self._options[chan] = dict()
 
-        self.__timings: Dict[str, tuple] = dict()
+        self._timings: Dict[str, tuple] = dict()
 
     def as_openqasm(self) -> dict:
         asdict: Dict[str, Any] = {
@@ -209,7 +209,7 @@ class Instruction:
         for k, v in options.items():
             if isinstance(v, dict):
                 options[k] = Quantity(**v)
-        self.__options[chan][name] = options
+        self._options[chan][name] = options
 
     def get_optimizable_parameters(self):
         parameter_list = list()
@@ -219,7 +219,7 @@ class Instruction:
                     parameter_list.append(
                         ([self.get_key(), chan, comp, par_name], par_value)
                     )
-                for option_name, option_val in self.__options[chan][comp].items():
+                for option_name, option_val in self._options[chan][comp].items():
                     if isinstance(option_val, Quantity):
                         parameter_list.append(
                             (
@@ -236,9 +236,9 @@ class Instruction:
 
     def get_timings(self, chan, name, minimal_time=False):
         key = chan + "-" + name
-        if key in self.__timings:
-            return self.__timings[key]
-        opts = self.__options[chan][name]
+        if key in self._timings:
+            return self._timings[key]
+        opts = self._options[chan][name]
         comp = self.comps[chan][name]
 
         t_start = self.t_start
@@ -270,14 +270,14 @@ class Instruction:
         #             f"""T_end of {self.get_key()} has been extended to {t_end}. This will however only take effect on the next signal generation"""
         #         )
         #         self.t_end = t_end
-        self.__timings[key] = (t_start, t_end)
+        self._timings[key] = (t_start, t_end)
         return t_start, t_end
 
     def get_full_gate_length(self):
         t_gate_start = np.inf
         t_gate_end = -np.inf
         for chan in self.comps:
-            self.__timings = dict()
+            self._timings = dict()
             for name in self.comps[chan]:
                 start, end = self.get_timings(chan, name, minimal_time=True)
                 t_gate_start = min(t_gate_start, start)
@@ -295,10 +295,10 @@ class Instruction:
     def get_awg_signal(self, chan, ts, options=None):
         amp_tot_sq = 0
         signal = tf.zeros_like(ts, tf.complex128)
-        self.__timings = dict()
+        self._timings = dict()
 
         for comp_name in self.comps[chan]:
-            opts = copy.copy(self.__options[chan][comp_name])
+            opts = copy.copy(self._options[chan][comp_name])
             opts.update(options)
             comp = self.comps[chan][comp_name]
             t_start, t_end = self.get_timings(chan, comp_name)

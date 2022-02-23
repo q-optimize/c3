@@ -1106,7 +1106,7 @@ class AWG(Device):
     """
 
     def __init__(self, **props):
-        self.__options = ""
+        self._options = ""
         self.logdir = props.pop(
             "logdir", os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
@@ -1125,7 +1125,7 @@ class AWG(Device):
 
     def asdict(self) -> dict:
         awg_dict = super().asdict()
-        awg_dict["options"] = self.__options
+        awg_dict["options"] = self._options
         return awg_dict
 
     # TODO create DC function
@@ -1159,7 +1159,7 @@ class AWG(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         self.ts = ts
 
-        signal, norm = instr.get_awg_signal(chan, ts, options={self.__options: True})
+        signal, norm = instr.get_awg_signal(chan, ts, options={self._options: True})
 
         self.amp_tot = norm
         self.signal[chan] = {
@@ -1263,13 +1263,13 @@ class AWG(Device):
         return self.signal[line]["quadrature"]  # * self.amp_tot
 
     def enable_drag(self):
-        self.__options = "drag"
+        self._options = "drag"
 
     def enable_drag_2(self):
-        self.__options = "drag_2"
+        self._options = "drag_2"
 
     def enable_pwc(self):
-        self.__options = "pwc"
+        self._options = "pwc"
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

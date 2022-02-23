@@ -57,9 +57,9 @@ class ParameterMap:
                 par_lens[par_id] = par_value.length
                 pars[par_id] = par_value
 
-        self.__par_lens = par_lens
-        self.__pars: Dict[str, Quantity] = pars
-        self.__par_ids_model = par_ids_model
+        self._par_lens = par_lens
+        self._pars: Dict[str, Quantity] = pars
+        self._par_ids_model = par_ids_model
 
     def update_parameters(self):
         self.__initialize_parameters()
@@ -166,11 +166,11 @@ class ParameterMap:
         """
         Returns the full parameter vector, including model and control parameters.
         """
-        return self.__pars
+        return self._pars
 
     def get_not_opt_params(self, opt_map=None) -> Dict[str, Quantity]:
         opt_map = self.get_opt_map(opt_map)
-        out_dict = copy.copy(self.__pars)
+        out_dict = copy.copy(self._pars)
         for equiv_ids in opt_map:
             for key in equiv_ids:
                 del out_dict[key]
@@ -183,14 +183,14 @@ class ParameterMap:
         units = []
         for equiv_ids in self.get_opt_map():
             key = equiv_ids[0]
-            units.append(self.__pars[key].unit)
+            units.append(self._pars[key].unit)
         return units
 
     def get_opt_limits(self):
         limits = []
         for equiv_ids in self.get_opt_map():
             key = equiv_ids[0]
-            limits.append((self.__pars[key].get_limits()))
+            limits.append((self._pars[key].get_limits()))
         return limits
 
     def check_limits(self, opt_map):
@@ -207,9 +207,9 @@ class ParameterMap:
         """
         for equiv_ids in self.get_opt_map():
             if len(equiv_ids) > 1:
-                limit = self.__pars[equiv_ids[0]].get_limits()
+                limit = self._pars[equiv_ids[0]].get_limits()
                 for key in equiv_ids[1:]:
-                    if not self.__pars[key].get_limits() == limit:
+                    if not self._pars[key].get_limits() == limit:
                         raise Exception(
                             "C3:Error:Limits for {key} are not equivalent to {equiv_ids}."
                         )
@@ -230,7 +230,7 @@ class ParameterMap:
         """
         key = "-".join(par_id)
         try:
-            value = self.__pars[key]
+            value = self._pars[key]
         except KeyError as ke:
             raise Exception(f"C3:ERROR:Parameter {key} not defined.") from ke
         return value
@@ -253,7 +253,7 @@ class ParameterMap:
         opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
             key = equiv_ids[0]
-            values.append(self.__pars[key])
+            values.append(self._pars[key])
         return values
 
     def get_parameter_dict(self, opt_map=None) -> Dict[str, Quantity]:
@@ -271,7 +271,7 @@ class ParameterMap:
         opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
             key = equiv_ids[0]
-            value_dict[key] = self.__pars[key]
+            value_dict[key] = self._pars[key]
         return value_dict
 
     def set_parameters(
@@ -299,9 +299,9 @@ class ParameterMap:
         for equiv_ids in opt_map:
             for key in equiv_ids:
                 # We check if a model parameter has changed
-                model_updated = key in self.__par_ids_model or model_updated
+                model_updated = key in self._par_ids_model or model_updated
                 try:
-                    par = self.__pars[key]
+                    par = self._pars[key]
                 except ValueError as ve:
                     raise Exception(f"C3:ERROR:{key} not defined.") from ve
                 try:
@@ -341,7 +341,7 @@ class ParameterMap:
         opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
             key = equiv_ids[0]
-            par = self.__pars[key]
+            par = self._pars[key]
             values.append(par.get_opt_value())
         return values
 
@@ -363,11 +363,11 @@ class ParameterMap:
         opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
             key = equiv_ids[0]
-            par_len = self.__pars[key].length
+            par_len = self._pars[key].length
             for par_id in equiv_ids:
                 key = par_id
-                model_updated = True if key in self.__par_ids_model else model_updated
-                par = self.__pars[key]
+                model_updated = True if key in self._par_ids_model else model_updated
+                par = self._pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
         if model_updated:
@@ -389,7 +389,7 @@ class ParameterMap:
         curr_indx = 0
         for equiv_ids in opt_map:
             key = equiv_ids[0]
-            par_len = self.__pars[key].length
+            par_len = self._pars[key].length
             curr_indx += par_len
             if idx < curr_indx:
                 return key
@@ -403,8 +403,8 @@ class ParameterMap:
         for equiv_ids in opt_map:
             for pid in equiv_ids:
                 key = pid
-                if key not in self.__pars:
-                    par_strings = "\n".join(self.__pars.keys())
+                if key not in self._pars:
+                    par_strings = "\n".join(self._pars.keys())
                     raise Exception(
                         f"C3:ERROR:Parameter {key} not defined in {par_strings}"
                     )
@@ -446,7 +446,7 @@ class ParameterMap:
         for equiv_ids in opt_map:
             par_id = equiv_ids[0]
             key = par_id
-            par = self.__pars[key]
+            par = self._pars[key]
             ret.append(f"{key:38}: {par}\n")
             if len(equiv_ids) > 1:
                 for eid in equiv_ids[1:]:
