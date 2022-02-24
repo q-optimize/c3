@@ -8,6 +8,7 @@ from c3.signal.gates import Instruction
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
+    tf_matmul_n,
     tf_spre,
     tf_spost,
 )
@@ -273,8 +274,8 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
 
     dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
 
-    U = tf_matmul_left(tf.cast(dUs, tf.complex128))
-    # U = tf_matmul_n(tf.cast(dUs, tf.complex128))
+    # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+    U = tf_matmul_n(dUs)
 
     if model.max_excitations:
         U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
