@@ -30,6 +30,7 @@ import c3.libraries.envelopes as envelopes
 import c3.libraries.fidelities as fidelities
 import c3.libraries.hamiltonians as hamiltonians
 import c3.libraries.tasks as tasks
+from c3.utils.tf_utils import tf_matmul_left, tf_matmul_n
 
 from c3.optimizers.optimalcontrol import OptimalControl
 
@@ -158,16 +159,14 @@ generator = Gnr(
             "LO": [],
             "AWG": [],
             "DigitalToAnalog": ["AWG"],
-            "Response": ["DigitalToAnalog"],
-            "Mixer": ["LO", "Response"],
+            "Mixer": ["LO", "DigitalToAnalog"],
             "VoltsToHertz": ["Mixer"],
         },
         "d2": {
             "LO": [],
             "AWG": [],
             "DigitalToAnalog": ["AWG"],
-            "Response": ["DigitalToAnalog"],
-            "Mixer": ["LO", "Response"],
+            "Mixer": ["LO", "DigitalToAnalog"],
             "VoltsToHertz": ["Mixer"],
         },
     },
@@ -446,3 +445,13 @@ def test_rk4() -> None:
     """Testing that RK4 exists and runs."""
     exp.set_prop_method(rk4)
     exp.propagation(model, generator, pmap.instructions["rx90p[0]"])
+
+
+def test_matmuls() -> None:
+    dus = result["dUs"]
+    u1 = tf_matmul_left(dus)
+    u2 = tf_matmul_n(dus)
+    almost_equal(u1, u2)
+
+
+test_optim_lbfgs()
