@@ -145,17 +145,18 @@ def tf_matmul_n(tensor_list):
 
     EXPERIMENTAL
     """
-    while tensor_list.shape[0] > 2:
+    while tensor_list.shape[0] > 1:
         even = tensor_list[0::2]
         odd = tensor_list[1::2]
         length = odd.shape[0]
         if even.shape[0] > odd.shape[0]:
-            even = tensor_list @ even[-1]
-            tensor_list = tf.einsum("bij,bjk->bik", even[:length], odd) @ even[-1]
+            tensor_list = tf.concat(
+                [tf.matmul(odd, even[:length]), tf.expand_dims(even[length], 0)], 0
+            )
         else:
-            tensor_list = tf.einsum("bij,bjk->bik", even, odd)
+            tensor_list = tf.matmul(odd, even)
 
-    return tensor_list[0] @ tensor_list[1]
+    return tensor_list[0]
 
 
 # MATH FUNCTIONS
