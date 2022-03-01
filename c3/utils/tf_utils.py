@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
 from c3.utils.qt_utils import pauli_basis, projector
+from typing import Callable, List
 
 
 def tf_setup():
@@ -139,24 +140,56 @@ def tf_matmul_right(dUs):
     return tf.foldl(lambda a, x: tf.matmul(a, x), dUs)
 
 
-def tf_matmul_n(tensor_list):
-    """
-    Multiply a list of tensors as binary tree.
+def tf_matmul_n(tensor_list: tf.Tensor, folding_stack: List[Callable]) -> tf.Tensor:
+    """Multipy a list of tensors using a precompiled stack of function to apply to each layer of a binary tree.
 
-    EXPERIMENTAL
+    Parameters
+    ----------
+    tensor_list : List[tf.Tensor]
+        Matrices to be multiplied.
+    folding_stack : List[Callable]
+        List of functions to multiply each layer.
+
+    Returns
+    -------
+    tf.Tensor
+        Reduced product of matrices.
     """
-    while tensor_list.shape[0] > 1:
+    for func in folding_stack:
         even = tensor_list[0::2]
         odd = tensor_list[1::2]
-        length = odd.shape[0]
-        if even.shape[0] > odd.shape[0]:
-            tensor_list = tf.concat(
-                [tf.matmul(odd, even[:length]), tf.expand_dims(even[length], 0)], 0
-            )
-        else:
-            tensor_list = tf.matmul(odd, even)
-
+        tensor_list = func(odd, even)
     return tensor_list[0]
+
+
+def _tf_matmul_n_even(odd: tf.Tensor, even: tf.Tensor) -> tf.Tensor:
+    """Batch matmul for tensors with equal batch dimesion.
+
+    Parameters
+    ----------
+    odd : tf.Tensor
+    even : tf.Tensor
+
+    Returns
+    -------
+    tf.Tensor
+    """
+    return tf.matmul(odd, even)
+
+
+def _tf_matmul_n_odd(odd: tf.Tensor, even: tf.Tensor) -> tf.Tensor:
+    """Batch matmul for tensors where the batch dimension of even is 1 longer than odd.
+
+    Parameters
+    ----------
+    odd : tf.Tensor
+    even : tf.Tensor
+
+    Returns
+    -------
+    tf.Tensor
+    """
+    return tf.concat([tf.matmul(odd, even[:-1]), tf.expand_dims(even[-1], 0)], 0)
 
 
 # MATH FUNCTIONS

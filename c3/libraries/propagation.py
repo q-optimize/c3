@@ -223,7 +223,7 @@ def gen_u_rk4(h, dt, dim):
 
 
 @unitary_deco
-def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
+def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -> Dict:
     """
     Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
     signal and Hamiltonians.
@@ -275,7 +275,7 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
     dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
-    U = tf_matmul_n(dUs)
+    U = tf_matmul_n(dUs, folding_stack)
 
     if model.max_excitations:
         U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))

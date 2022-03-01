@@ -27,6 +27,8 @@ from c3.utils.tf_utils import (
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
+    _tf_matmul_n_even,
+    _tf_matmul_n_odd,
 )
 
 from c3.libraries.propagation import unitary_provider, state_provider
@@ -54,7 +56,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None, prop_method=None):
+    def __init__(self, pmap: ParameterMap = None, prop_method=None, n_steps=0):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
@@ -67,6 +69,7 @@ class Experiment:
         self.compute_propagators_timestamp = 0
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
+        self.n_steps = n_steps
         self.set_prop_method(prop_method)
 
     def set_prop_method(self, prop_method=None) -> None:
@@ -76,6 +79,7 @@ class Experiment:
         """
         if prop_method is None:
             self.propagation = unitary_provider["pwc"]
+            self._compute_folding_stack()
         elif isinstance(prop_method, str):
             try:
                 self.propagation = unitary_provider[prop_method]
@@ -83,6 +87,17 @@ class Experiment:
                 self.propagation = state_provider[prop_method]
         elif callable(prop_method):
             self.propagation = prop_method
+
+    def _compute_folding_stack(self):
+        n_steps = self.n_steps
+        stack = []
+        while n_steps > 1:
+            if not n_steps % 2:  # is divisable by 2
+                stack.append(_tf_matmul_n_even)
+            else:
+                stack.append(_tf_matmul_n_odd)
+            n_steps = np.ceil(n_steps / 2)
+        self.folding_stack = stack
 
     def enable_qasm(self) -> None:
         """
@@ -438,7 +453,7 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             signal = generator.generate_signals(instr)
-            result = self.propagation(model, signal)
+            result = self.propagation(model, signal, self.folding_stack)
             states[instr] = result["states"]
         self.states = states
         return result
@@ -472,7 +487,7 @@ class Experiment:
                 )
 
             model.controllability = self.use_control_fields
-            result = self.propagation(model, generator, instr)
+            result = self.propagation(model, generator, instr, self.folding_stack)
             U = result["U"]
             dUs = result["dUs"]
             self.ts = result["ts"]
