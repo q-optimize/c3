@@ -302,7 +302,7 @@ single_q_gates.extend([QId_q2, rx90p_q2, Y90p_q2, X90m_q2, Y90m_q2])
 
 pmap = Pmap(single_q_gates, generator, model)
 
-exp = Exp(pmap)
+exp = Exp(pmap, n_steps=int(t_final * sim_res))
 
 awg.enable_drag_2()
 
@@ -343,7 +343,9 @@ with open("test/two_qubit_data.pickle", "rb") as filename:
 gen_signal = generator.generate_signals(pmap.instructions["rx90p[0]"])
 ts = gen_signal["d1"]["ts"]
 hdrift, hks = model.get_Hamiltonians()
-result = exp.propagation(model, generator, pmap.instructions["rx90p[0]"])
+result = exp.propagation(
+    model, generator, pmap.instructions["rx90p[0]"], exp.folding_stack
+)
 propagator = result["U"]
 
 
@@ -450,8 +452,5 @@ def test_rk4() -> None:
 def test_matmuls() -> None:
     dus = result["dUs"]
     u1 = tf_matmul_left(dus)
-    u2 = tf_matmul_n(dus)
+    u2 = tf_matmul_n(dus, exp.folding_stack)
     almost_equal(u1, u2)
-
-
-test_optim_lbfgs()
