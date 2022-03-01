@@ -450,6 +450,7 @@ def test_rk4() -> None:
 
 
 def test_matmuls() -> None:
+    """Comparing experimental matmul method to for loop."""
     dus = result["dUs"]
     u1 = tf_matmul_left(dus)
     u2 = tf_matmul_n(dus, exp.folding_stack)
