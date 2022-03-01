@@ -366,7 +366,7 @@ class Transmon(PhysicalComponent):
             d = 0
         factor = tf.sqrt(
             tf.sqrt(
-                tf.cos(pi * phi / phi_0) ** 2 + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+                tf.cos(pi * phi / phi_0) ** 2 + d**2 * tf.sin(pi * phi / phi_0) ** 2
             )
         )
         return factor
@@ -991,7 +991,7 @@ class Fluxonium(CShuntFluxQubit):
             * np.pi
         )
         if deriv_order == 0:  # Has to be defined
-            return -EJ * tf.math.cos(phi_variable + phi) + 0.5 * EL * phi_variable ** 2
+            return -EJ * tf.math.cos(phi_variable + phi) + 0.5 * EL * phi_variable**2
         elif deriv_order == 1:
             return EJ * tf.math.sin(phi_variable + phi) + EL * phi_variable
         elif deriv_order == 2:

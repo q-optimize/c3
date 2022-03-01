@@ -386,11 +386,11 @@ def gaussian_sigma(t, params):
     """
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
-    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
 
-    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    offset = tf.exp(-(t_final**2) / (8 * sigma**2))
     norm = (
-        tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(t_final / (np.sqrt(8) * sigma))
+        tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(t_final / (np.sqrt(8) * sigma))
         - t_final * offset
     )
     return (gauss - offset) / norm
@@ -483,7 +483,7 @@ def gaussian_nonorm(t, params):
     # TODO Add zeroes for t>t_final
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = params["sigma"].get_value()
-    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+    gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
     return gauss
 
 
@@ -493,9 +493,9 @@ def gaussian_der_nonorm(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
     gauss_der = (
-        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
         * (t - t_final / 2)
-        / sigma ** 2
+        / sigma**2
     )
     return gauss_der
 
@@ -506,13 +506,13 @@ def gaussian_der(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
     gauss_der = (
-        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
+        tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
         * (t - t_final / 2)
-        / sigma ** 2
+        / sigma**2
     )
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+    norm = tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(
         t_final / (tf.cast(tf.sqrt(8.0), tf.float64) * sigma)
-    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    ) - t_final * tf.exp(-(t_final**2) / (8 * sigma**2))
     return gauss_der / norm
 
 
@@ -521,11 +521,11 @@ def drag_sigma(t, params):
     """Second order gaussian."""
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
-    drag = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2))
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+    drag = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
+    norm = tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(
         t_final / (np.sqrt(8) * sigma)
-    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
-    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    ) - t_final * tf.exp(-(t_final**2) / (8 * sigma**2))
+    offset = tf.exp(-(t_final**2) / (8 * sigma**2))
     return (drag - offset) ** 2 / norm
 
 
@@ -547,16 +547,16 @@ def drag_der(t, params):
     """Derivative of second order gaussian."""
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = tf.cast(params["sigma"].get_value(), tf.float64)
-    norm = tf.sqrt(2 * np.pi * sigma ** 2) * tf.math.erf(
+    norm = tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(
         t_final / (np.sqrt(8) * sigma)
-    ) - t_final * tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
-    offset = tf.exp(-(t_final ** 2) / (8 * sigma ** 2))
+    ) - t_final * tf.exp(-(t_final**2) / (8 * sigma**2))
+    offset = tf.exp(-(t_final**2) / (8 * sigma**2))
     der = (
         -2
-        * (tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2)) - offset)
-        * (np.exp(-((t - t_final / 2) ** 2) / (2 * sigma ** 2)))
+        * (tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2)) - offset)
+        * (np.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2)))
         * (t - t_final / 2)
-        / sigma ** 2
+        / sigma**2
         / norm
     )
     return der
@@ -576,11 +576,11 @@ def flattop_variant(t, params):
     sigma = np.sqrt(2) * ramp * 0.2
     for i, e in enumerate(t):
         if t_up <= e <= t_up + ramp:
-            value[i] = np.exp(-((e - t_up - ramp) ** 2) / (2 * sigma ** 2))
+            value[i] = np.exp(-((e - t_up - ramp) ** 2) / (2 * sigma**2))
         elif t_up + ramp < e < t_down - ramp:
             value[i] = 1
         elif t_down >= e >= t_down - ramp:
-            value[i] = np.exp(-((e - t_down + ramp) ** 2) / (2 * sigma ** 2))
+            value[i] = np.exp(-((e - t_down + ramp) ** 2) / (2 * sigma**2))
         else:
             value[i] = 0
     return value

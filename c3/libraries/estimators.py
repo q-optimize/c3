@@ -34,7 +34,7 @@ def median_dist(exp_values, sim_values, exp_stds, shots):
 def rms_dist(exp_values, sim_values, exp_stds, shots):
     """Return the root mean squared of the differences."""
     diffs = tf.abs(tf.subtract(exp_values, sim_values))
-    return tf.sqrt(tf.reduce_mean(diffs ** 2))
+    return tf.sqrt(tf.reduce_mean(diffs**2))
 
 
 @estimator_reg_deco
@@ -154,7 +154,7 @@ def neg_loglkh_gauss_norm_sum(exp_values, sim_values, exp_stds, shots):
 @estimator_reg_deco
 def g_LL_prime(exp_values, sim_values, exp_stds, shots):
     std = tf.sqrt(sim_values * (1 - sim_values) / shots)
-    return tf.reduce_mean(((exp_values - sim_values) ** 2 / std ** 2 - 1) / 2)
+    return tf.reduce_mean(((exp_values - sim_values) ** 2 / std**2 - 1) / 2)
 
 
 def dv_g_LL_prime(gs, dv_gs, weights):

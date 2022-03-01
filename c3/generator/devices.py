@@ -378,7 +378,7 @@ class FluxTuning(Device):
             factor = tf.sqrt(
                 tf.sqrt(
                     tf.cos(pi * phi / phi_0) ** 2
-                    + d ** 2 * tf.sin(pi * phi / phi_0) ** 2
+                    + d**2 * tf.sin(pi * phi / phi_0) ** 2
                 )
             )
         else:
@@ -460,7 +460,7 @@ class FluxTuningLinear(Device):
             d = self.params["d"].get_value()
             max_freq = omega_0
             min_freq = omega_0 * tf.sqrt(
-                tf.sqrt(tf.cos(pi * 0.5) ** 2 + d ** 2 * tf.sin(pi * 0.5) ** 2)
+                tf.sqrt(tf.cos(pi * 0.5) ** 2 + d**2 * tf.sin(pi * 0.5) ** 2)
             )
         else:
             max_freq = omega_0
