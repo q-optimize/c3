@@ -306,7 +306,7 @@ class Instruction:
 
                 amp = comp.params["amp"].get_value(dtype=tf.complex128)
 
-                amp_tot_sq += amp ** 2
+                amp_tot_sq += amp**2
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()

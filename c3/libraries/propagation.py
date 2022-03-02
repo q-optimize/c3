@@ -395,7 +395,7 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     ht = tf.reduce_sum(prod, axis=0)
     comm = h0 @ ht - ht @ h0
     dh = -1.0j * ht * dt
-    dcomm = -comm * dt ** 2 / 2.0
+    dcomm = -comm * dt**2 / 2.0
     dUs = dU0 @ tf.linalg.expm(dh) @ (tf.identity(dU0) - dcomm)
     return dUs
 

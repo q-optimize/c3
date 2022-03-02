@@ -210,7 +210,7 @@ def get_basis_matrices(dim):
     Basis matrices with single ones of the matrices with given dimensions.
     """
     basis_mats = list()
-    for i in range(dim ** 2):
+    for i in range(dim**2):
         b = np.zeros((dim, dim), dtype=np.complex128)
         b.flat[i] = 1
         basis_mats.append(b)
