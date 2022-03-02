@@ -602,10 +602,10 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "max_shots": 65536,
         "coupling_map": None,  # TODO Coupling map from config file
         "description": "A physics based c3 simulator for qasm experiments",
-        "basis_gates": [  # TODO Basis gates from config file
+        "basis_gates": [
             "cx",
             "rx",
-        ],
+        ],  # TODO Basis gates from config file
         "gates": [],
     }
 
