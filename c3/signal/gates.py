@@ -133,7 +133,7 @@ class Instruction:
                 components[chan][key] = comp.asdict()
         out_dict = copy.deepcopy(self.__dict__)
         out_dict["ideal"] = out_dict["ideal"]
-        out_dict.pop("_Instruction__timings")
+        out_dict.pop("_timings")
         out_dict.pop("t_start")
         out_dict.pop("t_end")
         out_dict["gate_length"] = self.t_end - self.t_start
@@ -151,7 +151,7 @@ class Instruction:
             t_end=cfg["gate_length"],
         )
 
-        options = cfg.pop("_Instruction__options", None)
+        options = cfg.pop("_options", None)
         components = cfg.pop("drive_channels")
         self.__dict__.update(cfg)
         for drive_chan, comps in components.items():
