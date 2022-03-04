@@ -15,6 +15,7 @@ with open("test/two_qubit_data.pickle", "rb") as filename:
 
 
 def test_signals(get_two_qubit_chip) -> None:
+    """Compare generated control signals to stored examples."""
     exp = get_two_qubit_chip
     pmap = exp.pmap
     gen_signal = pmap.generator.generate_signals(pmap.instructions["rx90p[0]"])
@@ -27,6 +28,7 @@ def test_signals(get_two_qubit_chip) -> None:
 
 
 def test_hamiltonians(get_two_qubit_chip) -> None:
+    """Compare Hamilonians"""
     model = get_two_qubit_chip.pmap.model
     hdrift, hks = model.get_Hamiltonians()
     assert (hdrift.numpy() - test_data["hdrift"].numpy() < 1).any()
@@ -35,6 +37,7 @@ def test_hamiltonians(get_two_qubit_chip) -> None:
 
 
 def test_propagation(get_two_qubit_chip) -> None:
+    """Test that result of the propagation code does not change."""
     exp = get_two_qubit_chip
     pmap = exp.pmap
     result = exp.propagation(pmap.model, pmap.generator, pmap.instructions["rx90p[0]"])

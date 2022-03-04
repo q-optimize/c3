@@ -259,6 +259,7 @@ def get_test_dimensions() -> list:
 
 @pytest.fixture()
 def get_two_qubit_chip() -> Experiment:
+    """Setup a two qubit example with pre-optimized gates."""
     qubit_lvls = 2
     freq_q1 = 5e9
     q1 = Qubit(
@@ -499,6 +500,7 @@ def get_two_qubit_chip() -> Experiment:
 
 @pytest.fixture(params=algorithms.keys())
 def get_OC_optimizer(request, get_two_qubit_chip) -> OptimalControl:
+    """Create a general optimizer object with each algorithm with a decorator in the lib."""
     exp = get_two_qubit_chip
     exp.set_opt_gates(["rx90p[0]"])
     logdir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
@@ -508,7 +510,7 @@ def get_OC_optimizer(request, get_two_qubit_chip) -> OptimalControl:
         pmap=exp.pmap,
         fid_subspace=["Q1", "Q2"],
         algorithm=algorithms[request.param],
-        options={"maxiters": 50},
+        options={"maxiters": 2},
         run_name=f"better_X90_{request.param}",
     )
     opt.set_exp(exp)
