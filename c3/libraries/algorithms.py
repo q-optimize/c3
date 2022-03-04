@@ -46,7 +46,6 @@ def single_eval(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     fun(x_init)
 
 
-@algo_reg_deco
 def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Two dimensional scan of the function values around the initial point.
@@ -96,7 +95,6 @@ def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
                 fun([x, y])
 
 
-@algo_reg_deco
 def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     One dimensional scan of the function values around the initial point.
@@ -159,7 +157,6 @@ def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
             fun([x])
 
 
-@algo_reg_deco
 def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     One dimensional scan of the function values around the initial point, using
@@ -292,7 +289,6 @@ def tf_sgd(
     return result
 
 
-@algo_reg_deco
 def tf_adam(
     x_init: np.ndarray,
     fun: Callable = None,
@@ -357,7 +353,6 @@ def tf_rmsprop(
     raise NotImplementedError("This algorithm is not yet implemented.")
 
 
-@algo_reg_deco
 def tf_adadelta(
     x_init: np.ndarray,
     fun: Callable = None,
@@ -452,7 +447,6 @@ def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={
     return minimize(fun=fun, x0=x_init, options=options)
 
 
-@algo_reg_deco
 def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the pycma implementation of CMA-Es. See also:
@@ -566,7 +560,6 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
-@algo_reg_deco
 def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Performs a CMA-Es optimization and feeds the result into LBFG-S for further
@@ -590,7 +583,6 @@ def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
 
-@algo_reg_deco
 def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the
@@ -667,6 +659,5 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
-@algo_reg_deco
 def oneplusone(x_init, goal_fun):
     raise NotImplementedError("This algorithm is not yet implemented.")
