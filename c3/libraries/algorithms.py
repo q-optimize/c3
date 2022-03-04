@@ -447,6 +447,7 @@ def lbfgs_grad_free(x_init, fun=None, fun_grad=None, grad_lookup=None, options={
     return minimize(fun=fun, x0=x_init, options=options)
 
 
+@algo_reg_deco
 def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Wrapper for the pycma implementation of CMA-Es. See also:
@@ -560,6 +561,7 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
+@algo_reg_deco
 def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Performs a CMA-Es optimization and feeds the result into LBFG-S for further
