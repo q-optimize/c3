@@ -510,7 +510,7 @@ def get_OC_optimizer(request, get_two_qubit_chip) -> OptimalControl:
         pmap=exp.pmap,
         fid_subspace=["Q1", "Q2"],
         algorithm=algorithms[request.param],
-        options={"maxiters": 2},
+        options={"maxiters": 2} if request.param == "tf_sgd" else {"maxiter": 2},
         run_name=f"better_X90_{request.param}",
     )
     opt.set_exp(exp)
