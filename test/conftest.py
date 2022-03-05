@@ -498,7 +498,16 @@ def get_two_qubit_chip() -> Experiment:
     return Experiment(pmap)
 
 
-@pytest.fixture(params=algorithms.keys())
+@pytest.fixture(
+    params=[
+        "single_eval",
+        "tf_sgd",
+        "lbfgs",
+        "lbfgs_grad_free",
+        "cmaes",
+        "cma_pre_lbfgs",
+    ]
+)
 def get_OC_optimizer(request, get_two_qubit_chip) -> OptimalControl:
     """Create a general optimizer object with each algorithm with a decorator in the lib."""
     exp = get_two_qubit_chip
