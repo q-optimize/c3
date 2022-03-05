@@ -95,6 +95,7 @@ def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
                 fun([x, y])
 
 
+@algo_reg_deco
 def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     One dimensional scan of the function values around the initial point.
