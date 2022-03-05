@@ -57,11 +57,11 @@ def test_init_point(get_OC_optimizer) -> None:
 @pytest.mark.integration
 def test_optim(get_OC_optimizer) -> None:
     """
-    check if optimization result is below 1e-2
+    check if optimization result is below 1e-1
     """
     opt = get_OC_optimizer
     opt.optimize_controls()
-    assert opt.current_best_goal < 0.01
+    assert opt.current_best_goal < 0.1
 
 
 def test_rk4(get_two_qubit_chip) -> None:
