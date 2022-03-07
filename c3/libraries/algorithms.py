@@ -292,7 +292,6 @@ def tf_sgd(
     return result
 
 
-@algo_reg_deco
 def tf_adam(
     x_init: np.ndarray,
     fun: Callable = None,
@@ -357,7 +356,6 @@ def tf_rmsprop(
     raise NotImplementedError("This algorithm is not yet implemented.")
 
 
-@algo_reg_deco
 def tf_adadelta(
     x_init: np.ndarray,
     fun: Callable = None,
