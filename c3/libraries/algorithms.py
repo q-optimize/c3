@@ -46,6 +46,7 @@ def single_eval(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     fun(x_init)
 
 
+@algo_reg_deco
 def grid2D(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     Two dimensional scan of the function values around the initial point.
@@ -158,6 +159,7 @@ def sweep(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
             fun([x])
 
 
+@algo_reg_deco
 def adaptive_scan(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     One dimensional scan of the function values around the initial point, using
@@ -586,6 +588,7 @@ def cma_pre_lbfgs(x_init, fun=None, fun_grad=None, grad_lookup=None, options={})
     lbfgs(x1, fun_grad=fun_grad, grad_lookup=grad_lookup, options=options["lbfgs"])
 
 
+@algo_reg_deco
 def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     """
     EXPERIMENTAL CMA-Es where every point in the cloud is optimized with LBFG-S and the
@@ -662,5 +665,6 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     return es.result.xbest
 
 
+@algo_reg_deco
 def oneplusone(x_init, goal_fun):
     raise NotImplementedError("This algorithm is not yet implemented.")
