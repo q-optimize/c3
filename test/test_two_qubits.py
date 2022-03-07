@@ -14,6 +14,8 @@ with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
 
 
+@pytest.mark.tensorflow
+@pytest.mark.unit
 def test_signals(get_two_qubit_chip) -> None:
     """Compare generated control signals to stored examples."""
     exp = get_two_qubit_chip
@@ -27,6 +29,7 @@ def test_signals(get_two_qubit_chip) -> None:
     )
 
 
+@pytest.mark.unit
 def test_hamiltonians(get_two_qubit_chip) -> None:
     """Compare Hamilonians"""
     model = get_two_qubit_chip.pmap.model
@@ -36,6 +39,8 @@ def test_hamiltonians(get_two_qubit_chip) -> None:
         almost_equal(hks[key], test_data["hks"][key])
 
 
+@pytest.mark.tensorflow
+@pytest.mark.integration
 def test_propagation(get_two_qubit_chip) -> None:
     """Test that result of the propagation code does not change."""
     exp = get_two_qubit_chip
@@ -45,6 +50,7 @@ def test_propagation(get_two_qubit_chip) -> None:
     almost_equal(propagator, test_data["propagator"])
 
 
+@pytest.mark.unit
 def test_init_point(get_OC_optimizer) -> None:
     """Check that a previous best point can be loaded as an initial point."""
     opt = get_OC_optimizer
@@ -64,6 +70,8 @@ def test_optim(get_OC_optimizer) -> None:
     assert opt.current_best_goal < 0.1
 
 
+@pytest.mark.tensorflow
+@pytest.mark.integration
 def test_rk4(get_two_qubit_chip) -> None:
     """Testing that RK4 exists and runs."""
     exp = get_two_qubit_chip
