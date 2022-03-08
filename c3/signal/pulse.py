@@ -163,12 +163,26 @@ class EnvelopeNetZero(Envelope):
         params: dict = {},
         shape: types.FunctionType = None,
         drag: bool = False,
+        use_t_before=False,
     ):
         super().__init__(
-            name=name, desc=desc, comment=comment, params=params, shape=shape, drag=drag
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            shape=shape,
+            drag=drag,
+            use_t_before=use_t_before,
         )
+        self.set_use_t_before(use_t_before)
 
-    def get_shape_values(self, ts, t_before=None):
+    def set_use_t_before(self, use_t_before):
+        if use_t_before:
+            self.base_env = super()._get_shape_values_before
+        else:
+            self.base_env = super()._get_shape_values_just
+
+    def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times.
 
         Parameters
@@ -180,7 +194,7 @@ class EnvelopeNetZero(Envelope):
         """
         N_red = len(ts) // 2
         ts_red = tf.split(ts, [N_red, len(ts) - N_red], 0)[0]
-        shape_values = super().get_shape_values(ts=ts_red, t_before=t_before)
+        shape_values = self.base_env(ts=ts_red)
         netzero_shape_values = tf.concat(
             [shape_values, -shape_values, [0] * (len(ts) % 2)], axis=0
         )
