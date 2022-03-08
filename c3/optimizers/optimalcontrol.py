@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import time
 import tensorflow as tf
 from typing import Callable, List
 
@@ -185,27 +184,3 @@ class OptimalControl(Optimizer):
             **self.fid_func_kwargs,
         )
         return goal
-
-    def log_parameters(self):
-        with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
-            logfile.write(
-                "goal: {}: {}\n".format(self.fid_func.__name__, self.last_goal)
-            )
-            # for cal in self.callback_fids:
-            #     val = cal(
-            #         propagators=propagators,
-            #         instructions=self.pmap.instructions,
-            #         index=self.index,
-            #         dims=dims,
-            #         n_eval=self.evaluation + 1,
-            #     )
-            #     if isinstance(val, tf.Tensor):
-            #         val = float(val.numpy())
-            #     logfile.write("{}: {}\n".format(cal.__name__, val))
-            #     self.optim_status[cal.__name__] = val
-            logfile.flush()
-
-        self.optim_status["goal"] = self.last_goal
-        self.optim_status["time"] = time.asctime()
-        self.evaluation += 1
