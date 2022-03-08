@@ -376,6 +376,7 @@ def get_two_qubit_chip() -> Experiment:
         desc="Gaussian comp for single-qubit gates",
         params=gauss_params_single,
         shape=gaussian_nonorm,
+        use_t_before=True,
     )
 
     nodrive_env = Envelope(
@@ -495,7 +496,7 @@ def get_two_qubit_chip() -> Experiment:
             [["rx90p[0]", "d1", "gauss", "xy_angle"]],
         ]
     )
-    return Experiment(pmap)
+    return Experiment(pmap, n_steps=int(sim_res * t_final))
 
 
 @pytest.fixture(

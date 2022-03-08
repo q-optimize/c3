@@ -45,7 +45,9 @@ def test_propagation(get_two_qubit_chip) -> None:
     """Test that result of the propagation code does not change."""
     exp = get_two_qubit_chip
     pmap = exp.pmap
-    result = exp.propagation(pmap.model, pmap.generator, pmap.instructions["rx90p[0]"])
+    result = exp.propagation(
+        pmap.model, pmap.generator, pmap.instructions["rx90p[0]"], exp.folding_stack
+    )
     propagator = result["U"]
     almost_equal(propagator, test_data["propagator"])
 
