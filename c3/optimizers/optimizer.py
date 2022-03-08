@@ -165,7 +165,7 @@ class Optimizer:
                 best_point.write(f"Im {gate}: \n")
                 best_point.write(f"{np.round(np.imag(U), 3)}\n")
 
-    def log_parameters(self) -> None:
+    def log_parameters(self, params) -> None:
         """
         Log the current status. Write parameters to log. Update the current best
         parameters. Call plotting functions as set up.
@@ -173,7 +173,7 @@ class Optimizer:
         """
         if self.optim_status["goal"] < self.current_best_goal:
             self.current_best_goal = self.optim_status["goal"]
-            self.current_best_params = self.optim_status["params"]
+            self.current_best_params = params
             self.pmap.store_values(
                 path=self.logdir + "best_point_" + self.logname,
                 optim_status=self.optim_status,
@@ -255,15 +255,15 @@ class Optimizer:
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
-            self.last_goal = float(goal)
-            self.log_parameters()
+            self.optim_status["goal"] = float(goal)
+            self.log_parameters(input_parameters)
             goal = float(goal)
             return goal
         else:
             current_params = input_parameters
             goal = self.goal_run(current_params)
-            self.last_goal = float(goal)
-            self.log_parameters()
+            self.optim_status["goal"] = float(goal)
+            self.log_parameters(input_parameters)
             return goal
 
     def fct_to_min_autograd(self, x):
@@ -293,16 +293,15 @@ class Optimizer:
             )
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status["params"] = [
-            # par.numpy().tolist() for par in self.pmap.get_parameters()
+            par.get_value(y) for par, y in zip(self.pmap.get_parameters(), x)
         ]
         self.optim_status["gradient"] = gradients.tolist()
-        self.last_goal = float(goal)
-        if self.last_goal < self.current_best_goal:
-            self.current_best_goal = self.last_goal
+        last_goal = float(goal)
+        self.optim_status["goal"] = last_goal
+        if last_goal < self.current_best_goal:
+            self.current_best_goal = last_goal
             self.current_best_params = current_params
-        self.log_parameters()
-        if isinstance(goal, tf.Tensor):
-            goal = float(goal)
+        self.log_parameters(current_params)
         return goal
 
 
