@@ -293,7 +293,7 @@ class Optimizer:
             )
         self.gradients[str(current_params.numpy())] = gradients
         self.optim_status["params"] = [
-            par.get_value(y) for par, y in zip(self.pmap.get_parameters(), x)
+            par.get_other_value(y) for par, y in zip(self.pmap.get_parameters(), x)
         ]
         self.optim_status["gradient"] = gradients.tolist()
         last_goal = float(goal)
