@@ -236,7 +236,7 @@ class Quantity:
         # TODO should be removed to be consistent with get_value
         return self.get_value().numpy() / self.pref
 
-    def get_value(self, val: tf.float64 = None, dtype: tf.dtypes = None) -> tf.Tensor:
+    def get_value(self) -> tf.Tensor:
         """
         Return the value of this quantity as tensorflow.
 
@@ -245,13 +245,18 @@ class Quantity:
         val : tf.float64
         dtype: tf.dtypes
         """
-        if val is None:
-            val = self.value
-        if dtype is None:
-            dtype = self.value.dtype
+        return self.scale * (self.value + 1) / 2 + self.offset
 
-        value = self.scale * (val + 1) / 2 + self.offset
-        return tf.cast(value, dtype)
+    def get_other_value(self, val) -> tf.Tensor:
+        """
+        Return an arbitrary value of the same scale as this quantity as tensorflow.
+
+        Parameters
+        ----------
+        val : tf.float64
+        dtype: tf.dtypes
+        """
+        return self.scale * (val + 1) / 2 + self.offset
 
     def set_value(self, val, extend_bounds=False):
         if extend_bounds:
@@ -289,9 +294,9 @@ class Quantity:
         self.set_limits(min_val, max_val)
         self._set_value(val)
 
-    def get_opt_value(self) -> np.ndarray:
+    def get_opt_value(self) -> tf.Tensor:
         """Get an optimizer friendly representation of the value."""
-        return self.value
+        return tf.reshape(self.value, (-1,))
 
     def set_opt_value(self, val: float) -> None:
         """Set value optimizer friendly.
