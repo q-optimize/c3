@@ -1,6 +1,7 @@
 """Basic custom objects."""
 
 import hjson
+from typing import List
 import numpy as np
 import tensorflow as tf
 from c3.utils.utils import num3str
@@ -120,6 +121,13 @@ class Quantity:
             "unit": self.unit,
             "symbol": self.symbol,
         }
+
+    def tolist(self) -> List:
+        if self.length > 1:
+            tolist = self.get_value().numpy().tolist()
+        else:
+            tolist = [self.get_value().numpy().tolist()]
+        return tolist
 
     def __add__(self, other):
         out_val = copy.deepcopy(self)
