@@ -98,7 +98,7 @@ class Envelope(C3obj):
         else:
             self.get_shape_values = self._get_shape_values_just
 
-    def compute_mask(self, ts) -> tf.Tensor:
+    def compute_mask(self, ts, t_end=0) -> tf.Tensor:
         """Compute a mask to cut out a signal after t_final.
 
         Parameters
@@ -111,11 +111,13 @@ class Envelope(C3obj):
         tf.Tensor
             [description]
         """
-        t_final = self.params["t_final"].get_value()
+        t_final = max(self.params["t_final"].get_value(), t_end)
         dt = ts[1] - ts[0]
-        return tf.sigmoid((0.999 * t_final - ts) / dt * 1e6)
+        return tf.sigmoid((ts / dt + 0.001) * 1e6) * tf.sigmoid(
+            (0.999 * t_final - ts) / dt * 1e6
+        )
 
-    def _get_shape_values_before(self, ts):
+    def _get_shape_values_before(self, ts, t_final=0):
         """Return the value of the shape function at the specified times. With the offset, we make sure the
         signal starts with amplitude zero by subtracting the shape value at time -dt.
 
@@ -126,10 +128,10 @@ class Envelope(C3obj):
         """
         t_before = 2 * ts[0] - ts[1]  # t[0] - (t[1] - t[0])
         offset = self.shape(t_before, self.params)
-        mask = self.compute_mask(ts)
+        mask = self.compute_mask(ts, t_final)
         return mask * (self.shape(ts, self.params) - offset)
 
-    def _get_shape_values_just(self, ts):
+    def _get_shape_values_just(self, ts, t_final=0):
         """Return the value of the shape function at the specified times.
 
         Parameters
@@ -137,7 +139,7 @@ class Envelope(C3obj):
         ts : tf.Tensor
             Vector of time samples.
         """
-        mask = self.compute_mask(ts)
+        mask = self.compute_mask(ts, t_final)
         return mask * self.shape(ts, self.params)
 
 

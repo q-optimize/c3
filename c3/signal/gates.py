@@ -256,6 +256,7 @@ class Instruction:
         else:
             t_end = self.t_end
 
+        # TODO: The following needs to go. We need proper configuration or an error.
         # if t_end > self.t_end:
         #     if self.fixed_t_end and not minimal_time:
         #         warnings.warn(
@@ -296,30 +297,32 @@ class Instruction:
         amp_tot_sq = 0
         signal = tf.zeros_like(ts, tf.complex128)
         self._timings = dict()
-
+        dt = ts[1] - ts[0]
         for comp_name in self.comps[chan]:
             opts = copy.copy(self._options[chan][comp_name])
             opts.update(options)
             comp = self.comps[chan][comp_name]
             t_start, t_end = self.get_timings(chan, comp_name)
+            ts_off = ts - t_start
             if isinstance(comp, Envelope):
 
-                amp = comp.params["amp"].get_value(dtype=tf.complex128)
+                amp_re = comp.params["amp"].get_value()
+                amp = tf.complex(amp_re, tf.zeros_like(amp_re))
 
                 amp_tot_sq += amp**2
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle - freq_offset * ts
+                phase = -xy_angle - freq_offset * ts_off
                 denv = None
                 if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
-                    dt = ts[1] - ts[0]
+
                     delta = comp.params["delta"].get_value()
                     with tf.GradientTape() as t:
-                        t.watch(ts)
-                        env = comp.get_shape_values(ts=ts)
+                        t.watch(ts_off)
+                        env = comp.get_shape_values(ts_off, t_end - t_start)
                     denv = t.gradient(
-                        env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
+                        env, ts_off, unconnected_gradients=tf.UnconnectedGradients.ZERO
                     )  # Derivative W.R.T. to bins
                     if not opts.pop("drag", False):
                         # Use drag_2 definition here
@@ -342,7 +345,7 @@ class Instruction:
                         print("C3 Warning: AWG has less timesteps than given PWC bins")
 
                 else:
-                    env = comp.get_shape_values(ts)
+                    env = comp.get_shape_values(ts_off, t_end - t_start)
                     env = tf.cast(env, tf.complex128)
 
                 signal += (
@@ -372,7 +375,9 @@ class Instruction:
             env_params["freq_offset"] = Quantity(value=sideband, unit="Hz 2pi")
             carrier_freq -= sideband
         self.add_component(
-            comp=Envelope("gaussian", shape=gaussian_nonorm, params=env_params),
+            comp=Envelope(
+                "gaussian", shape=gaussian_nonorm, params=env_params, use_t_before=True
+            ),
             chan=chan,
         )
 
