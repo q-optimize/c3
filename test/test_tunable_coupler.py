@@ -472,7 +472,7 @@ def test_FluxTuning():
 
     for bias_phi in bias_phis:
         flux_tune.params["phi"].set_value(bias_phi)
-        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal = [{"ts": np.linspace(0, 1, 10), "values": phis}]
         signal_out = flux_tune.process(None, None, signal)
         flux_tune_frequencies = signal_out["values"].numpy()
 
@@ -513,7 +513,7 @@ def test_symmetric_FluxTuning():
 
     for bias_phi in bias_phis:
         flux_tune.params["phi"].set_value(bias_phi)
-        signal = {"ts": np.linspace(0, 1, 10), "values": phis}
+        signal = [{"ts": np.linspace(0, 1, 10), "values": phis}]
         signal_out = flux_tune.process(None, None, signal)
         flux_tune_frequencies = signal_out["values"].numpy()
 

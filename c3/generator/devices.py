@@ -435,7 +435,7 @@ class FluxTuning(Device):
         """
         phi = self.params["phi"].get_value()
         signal = signal_in[0]["values"]
-        self.signal["ts"] = signal_in["ts"]
+        self.signal["ts"] = signal_in[0]["ts"]
         freq = self.get_freq(phi + signal) - self.get_freq(phi)
         self.signal["values"] = freq
         return self.signal
