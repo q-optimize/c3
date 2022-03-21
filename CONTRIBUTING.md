@@ -20,6 +20,7 @@
   - [Pull Requests](#pull-requests)
     - [Changelog](#changelog)
   - [Continuous Integration Checks](#continuous-integration-checks)
+  - [Code Reviews](#code-reviews)
   - [Contributor License Agreement](#contributor-license-agreement)
   - [Git Flow Development Style](#git-flow-development-style)
   - [Developer Tools and Tips](#developer-tools-and-tips)
