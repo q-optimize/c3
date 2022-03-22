@@ -56,7 +56,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None, prop_method=None, n_steps=0):
+    def __init__(self, pmap: ParameterMap = None, prop_method=None, sim_res=0):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
@@ -69,7 +69,7 @@ class Experiment:
         self.compute_propagators_timestamp = 0
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
-        self.n_steps = n_steps
+        self.sim_res = sim_res
         self.set_prop_method(prop_method)
 
     def set_prop_method(self, prop_method=None) -> None:
@@ -79,7 +79,8 @@ class Experiment:
         """
         if prop_method is None:
             self.propagation = unitary_provider["pwc"]
-            self._compute_folding_stack()
+            if self.pmap is not None:
+                self._compute_folding_stack()
         elif isinstance(prop_method, str):
             try:
                 self.propagation = unitary_provider[prop_method]
@@ -89,15 +90,18 @@ class Experiment:
             self.propagation = prop_method
 
     def _compute_folding_stack(self):
-        n_steps = self.n_steps
-        stack = []
-        while n_steps > 1:
-            if not n_steps % 2:  # is divisable by 2
-                stack.append(_tf_matmul_n_even)
-            else:
-                stack.append(_tf_matmul_n_odd)
-            n_steps = np.ceil(n_steps / 2)
-        self.folding_stack = stack
+        self.folding_stack = {}
+        for instr in self.pmap.instructions.values():
+            n_steps = int((instr.t_end - instr.t_start) * self.sim_res)
+            if  n_steps not in self.folding_stack:
+                stack = []
+                while n_steps > 1:
+                    if not n_steps % 2:  # is divisable by 2
+                        stack.append(_tf_matmul_n_even)
+                    else:
+                        stack.append(_tf_matmul_n_odd)
+                    n_steps = np.ceil(n_steps / 2)
+                self.folding_stack[int((instr.t_end - instr.t_start) * self.sim_res)] = stack
 
     def enable_qasm(self) -> None:
         """
@@ -192,7 +196,9 @@ class Experiment:
             )
             instructions.append(instr)
 
+        self.sim_res = 100e9
         self.pmap = ParameterMap(instructions, generator=gen, model=model)
+        self.set_prop_method()
 
     def read_config(self, filepath: str) -> None:
         """
@@ -487,7 +493,8 @@ class Experiment:
                 )
 
             model.controllability = self.use_control_fields
-            result = self.propagation(model, generator, instr, self.folding_stack)
+            steps = int((instr.t_end - instr.t_start) * self.sim_res)
+            result = self.propagation(model, generator, instr, self.folding_stack[steps])
             U = result["U"]
             dUs = result["dUs"]
             self.ts = result["ts"]

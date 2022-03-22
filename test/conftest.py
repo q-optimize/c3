@@ -496,7 +496,7 @@ def get_two_qubit_chip() -> Experiment:
             [["rx90p[0]", "d1", "gauss", "xy_angle"]],
         ]
     )
-    return Experiment(pmap, n_steps=int(sim_res * t_final))
+    return Experiment(pmap, sim_res=sim_res)
 
 
 @pytest.fixture(
