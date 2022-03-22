@@ -44,13 +44,16 @@ class Generator:
         self.devices = {}
         if devices:
             self.devices = devices
-        self.chains = {}
+        self.chains: Dict[str, Dict[str, List[str]]] = {}
         self.sorted_chains: Dict[str, List[str]] = {}
+        self.set_chains(chains)
+        self.resolution = resolution
+        self.callback = callback
+
+    def set_chains(self, chains: Dict[str, Dict[str, List[str]]]):
         if chains:
             self.chains = chains
             self.__check_signal_chains()
-        self.resolution = resolution
-        self.callback = callback
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
