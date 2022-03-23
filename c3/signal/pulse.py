@@ -111,7 +111,7 @@ class Envelope(C3obj):
         tf.Tensor
             [description]
         """
-        t_final = tf.maximum(self.params["t_final"].get_value(), t_end)
+        t_final = tf.minimum(self.params["t_final"].get_value(), t_end)
         dt = ts[1] - ts[0]
         return tf.sigmoid((ts / dt + 0.001) * 1e6) * tf.sigmoid(
             (0.999 * t_final - ts) / dt * 1e6
