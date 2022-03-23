@@ -50,7 +50,7 @@ class Envelope(C3obj):
             "freq_offset": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="Hz 2pi"),
             "xy_angle": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="rad"),
             "sigma": Qty(value=5e-9, min_val=-2.0, max_val=+2.0, unit="s"),
-            "t_final": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="s"),
+            "t_final": Qty(value=1.0, min_val=-1.0, max_val=+1.0, unit="s"),
         }
         default_params.update(params)
         self.drag = drag
@@ -98,7 +98,7 @@ class Envelope(C3obj):
         else:
             self.get_shape_values = self._get_shape_values_just
 
-    def compute_mask(self, ts, t_end=0) -> tf.Tensor:
+    def compute_mask(self, ts, t_end) -> tf.Tensor:
         """Compute a mask to cut out a signal after t_final.
 
         Parameters
@@ -117,7 +117,7 @@ class Envelope(C3obj):
             (0.999 * t_final - ts) / dt * 1e6
         )
 
-    def _get_shape_values_before(self, ts, t_final=0):
+    def _get_shape_values_before(self, ts, t_final=1):
         """Return the value of the shape function at the specified times. With the offset, we make sure the
         signal starts with amplitude zero by subtracting the shape value at time -dt.
 
@@ -131,7 +131,7 @@ class Envelope(C3obj):
         mask = self.compute_mask(ts, t_final)
         return mask * (self.shape(ts, self.params) - offset)
 
-    def _get_shape_values_just(self, ts, t_final=0):
+    def _get_shape_values_just(self, ts, t_final=1):
         """Return the value of the shape function at the specified times.
 
         Parameters
