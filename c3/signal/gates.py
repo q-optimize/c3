@@ -376,7 +376,7 @@ class Instruction:
             carrier_freq -= sideband
         self.add_component(
             comp=Envelope(
-                "gaussian", shape=gaussian_nonorm, params=env_params, use_t_before=True
+                "gaussian", shape=gaussian_nonorm, params=env_params, use_t_before=False
             ),
             chan=chan,
         )
