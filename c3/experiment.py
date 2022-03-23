@@ -228,6 +228,7 @@ class Experiment:
             for k, v in cfg["options"].items():
                 self.__dict__[k] = v
         self.pmap = pmap
+        self.set_prop_method()
 
     def write_config(self, filepath: str) -> None:
         """
