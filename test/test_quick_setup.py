@@ -26,6 +26,7 @@ def test_exp_quick_setup_freqs() -> None:
     offset = gate.comps["d1"]["gaussian"].params["freq_offset"].get_value()
     assert qubit_freq == carrier_freq + offset
 
+
 @pytest.mark.integration
 def test_generator() -> None:
     gen_signal = pmap.generator.generate_signals(pmap.instructions["rx90p[0]"])
