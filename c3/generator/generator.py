@@ -142,6 +142,8 @@ class Generator:
     def fromdict(self, cfg: dict) -> None:
         for name, props in cfg["Devices"].items():
             dev_type = props.pop("c3type")
+            if "name" not in props:
+                props["name"] = name
             self.devices[name] = dev_lib[dev_type](**props)
         self.chains = cfg["Chains"]
         self.__check_signal_chains()

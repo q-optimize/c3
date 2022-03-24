@@ -724,6 +724,7 @@ class SkinEffectResponse(StepFuncFilter):
 
 
 # Obsolete. Use HighpassExponential
+@dev_reg_deco
 class HighpassFilter(Device):
     """Introduce a highpass filter
 
