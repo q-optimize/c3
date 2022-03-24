@@ -141,8 +141,8 @@ def test_qty_math() -> None:
     assert b - a == 1.5
     assert a * b == 1.0
     assert b * a == 1.0
-    np.testing.assert_allclose(a ** b, 0.25)
-    assert b ** a == 2 ** 0.5
+    np.testing.assert_allclose(a**b, 0.25)
+    assert b**a == 2**0.5
     np.testing.assert_allclose(a / b, 0.25)
     assert b / a == 4.0
     assert b % a == 0
