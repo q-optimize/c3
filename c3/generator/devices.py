@@ -60,6 +60,7 @@ class Device(C3obj):
             params[key] = item.asdict()
         return {
             "c3type": self.__class__.__name__,
+            "name": self.name,
             "inputs": self.inputs,
             "outputs": self.outputs,
             "params": params,
@@ -752,6 +753,7 @@ class SkinEffectResponse(StepFuncFilter):
 
 
 # Obsolete. Use HighpassExponential
+@dev_reg_deco
 class HighpassFilter(Device):
     """Introduce a highpass filter
 
@@ -1005,7 +1007,10 @@ class DC_Offset(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
         self.signal = None
-        self.params["offset_amp"] = props.pop("offset_amp")
+        if (
+            self.params["offset_amp"] is None
+        ):  # i.e. it was not set in the general params already
+            self.params["offset_amp"] = props.pop("offset_amp")
 
     def process(self, instr, chan, signal):
         """Distort signal by adding noise."""

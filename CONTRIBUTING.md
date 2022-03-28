@@ -20,6 +20,7 @@
   - [Pull Requests](#pull-requests)
     - [Changelog](#changelog)
   - [Continuous Integration Checks](#continuous-integration-checks)
+  - [Code Reviews](#code-reviews)
   - [Contributor License Agreement](#contributor-license-agreement)
   - [Git Flow Development Style](#git-flow-development-style)
   - [Developer Tools and Tips](#developer-tools-and-tips)
@@ -285,6 +286,10 @@ We use the [CHANGELOG.md](CHANGELOG.md) as a living document that not only recor
 ## Continuous Integration Checks
 
 As previously discussed, tests are an inherent part of good code. All Pull Requests made to the repository are automatically tested on Windows, MacOS and Ubuntu with Python 3.7, 3.8 and 3.9, which come up in the PR as `Checks`, notifying you whenever a particular check is failing on any platform. Except the `Code Complexity`, all checks should be passing for your PR to be ready for review/merge. The `Codecov` bot will also comment on the PR with a report on the change in the test coverage for that particular PR. If your PR reduces the overall test coverage of the codebase, it is not yet ready and you need to add more tests.
+
+## Code Reviews
+
+Code Reviews are an integral aspect of our development workflow with the explicit goal of ensuring that every new Pull Request either maintains or preferably improves the overall code quality of this codebase. We try to automate large chunks of the traditional code review process through the PR checks (formatters, linters, tests, code-coverage, code-climate etc) while expecting human reviewers to focus more on things lower in the [Code Review Pyramid](https://www.morling.dev/blog/the-code-review-pyramid/). This generally means that code reviewers shouldn't be nitpicking on style or tests but address possible issues in the design and implementation of the bugfix/feature. Everyone is welcome and encouraged to participate in our code-review process. Particularly, new contributors have a lot to gain by reviewing Pull Requests since it gives them a crash course in what it means to add a new feature to this codebase and what are the general pitfalls one needs to look out for. A good introduction to code reviews is the [Google Engineering Practices Documentation](https://google.github.io/eng-practices/). This [blog](https://stackoverflow.blog/2019/09/30/how-to-make-good-code-reviews-better/) on StackOverflow has further insights on improving the process.
 
 ## Contributor License Agreement
 

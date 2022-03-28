@@ -43,13 +43,16 @@ class Generator:
         self.devices: Dict[str, Device] = {}
         if devices:
             self.devices = devices
-        self.chains = {}
+        self.chains: Dict[str, Dict[str, List[str]]] = {}
         self.sorted_chains: Dict[str, List[str]] = {}
+        self.set_chains(chains)
+        self.resolution = resolution
+        self.callback = callback
+
+    def set_chains(self, chains: Dict[str, Dict[str, List[str]]]):
         if chains:
             self.chains = chains
             self.__check_signal_chains()
-        self.resolution = resolution
-        self.callback = callback
 
     def __check_signal_chains(self) -> None:
         for channel, chain in self.chains.items():
@@ -140,8 +143,9 @@ class Generator:
 
     def fromdict(self, cfg: dict) -> None:
         for name, props in cfg["Devices"].items():
-            props["name"] = name
             dev_type = props.pop("c3type")
+            if "name" not in props:
+                props["name"] = name
             self.devices[name] = dev_lib[dev_type](**props)
         self.chains = cfg["Chains"]
         self.__check_signal_chains()
