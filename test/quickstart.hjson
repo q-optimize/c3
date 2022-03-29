@@ -2,8 +2,8 @@
   "optim_type": "C1",
   "run_name" : "quick",
   "include_model" : true,
-  "model" : "test/test_model.cfg",
-  "generator": "test/generator.cfg",
+  "model" : "test_model.cfg",
+  "generator": "generator.cfg",
   "v2hz": 1e9
   "sideband": 50e6
   "single_qubit_gate_time" : 20e-9
