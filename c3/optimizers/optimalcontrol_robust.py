@@ -37,6 +37,15 @@ class OptimalControlRobust(OptimalControl):
         super().__init__(**kwargs)
         self.noise_map = noise_map
 
+    def noise_instance(self, current_params, noise_val, noise_map, evaluation):
+        self.exp.pmap.set_parameters([noise_val], [noise_map])
+        self.evaluation = evaluation
+        with tf.GradientTape() as t:
+            t.watch(current_params)
+            goal = self.goal_run(current_params)
+        grad = t.gradient(goal, current_params)
+        return goal, grad
+
     def goal_run_with_grad(self, current_params):
         goals = []
         goals_float = []
@@ -45,22 +54,17 @@ class OptimalControlRobust(OptimalControl):
         for noise_vals, noise_map in self.noise_map:
             orig_val = np.array(self.exp.pmap.get_parameters([noise_map]))
             for noise_val in noise_vals:
-                self.exp.pmap.set_parameters([noise_val], [noise_map])
-                self.evaluation = evaluation
-                with tf.GradientTape() as t:
-                    t.watch(current_params)
-                    goal = self.goal_run(current_params)
-                grad = t.gradient(goal, current_params)
+                goal, grad = self.noise_instance(
+                    current_params, noise_val, noise_map, evaluation
+                )
                 goals.append(goal)
                 goals_float.append(float(goal))
                 grads.append(grad)
             self.exp.pmap.set_parameters(orig_val, [noise_map])
 
         self.optim_status["goals_individual"] = [float(goal) for goal in goals]
-        self.optim_status["goal_std"] = float(tf.math.reduce_std(goals))
-        self.optim_status["gradient_std"] = (
-            tf.math.reduce_std(grads, axis=0).numpy().tolist()
-        )
+        self.optim_status["goal_std"] = float(np.std(goals))
+        self.optim_status["gradient_std"] = np.std(grads, axis=0).tolist()
         self.optim_status["goal"] = float(tf.reduce_mean(goals, axis=0))
         self.optim_status["time"] = time.asctime()
         return tf.reduce_mean(goals, axis=0), tf.reduce_mean(grads, axis=0)
@@ -77,3 +81,32 @@ class OptimalControlRobust(OptimalControl):
             logfile.write(hjson.dumps(self.noise_map, default=hjson_encode))
             logfile.write("\n")
             logfile.flush()
+
+    # Temporary fallback non @tf.function implementation for robust control
+    def goal_run(self, current_params: tf.Tensor) -> tf.float64:
+        """
+        Evaluate the goal function for current parameters.
+
+        Parameters
+        ----------
+        current_params : tf.Tensor
+            Vector representing the current parameter values.
+
+        Returns
+        -------
+        tf.float64
+            Value of the goal function
+        """
+        self.pmap.set_parameters_scaled(current_params)
+        dims = self.pmap.model.dims
+        propagators = self.exp.compute_propagators()
+
+        goal = self.fid_func(
+            propagators=propagators,
+            instructions=self.pmap.instructions,
+            index=self.index,
+            dims=dims,
+            n_eval=self.evaluation + 1,
+            **self.fid_func_kwargs,
+        )
+        return goal
