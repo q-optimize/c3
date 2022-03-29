@@ -29,7 +29,7 @@ from c3.optimizers.modellearning import ModelLearning
 from c3.experiment import Experiment
 
 OPT_CONFIG_FILE_NAME = "test/c3.cfg"
-DESIRED_PARAMS = [-210000000.0, 5000000000.0]
+DESIRED_PARAMS = [-210e6 * 2 * np.pi, 5e9 * 2 * np.pi]
 RELATIVE_TOLERANCE = 1e-3
 
 
