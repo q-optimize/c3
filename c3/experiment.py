@@ -56,7 +56,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None, prop_method=None, sim_res=0):
+    def __init__(self, pmap: ParameterMap = None, prop_method=None, sim_res=100e9):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
@@ -93,7 +93,7 @@ class Experiment:
         self.folding_stack = {}
         for instr in self.pmap.instructions.values():
             n_steps = int((instr.t_end - instr.t_start) * self.sim_res)
-            if  n_steps not in self.folding_stack:
+            if n_steps not in self.folding_stack:
                 stack = []
                 while n_steps > 1:
                     if not n_steps % 2:  # is divisable by 2
@@ -101,7 +101,9 @@ class Experiment:
                     else:
                         stack.append(_tf_matmul_n_odd)
                     n_steps = np.ceil(n_steps / 2)
-                self.folding_stack[int((instr.t_end - instr.t_start) * self.sim_res)] = stack
+                self.folding_stack[
+                    int((instr.t_end - instr.t_start) * self.sim_res)
+                ] = stack
 
     def enable_qasm(self) -> None:
         """
@@ -495,7 +497,9 @@ class Experiment:
 
             model.controllability = self.use_control_fields
             steps = int((instr.t_end - instr.t_start) * self.sim_res)
-            result = self.propagation(model, generator, instr, self.folding_stack[steps])
+            result = self.propagation(
+                model, generator, instr, self.folding_stack[steps]
+            )
             U = result["U"]
             dUs = result["dUs"]
             self.ts = result["ts"]
