@@ -634,11 +634,6 @@ class ResponseFFT(Device):
             Bandwidth limited IQ signal.
 
         """
-        res_diff = (iq_signal[0]["ts"][1] - iq_signal[0]["ts"][0]) / self.resolution - 1
-        if res_diff > 1e-8:
-            raise Exception(
-                "C3:Error:Actual time resolution differs from desired by {res_diff:1.3g}."
-            )
         n_ts = tf.floor(self.params["rise_time"].get_value() * self.resolution)
         ts = tf.linspace(
             tf.constant(0.0, dtype=tf.float64),
@@ -1019,9 +1014,6 @@ class DC_Offset(Device):
     def process(self, instr, chan, signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Distort signal by adding noise."""
         offset_amp = self.params["offset_amp"].get_value()
-        if np.abs(offset_amp) < 1e-17:
-            self.signal = signal[0]
-            return signal[0]
         out_signal = {}
         for k, sig in signal[0].items():
             out_signal[k] = sig + offset_amp
