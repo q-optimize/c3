@@ -109,9 +109,9 @@ class Experiment:
         """
         with open(filepath, "r") as cfg_file:
             cfg = hjson.loads(cfg_file.read(), object_pairs_hook=hjson_decode)
-        self.quick_setup(cfg)
+        self.quick_setup(cfg, os.path.dirname(filepath))
 
-    def quick_setup(self, cfg) -> None:
+    def quick_setup(self, cfg, base_dir: str = None) -> None:
         """
         Load a quick setup cfg and create all necessary components.
 
@@ -121,10 +121,17 @@ class Experiment:
             Configuration options
 
         """
+
+        def make_absolute(filename: str) -> str:
+            if base_dir or os.path.isabs(filename):
+                return os.path.join(base_dir, filename)
+            else:
+                return filename
+
         model = Model()
-        model.read_config(cfg["model"])
+        model.read_config(make_absolute(cfg["model"]))
         gen = Generator()
-        gen.read_config(cfg["generator"])
+        gen.read_config(make_absolute(cfg["generator"]))
 
         single_gate_time = cfg["single_qubit_gate_time"]
         v2hz = cfg["v2hz"]
