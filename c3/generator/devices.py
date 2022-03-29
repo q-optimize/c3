@@ -420,7 +420,9 @@ class FluxTuning(Device):
         biased_freq = (omega_0 - anhar) * self.get_factor(phi) + anhar
         return biased_freq
 
-    def process(self, instr: Instruction, chan: str, signal_in):
+    def process(
+        self, instr: Instruction, chan: str, signal_in: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Compute the qubit frequency resulting from an applied flux.
 
@@ -559,7 +561,7 @@ class Response(Device):
             )
         return convolution
 
-    def process(self, instr, chan, iq_signal):
+    def process(self, instr, chan, iq_signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Apply a Gaussian shaped limiting function to an IQ signal.
 
@@ -617,7 +619,7 @@ class ResponseFFT(Device):
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
 
-    def process(self, instr, chan, iq_signal):
+    def process(self, instr, chan, iq_signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Apply a Gaussian shaped limiting function to an IQ signal.
 
@@ -681,17 +683,17 @@ class StepFuncFilter(Device):
     def step_response_function(self, ts):
         raise NotImplementedError()
 
-    def process(self, instr, chan, signal_in):
-        ts = tf.identity(signal_in["ts"])
+    def process(self, instr, chan, signal_in: List[Dict[str, Any]]) -> Dict[str, Any]:
+        ts = tf.identity(signal_in[0]["ts"])
         step_response = self.step_response_function(ts)
         step_response = tf.concat([[0], step_response], axis=0)
         impulse_response = step_response[1:] - step_response[:-1]
         signal_out = dict()
-        for key, signal in signal_in.items():
+        for key, signal in signal_in[0].items():
             if key == "ts":
                 continue
             signal_out[key] = tf.cast(tf_convolve(signal, impulse_response), tf.float64)
-        signal_out["ts"] = signal_in["ts"]
+        signal_out["ts"] = signal_in[0]["ts"]
 
         return signal_out
 
@@ -814,7 +816,7 @@ class HighpassFilter(Device):
             )
         return convolution
 
-    def process(self, instr, chan, iq_signal):
+    def process(self, instr, chan, iq_signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
         Apply a highpass cutoff to an IQ signal.
 
@@ -841,8 +843,8 @@ class HighpassFilter(Device):
 
         N_ts = tf.cast(tf.math.ceil(4 / tb), tf.int32)
         N_ts += 1 - tf.math.mod(N_ts, 2)  # make n_ts odd
-        if N_ts > len(iq_signal["inphase"] * 100):
-            self.signal = iq_signal
+        if N_ts > len(iq_signal[0]["inphase"] * 100):
+            self.signal = iq_signal[0]
             return self.signal
 
         pi = tf.cast(np.pi, tf.double)
@@ -857,12 +859,12 @@ class HighpassFilter(Device):
         h *= w
         h /= -tf.reduce_sum(h)
         h = tf.where(tf.cast(n, tf.int32) == (N_ts - 1) // 2, tf.ones_like(h), h)
-        inphase = self.convolve(iq_signal["inphase"], h)
-        quadrature = self.convolve(iq_signal["quadrature"], h)
+        inphase = self.convolve(iq_signal[0]["inphase"], h)
+        quadrature = self.convolve(iq_signal[0]["quadrature"], h)
         self.signal = {
             "inphase": inphase,
             "quadrature": quadrature,
-            "ts": iq_signal["ts"],
+            "ts": iq_signal[0]["ts"],
         }
         return self.signal
 
@@ -876,7 +878,9 @@ class Mixer(Device):
         self.inputs = props.pop("inputs", 2)
         self.outputs = props.pop("outputs", 1)
 
-    def process(self, instr: Instruction, chan: str, inputs: List[Dict[str, Any]]):
+    def process(
+        self, instr: Instruction, chan: str, inputs: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """Combine signal from AWG and LO.
 
         Parameters
@@ -913,14 +917,14 @@ class LONoise(Device):
         self.signal = None
         self.params["noise_perc"] = props.pop("noise_perc")
 
-    def process(self, instr, chan, lo_signal):
+    def proces(self, instr, chan, lo_signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Distort signal by adding noise."""
         noise_perc = self.params["noise_perc"].get_value()
-        cos, sin = lo_signal["values"]
+        cos, sin = lo_signal[0]["values"]
         cos = cos + noise_perc * np.random.normal(loc=0.0, scale=1.0, size=len(cos))
         sin = sin + noise_perc * np.random.normal(loc=0.0, scale=1.0, size=len(sin))
-        lo_signal["values"] = (cos, sin)
-        self.signal = lo_signal
+        lo_signal[0]["values"] = (cos, sin)
+        self.signal = lo_signal[0]
         return self.signal
 
 
@@ -940,11 +944,11 @@ class Additive_Noise(Device):
         noise_amp = self.params["noise_amp"].get_value()
         return noise_amp * np.random.normal(size=tf.shape(sig), loc=0.0, scale=1.0)
 
-    def process(self, instr, chan, signal):
+    def process(self, instr, chan, signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Distort signal by adding noise."""
         noise_amp = self.params["noise_amp"].get_value()
-        out_signal = {"ts": signal["ts"]}
-        for k, sig in signal.items():
+        out_signal = {"ts": signal[0]["ts"]}
+        for k, sig in signal[0].items():
             if k != "ts" and "noise" not in k:
                 if noise_amp < 1e-17:
                     noise = tf.zeros_like(sig)
@@ -1012,18 +1016,18 @@ class DC_Offset(Device):
         ):  # i.e. it was not set in the general params already
             self.params["offset_amp"] = props.pop("offset_amp")
 
-    def process(self, instr, chan, signal):
+    def process(self, instr, chan, signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Distort signal by adding noise."""
         offset_amp = self.params["offset_amp"].get_value()
         if np.abs(offset_amp) < 1e-17:
-            self.signal = signal
-            return signal
+            self.signal = signal[0]
+            return signal[0]
         out_signal = {}
         if type(signal) is dict:
-            for k, sig in signal.items():
+            for k, sig in signal[0].items():
                 out_signal[k] = sig + offset_amp
         else:
-            out_signal = signal + offset_amp
+            out_signal = signal[0] + offset_amp
         self.signal = out_signal
         return self.signal
 
@@ -1136,7 +1140,9 @@ class AWG(Device):
     # TODO create DC function
 
     # TODO make AWG take offset from the previous point
-    def create_IQ(self, instr: Instruction, chan: str, inputs) -> dict:
+    def create_IQ(
+        self, instr: Instruction, chan: str, inputs: List[Dict[str, Any]]
+    ) -> dict:
         """
         Construct the in-phase (I) and quadrature (Q) components of the signal.
         These are universal to either experiment or simulation.
