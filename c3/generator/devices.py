@@ -1023,11 +1023,8 @@ class DC_Offset(Device):
             self.signal = signal[0]
             return signal[0]
         out_signal = {}
-        if type(signal) is dict:
-            for k, sig in signal[0].items():
-                out_signal[k] = sig + offset_amp
-        else:
-            out_signal = signal[0] + offset_amp
+        for k, sig in signal[0].items():
+            out_signal[k] = sig + offset_amp
         self.signal = out_signal
         return self.signal
 
