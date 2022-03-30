@@ -253,7 +253,7 @@ class Optimizer:
         """
         self.optim_status["params"] = [
             par.get_other_value(y)
-            for par, y in zip(self.pmap.get_parameters(), input_parameters)
+            for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters))
         ]
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
