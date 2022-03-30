@@ -230,6 +230,7 @@ class Experiment:
             for k, v in cfg["options"].items():
                 self.__dict__[k] = v
         self.pmap = pmap
+        self.sim_res = cfg.pop("sim_res", 100e9)
         self.set_prop_method()
 
     def write_config(self, filepath: str) -> None:
@@ -255,6 +256,7 @@ class Experiment:
             "overwrite_propagators": self.overwrite_propagators,
             "stop_partial_propagator_gradient": self.stop_partial_propagator_gradient,
         }
+        exp_dict["sim_res"] = self.sim_res
         return exp_dict
 
     def __str__(self) -> str:
