@@ -153,7 +153,7 @@ class OptimalControl(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        # self.load_best(self.logdir + "best_point_" + self.logname)
+        self.load_best(self.logdir + "best_point_" + self.logname)
         self.end_log()
 
     @tf.function
