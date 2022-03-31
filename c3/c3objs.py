@@ -264,7 +264,7 @@ class Quantity:
         val : tf.float64
         dtype: tf.dtypes
         """
-        return self.scale * (val + 1) / 2 + self.offset
+        return (self.scale * (val + 1) / 2 + self.offset) / self.pref
 
     def set_value(self, val, extend_bounds=False):
         if extend_bounds:
