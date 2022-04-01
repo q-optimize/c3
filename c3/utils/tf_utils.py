@@ -5,6 +5,7 @@ import tensorflow as tf
 from tensorflow.python.client import device_lib
 import os
 from c3.utils.qt_utils import pauli_basis, projector
+from typing import Callable, List
 
 
 def tf_setup():
@@ -115,9 +116,6 @@ def tf_measure_operator(M, rho):
 
 
 # MATRIX MULTIPLICATION FUNCTIONS
-
-
-@tf.function
 def tf_matmul_left(dUs: tf.Tensor):
     """
     Parameters:
@@ -130,7 +128,6 @@ def tf_matmul_left(dUs: tf.Tensor):
     return tf.foldr(lambda a, x: tf.matmul(a, x), dUs)
 
 
-@tf.function
 def tf_matmul_right(dUs):
     """
     Parameters:
@@ -143,20 +140,56 @@ def tf_matmul_right(dUs):
     return tf.foldl(lambda a, x: tf.matmul(a, x), dUs)
 
 
-def tf_matmul_n(tensor_list):
-    """
-    Multiply a list of tensors as binary tree.
+def tf_matmul_n(tensor_list: tf.Tensor, folding_stack: List[Callable]) -> tf.Tensor:
+    """Multipy a list of tensors using a precompiled stack of function to apply to each layer of a binary tree.
 
-    EXPERIMENTAL
+    Parameters
+    ----------
+    tensor_list : List[tf.Tensor]
+        Matrices to be multiplied.
+    folding_stack : List[Callable]
+        List of functions to multiply each layer.
+
+    Returns
+    -------
+    tf.Tensor
+        Reduced product of matrices.
     """
-    # TODO does it multiply from the left?
-    ln = len(tensor_list)
-    if ln == 1:
-        return tensor_list[0]
-    else:
-        left_half = tensor_list[0 : int(ln / 2)]
-        right_half = tensor_list[int(ln / 2) : ln]
-        return tf.matmul(tf_matmul_n(left_half), tf_matmul_n(right_half))
+    for func in folding_stack:
+        even = tensor_list[0::2]
+        odd = tensor_list[1::2]
+        tensor_list = func(odd, even)
+    return tensor_list[0]
+
+
+def _tf_matmul_n_even(odd: tf.Tensor, even: tf.Tensor) -> tf.Tensor:
+    """Batch matmul for tensors with equal batch dimesion.
+
+    Parameters
+    ----------
+    odd : tf.Tensor
+    even : tf.Tensor
+
+    Returns
+    -------
+    tf.Tensor
+    """
+    return tf.matmul(odd, even)
+
+
+def _tf_matmul_n_odd(odd: tf.Tensor, even: tf.Tensor) -> tf.Tensor:
+    """Batch matmul for tensors where the batch dimension of even is 1 longer than odd.
+
+    Parameters
+    ----------
+    odd : tf.Tensor
+    even : tf.Tensor
+
+    Returns
+    -------
+    tf.Tensor
+    """
+    return tf.concat([tf.matmul(odd, even[:-1]), tf.expand_dims(even[-1], 0)], 0)
 
 
 # MATH FUNCTIONS
@@ -196,13 +229,15 @@ def tf_diff(l):  # noqa
 
 
 # MATRIX FUNCTIONS
-@tf.function
+
+
 def Id_like(A):
     """Identity of the same size as A."""
-    return tf.eye(A.shape[-1], batch_shape=A.shape[:-2], dtype=A.dtype)
+    length = len(A.shape)  # TF does not like negative pythonic indexing
+    return tf.eye(A.shape[length - 1], batch_shape=A.shape[: length - 2], dtype=A.dtype)
 
 
-# @tf.function
+#
 # def tf_kron(A, B):
 #     """Kronecker product of 2 matrices."""
 #     dims = tf.shape(A) * tf.shape(B)
@@ -211,7 +246,6 @@ def Id_like(A):
 #     return reshaped
 
 
-@tf.function
 def tf_kron(A, B):
     """Kronecker product of 2 matrices. Can be applied with batch dimmensions."""
     dims = [A.shape[-2] * B.shape[-2], A.shape[-1] * B.shape[-1]]
@@ -235,7 +269,7 @@ def tf_spost(A):
     return tf_kron(Id, tf.linalg.matrix_transpose(A))
 
 
-# @tf.function
+#
 def tf_super(A):
     """Superoperator from both sides of matrix A."""
     superA = tf.matmul(
@@ -390,7 +424,6 @@ def tf_project_to_comp(A, dims, index=None, to_super=False):
     return tf.matmul(tf.matmul(P, A, transpose_a=True), P)
 
 
-@tf.function
 def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     """
     Compute the convolution with a time response.

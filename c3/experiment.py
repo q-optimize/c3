@@ -27,6 +27,8 @@ from c3.utils.tf_utils import (
     tf_state_to_dm,
     tf_super,
     tf_vec_to_dm,
+    _tf_matmul_n_even,
+    _tf_matmul_n_odd,
 )
 
 from c3.libraries.propagation import unitary_provider, state_provider
@@ -54,7 +56,7 @@ class Experiment:
 
     """
 
-    def __init__(self, pmap: ParameterMap = None, prop_method=None):
+    def __init__(self, pmap: ParameterMap = None, prop_method=None, sim_res=100e9):
         self.pmap = pmap
         self.opt_gates = None
         self.propagators: Dict[str, tf.Tensor] = {}
@@ -67,6 +69,7 @@ class Experiment:
         self.compute_propagators_timestamp = 0
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
+        self.sim_res = sim_res
         self.set_prop_method(prop_method)
 
     def set_prop_method(self, prop_method=None) -> None:
@@ -76,6 +79,8 @@ class Experiment:
         """
         if prop_method is None:
             self.propagation = unitary_provider["pwc"]
+            if self.pmap is not None:
+                self._compute_folding_stack()
         elif isinstance(prop_method, str):
             try:
                 self.propagation = unitary_provider[prop_method]
@@ -83,6 +88,22 @@ class Experiment:
                 self.propagation = state_provider[prop_method]
         elif callable(prop_method):
             self.propagation = prop_method
+
+    def _compute_folding_stack(self):
+        self.folding_stack = {}
+        for instr in self.pmap.instructions.values():
+            n_steps = int((instr.t_end - instr.t_start) * self.sim_res)
+            if n_steps not in self.folding_stack:
+                stack = []
+                while n_steps > 1:
+                    if not n_steps % 2:  # is divisable by 2
+                        stack.append(_tf_matmul_n_even)
+                    else:
+                        stack.append(_tf_matmul_n_odd)
+                    n_steps = np.ceil(n_steps / 2)
+                self.folding_stack[
+                    int((instr.t_end - instr.t_start) * self.sim_res)
+                ] = stack
 
     def enable_qasm(self) -> None:
         """
@@ -184,7 +205,9 @@ class Experiment:
             )
             instructions.append(instr)
 
+        self.sim_res = 100e9
         self.pmap = ParameterMap(instructions, generator=gen, model=model)
+        self.set_prop_method()
 
     def read_config(self, filepath: str) -> None:
         """
@@ -214,6 +237,8 @@ class Experiment:
             for k, v in cfg["options"].items():
                 self.__dict__[k] = v
         self.pmap = pmap
+        self.sim_res = cfg.pop("sim_res", 100e9)
+        self.set_prop_method()
 
     def write_config(self, filepath: str) -> None:
         """
@@ -238,6 +263,7 @@ class Experiment:
             "overwrite_propagators": self.overwrite_propagators,
             "stop_partial_propagator_gradient": self.stop_partial_propagator_gradient,
         }
+        exp_dict["sim_res"] = self.sim_res
         return exp_dict
 
     def __str__(self) -> str:
@@ -445,7 +471,7 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             signal = generator.generate_signals(instr)
-            result = self.propagation(model, signal)
+            result = self.propagation(model, signal, self.folding_stack)
             states[instr] = result["states"]
         self.states = states
         return result
@@ -479,7 +505,10 @@ class Experiment:
                 )
 
             model.controllability = self.use_control_fields
-            result = self.propagation(model, generator, instr)
+            steps = int((instr.t_end - instr.t_start) * self.sim_res)
+            result = self.propagation(
+                model, generator, instr, self.folding_stack[steps]
+            )
             U = result["U"]
             dUs = result["dUs"]
             self.ts = result["ts"]
@@ -489,7 +518,7 @@ class Experiment:
                 framechanges = {}
                 for line, ctrls in instr.comps.items():
                     # TODO calculate properly the average frequency that each qubit sees
-                    offset = 0.0
+                    offset = tf.constant(0.0, tf.float64)
                     for ctrl in ctrls.values():
                         if "freq_offset" in ctrl.params.keys():
                             if ctrl.params["amp"] != 0.0:

@@ -544,7 +544,9 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
 
         samples = es.ask()
         if init_point and iter == 0:
-            samples.insert(0, x_init)
+            # convert x_init to numpy array before appending
+            x_init_numpy = tf.concat(x_init, axis=0).numpy()
+            samples.insert(0, x_init_numpy)
             print("C3:STATUS:Adding initial point to CMA sample.")
         solutions = []
         if batch_noise:

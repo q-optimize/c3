@@ -106,7 +106,7 @@ def test_qty_matrix_set() -> None:
 
 @pytest.mark.unit
 def test_qty_matrix_set_opt() -> None:
-    assert (matrix.get_opt_value() == [1.0, -1.0, -1.0, 1.0]).all()
+    assert (matrix.get_opt_value().numpy() == np.array([1.0, -1.0, -1.0, 1.0])).all()
 
 
 @pytest.mark.unit
@@ -120,7 +120,7 @@ def test_qty_np_conversions() -> None:
     np.array(a)
     float(a)
     assert np.mod([a], 2) == np.array([[1.0]])
-    assert list(a) == [3.0]
+    assert a.tolist() == [3.0]
 
     b = Quantity(np.array([0.0000001, 0.00001]))
     np.array([b])

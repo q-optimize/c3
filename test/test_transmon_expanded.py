@@ -174,7 +174,7 @@ instr2.add_component(carr_q1, "Qubit2")
 parameter_map = ParameterMap(
     instructions=[instr1, instr2], model=model, generator=generator
 )
-exp = Experiment(pmap=parameter_map)
+exp = Experiment(pmap=parameter_map, sim_res=sim_res)
 exp.use_control_fields = False
 exp.stop_partial_propagator_gradient = False
 
@@ -286,7 +286,7 @@ def test_save_and_load():
     propagators = exp.propagators
     cfg_str = hjson.dumpsJSON(exp.asdict(), default=hjson_encode)
     cfg_dct = hjson.loads(cfg_str, object_pairs_hook=hjson_decode)
-    exp2 = Experiment()
+    exp2 = Experiment(sim_res=sim_res)
     exp2.from_dict(cfg_dct)
     exp2.compute_propagators()
     for k in propagators:

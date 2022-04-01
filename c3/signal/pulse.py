@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 import types
 import hjson
-from typing import Callable, Union
+from typing import Callable, Union, Dict
 
 components = dict()
 
@@ -35,9 +35,10 @@ class Envelope(C3obj):
         name: str,
         desc: str = " ",
         comment: str = " ",
-        params: dict = {},
+        params: Dict[str, Qty] = {},
         shape: Union[Callable, str] = None,
         drag=False,
+        use_t_before=False,
     ):
         if isinstance(shape, str):
             self.shape = envelopes[shape]
@@ -49,10 +50,11 @@ class Envelope(C3obj):
             "freq_offset": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="Hz 2pi"),
             "xy_angle": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="rad"),
             "sigma": Qty(value=5e-9, min_val=-2.0, max_val=+2.0, unit="s"),
-            "t_final": Qty(value=0.0, min_val=-1.0, max_val=+1.0, unit="s"),
+            "t_final": Qty(value=1.0, min_val=-1.0, max_val=+1.0, unit="s"),
         }
         default_params.update(params)
         self.drag = drag
+        self.set_use_t_before(use_t_before)
         super().__init__(
             name=name,
             desc=desc,
@@ -90,26 +92,55 @@ class Envelope(C3obj):
         repr_str += "drag pulse" + str(self.drag) + ", "
         return repr_str
 
-    def get_shape_values(self, ts, t_before=None):
+    def set_use_t_before(self, use_t_before):
+        if use_t_before:
+            self.get_shape_values = self._get_shape_values_before
+        else:
+            self.get_shape_values = self._get_shape_values_just
+
+    def compute_mask(self, ts, t_end) -> tf.Tensor:
+        """Compute a mask to cut out a signal after t_final.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time steps.
+
+        Returns
+        -------
+        tf.Tensor
+            [description]
+        """
+        t_final = tf.minimum(self.params["t_final"].get_value(), t_end)
+        dt = ts[1] - ts[0]
+        return tf.sigmoid((ts / dt + 0.001) * 1e6) * tf.sigmoid(
+            (0.999 * t_final - ts) / dt * 1e6
+        )
+
+    def _get_shape_values_before(self, ts, t_final=1):
+        """Return the value of the shape function at the specified times. With the offset, we make sure the
+        signal starts with amplitude zero by subtracting the shape value at time -dt.
+
+        Parameters
+        ----------
+        ts : tf.Tensor
+            Vector of time samples.
+        """
+        t_before = 2 * ts[0] - ts[1]  # t[0] - (t[1] - t[0])
+        offset = self.shape(t_before, self.params)
+        mask = self.compute_mask(ts, t_final)
+        return mask * (self.shape(ts, self.params) - offset)
+
+    def _get_shape_values_just(self, ts, t_final=1):
         """Return the value of the shape function at the specified times.
 
         Parameters
         ----------
         ts : tf.Tensor
             Vector of time samples.
-        t_before : tf.float64
-            Offset the beginning of the shape by this time.
         """
-        t_final = self.params["t_final"]
-        if t_before:
-            offset = self.shape(t_before, self.params)
-            vals = self.shape(ts, self.params) - offset
-            mask = tf.cast(ts < t_final.numpy() - t_before, vals.dtype)
-        else:
-            vals = self.shape(ts, self.params)
-            mask = tf.cast(ts < t_final.numpy(), vals.dtype)
-        # With the offset, we make sure the signal starts with amplitude 0.
-        return vals * mask
+        mask = self.compute_mask(ts, t_final)
+        return mask * self.shape(ts, self.params)
 
 
 @comp_reg_deco
@@ -134,12 +165,26 @@ class EnvelopeNetZero(Envelope):
         params: dict = {},
         shape: types.FunctionType = None,
         drag: bool = False,
+        use_t_before=False,
     ):
         super().__init__(
-            name=name, desc=desc, comment=comment, params=params, shape=shape, drag=drag
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            shape=shape,
+            drag=drag,
+            use_t_before=use_t_before,
         )
+        self.set_use_t_before(use_t_before)
 
-    def get_shape_values(self, ts, t_before=None):
+    def set_use_t_before(self, use_t_before):
+        if use_t_before:
+            self.base_env = super()._get_shape_values_before
+        else:
+            self.base_env = super()._get_shape_values_just
+
+    def get_shape_values(self, ts):
         """Return the value of the shape function at the specified times.
 
         Parameters
@@ -151,7 +196,7 @@ class EnvelopeNetZero(Envelope):
         """
         N_red = len(ts) // 2
         ts_red = tf.split(ts, [N_red, len(ts) - N_red], 0)[0]
-        shape_values = super().get_shape_values(ts=ts_red, t_before=t_before)
+        shape_values = self.base_env(ts=ts_red)
         netzero_shape_values = tf.concat(
             [shape_values, -shape_values, [0] * (len(ts) % 2)], axis=0
         )

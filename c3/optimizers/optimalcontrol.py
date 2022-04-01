@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import time
 import tensorflow as tf
 from typing import Callable, List
 
@@ -157,6 +156,7 @@ class OptimalControl(Optimizer):
         self.load_best(self.logdir + "best_point_" + self.logname)
         self.end_log()
 
+    @tf.function
     def goal_run(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function for current parameters.
@@ -183,28 +183,4 @@ class OptimalControl(Optimizer):
             n_eval=self.evaluation + 1,
             **self.fid_func_kwargs,
         )
-
-        with open(self.logdir + self.logname, "a") as logfile:
-            logfile.write(f"\nEvaluation {self.evaluation + 1} returned:\n")
-            logfile.write("goal: {}: {}\n".format(self.fid_func.__name__, float(goal)))
-            for cal in self.callback_fids:
-                val = cal(
-                    propagators=propagators,
-                    instructions=self.pmap.instructions,
-                    index=self.index,
-                    dims=dims,
-                    n_eval=self.evaluation + 1,
-                )
-                if isinstance(val, tf.Tensor):
-                    val = float(val.numpy())
-                logfile.write("{}: {}\n".format(cal.__name__, val))
-                self.optim_status[cal.__name__] = val
-            logfile.flush()
-
-        self.optim_status["params"] = [
-            par.numpy().tolist() for par in self.pmap.get_parameters()
-        ]
-        self.optim_status["goal"] = float(goal)
-        self.optim_status["time"] = time.asctime()
-        self.evaluation += 1
         return goal

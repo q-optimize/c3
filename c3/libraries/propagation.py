@@ -8,6 +8,7 @@ from c3.signal.gates import Instruction
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
+    tf_matmul_n,
     tf_spre,
     tf_spost,
 )
@@ -222,7 +223,7 @@ def gen_u_rk4(h, dt, dim):
 
 
 @unitary_deco
-def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
+def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -> Dict:
     """
     Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
     signal and Hamiltonians.
@@ -267,13 +268,14 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
         ):
             raise Exception("C3Error:Something with the times happend.")
 
-    dt = tf.constant(ts[1].numpy() - ts[0].numpy(), dtype=tf.complex128)
+    dt = ts[1] - ts[0]
 
     batch_size = tf.constant(len(h0), tf.int32)
 
     dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
 
-    U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+    # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
+    U = tf_matmul_n(dUs, folding_stack)
 
     if model.max_excitations:
         U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
@@ -287,7 +289,6 @@ def pwc(model: Model, gen: Generator, instr: Instruction) -> Dict:
 ####################
 
 
-@tf.function
 def tf_dU_of_t(h0, hks, cflds_t, dt):
     """
     Compute H(t) = H_0 + sum_k c_k H_k and matrix exponential exp(-i H(t) dt).
@@ -321,7 +322,6 @@ def tf_dU_of_t(h0, hks, cflds_t, dt):
     return dU
 
 
-# @tf.function
 def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     """
     Compute the Lindbladian and it's matrix exponential exp(L(t) dt).
@@ -366,7 +366,6 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
-@tf.function
 def tf_propagation_vectorized(h0, hks, cflds_t, dt):
     dt = tf.cast(dt, dtype=tf.complex128)
     if hks is not None and cflds_t is not None:
@@ -484,7 +483,6 @@ def tf_propagation(h0, hks, cflds, dt):
     return dUs
 
 
-@tf.function
 def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
     col_ops = tf.cast(col_ops, dtype=tf.complex128)
     dt = tf.cast(dt, dtype=tf.complex128)

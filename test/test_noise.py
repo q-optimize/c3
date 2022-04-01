@@ -42,7 +42,7 @@ def test_c1_robust():
     noise_map = [[np.linspace(-0.1, 0.1, 5), [("dc_offset", "offset_amp")]]]
     opt = OptimalControlRobust(
         dir_path=logdir,
-        fid_func=fidelities.average_infid_set,
+        fid_func=fidelities.unitary_infid_set,
         fid_subspace=["Q1"],
         pmap=pmap,
         noise_map=noise_map,

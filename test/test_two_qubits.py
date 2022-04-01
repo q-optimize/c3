@@ -43,9 +43,14 @@ def test_hamiltonians(get_two_qubit_chip) -> None:
 @pytest.mark.integration
 def test_propagation(get_two_qubit_chip) -> None:
     """Test that result of the propagation code does not change."""
+    GATE_STR = "rx90p[0]"
     exp = get_two_qubit_chip
     pmap = exp.pmap
-    result = exp.propagation(pmap.model, pmap.generator, pmap.instructions["rx90p[0]"])
+    instr = pmap.instructions[GATE_STR]
+    steps = int((instr.t_end - instr.t_start) * exp.sim_res)
+    result = exp.propagation(
+        pmap.model, pmap.generator, pmap.instructions["rx90p[0]"], exp.folding_stack[steps]
+    )
     propagator = result["U"]
     almost_equal(propagator, test_data["propagator"])
 

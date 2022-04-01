@@ -165,7 +165,7 @@ class Optimizer:
                 best_point.write(f"Im {gate}: \n")
                 best_point.write(f"{np.round(np.imag(U), 3)}\n")
 
-    def log_parameters(self) -> None:
+    def log_parameters(self, params) -> None:
         """
         Log the current status. Write parameters to log. Update the current best
         parameters. Call plotting functions as set up.
@@ -251,18 +251,21 @@ class Optimizer:
         [np.ndarray, tf.constant]
             Value of the goal function. Float if input is np.array else tf.constant
         """
-
+        self.optim_status["params"] = [
+            par.get_other_value(y)
+            for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters))
+        ]
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
-            self.log_parameters()
+            self.optim_status["goal"] = float(goal)
             goal = float(goal)
-            return goal
         else:
             current_params = input_parameters
             goal = self.goal_run(current_params)
-            self.log_parameters()
-            return goal
+            self.optim_status["goal"] = float(goal)
+        self.log_parameters(input_parameters)
+        return goal
 
     def fct_to_min_autograd(self, x):
         """
@@ -290,10 +293,13 @@ class Optimizer:
                 Warning,
             )
         self.gradients[str(current_params.numpy())] = gradients
+        self.optim_status["params"] = [
+            par.get_other_value(y) for par, y in zip(self.pmap.get_parameters(), x)
+        ]
         self.optim_status["gradient"] = gradients.tolist()
-        self.log_parameters()
-        if isinstance(goal, tf.Tensor):
-            goal = float(goal)
+        last_goal = float(goal)
+        self.optim_status["goal"] = last_goal
+        self.log_parameters(current_params)
         return goal
 
 
@@ -327,7 +333,7 @@ class TensorBoardLogger(BaseLogger):
             )
         for i in range(len(self.opt_map)):
             for key in self.opt_map[i]:
-                if type(params[i]) is float:
+                if type(params[i]) is float or np.float64:
                     tf.summary.scalar(key, float(params[i]), step=step)
                 elif len(params[i]) == 1:
                     tf.summary.scalar(key, float(params[i][0]), step=step)
