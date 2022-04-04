@@ -1017,6 +1017,123 @@ class Fluxonium(CShuntFluxQubit):
     #     pass
 
 
+class CooperPairBox(PhysicalComponent):
+    def __init__(
+        self,
+        name: str,
+        desc: str = None,
+        comment: str = None,
+        hilbert_dim: int = None,
+        calc_dim: int = None,
+        EC: Quantity = None,
+        EJ: Quantity = None,
+        NG: Quantity = None,
+        Asym: Quantity = None,
+        Reduced_Flux: Quantity = None,
+        use_FR: bool = True,
+        params=None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim,
+            params=params,
+        )
+        if not self.hilbert_dim % 2:
+            raise Exception("Hilbert dimension has to be odd.")
+        if EC:
+            self.params["EC"] = EC
+        if EJ:
+            self.params["EJ"] = EJ
+        if Asym:
+            self.params["Asym"] = Asym
+        if Reduced_Flux:
+            self.params["Reduced_Flux"] = Reduced_Flux
+        if NG:
+            self.params["NG"] = NG
+        if calc_dim:
+            self.params["calc_dim"] = calc_dim
+        self.init_Hamiltonian()
+
+    def init_Hs(self, ann_oper):
+        pass
+
+    def init_Ls(self, ann_oper):
+        pass
+
+    def init_Hamiltonian(self):
+        ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
+        ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
+        asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
+        reduced_flux = tf.cast(self.params["Reduced_Flux"].get_value(), tf.complex128)
+        self.calc_dim = tf.cast(self.params["calc_dim"].get_value(), tf.int32)
+        ng_mat = tf.linalg.diag(
+            tf.ones(self.calc_dim - 1, tf.complex128), k=1
+        ) + tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=-1)
+        ng = tf.cast(self.params["NG"].get_value(), tf.float64)
+        EJphi = ej * tf.sqrt(
+            asym**2 + (1 - asym**2) * tf.math.cos(np.pi * reduced_flux) ** 2
+        )
+        h = (
+            4
+            * ec
+            * tf.linalg.diag(
+                tf.cast(
+                    tf.range(
+                        -(self.calc_dim - 1) / 2 - ng,
+                        (self.calc_dim - 1) / 2 - ng + 1,
+                    )
+                    ** 2,
+                    tf.complex128,
+                )
+            )
+            - EJphi / 2 * ng_mat
+        )
+        e, v = tf.linalg.eigh(h)
+        self.transform = v
+        self.static_h = tf.linalg.diag(e)[: self.hilbert_dim, : self.hilbert_dim]
+
+    def get_Hamiltonian(
+        self,
+        signal=None,
+        transform=None,
+    ):
+        ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
+        ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
+        asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
+        ng = tf.cast(self.params["NG"].get_value(), tf.float64)
+        reduced_flux = tf.cast(self.params["Reduced_Flux"].get_value(), tf.complex128)
+        EJphi = ej * tf.sqrt(
+            asym**2 + (1 - asym**2) * tf.math.cos(np.pi * reduced_flux) ** 2
+        )
+        ng_mat = (
+            EJphi
+            / 2
+            * (
+                tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=1)
+                + tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=-1)
+            )
+        )
+        diag_mat_list = tf.range(-(self.calc_dim - 1) / 2, (self.calc_dim - 1) / 2 + 1)
+        diag_mat = (
+            2
+            * tf.sqrt(ec)
+            * tf.cast(tf.linalg.diag(diag_mat_list), dtype=tf.complex128)
+        )
+        ec_identity = 2 * tf.sqrt(ec) * tf.eye(self.calc_dim, dtype=tf.complex128)
+
+        if signal:
+            h_of_t = []
+            ng_of_t = tf.cast(signal["values"] + ng, dtype=tf.complex128)
+            for ngs in ng_of_t:
+                h = (diag_mat - ngs * ec_identity) ** 2 - ng_mat
+                h = tf.linalg.inv(self.transform) @ h @ self.transform
+            return tf.stack(h_of_t)
+        else:
+            return self.static_h
+
+
 @dev_reg_deco
 class SNAIL(Qubit):
     """
