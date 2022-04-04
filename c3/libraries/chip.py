@@ -1018,6 +1018,27 @@ class Fluxonium(CShuntFluxQubit):
 
 
 class CooperPairBox(PhysicalComponent):
+    """
+    The CooperPairBox is a basic model of a modifiable Charge qubit. Which is defined by the Hamiltonian:
+    H=4*EC*(N-NG)^2 + E_J*cos(Phi)
+    Parameters
+    ----------
+    EC: Quantity
+        Charge energy of the qubit
+    EJ: Quantity
+        Josephon energy of the qubit
+    NG: Quantity
+        Initial value of NG in the hamiltonian from above
+    Asym: Quantity
+        Parameter that can modify the effective Josephon energy
+    Reduced Flux: Quantity
+        Parameter that can modify the effective Josephon energy
+    hilbert_dim: Quantity
+        Dimension of the hilbert space we want to look at
+    calc_dim: Quantity
+        Number which defines how many charge levels are included in calculating the hamiltonian
+    """
+
     def __init__(
         self,
         name: str,
@@ -1063,6 +1084,9 @@ class CooperPairBox(PhysicalComponent):
         pass
 
     def init_Hamiltonian(self):
+        """
+        initialize Hamiltonian for initial NG
+        """
         ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
         ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
         asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
@@ -1099,6 +1123,17 @@ class CooperPairBox(PhysicalComponent):
         signal=None,
         transform=None,
     ):
+        """
+        Calculate Hamiltonians for a given signal, i.e. at each time step.
+        Parameters
+        ----------
+        signal : dictionary
+            Dictionary containing times and values of NG
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonians
+        """
         ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
         ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
         asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
