@@ -165,3 +165,11 @@ def test_model_update_by_parametermap() -> None:
 
     assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
     assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi
+
+
+@pytest.mark.unit
+def test_model_recompute() -> None:
+    """Test whether setting a model parameter triggers recompute."""
+    assert not pmap.update_model
+    pmap.set_opt_map([[("Q1-Q2", "strength")]])
+    assert pmap.update_model
