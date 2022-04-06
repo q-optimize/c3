@@ -37,7 +37,7 @@ class ParameterMap:
             components.update(generator.devices)
         self.__components = components
         self.update_model = False
-        self.set_parameters_scaled = self._set_parameters_scaled
+        self.set_parameters_scaled = self._set_parameters_scaled_ctrls
         self.__initialize_parameters()
 
     def __initialize_parameters(self) -> None:
@@ -347,12 +347,13 @@ class ParameterMap:
             values.append(par.get_opt_value())
         return values
 
-    def _set_parameters_scaled(
+    def _set_parameters_scaled_ctrls(
         self, values: Union[tf.constant, tf.Variable], opt_map=None
     ) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
-        called by an optimizer. Are you an optimizer?
+        called by an optimizer. Are you an optimizer? This method only sets control
+        parameters and does not trigger a model update.
 
         Parameters
         ----------
@@ -384,7 +385,7 @@ class ParameterMap:
             List of parameter values. Matrix valued parameters need to be flattened.
 
         """
-        self._set_parameters_scaled(values)
+        self._set_parameters_scaled_ctrls(values)
         self.model.update_model()
 
     def get_key_from_scaled_index(self, idx, opt_map=None) -> str:
@@ -433,7 +434,7 @@ class ParameterMap:
         if update:
             self.set_parameters_scaled = self._set_parameters_scaled_model
         else:
-            self.set_parameters_scaled = self._set_parameters_scaled
+            self.set_parameters_scaled = self._set_parameters_scaled_ctrls
 
     def get_opt_map(self, opt_map=None) -> List[List[str]]:
         if opt_map is None:
