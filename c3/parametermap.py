@@ -79,7 +79,7 @@ class ParameterMap:
 
         best_opt_map = best["opt_map"]
         init_p = best["optim_status"]["params"]
-        self.set_parameters(init_p, best_opt_map)
+        self.set_parameters(init_p, best_opt_map, extend_bounds=True)
 
     def store_values(self, path: str, optim_status=None) -> None:
         """
@@ -132,7 +132,7 @@ class ParameterMap:
                             instr.comps[drive_chan][comp].params[par].set_value(val)
             else:
                 # TODO: initialize directly by using the constructor.
-                instr = Instruction(ideal=[[1]])  # Set ideal to mute warning
+                instr = Instruction()
                 instr.from_dict(gate, name=key)
             self.instructions[key] = instr
             self.__initialize_parameters()
