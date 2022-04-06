@@ -1017,6 +1017,7 @@ class Fluxonium(CShuntFluxQubit):
     #     pass
 
 
+@dev_reg_deco
 class CooperPairBox(PhysicalComponent):
     """
     The CooperPairBox is a basic model of a modifiable Charge qubit. Which is defined by the Hamiltonian:
@@ -1115,8 +1116,9 @@ class CooperPairBox(PhysicalComponent):
             - EJphi / 2 * ng_mat
         )
         e, v = tf.linalg.eigh(h)
-        self.transform = v
+        self.transform = tf.expand_dims(v, axis=0)
         self.static_h = tf.linalg.diag(e)[: self.hilbert_dim, : self.hilbert_dim]
+        self.transform_inv = tf.expand_dims(tf.linalg.inv(v), axis=0)
 
     def get_Hamiltonian(
         self,
@@ -1157,14 +1159,16 @@ class CooperPairBox(PhysicalComponent):
             * tf.cast(tf.linalg.diag(diag_mat_list), dtype=tf.complex128)
         )
         ec_identity = 2 * tf.sqrt(ec) * tf.eye(self.calc_dim, dtype=tf.complex128)
+        ec_identity = tf.expand_dims(ec_identity, axis=0)
+        diag_mat = tf.expand_dims(diag_mat, axis=0)
+        ng_mat = tf.expand_dims(ng_mat, axis=0)
 
         if signal:
-            h_of_t = []
             ng_of_t = tf.cast(signal["values"] + ng, dtype=tf.complex128)
-            for ngs in ng_of_t:
-                h = (diag_mat - ngs * ec_identity) ** 2 - ng_mat
-                h = tf.linalg.inv(self.transform) @ h @ self.transform
-            return tf.stack(h_of_t)
+            ng_of_t = tf.expand_dims(tf.expand_dims(ng_of_t, axis=1), axis=2)
+            h = (diag_mat - ng_of_t * ec_identity) ** 2 - ng_mat
+            h = self.transform_inv @ h @ self.transform
+            return h
         else:
             return self.static_h
 
