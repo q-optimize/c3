@@ -87,16 +87,10 @@ class Quantity:
 
         self.pref = pref
         if min_val is None and max_val is None:
-            if value.any():
-                minmax = [0.9 * value, 1.1 * value]
-                min_val = np.min(minmax)
-                max_val = np.max(minmax)
-            else:
-                # When would this case be reached?
-                min_val = -1
-                max_val = 1
-        self.offset = np.array(min_val) * pref
-        self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
+            minmax = [0.9 * value, 1.1 * value]
+            min_val = np.min(minmax)
+            max_val = np.max(minmax)
+        self._set_limits(min_val, max_val)
         self.unit = unit
         self.symbol = symbol
         if hasattr(value, "shape"):
@@ -299,7 +293,7 @@ class Quantity:
         minmax = [val * 0.9, val * 1.1, min_val, max_val]
         min_val = tf.math.reduce_min(minmax)
         max_val = tf.math.reduce_max(minmax)
-        self.set_limits(min_val, max_val)
+        self._set_limits(min_val, max_val)
         self._set_value(val)
 
     def get_opt_value(self) -> tf.Tensor:
@@ -322,11 +316,17 @@ class Quantity:
         max_val = (self.scale + self.offset) / self.pref
         return min_val, max_val
 
-    def set_limits(self, min_val, max_val):
-        val = self.get_value() / self.pref
+    def _set_limits(self, min_val, max_val):
+        """Sets the allowed minimum and maximum of this quantity. WARNING: Calling this
+        manually leads to inconstistencies with the previously stored value.
+
+        Parameters
+        ----------
+        min_val : float
+        max_val : float
+        """
         self.offset = np.array(min_val) * self.pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * self.pref
-        self._set_value(val)
 
 
 def jsonify_list(data, transform_arrays=True):
