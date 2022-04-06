@@ -36,6 +36,8 @@ class ParameterMap:
         if generator:
             components.update(generator.devices)
         self.__components = components
+        self.update_model = False
+        self.set_parameters_scaled = self._set_parameters_scaled_ctrls
         self.__initialize_parameters()
 
     def __initialize_parameters(self) -> None:
@@ -345,12 +347,13 @@ class ParameterMap:
             values.append(par.get_opt_value())
         return values
 
-    def set_parameters_scaled(
+    def _set_parameters_scaled_ctrls(
         self, values: Union[tf.constant, tf.Variable], opt_map=None
     ) -> None:
         """
         Set the values in the original instruction class. This fuction should only be
-        called by an optimizer. Are you an optimizer?
+        called by an optimizer. Are you an optimizer? This method only sets control
+        parameters and does not trigger a model update.
 
         Parameters
         ----------
@@ -358,7 +361,6 @@ class ParameterMap:
             List of parameter values. Matrix valued parameters need to be flattened.
 
         """
-        model_updated = False
         val_indx = 0
         opt_map = self.get_opt_map(opt_map)
         for equiv_ids in opt_map:
@@ -366,12 +368,25 @@ class ParameterMap:
             par_len = self._pars[key].length
             for par_id in equiv_ids:
                 key = par_id
-                model_updated = True if key in self._par_ids_model else model_updated
                 par = self._pars[key]
                 par.set_opt_value(values[val_indx : val_indx + par_len])
             val_indx += par_len
-        if model_updated:
-            self.model.update_model()
+
+    def _set_parameters_scaled_model(
+        self, values: Union[tf.constant, tf.Variable], opt_map=None
+    ) -> None:
+        """
+        Set the values in the original instruction class. This fuction should only be
+        called by an optimizer. Are you an optimizer? Also update the model.
+
+        Parameters
+        ----------
+        values: list
+            List of parameter values. Matrix valued parameters need to be flattened.
+
+        """
+        self._set_parameters_scaled_ctrls(values)
+        self.model.update_model()
 
     def get_key_from_scaled_index(self, idx, opt_map=None) -> str:
         """
@@ -400,6 +415,7 @@ class ParameterMap:
         Set the opt_map, i.e. which parameters will be optimized.
         """
         opt_map = self.get_opt_map(opt_map)
+        update_model = False
         for equiv_ids in opt_map:
             for pid in equiv_ids:
                 key = pid
@@ -408,8 +424,17 @@ class ParameterMap:
                     raise Exception(
                         f"C3:ERROR:Parameter {key} not defined in {par_strings}"
                     )
+                update_model = key in self._par_ids_model or update_model
+        self.set_update_model(update_model)
         self.check_limits(opt_map)
         self.opt_map = opt_map
+
+    def set_update_model(self, update: bool) -> None:
+        self.update_model = update
+        if update:
+            self.set_parameters_scaled = self._set_parameters_scaled_model
+        else:
+            self.set_parameters_scaled = self._set_parameters_scaled_ctrls
 
     def get_opt_map(self, opt_map=None) -> List[List[str]]:
         if opt_map is None:
