@@ -285,7 +285,7 @@ class Quantity:
 
         if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
             raise Exception(
-                f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
+                f"Value {num3str(val.numpy())}{self.unit} out of bounds for quantity with "
                 f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
                 f"max_val: {num3str(self.get_limits()[1])}{self.unit}",
             )
@@ -323,10 +323,10 @@ class Quantity:
         return min_val, max_val
 
     def set_limits(self, min_val, max_val):
-        val = self.get_value()
+        val = self.get_value() / self.pref
         self.offset = np.array(min_val) * self.pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * self.pref
-        self.set_value(val)
+        self._set_value(val)
 
 
 def jsonify_list(data, transform_arrays=True):
