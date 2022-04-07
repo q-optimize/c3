@@ -70,9 +70,6 @@ def test_AWG_phase_shift() -> None:
     )
 
 
-test_AWG_phase_shift()
-
-
 @pytest.mark.unit
 def test_AWG_freq_offset() -> None:
     offset = 53e6
