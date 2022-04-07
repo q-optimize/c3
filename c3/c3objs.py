@@ -87,9 +87,13 @@ class Quantity:
 
         self.pref = pref
         if min_val is None and max_val is None:
-            minmax = [0.9 * value, 1.1 * value]
-            min_val = np.min(minmax)
-            max_val = np.max(minmax)
+            if value:
+                minmax = [0.9 * value, 1.1 * value]
+                min_val = np.min(minmax)
+                max_val = np.max(minmax)
+            else:
+                min_val = -1
+                max_val = 1
         self._set_limits(min_val, max_val)
         self.unit = unit
         self.symbol = symbol
@@ -221,6 +225,8 @@ class Quantity:
         for entry in np.nditer(val):
             if self.unit != "undefined":
                 ret += num3str(entry) + self.unit + " "
+            elif self.unit == "pi":
+                ret += num3str(entry, use_prefix=False) + self.unit + " "
             else:
                 ret += num3str(entry, use_prefix=False) + " "
         return ret
