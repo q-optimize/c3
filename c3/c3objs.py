@@ -80,29 +80,29 @@ class Quantity:
     ):
         pref = 1.0
         value = np.array(value)
-        if "pi" in unit:
-            pref = np.pi
-        if "2pi" in unit:
-            pref = 2 * np.pi
-
-        self.pref = pref
-        if min_val is None and max_val is None:
-            if value.any():
-                minmax = [0.9 * value, 1.1 * value]
-                min_val = np.min(minmax)
-                max_val = np.max(minmax)
-            else:
-                min_val = -1
-                max_val = 1
-        self._set_limits(min_val, max_val)
-        self.unit = unit
-        self.symbol = symbol
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
         else:
             self.shape = (1,)
             self.length = 1
+        if "pi" in unit:
+            pref = np.pi
+        if "2pi" in unit:
+            pref = 2 * np.pi
+
+        self.pref = np.array(pref)
+        if min_val is None and max_val is None:
+            if value.any():
+                minmax = [0.9 * value, 1.1 * value]
+                min_val = np.min(minmax)
+                max_val = np.max(minmax)
+            else:
+                min_val = np.array(-1)
+                max_val = np.array(1)
+        self._set_limits(min_val, max_val)
+        self.unit = unit
+        self.symbol = symbol
 
         self.value = None
         self.set_value(np.array(value))
@@ -268,9 +268,9 @@ class Quantity:
 
     def set_value(self, val, extend_bounds=False):
         if extend_bounds:
-            self._set_value_extend(val)
+            self._set_value_extend(np.reshape(val, self.shape))
         else:
-            self._set_value(val)
+            self._set_value(np.reshape(val, self.shape))
 
     def _set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
@@ -281,7 +281,9 @@ class Quantity:
         else:
             val = tf.constant(val, tf.float64)
 
-        tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
+        tmp = (
+            2 * (tf.reshape(val, self.shape) * self.pref - self.offset) / self.scale - 1
+        )
 
         if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
             raise Exception(
