@@ -36,11 +36,7 @@ class C3obj:
                 if isinstance(par, Quantity):
                     self.params[pname] = par
                 else:
-                    try:
-                        self.params[pname] = Quantity(**par)
-                    except Exception as exception:
-                        print(f"Error initializing {pname} with\n {par}")
-                        raise exception
+                    self.params[pname] = Quantity(**par)
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
@@ -213,7 +209,7 @@ class Quantity:
 
     def __float__(self):
         if self.length > 1:
-            return NotImplemented
+            raise NotImplementedError
         return float(self.numpy())
 
     def __repr__(self):
@@ -223,10 +219,10 @@ class Quantity:
         val = self.numpy()
         ret = ""
         for entry in np.nditer(val):
-            if self.unit != "undefined":
+            if self.unit == "pi":
+                ret += f"{entry} {self.unit} "
+            elif self.unit != "undefined":
                 ret += num3str(entry) + self.unit + " "
-            elif self.unit == "pi":
-                ret += num3str(entry, use_prefix=False) + self.unit + " "
             else:
                 ret += num3str(entry, use_prefix=False) + " "
         return ret
