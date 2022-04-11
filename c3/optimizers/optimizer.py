@@ -251,10 +251,10 @@ class Optimizer:
         [np.ndarray, tf.constant]
             Value of the goal function. Float if input is np.array else tf.constant
         """
-        self.optim_status["params"] = [
-            par.get_other_value(y)
-            for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters))
-        ]
+        pars = []
+        for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters)):
+            pars.extend(par.get_other_value(y).tolist())
+        self.optim_status["params"] = pars
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
             goal = self.goal_run(current_params)
