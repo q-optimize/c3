@@ -70,6 +70,11 @@ def test_qty_str() -> None:
 
 
 @pytest.mark.unit
+def test_qty_item() -> None:
+    assert gate_time[0] == gate_time.numpy()
+
+
+@pytest.mark.unit
 def test_qty_set() -> None:
     gate_time.set_value(7e-9)
     assert gate_time.get_value() - 7e-9 < 1e-15
@@ -96,6 +101,16 @@ def test_qty_get_opt() -> None:
 @pytest.mark.unit
 def test_qty_matrix_str() -> None:
     assert str(matrix) == "0.000  1.000  1.000  0.000  "
+
+
+@pytest.mark.unit
+def test_qty_matrix_list() -> None:
+    assert matrix.tolist() == [[0, 1], [1, 0]]
+
+
+@pytest.mark.unit
+def test_qty_matrix_item() -> None:
+    assert matrix[0][1] == 1
 
 
 @pytest.mark.unit
@@ -165,3 +180,16 @@ def get_and_set() -> None:
         opt_val = a.get_opt_value()
         a.set_opt_value(opt_val)
         np.testing.assert_allclose(a, val)
+
+
+@pytest.mark.unit
+def test_qty_matrix_float() -> None:
+    with pytest.raises(NotImplementedError):
+        float(matrix)
+
+
+@pytest.mark.unit
+def test_pihalf() -> None:
+    "Don't use prefixes with pi."
+    pihalf = Quantity(1500, unit="pi")
+    assert str(pihalf) == "1500.0 pi "
