@@ -289,10 +289,15 @@ class Experiment:
         """
         model = self.pmap.model
         if psi_init is None:
-            psi_init = model.tasks["init_ground"].initialise(
-                model.drift_ham, model.lindbladian
-            )
-        self.psi_init = psi_init
+            if "init_ground" in model.tasks:
+                self.psi_init = model.tasks["init_ground"].initialise(
+                    model.drift_ham, model.lindbladian
+                )
+            else:
+                self.psi_init = model.get_ground_state()
+        else:
+            self.psi_init = psi_init
+
         populations = []
         for sequence in sequences:
             psi_t = copy.deepcopy(self.psi_init)
