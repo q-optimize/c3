@@ -282,7 +282,7 @@ class Quantity:
         )
 
         if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
-            raise Exception(
+            raise ValueError(
                 f"Value {num3str(val.numpy())}{self.unit} out of bounds for quantity with "
                 f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
                 f"max_val: {num3str(self.get_limits()[1])}{self.unit}",

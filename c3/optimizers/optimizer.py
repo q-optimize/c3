@@ -252,6 +252,8 @@ class Optimizer:
             Value of the goal function. Float if input is np.array else tf.constant
         """
         pars = []
+        # We use zip to create pairs of Quantity objects and their new bare numeric parameter values.
+        # Then we compute the new physical value and store it in the status.
         for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters)):
             pars.append(par.get_other_value(y).tolist())
         self.optim_status["params"] = pars
@@ -293,6 +295,8 @@ class Optimizer:
                 Warning,
             )
         self.gradients[str(current_params.numpy())] = gradients
+        # We use zip to create pairs of Quantity objects and their new bare numeric parameter values.
+        # Then we compute the new physical value and store it in the status.
         self.optim_status["params"] = [
             par.get_other_value(y) for par, y in zip(self.pmap.get_parameters(), x)
         ]
