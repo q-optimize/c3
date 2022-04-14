@@ -253,15 +253,20 @@ def test_parameter_set_opt() -> None:
 @pytest.mark.unit
 def test_parameter_extend() -> None:
     """
-    Test the setting in optimizer format.
+    Test the setting in optimizer format. Parameter is out of bounds for the
+    original pmap and should be extended.
     """
     pmap.load_values("test/sample_optim_log.c3log")
+    np.testing.assert_almost_equal(
+        pmap.get_parameter(("rx90p[0]", "d1", "gauss", "freq_offset")).numpy(),
+        -82997604.24565414,
+    )
 
 
 @pytest.mark.unit
 def test_parameter_save_load() -> None:
     """
-    Test the setting in optimizer format.
+    Test the saving and loading from file.
     """
     full_pars = pmap.get_full_params()
     pmap.store_values("test/some_params.c3log")
