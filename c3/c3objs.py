@@ -36,11 +36,7 @@ class C3obj:
                 if isinstance(par, Quantity):
                     self.params[pname] = par
                 else:
-                    try:
-                        self.params[pname] = Quantity(**par)
-                    except Exception as exception:
-                        print(f"Error initializing {pname} with\n {par}")
-                        raise exception
+                    self.params[pname] = Quantity(**par)
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
@@ -80,31 +76,29 @@ class Quantity:
     ):
         pref = 1.0
         value = np.array(value)
-        if "pi" in unit:
-            pref = np.pi
-        if "2pi" in unit:
-            pref = 2 * np.pi
-
-        self.pref = pref
-        if min_val is None and max_val is None:
-            if value.any():
-                minmax = [0.9 * value, 1.1 * value]
-                min_val = np.min(minmax)
-                max_val = np.max(minmax)
-            else:
-                # When would this case be reached?
-                min_val = -1
-                max_val = 1
-        self.offset = np.array(min_val) * pref
-        self.scale = np.abs(np.array(max_val) - np.array(min_val)) * pref
-        self.unit = unit
-        self.symbol = symbol
         if hasattr(value, "shape"):
             self.shape = value.shape
             self.length = int(np.prod(value.shape))
         else:
             self.shape = (1,)
             self.length = 1
+        if "pi" in unit:
+            pref = np.pi
+        if "2pi" in unit:
+            pref = 2 * np.pi
+
+        self.pref = np.array(pref)
+        if min_val is None and max_val is None:
+            if value.any():
+                minmax = [0.9 * value, 1.1 * value]
+                min_val = np.min(minmax)
+                max_val = np.max(minmax)
+            else:
+                min_val = np.array(-1)
+                max_val = np.array(1)
+        self._set_limits(min_val, max_val)
+        self.unit = unit
+        self.symbol = symbol
 
         self.value = None
         self.set_value(np.array(value))
@@ -215,7 +209,7 @@ class Quantity:
 
     def __float__(self):
         if self.length > 1:
-            return NotImplemented
+            raise NotImplementedError
         return float(self.numpy())
 
     def __repr__(self):
@@ -225,7 +219,9 @@ class Quantity:
         val = self.numpy()
         ret = ""
         for entry in np.nditer(val):
-            if self.unit != "undefined":
+            if self.unit == "pi":
+                ret += f"{entry} {self.unit} "
+            elif self.unit != "undefined":
                 ret += num3str(entry) + self.unit + " "
             else:
                 ret += num3str(entry, use_prefix=False) + " "
@@ -268,9 +264,9 @@ class Quantity:
 
     def set_value(self, val, extend_bounds=False):
         if extend_bounds:
-            self._set_value_extend(val)
+            self._set_value_extend(np.reshape(val, self.shape))
         else:
-            self._set_value(val)
+            self._set_value(np.reshape(val, self.shape))
 
     def _set_value(self, val) -> None:
         """Set the value of this quantity as tensorflow. Value needs to be
@@ -281,11 +277,13 @@ class Quantity:
         else:
             val = tf.constant(val, tf.float64)
 
-        tmp = 2 * (val * self.pref - self.offset) / self.scale - 1
+        tmp = (
+            2 * (tf.reshape(val, self.shape) * self.pref - self.offset) / self.scale - 1
+        )
 
         if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
-            raise Exception(
-                f"Value {val.numpy()}{self.unit} out of bounds for quantity with "
+            raise ValueError(
+                f"Value {num3str(val.numpy())}{self.unit} out of bounds for quantity with "
                 f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
                 f"max_val: {num3str(self.get_limits()[1])}{self.unit}",
             )
@@ -299,7 +297,7 @@ class Quantity:
         minmax = [val * 0.9, val * 1.1, min_val, max_val]
         min_val = tf.math.reduce_min(minmax)
         max_val = tf.math.reduce_max(minmax)
-        self.set_limits(min_val, max_val)
+        self._set_limits(min_val, max_val)
         self._set_value(val)
 
     def get_opt_value(self) -> tf.Tensor:
@@ -322,11 +320,17 @@ class Quantity:
         max_val = (self.scale + self.offset) / self.pref
         return min_val, max_val
 
-    def set_limits(self, min_val, max_val):
-        val = self.get_value()
+    def _set_limits(self, min_val, max_val):
+        """Sets the allowed minimum and maximum of this quantity. WARNING: Calling this
+        manually leads to inconstistencies with the previously stored value.
+
+        Parameters
+        ----------
+        min_val : float
+        max_val : float
+        """
         self.offset = np.array(min_val) * self.pref
         self.scale = np.abs(np.array(max_val) - np.array(min_val)) * self.pref
-        self.set_value(val)
 
 
 def jsonify_list(data, transform_arrays=True):
