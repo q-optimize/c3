@@ -288,14 +288,11 @@ class Experiment:
 
         """
         model = self.pmap.model
-        if psi_init is None:
-            psi_init = model.tasks["init_ground"].initialise(
-                model.drift_ham, model.lindbladian
-            )
-        self.psi_init = psi_init
+        if not psi_init:
+            psi_init = model.get_init_state()
         populations = []
         for sequence in sequences:
-            psi_t = copy.deepcopy(self.psi_init)
+            psi_t = copy.deepcopy(psi_init)
             for gate in sequence:
                 psi_t = tf.matmul(self.propagators[gate], psi_t)
 
@@ -324,12 +321,7 @@ class Experiment:
         """
         model = self.pmap.model
         if psi_init is None:
-            if "init_ground" in model.tasks:
-                psi_init = model.tasks["init_ground"].initialise(
-                    model.drift_ham, model.lindbladian
-                )
-            else:
-                psi_init = model.get_ground_state()
+            psi_init = model.get_init_state()
         self.psi_init = psi_init
         populations = []
         for sequence in sequences:

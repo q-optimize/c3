@@ -173,3 +173,16 @@ def test_model_recompute() -> None:
     assert not pmap.update_model
     pmap.set_opt_map([[("Q1-Q2", "strength")]])
     assert pmap.update_model
+
+
+@pytest.mark.unit
+def test_model_thermal_state() -> None:
+    """Test computation of initial state"""
+    model.set_lindbladian(True)
+    np.testing.assert_almost_equal(model.get_init_state()[0], 0.9871, decimal=4)
+
+
+@pytest.mark.unit
+def test_model_init_state() -> None:
+    """Test computation of initial state"""
+    np.testing.assert_almost_equal(model.get_ground_state()[0], 1, decimal=4)

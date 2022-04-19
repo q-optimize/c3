@@ -64,6 +64,16 @@ class Model:
         gs[0][0] = 1
         return tf.transpose(tf.constant(gs, dtype=tf.complex128))
 
+    def get_init_state(self) -> tf.Tensor:
+        """Get an initial state. If a task to compute a thermal state is set, return that."""
+        if "init_ground" in self.tasks:
+            psi_init = self.tasks["init_ground"].initialise(
+                self.drift_ham, self.lindbladian
+            )
+        else:
+            psi_init = self.get_ground_state()
+        return psi_init
+
     def __check_drive_connect(self, comp):
         for connect in comp.connected:
             try:
@@ -278,7 +288,7 @@ class Model:
         self.dressed = dressed
         self.update_model()
 
-    def set_lindbladian(self, lindbladian):
+    def set_lindbladian(self, lindbladian: bool) -> None:
         """
         Set whether to include open system dynamics.
 
