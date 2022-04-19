@@ -288,7 +288,7 @@ class Experiment:
 
         """
         model = self.pmap.model
-        if not psi_init:
+        if psi_init is None:
             psi_init = model.get_init_state()
         populations = []
         for sequence in sequences:
