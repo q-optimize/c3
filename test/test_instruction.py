@@ -14,6 +14,8 @@ from c3.signal import gates, pulse
 from c3.model import Model
 import numpy as np
 import pytest
+from c3.libraries.constants import GATES
+
 
 model = Model()
 model.read_config("test/test_model.cfg")
@@ -176,3 +178,12 @@ def test_save_and_load():
 @pytest.mark.unit
 def test_str_conversion():
     assert repr(instr) == "Instruction[multi_instruction]"
+
+
+@pytest.mark.unit
+def test_set_name_ideal():
+    """Check that asigning a name of a specific gate from the constants updates the ideal unitary."""
+    instr.set_name("ry90p")
+    assert (instr.ideal == GATES["ry90p"]).all()
+    instr.set_name("crzp")
+    assert (instr.ideal == GATES["crzp"]).all()
