@@ -139,3 +139,6 @@ dmypy.json
 *.swp
 .stignore
 okteto.yml
+
+# Logs
+*c3log*
