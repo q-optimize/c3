@@ -54,7 +54,7 @@ class Instruction:
         t_end: float = 0.0,
         # fixed_t_end: bool = True,
     ):
-        self.name = name
+        self.set_name(name)
         self.targets = targets
         self.params: dict = {}
         if isinstance(params, dict):
@@ -69,17 +69,6 @@ class Instruction:
         self.comps: Dict[str, Dict[str, C3obj]] = dict()
         self._options: Dict[str, dict] = dict()
         self.fixed_t_end = True
-        if ideal is not None:
-            self.ideal = ideal
-        else:
-            gate_list = []
-            # legacy use
-            for key in name.split(":"):
-                if key in GATES:
-                    gate_list.append(GATES[key])
-                else:
-                    warnings.warn(f"No ideal gate found for gate: {key}")
-            self.ideal = np_kron_n(gate_list)
         for chan in channels:
             self.comps[chan] = dict()
             self._options[chan] = dict()
@@ -95,6 +84,25 @@ class Instruction:
         if self.ideal:
             asdict["ideal"] = self.ideal
         return asdict
+
+    def set_name(self, name, ideal=None):
+        self.name = name
+        self.set_ideal(ideal)
+
+    def set_ideal(self, ideal):
+        if ideal is not None:
+            self.ideal = ideal
+        else:
+            gate_list = []
+            # legacy use
+            for key in self.name.split(":"):
+                if key in GATES:
+                    gate_list.append(GATES[key])
+                else:
+                    warnings.warn(
+                        f"No ideal gate found for gate: {key}. Use set_ideal() explicitly."
+                    )
+            self.ideal = np_kron_n(gate_list)
 
     def get_ideal_gate(self, dims, index=None):
         if self.ideal is None:
