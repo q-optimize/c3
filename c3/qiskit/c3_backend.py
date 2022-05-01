@@ -22,6 +22,7 @@ from c3.experiment import Experiment
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
+from .c3_options import C3Options
 
 from typing import Any, Dict, List, Tuple
 from abc import ABC, abstractclassmethod, abstractmethod
@@ -49,7 +50,7 @@ class C3QasmSimulator(Backend, ABC):
     """
 
     @abstractclassmethod
-    def _default_options(cls) -> None:
+    def _default_options(cls) -> C3Options:
         raise NotImplementedError("This must be implemented in the derived class")
 
     def set_device_config(self, config_file: str) -> None:
@@ -635,8 +636,15 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self.c3_exp = Experiment()
 
     @classmethod
-    def _default_options(cls) -> Options:
-        return Options(shots=1024, memory=False, initial_statevector=None)
+    def _default_options(cls) -> C3Options:
+        DEFAULT_OPTIONS = {
+            "params": None,
+            "opt_map": None,
+            "shots": 1024,
+            "memory": False,
+            "initial_statevector": None,
+        }
+        return C3Options(**DEFAULT_OPTIONS)
 
     def run_experiment(self, experiment: QasmQobjExperiment) -> Dict[str, Any]:
         """Run an experiment (circuit) and return a single experiment result
