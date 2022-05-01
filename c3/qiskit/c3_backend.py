@@ -388,11 +388,16 @@ class C3QasmSimulator(Backend, ABC):
             )
 
     def _set_options(self, qobj_config=None, backend_options=None):
-        """Qiskit stock method to Set the backend options for all experiments in a qobj"""
-        # Reset default options
+        """Set the backend options for all experiments in a qobj"""
+        # set runtime options
+        for field in backend_options:
+            if not hasattr(self._options, field):
+                raise AttributeError(
+                    "Options field %s is not valid for this backend" % field
+                )
+        self._options.update_options(**backend_options)
+
         self._initial_statevector = self.options.get("initial_statevector")
-        if "backend_options" in backend_options and backend_options["backend_options"]:
-            backend_options = backend_options["backend_options"]
 
         # Check for custom initial statevector in backend_options first,
         # then config second
