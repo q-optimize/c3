@@ -684,6 +684,14 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         exp = self._setup_c3_experiment(experiment)
+        if self.options.get("params"):
+            params = self.options.get("params")
+            opt_map = self.options.get("opt_map")
+            if not opt_map:
+                raise KeyError(
+                    "Missing opt_map in options to run(), required for updating parameters"
+                )
+            exp.pmap.set_parameters(params, opt_map)
         exp.compute_propagators()
 
         sanitized_instructions, instructions_list = self.sanitize_instructions(
