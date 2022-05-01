@@ -615,8 +615,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "gates": [],
     }
 
-    DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
-
     def __init__(self, configuration=None, provider=None, **fields):
         super().__init__(
             configuration=(
