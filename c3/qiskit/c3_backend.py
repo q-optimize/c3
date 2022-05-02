@@ -254,19 +254,37 @@ class C3QasmSimulator(Backend, ABC):
 
         Notes
         -----
-        backend_options: Is a dict of options for the backend. It may contain
-                * "initial_statevector": vector_like
+        backend_options: Is a dict of options for the backend. It may contain::
 
-        The "initial_statevector" option specifies a custom initial statevector
+            "initial_statevector": vector_like
+
+        The ``initial_statevector`` option specifies a custom initial statevector
         for the simulator to be used instead of the all zero state. This size of
         this vector must be correct for the number of qubits in all experiments
-        in the qobj.
-
-        Example::
+        in the qobj. Example::
 
             backend_options = {
                 "initial_statevector": np.array([1, 0, 0, 1j]) / np.sqrt(2),
             }
+
+        ::
+
+            "params": list
+
+        List of parameter values. Can be nested, if a parameter is matrix valued. ::
+
+            "opt_map": list
+
+        Corresponding identifiers for the parameter values. ::
+
+            "shots": int
+
+        Total number of measurement shots. ::
+
+            "memory": bool
+
+        Whether individual measurement readout is stored.
+
         """
 
         if isinstance(qobj, (QuantumCircuit, list)):
