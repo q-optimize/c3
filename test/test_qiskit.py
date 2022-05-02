@@ -4,6 +4,7 @@
 import json
 from c3.libraries.constants import GATES
 from c3.experiment import Experiment
+from c3.c3objs import Quantity as Qty
 from c3.qiskit import C3Provider
 from c3.qiskit.c3_exceptions import C3QiskitError
 from c3.qiskit.c3_gates import (
@@ -158,6 +159,18 @@ def test_qiskit_physics(get_physics_circuit):
     expected_pops = np.array([0, 0, 0.5, 0, 0, 0, 0.5, 0])
     received_pops = np.array(list(job_sim.result().data()["state_pops"].values()))
     np.testing.assert_allclose(received_pops, desired=expected_pops, atol=1e-1)
+
+    # Test that runtime options are correctly assigned
+    opt_map = [[["rx90p[0]", "d1", "gaussian", "amp"]]]
+    param = [
+        Qty(value=0.5, min_val=0.2, max_val=0.6, unit="V"),
+    ]
+    _ = physics_backend.run(qc, params=param, opt_map=opt_map)
+    physics_backend.c3_exp.pmap.set_opt_map(opt_map)
+    assert (
+        physics_backend.c3_exp.pmap.get_parameter_dict()["rx90p[0]-d1-gaussian-amp"]
+        == param[0]
+    )
 
 
 @pytest.mark.parametrize(
