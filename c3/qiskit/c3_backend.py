@@ -22,6 +22,7 @@ from c3.experiment import Experiment
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
 from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
+from .c3_options import C3Options
 
 from typing import Any, Dict, List, Tuple
 from abc import ABC, abstractclassmethod, abstractmethod
@@ -49,7 +50,7 @@ class C3QasmSimulator(Backend, ABC):
     """
 
     @abstractclassmethod
-    def _default_options(cls) -> None:
+    def _default_options(cls) -> C3Options:
         raise NotImplementedError("This must be implemented in the derived class")
 
     def set_device_config(self, config_file: str) -> None:
@@ -253,19 +254,37 @@ class C3QasmSimulator(Backend, ABC):
 
         Notes
         -----
-        backend_options: Is a dict of options for the backend. It may contain
-                * "initial_statevector": vector_like
+        backend_options: Is a dict of options for the backend. It may contain::
 
-        The "initial_statevector" option specifies a custom initial statevector
+            "initial_statevector": vector_like
+
+        The ``initial_statevector`` option specifies a custom initial statevector
         for the simulator to be used instead of the all zero state. This size of
         this vector must be correct for the number of qubits in all experiments
-        in the qobj.
-
-        Example::
+        in the qobj. Example::
 
             backend_options = {
                 "initial_statevector": np.array([1, 0, 0, 1j]) / np.sqrt(2),
             }
+
+        ::
+
+            "params": list
+
+        List of parameter values. Can be nested, if a parameter is matrix valued. ::
+
+            "opt_map": list
+
+        Corresponding identifiers for the parameter values. ::
+
+            "shots": int
+
+        Total number of measurement shots. ::
+
+            "memory": bool
+
+        Whether individual measurement readout is stored.
+
         """
 
         if isinstance(qobj, (QuantumCircuit, list)):
@@ -387,11 +406,16 @@ class C3QasmSimulator(Backend, ABC):
             )
 
     def _set_options(self, qobj_config=None, backend_options=None):
-        """Qiskit stock method to Set the backend options for all experiments in a qobj"""
-        # Reset default options
+        """Set the backend options for all experiments in a qobj"""
+        # set runtime options
+        for field in backend_options:
+            if not hasattr(self._options, field):
+                raise AttributeError(
+                    "Options field %s is not valid for this backend" % field
+                )
+        self._options.update_options(**backend_options)
+
         self._initial_statevector = self.options.get("initial_statevector")
-        if "backend_options" in backend_options and backend_options["backend_options"]:
-            backend_options = backend_options["backend_options"]
 
         # Check for custom initial statevector in backend_options first,
         # then config second
@@ -609,8 +633,6 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         "gates": [],
     }
 
-    DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
-
     def __init__(self, configuration=None, provider=None, **fields):
         super().__init__(
             configuration=(
@@ -635,8 +657,15 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         self.c3_exp = Experiment()
 
     @classmethod
-    def _default_options(cls) -> Options:
-        return Options(shots=1024, memory=False, initial_statevector=None)
+    def _default_options(cls) -> C3Options:
+        DEFAULT_OPTIONS = {
+            "params": None,
+            "opt_map": None,
+            "shots": 1024,
+            "memory": False,
+            "initial_statevector": None,
+        }
+        return C3Options(**DEFAULT_OPTIONS)
 
     def run_experiment(self, experiment: QasmQobjExperiment) -> Dict[str, Any]:
         """Run an experiment (circuit) and return a single experiment result
@@ -673,6 +702,14 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         exp = self._setup_c3_experiment(experiment)
+        if self.options.get("params"):
+            params = self.options.get("params")
+            opt_map = self.options.get("opt_map")
+            if not opt_map:
+                raise KeyError(
+                    "Missing opt_map in options to run(), required for updating parameters"
+                )
+            exp.pmap.set_parameters(params, opt_map)
         exp.compute_propagators()
 
         sanitized_instructions, instructions_list = self.sanitize_instructions(
