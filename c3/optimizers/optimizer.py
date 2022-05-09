@@ -269,6 +269,7 @@ class Optimizer:
             current_params = input_parameters
             goal = self.goal_run(current_params)
             self.optim_status["goal"] = float(goal)
+        self.evaluation += 1
         self.log_parameters(input_parameters)
         return goal
 
