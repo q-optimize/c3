@@ -355,19 +355,6 @@ class C3QasmSimulator(Backend, ABC):
                 + "is greater than maximum ({}) ".format(max_qubits)
                 + 'for "{}".'.format(self.name())
             )
-        for experiment in qobj.experiments:
-            name = experiment.header.name
-            if experiment.config.memory_slots == 0:
-                logger.warning(
-                    'No classical registers in circuit "%s", ' "counts will be empty.",
-                    name,
-                )
-            elif "measure" not in [op.name for op in experiment.instructions]:
-                logger.warning(
-                    'No measurements in circuit "%s", '
-                    "classical register will remain all zeros.",
-                    name,
-                )
 
     def _validate_initial_statevector(self):
         """Check initial statevector has correct dimensions and is normalised.
