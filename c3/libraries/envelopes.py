@@ -62,7 +62,7 @@ def pwc_shape(t, params):
             fill_value_below=0,
             fill_value_above=0,
         ),
-        [len(t), 1],
+        [len(t)],
     )
 
     return shape
