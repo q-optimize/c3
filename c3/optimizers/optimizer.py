@@ -151,6 +151,9 @@ class Optimizer:
             logfile.write(f"Total runtime: {self.end_time - self.start_time}\n\n")
             logfile.flush()
 
+        for logger in self.logger:
+            logger.end_log(self, self.logdir)
+
     def log_best_unitary(self) -> None:
         """
         Save the best unitary in the log.
@@ -315,6 +318,9 @@ class BaseLogger:
         self.logdir = logdir
 
     def log_parameters(self, evaluation, optim_status):
+        pass
+
+    def end_log(self, opt, logdir):
         pass
 
 

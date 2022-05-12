@@ -62,6 +62,7 @@ class ModelLearning(Optimizer):
         algorithm=None,
         run_name=None,
         options={},
+        logger: List = None,
     ):
         """Initiliase."""
         # Consistency checks
@@ -83,7 +84,7 @@ class ModelLearning(Optimizer):
             except KeyError:
                 raise KeyError("C3:ERROR:Unknown sampling method.")
 
-        super().__init__(pmap=pmap, algorithm=algorithm)
+        super().__init__(pmap=pmap, algorithm=algorithm, logger=logger)
 
         self.state_labels = {"all": None}
         for target, labels in state_labels.items():

@@ -2,6 +2,7 @@
 
 import os
 import time
+from typing import List
 import hjson
 import pickle
 import inspect
@@ -42,10 +43,11 @@ class Calibration(Optimizer):
         exp_right=None,
         options={},
         run_name=None,
+        logger: List = None,
     ):
         if type(algorithm) is str:
             algorithm = algorithms[algorithm]
-        super().__init__(pmap=pmap, algorithm=algorithm)
+        super().__init__(pmap=pmap, algorithm=algorithm, logger=logger)
         self.set_eval_func(eval_func, exp_type)
         self.options = options
         self.exp_right = exp_right
