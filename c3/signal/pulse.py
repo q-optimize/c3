@@ -110,9 +110,10 @@ class Envelope(C3obj):
         """
         t_final = tf.minimum(self.params["t_final"].get_value(), t_end)
         dt = ts[1] - ts[0]
-        return tf_complexify(tf.sigmoid((ts / dt + 0.001) * 1e6) * tf.sigmoid(
-            (0.999 * t_final - ts) / dt * 1e6
-        ))
+        return tf_complexify(
+            tf.sigmoid((ts / dt + 0.001) * 1e6)
+            * tf.sigmoid((0.999 * t_final - ts) / dt * 1e6)
+        )
 
     def _get_shape_values_before(self, ts, t_final=1):
         """Return the value of the shape function at the specified times. With the offset, we make sure the
@@ -174,9 +175,9 @@ class EnvelopeDrag(Envelope):
         with tf.GradientTape() as t:
             t.watch(ts)
             env = self.base_env(ts, t_final)
-        denv = t.gradient(
-            env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO
-        ) * dt  # Derivative W.R.T. to bins
+        denv = (
+            t.gradient(env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO) * dt
+        )  # Derivative W.R.T. to bins
         delta = self.params["delta"].get_value()
         return tf.complex(env, -denv * delta)
 

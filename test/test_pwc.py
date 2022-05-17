@@ -57,16 +57,14 @@ pwc_params = {
     "xy_angle": Quantity(
         value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"
     ),
-    "freq_offset": Quantity(
-        value=0, min_val=-5 * 1e6, max_val=5 * 1e6, unit="Hz 2pi"
-    ),
+    "freq_offset": Quantity(value=0, min_val=-5 * 1e6, max_val=5 * 1e6, unit="Hz 2pi"),
 }
 
 pwc_env_single = Envelope(
     name="gauss",
     desc="Gaussian comp for single-qubit gates",
     params=pwc_params,
-    shape=pwc
+    shape=pwc,
 )
 
 lo_freq_q1 = 5e9

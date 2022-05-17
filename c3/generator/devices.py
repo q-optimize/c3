@@ -5,7 +5,7 @@ import hjson
 from typing import Callable, Dict, Any, List
 import tensorflow as tf
 import numpy as np
-from c3.signal.pulse import Envelope, Carrier
+from c3.signal.pulse import Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj, hjson_encode
 from c3.utils.tf_utils import tf_convolve
@@ -1114,6 +1114,7 @@ class AWG(Device):
         self.amp_tot_sq = None
         self.process = self.create_IQ
         self.centered_ts = True
+
     # TODO create DC function
 
     # TODO make AWG take offset from the previous point
