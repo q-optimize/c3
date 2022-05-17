@@ -1104,7 +1104,6 @@ class AWG(Device):
     """
 
     def __init__(self, **props):
-        self._options = ""
         self.logdir = props.pop(
             "logdir", os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
@@ -1115,12 +1114,6 @@ class AWG(Device):
         self.amp_tot_sq = None
         self.process = self.create_IQ
         self.centered_ts = True
-
-    def asdict(self) -> dict:
-        awg_dict = super().asdict()
-        awg_dict["options"] = self._options
-        return awg_dict
-
     # TODO create DC function
 
     # TODO make AWG take offset from the previous point
@@ -1154,7 +1147,7 @@ class AWG(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         self.ts = ts
 
-        signal, norm = instr.get_awg_signal(chan, ts, options={self._options: True})
+        signal, norm = instr.get_awg_signal(chan, ts)
 
         self.amp_tot = norm
         self.signal[chan] = {
