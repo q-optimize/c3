@@ -30,8 +30,7 @@ def no_drive(t, params=None):
 @env_reg_deco
 def pwc(t, params):
     """Piecewise constant pulse."""
-    # TODO make pwc return actual values like other envelopes
-    return params
+    return params["values"].get_value()
 
 
 @env_reg_deco
