@@ -301,14 +301,11 @@ class Instruction:
             self.t_end = t_end
         self.t_end = float(t_end * (1 + buffer))
 
-    def get_awg_signal(self, chan, ts, options=None):
+    def get_awg_signal(self, chan, ts):
         amp_tot_sq = 0
         signal = tf.zeros_like(ts, tf.complex128)
         self._timings = dict()
-        dt = ts[1] - ts[0]
         for comp_name in self.comps[chan]:
-            opts = copy.copy(self._options[chan][comp_name])
-            opts.update(options)
             comp = self.comps[chan][comp_name]
             t_start, t_end = self.get_timings(chan, comp_name)
             ts_off = ts - t_start
@@ -322,25 +319,8 @@ class Instruction:
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
                 phase = -xy_angle - freq_offset * ts_off
-                denv = None
-                if comp.drag or opts.pop("drag", False) or opts.pop("drag_2", False):
-
-                    delta = comp.params["delta"].get_value()
-                    with tf.GradientTape() as t:
-                        t.watch(ts_off)
-                        env = comp.get_shape_values(ts_off, t_end - t_start)
-                    denv = t.gradient(
-                        env, ts_off, unconnected_gradients=tf.UnconnectedGradients.ZERO
-                    )  # Derivative W.R.T. to bins
-                    if not opts.pop("drag", False):
-                        # Use drag_2 definition here
-                        denv = denv * dt  # derivative W.R.T. time
-
-                    env = tf.complex(env, -denv * delta)
-
-                else:
-                    env = comp.get_shape_values(ts_off, t_end - t_start)
-                    env = tf.cast(env, tf.complex128)
+                env = comp.get_shape_values(ts_off, t_end - t_start)
+                env = tf.cast(env, tf.complex128)
 
                 signal += (
                     amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
