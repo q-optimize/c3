@@ -152,8 +152,6 @@ class EnvelopeDrag(Envelope):
         shape: types.FunctionType = None,
         use_t_before=False,
     ):
-        # if not use_t_before:
-        #     raise TypeError("C3: Using DRAG requires the signal to start at 0. Set use_t_before=True.")
         super().__init__(
             name=name,
             desc=desc,
@@ -174,7 +172,7 @@ class EnvelopeDrag(Envelope):
         dt = ts[1] - ts[0]
         with tf.GradientTape() as t:
             t.watch(ts)
-            env = self.base_env(ts, t_final)
+            env = tf.math.real(self.base_env(ts, t_final))
         denv = (
             t.gradient(env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO) * dt
         )  # Derivative W.R.T. to bins

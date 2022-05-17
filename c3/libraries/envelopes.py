@@ -242,7 +242,7 @@ def flattop_risefall(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     t_up = risefall
     t_down = t_final - risefall
-    return tf_complexify(
+    return (
         (1 + tf.math.erf((t - t_up) / risefall))
         / 2
         * (1 + tf.math.erf((-t + t_down) / risefall))
@@ -393,7 +393,7 @@ def gaussian_sigma(t, params):
         tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(t_final / (np.sqrt(8) * sigma))
         - t_final * offset
     )
-    return tf_complexify((gauss - offset) / norm)
+    return (gauss - offset) / norm
 
 
 @deprecated("Using standard width. Better use gaussian_sigma().")
@@ -414,7 +414,7 @@ def gaussian(t, params):
         max_val=params["t_final"].get_value() / 4,
         unit=params["t_final"].unit,
     )
-    return tf_complexify(tf_complexify(gaussian_sigma(t, params)))
+    return gaussian_sigma(t, params)
 
 
 @env_reg_deco
@@ -497,7 +497,7 @@ def gaussian_der_nonorm(t, params):
         * (t - t_final / 2)
         / sigma**2
     )
-    return tf_complexify(gauss_der)
+    return gauss_der
 
 
 @env_reg_deco
@@ -539,7 +539,7 @@ def drag(t, params):
         max_val=params["t_final"].get_value() / 2,
         unit=params["t_final"].unit,
     )
-    return tf_complexify(drag_sigma(t, params))
+    return drag_sigma(t, params)
 
 
 @env_reg_deco
