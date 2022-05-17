@@ -51,7 +51,8 @@ t_final = 7e-9  # Time for single qubit gates
 slices = int(t_final * awg_res)
 
 pwc_params = {
-    "values": Quantity(value=np.random.randn(slices), unit="V"),
+    "inphase": Quantity(value=np.random.randn(slices), unit="V"),
+    "quadrature": Quantity(value=np.random.randn(slices), unit="V"),
     "amp": Quantity(value=1.0, unit="V"),
     "xy_angle": Quantity(
         value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"

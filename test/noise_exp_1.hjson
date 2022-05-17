@@ -101,7 +101,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -221,7 +220,6 @@
         outputs: 1
         params: {}
         resolution: 2000000000.0
-        options: ""
       }
       DigitalToAnalog:
       {
