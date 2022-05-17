@@ -337,20 +337,6 @@ class Instruction:
                         denv = denv * dt  # derivative W.R.T. time
 
                     env = tf.complex(env, -denv * delta)
-                elif "pwc" in options and options["pwc"]:
-                    inphase = comp.params["inphase"].get_value()
-                    quadrature = comp.params["quadrature"].get_value()
-                    if not inphase.shape == quadrature.shape:
-                        raise Exception(
-                            "C3:Error:inphase and quadrature are of different lengths."
-                        )
-                    env = tf.complex(inphase, quadrature)
-                    len_diff = len(ts) - len(env)
-                    if len_diff > 0:
-                        zeros = tf.zeros([len_diff], tf.complex128)
-                        env = tf.concat([env, zeros], axis=0)
-                    elif len_diff < 0:
-                        print("C3 Warning: AWG has less timesteps than given PWC bins")
 
                 else:
                     env = comp.get_shape_values(ts_off, t_end - t_start)
