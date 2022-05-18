@@ -144,7 +144,6 @@
         inputs: 0
         outputs: 1
         resolution: 2400000000.0
-        options: "drag_2"
       }
       mixer:
       {

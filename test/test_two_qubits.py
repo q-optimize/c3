@@ -49,7 +49,10 @@ def test_propagation(get_two_qubit_chip) -> None:
     instr = pmap.instructions[GATE_STR]
     steps = int((instr.t_end - instr.t_start) * exp.sim_res)
     result = exp.propagation(
-        pmap.model, pmap.generator, pmap.instructions["rx90p[0]"], exp.folding_stack[steps]
+        pmap.model,
+        pmap.generator,
+        pmap.instructions["rx90p[0]"],
+        exp.folding_stack[steps],
     )
     propagator = result["U"]
     almost_equal(propagator, test_data["propagator"])

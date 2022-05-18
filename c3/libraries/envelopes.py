@@ -1,7 +1,7 @@
 """
 Library of envelope functions.
 
-All functions assume the input of a time vector.
+All functions assume the input of a time vector and return complex amplitudes.
 """
 
 import numpy as np
@@ -9,6 +9,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from c3.c3objs import Quantity as Qty
 from c3.utils.utils import deprecated
+from c3.utils.tf_utils import tf_complexify
 
 envelopes = dict()
 
@@ -24,14 +25,13 @@ def env_reg_deco(func):
 @env_reg_deco
 def no_drive(t, params=None):
     """Do nothing."""
-    return tf.zeros_like(t, dtype=tf.float64)
+    return tf.zeros_like(t, dtype=tf.complex128)
 
 
 @env_reg_deco
 def pwc(t, params):
     """Piecewise constant pulse."""
-    # TODO make pwc return actual values like other envelopes
-    return params
+    return tf.complex(params["inphase"].get_value(), params["quadrature"].get_value())
 
 
 @env_reg_deco
@@ -65,7 +65,7 @@ def pwc_shape(t, params):
         [len(t), 1],
     )
 
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -98,7 +98,7 @@ def pwc_shape_plateau(t, params):
 
     if "width" in params:
         shape = tf.where(x == t_mid, 1.0, shape)
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -122,7 +122,7 @@ def pwc_symmetric(t, params):
         ),
         [len(t)],
     )
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -136,7 +136,7 @@ def delta_pulse(t, params):
             np.ones_like(t),
             shape,
         )
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -165,7 +165,7 @@ def fourier_sin(t, params):
         [params["phases"].get_value().shape[0], 1],
     )
     t = tf.reshape(tf.cast(t, tf.float64), [1, t.shape[0]])
-    return tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0)
+    return tf_complexify(tf.reduce_sum(amps * tf.sin(freqs * t + phases), 0))
 
 
 @env_reg_deco
@@ -188,13 +188,13 @@ def fourier_cos(t, params):
         tf.cast(params["freqs"].get_value(), tf.float64), [params["freqs"].shape[0], 1]
     )
     t = tf.reshape(tf.cast(t, tf.float64), [1, t.shape[0]])
-    return tf.reduce_sum(amps * tf.cos(freqs * t), 0)
+    return tf_complexify(tf.reduce_sum(amps * tf.cos(freqs * t), 0))
 
 
 @env_reg_deco
 def rect(t, params=None):
     """Rectangular pulse. Returns 1 at every time step."""
-    return tf.ones_like(t, tf.float64)
+    return tf_complexify(tf.ones_like(t, tf.float64))
 
 
 @env_reg_deco
@@ -221,7 +221,7 @@ def trapezoid(t, params):
         (t_final - t) / (risefall * 2.5),
         envelope,
     )
-    return envelope
+    return tf_complexify(envelope)
 
 
 @env_reg_deco
@@ -275,7 +275,7 @@ def flattop(t, params):
         * (1 + tf.math.erf((-t + t_down) / risefall))
         / 2
     )
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -299,7 +299,7 @@ def flattop_cut(t, params):
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
     shape = tf.clip_by_value(shape, 0, 1)
     shape /= tf.reduce_max(shape)
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -324,7 +324,7 @@ def flattop_cut_center(t, params):
     t_down = t_final / 2 + width / 2
     shape = tf.math.erf((t - t_up) / risefall) * tf.math.erf((-t + t_down) / risefall)
     shape = tf.clip_by_value(shape, 0, 2)
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
@@ -360,14 +360,14 @@ def slepian_fourier(t, params):
     shape = tf.where(tf.abs(t_final / 2 - t) > width / 2, tf.zeros_like(t), shape)
     shape /= tf.reduce_max(shape)
     shape = shape * (1 - offset / amp) + offset / amp
-    return shape
+    return tf_complexify(shape)
 
 
 @env_reg_deco
 def flattop_risefall_1ns(t, params):
     """Flattop gaussian with fixed width of 1ns."""
     params["risefall"] = Qty(1e-9, unit="s")
-    return flattop_risefall(t, params)
+    return tf_complexify(flattop_risefall(t, params))
 
 
 @env_reg_deco
@@ -434,7 +434,7 @@ def cosine(t, params):
     # TODO Add zeroes for t>t_final
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     cos = 0.5 * (1 - tf.cos(2 * np.pi * t / t_final))
-    return cos
+    return tf_complexify(cos)
 
 
 @env_reg_deco
@@ -463,7 +463,7 @@ def cosine_flattop(t, params):
         ],
         axis=0,
     )
-    return cos_flt
+    return tf_complexify(cos_flt)
 
 
 @env_reg_deco
@@ -484,7 +484,7 @@ def gaussian_nonorm(t, params):
     t_final = tf.cast(params["t_final"].get_value(), tf.float64)
     sigma = params["sigma"].get_value()
     gauss = tf.exp(-((t - t_final / 2) ** 2) / (2 * sigma**2))
-    return gauss
+    return tf_complexify(gauss)
 
 
 @env_reg_deco
@@ -513,7 +513,7 @@ def gaussian_der(t, params):
     norm = tf.sqrt(2 * np.pi * sigma**2) * tf.math.erf(
         t_final / (tf.cast(tf.sqrt(8.0), tf.float64) * sigma)
     ) - t_final * tf.exp(-(t_final**2) / (8 * sigma**2))
-    return gauss_der / norm
+    return tf_complexify(gauss_der / norm)
 
 
 @env_reg_deco
@@ -526,7 +526,7 @@ def drag_sigma(t, params):
         t_final / (np.sqrt(8) * sigma)
     ) - t_final * tf.exp(-(t_final**2) / (8 * sigma**2))
     offset = tf.exp(-(t_final**2) / (8 * sigma**2))
-    return (drag - offset) ** 2 / norm
+    return tf_complexify((drag - offset) ** 2 / norm)
 
 
 @deprecated("Using standard width. Better use drag_sigma.")
@@ -559,7 +559,7 @@ def drag_der(t, params):
         / sigma**2
         / norm
     )
-    return der
+    return tf_complexify(der)
 
 
 @env_reg_deco
@@ -583,4 +583,4 @@ def flattop_variant(t, params):
             value[i] = np.exp(-((e - t_down + ramp) ** 2) / (2 * sigma**2))
         else:
             value[i] = 0
-    return value
+    return tf_complexify(value)

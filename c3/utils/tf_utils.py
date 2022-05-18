@@ -205,6 +205,10 @@ def tf_abs_squared(x):
     return tf.reshape(tf.cast(tf.math.conj(x) * x, dtype=tf.float64), shape=[1])
 
 
+def tf_complexify(x):
+    return tf.complex(x, tf.zeros_like(x))
+
+
 def tf_abs(x):
     """Rewritten so that is has a gradient."""
     # TODO: See if custom abs and abs_squared are needed and compare performance.

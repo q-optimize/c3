@@ -294,7 +294,15 @@ class Quantity:
         """Set the value of this quantity as tensorflow. If needed, limits will be extended."""
         min_val, max_val = self.get_limits()
         # Extra bounds included to not be directly at border due to differentiability
-        minmax = [val * 0.9, val * 1.1, min_val, max_val]
+        # val can be matrix valued
+        minmax = [
+            tf.math.reduce_min(val * 0.9),
+            tf.math.reduce_max(val * 0.9),
+            tf.math.reduce_min(val * 1.1),
+            tf.math.reduce_max(val * 1.1),
+            min_val,
+            max_val,
+        ]
         min_val = tf.math.reduce_min(minmax)
         max_val = tf.math.reduce_max(minmax)
         self._set_limits(min_val, max_val)

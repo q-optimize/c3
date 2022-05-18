@@ -10,7 +10,7 @@
         {
           no_drive:
           {
-            c3type: Envelope
+            c3type: EnvelopeDrag
             shape: no_drive
             params:
             {
@@ -63,7 +63,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -100,7 +99,7 @@
         {
           gauss:
           {
-            c3type: Envelope
+            c3type: EnvelopeDrag
             shape: gaussian_nonorm
             params:
             {
@@ -153,7 +152,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -190,7 +188,7 @@
         {
           gauss:
           {
-            c3type: Envelope
+            c3type: EnvelopeDrag
             shape: gaussian_nonorm
             params:
             {
@@ -243,7 +241,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -280,7 +277,7 @@
         {
           gauss:
           {
-            c3type: Envelope
+            c3type: EnvelopeDrag
             shape: gaussian_nonorm
             params:
             {
@@ -333,7 +330,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -370,7 +366,7 @@
         {
           gauss:
           {
-            c3type: Envelope
+            c3type: EnvelopeDrag
             shape: gaussian_nonorm
             params:
             {
@@ -423,7 +419,6 @@
                 symbol: \alpha
               }
             }
-            drag: false
           }
           carrier:
           {
@@ -540,7 +535,6 @@
         outputs: 1
         params: {}
         resolution: 2000000000.0
-        options: drag_2
       }
       DigitalToAnalog:
       {
