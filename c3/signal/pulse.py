@@ -1,6 +1,7 @@
 from c3.c3objs import C3obj, hjson_encode
 from c3.c3objs import Quantity as Qty
 from c3.libraries.envelopes import envelopes
+from c3.utils.tf_utils import tf_complexify
 import tensorflow as tf
 import numpy as np
 import types
@@ -37,7 +38,6 @@ class Envelope(C3obj):
         comment: str = " ",
         params: Dict[str, Qty] = {},
         shape: Union[Callable, str] = None,
-        drag=False,
         use_t_before=False,
     ):
         if isinstance(shape, str):
@@ -53,7 +53,6 @@ class Envelope(C3obj):
             "t_final": Qty(value=1.0, min_val=-1.0, max_val=+1.0, unit="s"),
         }
         default_params.update(params)
-        self.drag = drag
         self.set_use_t_before(use_t_before)
         super().__init__(
             name=name,
@@ -78,7 +77,6 @@ class Envelope(C3obj):
             "c3type": self.__class__.__name__,
             "shape": self.shape.__name__,
             "params": params,
-            "drag": self.drag,
         }
 
     def __str__(self) -> str:
@@ -89,7 +87,6 @@ class Envelope(C3obj):
         for key, item in self.params.items():
             repr_str += str(key) + " : " + str(item) + ", "
         repr_str += "shape: " + self.shape.__name__ + ", "
-        repr_str += "drag pulse" + str(self.drag) + ", "
         return repr_str
 
     def set_use_t_before(self, use_t_before):
@@ -113,8 +110,9 @@ class Envelope(C3obj):
         """
         t_final = tf.minimum(self.params["t_final"].get_value(), t_end)
         dt = ts[1] - ts[0]
-        return tf.sigmoid((ts / dt + 0.001) * 1e6) * tf.sigmoid(
-            (0.999 * t_final - ts) / dt * 1e6
+        return tf_complexify(
+            tf.sigmoid((ts / dt + 0.001) * 1e6)
+            * tf.sigmoid((0.999 * t_final - ts) / dt * 1e6)
         )
 
     def _get_shape_values_before(self, ts, t_final=1):
@@ -144,6 +142,45 @@ class Envelope(C3obj):
 
 
 @comp_reg_deco
+class EnvelopeDrag(Envelope):
+    def __init__(
+        self,
+        name: str,
+        desc: str = " ",
+        comment: str = " ",
+        params: dict = {},
+        shape: types.FunctionType = None,
+        use_t_before=False,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            shape=shape,
+            use_t_before=use_t_before,
+        )
+        self.set_use_t_before(use_t_before)
+
+    def set_use_t_before(self, use_t_before):
+        if use_t_before:
+            self.base_env = super()._get_shape_values_before
+        else:
+            self.base_env = super()._get_shape_values_just
+
+    def get_shape_values(self, ts, t_final=1):
+        dt = ts[1] - ts[0]
+        with tf.GradientTape() as t:
+            t.watch(ts)
+            env = tf.math.real(self.base_env(ts, t_final))
+        denv = (
+            t.gradient(env, ts, unconnected_gradients=tf.UnconnectedGradients.ZERO) * dt
+        )  # Derivative W.R.T. to bins
+        delta = self.params["delta"].get_value()
+        return tf.complex(env, -denv * delta)
+
+
+@comp_reg_deco
 class EnvelopeNetZero(Envelope):
     """
     Represents the envelopes shaping a pulse.
@@ -164,7 +201,6 @@ class EnvelopeNetZero(Envelope):
         comment: str = " ",
         params: dict = {},
         shape: types.FunctionType = None,
-        drag: bool = False,
         use_t_before=False,
     ):
         super().__init__(
@@ -173,7 +209,6 @@ class EnvelopeNetZero(Envelope):
             comment=comment,
             params=params,
             shape=shape,
-            drag=drag,
             use_t_before=use_t_before,
         )
         self.set_use_t_before(use_t_before)

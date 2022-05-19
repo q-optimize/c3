@@ -41,7 +41,7 @@ gauss_params_single = {
     "delta": Quantity(value=-1, min_val=-5, max_val=3, unit=""),
 }
 
-gauss_env_single = pulse.Envelope(
+gauss_env_single = pulse.EnvelopeDrag(
     name="gauss",
     desc="Gaussian comp for single-qubit gates",
     params=gauss_params_single,

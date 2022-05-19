@@ -100,7 +100,6 @@ def create_experiment():
             }
         },
     )
-    generator.devices["AWG"].enable_drag_2()
 
     # ### MAKE GATESET
     gauss_params_single = {
@@ -123,7 +122,7 @@ def create_experiment():
         "delta": Qty(value=-1, min_val=-5, max_val=3, unit=""),
     }
 
-    gauss_env_single = pulse.Envelope(
+    gauss_env_single = pulse.EnvelopeDrag(
         name="gauss",
         desc="Gaussian comp for single-qubit gates",
         params=gauss_params_single,

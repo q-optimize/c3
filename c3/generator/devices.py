@@ -5,7 +5,7 @@ import hjson
 from typing import Callable, Dict, Any, List
 import tensorflow as tf
 import numpy as np
-from c3.signal.pulse import Envelope, Carrier
+from c3.signal.pulse import Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj, hjson_encode
 from c3.utils.tf_utils import tf_convolve
@@ -1104,27 +1104,16 @@ class AWG(Device):
     """
 
     def __init__(self, **props):
-        self._options = ""
         self.logdir = props.pop(
             "logdir", os.path.join(tempfile.gettempdir(), "c3logs", "AWG")
         )
         self.logname = "awg.log"
-        options = props.pop("options", "")
         super().__init__(**props)
         self.outputs = props.pop("outputs", 1)
         # TODO move the options pwc & drag to the instruction object
         self.amp_tot_sq = None
         self.process = self.create_IQ
-        if options == "drag":
-            self.enable_drag()
-        elif options == "drag_2":
-            self.enable_drag_2()
         self.centered_ts = True
-
-    def asdict(self) -> dict:
-        awg_dict = super().asdict()
-        awg_dict["options"] = self._options
-        return awg_dict
 
     # TODO create DC function
 
@@ -1159,7 +1148,7 @@ class AWG(Device):
         ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
         self.ts = ts
 
-        signal, norm = instr.get_awg_signal(chan, ts, options={self._options: True})
+        signal, norm = instr.get_awg_signal(chan, ts)
 
         self.amp_tot = norm
         self.signal[chan] = {
@@ -1168,77 +1157,6 @@ class AWG(Device):
             "ts": ts,
         }
         return self.signal[chan]
-
-    def create_IQ_pwc(self, instr: Instruction, chan: str, inputs) -> dict:
-        """
-        Construct the in-phase (I) and quadrature (Q) components of the signal.
-        These are universal to either experiment or simulation.
-        In the xperiment these will be routed to AWG and mixer
-        electronics, while in the simulation they provide the shapes of the
-        instruction fields to be added to the Hamiltonian.
-
-        Parameters
-        ----------
-        channel : str
-            Identifier for the selected drive line.
-        components : dict
-            Separate signals to be combined onto this drive line.
-        t_start : float
-            Beginning of the signal.
-        t_end : float
-            End of the signal.
-
-        Returns
-        -------
-        dict
-            Waveforms as I and Q components.
-
-        """
-        ts = self.create_ts(instr.t_start, instr.t_end, centered=True)
-        components = instr.comps
-        self.ts = ts
-        # dt = ts[1] - ts[0]
-        amp_tot_sq = 0.0
-        inphase_comps = []
-        quadrature_comps = []
-
-        for comp in components[chan].values():
-            if isinstance(comp, Envelope):
-                amp_tot_sq += 1
-                if comp.shape is None:
-                    inphase = comp.params["inphase"].get_value()
-                    quadrature = comp.params["quadrature"].get_value()
-                else:
-                    shape = comp.get_shape_values(ts)
-                    inphase = tf.math.real(shape)
-                    quadrature = tf.math.imag(shape)
-                xy_angle = comp.params["xy_angle"].get_value()
-                freq_offset = comp.params["freq_offset"].get_value()
-                phase = xy_angle + freq_offset * ts
-
-                if len(inphase) != len(quadrature):
-                    raise ValueError("inphase and quadrature are of different lengths.")
-                elif len(inphase) < len(ts):
-                    zeros = tf.constant(
-                        np.zeros(len(ts) - len(inphase)), dtype=inphase.dtype
-                    )
-                    inphase = tf.concat([inphase, zeros], axis=0)
-                    quadrature = tf.concat([quadrature, zeros], axis=0)
-
-                inphase_comps.append(
-                    inphase * tf.cos(phase) + quadrature * tf.sin(phase)
-                )
-                quadrature_comps.append(
-                    quadrature * tf.cos(phase) - inphase * tf.sin(phase)
-                )
-
-        norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
-        inphase = tf.add_n(inphase_comps, name="inphase")
-        quadrature = tf.add_n(quadrature_comps, name="quadrature")
-
-        self.amp_tot = norm
-        self.signal[chan] = {"inphase": inphase, "quadrature": quadrature, "ts": ts}
-        return {"inphase": inphase, "quadrature": quadrature, "ts": ts}
 
     def get_average_amp(self, line):
         """
@@ -1261,15 +1179,6 @@ class AWG(Device):
 
     def get_Q(self, line):
         return self.signal[line]["quadrature"]  # * self.amp_tot
-
-    def enable_drag(self):
-        self._options = "drag"
-
-    def enable_drag_2(self):
-        self._options = "drag_2"
-
-    def enable_pwc(self):
-        self._options = "pwc"
 
     def log_shapes(self):
         # TODO log shapes in the generator instead

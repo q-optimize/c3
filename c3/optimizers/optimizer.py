@@ -300,8 +300,9 @@ class Optimizer:
         self.gradients[str(current_params.numpy())] = gradients
         # We use zip to create pairs of Quantity objects and their new bare numeric parameter values.
         # Then we compute the new physical value and store it in the status.
+        self.pmap.set_parameters_scaled(x)
         self.optim_status["params"] = [
-            par.get_other_value(y) for par, y in zip(self.pmap.get_parameters(), x)
+            par.numpy().tolist() for par in self.pmap.get_parameters()
         ]
         self.optim_status["gradient"] = gradients.tolist()
         last_goal = float(goal)
