@@ -1,6 +1,5 @@
 import os
 import tempfile
-import warnings
 import hjson
 from typing import Callable, Dict, Any, List
 import tensorflow as tf
@@ -514,9 +513,7 @@ class Response(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
-        warnings.warn(
-            "use ResponseFFT for faster signal generation instead", DeprecationWarning
-        )
+        raise Exception("use ResponseFFT for faster signal generation instead")
 
     def convolve(self, signal: list, resp_shape: list):
         """
