@@ -324,7 +324,7 @@ class ParameterMap:
         if model_updated and self.model:
             self.model.update_model()
 
-    def get_parameters_scaled(self, opt_map=None) -> np.ndarray:
+    def get_parameters_scaled(self, opt_map=None) -> tf.Tensor:
         """
         Return the current parameters. This fuction should only be called by an
         optimizer. Are you an optimizer?
@@ -345,7 +345,7 @@ class ParameterMap:
             key = equiv_ids[0]
             par = self._pars[key]
             values.append(par.get_opt_value())
-        return values
+        return tf.concat(values, axis=0)
 
     def _set_parameters_scaled_ctrls(
         self, values: Union[tf.constant, tf.Variable], opt_map=None
