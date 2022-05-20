@@ -7,7 +7,7 @@ from c3.generator.devices import (
     LO,
     AWG,
     Mixer,
-    Response,
+    ResponseFFT,
     DigitalToAnalog,
     VoltsToHertz,
     Crosstalk,
@@ -24,7 +24,7 @@ awg_res = 2e9  # Realistic, limited resolution of an AWG
 lo = LO(name="lo", resolution=sim_res, outputs=1)
 awg = AWG(name="awg", resolution=awg_res, outputs=1)
 dac = DigitalToAnalog(name="dac", resolution=sim_res, inputs=1, outputs=1)
-resp = Response(
+resp = ResponseFFT(
     name="resp",
     rise_time=Quantity(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
     resolution=sim_res,

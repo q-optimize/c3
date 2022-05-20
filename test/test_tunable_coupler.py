@@ -160,7 +160,7 @@ model.set_dressed(dressed)
 lo = devices.LO(name="lo", resolution=sim_res)
 awg = devices.AWG(name="awg", resolution=awg_res)
 dig_to_an = devices.DigitalToAnalog(name="dac", resolution=sim_res)
-resp = devices.Response(
+resp = devices.ResponseFFT(
     name="resp",
     rise_time=Qty(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
     resolution=sim_res,
