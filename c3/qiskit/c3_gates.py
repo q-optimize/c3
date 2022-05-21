@@ -1,7 +1,8 @@
 """Library for interoperability of c3 gates with qiskit
 """
-from typing import Optional
+from typing import Iterable, List, Optional
 from qiskit.extensions import UnitaryGate
+from qiskit.circuit import Gate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES
 import numpy as np
@@ -113,3 +114,35 @@ class CR90Gate(UnitaryGate):
         warnings.warn("This is not equivalent to the RZX(pi/2) gate in qiskit")
         super().__init__(data=GATES["cr90"], label=label)
         self.name = "cr90"
+
+
+class SetParamsGate(Gate):
+    """Gate for setting parameter values through qiskit interface
+
+    These parameters should be supplied as a list with the first item
+    a list of Quantity objects converted to Dict and the second item an
+    opt_map with the proper list nesting. For example: ::
+
+        amp = Qty(value=0.8, min_val=0.2, max_val=1, unit="V")
+        opt_map = [[["rx90p[0]", "d1", "gaussian", "amp"]]]
+        param_gate = SetParamsGate(params=[[amp.asdict()], opt_map])
+    """
+
+    def __init__(self, params: List) -> None:
+        name = "param_update"
+        num_qubits = 1
+        label = None
+        super().__init__(name, num_qubits, params, label)
+
+    def validate_parameter(self, parameter: Iterable) -> Iterable:
+        """Override the default validation in Gate to allow arbitrary lists
+        ----------
+        parameter : Iterable
+            The waveform as a nested list
+        Returns
+        -------
+        Iterable
+            The same waveform
+        """
+        # TODO implement sanitation/validation as required
+        return parameter
