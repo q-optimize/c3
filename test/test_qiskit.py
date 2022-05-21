@@ -199,6 +199,11 @@ def test_qiskit_parameter_update(get_physics_circuit):
         amp.numpy(),
     )
 
+    # Test that SetParamsGate not at the end raises an error
+    qc.append(RX90pGate(), [0])
+    with pytest.raises(KeyError):
+        _ = physics_backend.run(qc)
+
 
 @pytest.mark.parametrize(
     ["backend", "config_file"],

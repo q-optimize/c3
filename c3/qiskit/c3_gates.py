@@ -117,10 +117,13 @@ class CR90Gate(UnitaryGate):
 
 
 class SetParamsGate(Gate):
-    """Gate for setting parameter values through qiskit interface
+    """Gate for setting parameter values through qiskit interface. This gate is only
+    processed when it is the last gate in the circuit, otherwise it throws a KeyError.
+    The qubit target for the gate can be any valid qubit in the circuit, this argument
+    is currently ignored and not processed by the backend
 
-    These parameters should be supplied as a list with the first item
-    a list of Quantity objects converted to Dict and the second item an
+    These parameters should be supplied as a list with the first item a list of
+    Quantity objects converted to a Dict of Python primitives and the second item an
     opt_map with the proper list nesting. For example: ::
 
         amp = Qty(value=0.8, min_val=0.2, max_val=1, unit="V")
