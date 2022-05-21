@@ -20,6 +20,7 @@ from c3.qiskit.c3_gates import (
     CRXpGate,
     CRGate,
     CR90Gate,
+    SetParamsGate,
 )
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from qiskit.extensions import UnitaryGate
@@ -160,6 +161,7 @@ def test_qiskit_physics(get_physics_circuit):
     received_pops = np.array(list(job_sim.result().data()["state_pops"].values()))
     np.testing.assert_allclose(received_pops, desired=expected_pops, atol=1e-1)
 
+
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.slow
@@ -168,7 +170,7 @@ def test_qiskit_parameter_update(get_physics_circuit):
     c3_qiskit = C3Provider()
     physics_backend = c3_qiskit.get_backend("c3_qasm_physics_simulator")
     physics_backend.set_device_config("test/qiskit.cfg")
-    qc = get_physics_circuit
+    qc = get_physics_circuit  # TODO use a smaller circuit
 
     # Test that runtime options are correctly assigned
     opt_map = [[["rx90p[0]", "d1", "gaussian", "amp"]]]
@@ -177,8 +179,25 @@ def test_qiskit_parameter_update(get_physics_circuit):
     ]
     _ = physics_backend.run(qc, params=param, opt_map=opt_map)
     physics_backend.c3_exp.pmap.set_opt_map(opt_map)
-    np.testing.assert_allclose(physics_backend.c3_exp.pmap.get_parameter_dict()["rx90p[0]-d1-gaussian-amp"].numpy(),
-        param[0].numpy())
+    np.testing.assert_allclose(
+        physics_backend.c3_exp.pmap.get_parameter_dict()[
+            "rx90p[0]-d1-gaussian-amp"
+        ].numpy(),
+        param[0].numpy(),
+    )
+
+    # Test that custom gate for setting parameters works
+    amp = Qty(value=0.8, min_val=0.2, max_val=1, unit="V")
+    opt_map = [[["rx90p[0]", "d1", "gaussian", "amp"]]]
+    param_gate = SetParamsGate(params=[[amp.asdict()], opt_map])
+    qc.append(param_gate, [0])
+    _ = physics_backend.run(qc)
+    np.testing.assert_allclose(
+        physics_backend.c3_exp.pmap.get_parameter_dict()[
+            "rx90p[0]-d1-gaussian-amp"
+        ].numpy(),
+        amp.numpy(),
+    )
 
 
 @pytest.mark.parametrize(
