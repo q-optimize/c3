@@ -32,13 +32,26 @@ There is no official support for `c3-toolset` on Apple Silicon devices, but you 
 C3  provides a simple Python API through which it may integrate with virtually any experimental setup.
 Contact us at [c3@q-optimize.org](mailto://quantum.c3po@gmail.com).
 
-The paper introducing C3 as a concept can be found on the [arxiv](https://arxiv.org/abs/2009.09866).
+The paper introducing C3 as a scientific concept can be found in [Wittler2021](https://arxiv.org/abs/2009.09866). Software and implementation details are described in [SahaRoy2022](https://arxiv.org/abs/2205.04829). 
 
 Documentation is available [here](https://c3-toolset.readthedocs.io) on RTD.
 
-Examples are available in the `examples/` directory and can also be run online using the `launch|binder` badge above.
+### Examples
 
-If you wish to contribute, please check out the issues tab and also the `CONTRIBUTING.md` for useful resources.
+The following notebooks are available in the `examples/` directory and can also be run online using the `launch|binder` badge above:
+
+- [Model-based Optimal Control for Single Qubit Gate](examples/two_qubits.ipynb)
+- [Model-based Optimal Control for Two Qubit Engtangling Gate](examples/two_qubit_entangling_gate.ipynb)
+- [Model-free Calibration on Simulated Hardware](examples/Simulated_calibration.ipynb)
+- [Simulated Model Learning with data from Simulated Calibration](examples/Simulated_Model_Learning.ipynb)
+- [Full loop - Control, Calibration & Characterization](examples/Full_loop_single_qubit.ipynb)
+- [Minimum example for using the Qiskit interface](examples/c3_qiskit.ipynb)
+- [Minimum example for optimizing piece-wise constant pulses](examples/Piecewise_constant_controls.ipynb)
+- [Understanding the ParameterMap](examples/Parametermap.ipynb)
+
+## Contributing
+
+If you wish to contribute, please check out the issues tab and also the [CONTRIBUTING.md](CONTRIBUTING.md) for useful resources.
 
 The source code is available on Github at [https://github.com/q-optimize/c3](https://github.com/q-optimize/c3).
 
