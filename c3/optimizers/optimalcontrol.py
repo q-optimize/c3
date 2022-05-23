@@ -183,4 +183,5 @@ class OptimalControl(Optimizer):
             n_eval=self.evaluation + 1,
             **self.fid_func_kwargs,
         )
+        self.evaluation += 1
         return goal

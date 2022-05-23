@@ -6,6 +6,7 @@ import pickle
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal as almost_equal
+import c3.libraries.algorithms as algorithms
 
 # Libs and helpers
 from c3.libraries.propagation import rk4
@@ -74,8 +75,11 @@ def test_optim(get_OC_optimizer) -> None:
     check if optimization result is below 1e-1
     """
     opt = get_OC_optimizer
+    assert opt.evaluation == 0
     opt.optimize_controls()
     assert opt.current_best_goal < 0.1
+    maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
+    assert opt.evaluation == opt.options[maxiterKey] - 1
 
 
 @pytest.mark.tensorflow

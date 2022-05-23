@@ -153,6 +153,7 @@ class Calibration(Optimizer):
         ]
         self.optim_status["goal"] = float(goal)
         self.optim_status["time"] = time.asctime()
+        self.evaluation += 1
         self.log_pickle(params, seqs, results, results_std, shots)
         return goal
 
