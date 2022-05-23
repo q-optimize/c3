@@ -7,7 +7,7 @@ import numpy as np
 from c3.signal.pulse import Carrier
 from c3.signal.gates import Instruction
 from c3.c3objs import Quantity, C3obj, hjson_encode
-from c3.utils.tf_utils import tf_convolve
+from c3.utils.tf_utils import tf_convolve, tf_convolve_legacy
 
 devices = dict()
 
@@ -513,50 +513,6 @@ class Response(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
-        raise Exception("use ResponseFFT for faster signal generation instead")
-
-    def convolve(self, signal: list, resp_shape: list):
-        """
-        Compute the convolution with a function.
-
-        Parameters
-        ----------
-        signal : list
-            Potentially unlimited signal samples.
-        resp_shape : list
-            Samples of the function to model limited bandwidth.
-
-        Returns
-        -------
-        tf.Tensor
-            Processed signal.
-
-        """
-        convolution = tf.zeros(0, dtype=tf.float64)
-        signal = tf.concat(
-            [
-                tf.zeros(len(resp_shape), dtype=tf.float64),
-                signal,
-                tf.zeros(len(resp_shape), dtype=tf.float64),
-            ],
-            0,
-        )
-        for p in range(len(signal) - 2 * len(resp_shape)):
-            convolution = tf.concat(
-                [
-                    convolution,
-                    tf.reshape(
-                        tf.math.reduce_sum(
-                            tf.math.multiply(
-                                signal[p : p + len(resp_shape)], resp_shape
-                            )
-                        ),
-                        shape=[1],
-                    ),
-                ],
-                0,
-            )
-        return convolution
 
     def process(self, instr, chan, iq_signal: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
@@ -580,23 +536,26 @@ class Response(Device):
             tf.cast(n_ts, tf.int32),
         )
         cen = tf.cast(
-            (self.params["rise_time"].get_value() - 1 / self.resolution) / 2, tf.float64
+            (self.params["rise_time"].get_value() + 1 / self.resolution) / 2, tf.float64
         )
         sigma = self.params["rise_time"].get_value() / 4
         gauss = tf.exp(-((ts - cen) ** 2) / (2 * sigma * sigma))
         offset = tf.exp(-((-1 - cen) ** 2) / (2 * sigma * sigma))
-        # TODO make sure ratio of risetime and resolution is an integer
+
         risefun = gauss - offset
-        inphase = self.convolve(
+        inphase = tf_convolve_legacy(
             iq_signal[0]["inphase"], risefun / tf.reduce_sum(risefun)
         )
-        quadrature = self.convolve(
+        quadrature = tf_convolve_legacy(
             iq_signal[0]["quadrature"], risefun / tf.reduce_sum(risefun)
         )
+
+        inphase = tf.math.real(inphase)
+        quadrature = tf.math.real(quadrature)
         self.signal = {
             "inphase": inphase,
             "quadrature": quadrature,
-            "ts": self.create_ts(instr.t_start, instr.t_end, centered=True),
+            "ts": iq_signal[0]["ts"],
         }
         return self.signal
 

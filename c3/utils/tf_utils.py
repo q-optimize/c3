@@ -463,3 +463,48 @@ def tf_convolve(sig: tf.Tensor, resp: tf.Tensor):
     fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
     convolution = tf.signal.ifft(fft_conv)
     return convolution[:sig_len]
+
+
+def tf_convolve_legacy(sig: tf.Tensor, resp: tf.Tensor):
+    """
+    Compute the convolution with a time response. LEGACY version. Ensures compatibility with the previous response implementation.
+
+    Parameters
+    ----------
+    sig : tf.Tensor
+        Signal which will be convoluted, shape: [N]
+    resp : tf.Tensor
+        Response function to be convoluted with signal, shape: [M]
+
+    Returns
+    -------
+    tf.Tensor
+        convoluted signal of shape [N]
+
+    """
+    sig = tf.cast(sig, dtype=tf.complex128)
+    resp = tf.cast(resp, dtype=tf.complex128)
+
+    sig_len = len(sig)
+    resp_len = len(resp)
+
+    signal_pad = tf.expand_dims(
+        tf.concat(
+            [
+                tf.zeros(resp_len, dtype=tf.complex128),
+                sig,
+                tf.zeros(resp_len, dtype=tf.complex128),
+            ],
+            axis=0,
+        ),
+        0,
+    )
+    resp_pad = tf.expand_dims(
+        tf.concat([resp, tf.zeros(sig_len + resp_len, dtype=tf.complex128)], axis=0), 0
+    )
+    sig_resp = tf.concat([signal_pad, resp_pad], axis=0)
+
+    fft_sig_resp = tf.signal.fft(sig_resp)
+    fft_conv = tf.math.reduce_prod(fft_sig_resp, axis=0)
+    convolution = tf.signal.ifft(fft_conv)
+    return convolution[resp_len - 1 : sig_len + resp_len - 1]
