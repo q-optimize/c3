@@ -555,7 +555,7 @@ class Response(Device):
         self.signal = {
             "inphase": inphase,
             "quadrature": quadrature,
-            "ts": iq_signal[0]["ts"],
+            "ts": self.create_ts(instr.t_start, instr.t_end, centered=True),
         }
         return self.signal
 
