@@ -51,7 +51,7 @@ def test_convolution() -> None:
     sigA = data["convolution"]["sigA"]
     sigB = data["convolution"]["sigB"]
     out = tf_convolve(sigA, sigB)
-    assert tf.math.reduce_sum(tf.abs(out - data["convolution"]["out"])) < 1e-9
+    np.testing.assert_almost_equal(out, data["convolution"]["out"], decimal=8)
 
 
 @pytest.mark.tensorflow

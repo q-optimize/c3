@@ -81,7 +81,7 @@ model.set_FR(True)
 lo = devices.LO(name="lo", resolution=sim_res)
 awg = devices.AWG(name="awg", resolution=awg_res)
 dig_to_an = devices.DigitalToAnalog(name="dac", resolution=sim_res)
-resp = devices.ResponseFFT(
+resp = devices.Response(
     name="resp",
     rise_time=Qty(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
     resolution=sim_res,
@@ -190,25 +190,31 @@ gen_signal2 = generator.generate_signals(instr2)
 def test_signals():
     test_data["signal_q1"] = gen_signal1["Qubit1"]
     test_data["signal_q2"] = gen_signal2["Qubit2"]
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(test_data["signal_q1"]["values"])
+    plt.plot(data["signal_q1"]["values"])
+    plt.savefig("test/transmon_sigs.png")
     np.testing.assert_allclose(
         actual=test_data["signal_q1"]["ts"],
         desired=data["signal_q1"]["ts"],
-        atol=1e-11 * np.max(data["signal_q1"]["ts"]),
+        atol=1e-8,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q1"]["values"],
         desired=data["signal_q1"]["values"],
-        atol=1e-11 * np.max(data["signal_q1"]["values"]),
+        atol=1e-8,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q2"]["ts"],
         desired=data["signal_q2"]["ts"],
-        atol=1e-11 * np.max(data["signal_q2"]["ts"]),
+        atol=1e-8,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q2"]["values"].numpy(),
         desired=data["signal_q2"]["values"].numpy(),
-        atol=1e-11 * np.max(data["signal_q2"]["values"]),
+        atol=1e-8,
     )
 
 
@@ -260,23 +266,23 @@ def test_propagation():
     np.testing.assert_allclose(
         actual=test_data["propagators_q1"],
         desired=data["propagators_q1"],
-        atol=1e-11 * np.max(data["propagators_q1"]),
+        atol=1e-12,
     )
     np.testing.assert_allclose(
         actual=test_data["partial_propagators_q1"],
         desired=data["partial_propagators_q1"],
-        atol=1e-11 * np.max(data["partial_propagators_q1"]),
+        atol=1e-12,
     )
 
     np.testing.assert_allclose(
         actual=test_data["propagators_q2"],
         desired=data["propagators_q2"],
-        atol=1e-11 * np.max(data["propagators_q2"]),
+        atol=1e-12,
     )
     np.testing.assert_allclose(
         actual=test_data["partial_propagators_q2"],
         desired=data["partial_propagators_q2"],
-        atol=1e-11 * np.max(data["partial_propagators_q2"]),
+        atol=1e-12,
     )
 
 
