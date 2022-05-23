@@ -7,7 +7,7 @@ from c3.generator.devices import (
     LO,
     AWG,
     Mixer,
-    ResponseFFT,
+    Response,
     DigitalToAnalog,
     VoltsToHertz,
     Crosstalk,
@@ -24,7 +24,7 @@ awg_res = 2e9  # Realistic, limited resolution of an AWG
 lo = LO(name="lo", resolution=sim_res, outputs=1)
 awg = AWG(name="awg", resolution=awg_res, outputs=1)
 dac = DigitalToAnalog(name="dac", resolution=sim_res, inputs=1, outputs=1)
-resp = ResponseFFT(
+resp = Response(
     name="resp",
     rise_time=Quantity(value=0.3e-9, min_val=0.05e-9, max_val=0.6e-9, unit="s"),
     resolution=sim_res,
@@ -184,15 +184,6 @@ def test_v2hz() -> None:
 @pytest.mark.integration
 def test_full_signal_chain() -> None:
     full_signal = generator.generate_signals(rx90p_q1)
-
-    import matplotlib.pyplot as plt
-
-    plt.plot(
-        full_signal["d1"]["values"].numpy()
-        / data["full_signal"][0]["d1"]["values"].numpy()
-    )
-    plt.savefig("test/full_chain.png")
-
     np.testing.assert_almost_equal(
         full_signal["d1"]["values"].numpy(),
         data["full_signal"][0]["d1"]["values"].numpy(),

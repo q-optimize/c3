@@ -3,6 +3,7 @@
 import tensorflow as tf
 from c3.utils.tf_utils import (
     tf_convolve,
+    tf_convolve_legacy,
     tf_unitary_overlap,
     tf_measure_operator,
     tf_super,
@@ -47,11 +48,20 @@ def test_unitary_overlap(args: Tuple[List[int], List[int], List[int]]) -> None:
 
 @pytest.mark.tensorflow
 @pytest.mark.unit
+def test_convolution_legacy() -> None:
+    sigA = data["convolution"]["sigA"]
+    sigB = data["convolution"]["sigB"]
+    out = tf_convolve_legacy(sigA, sigB)
+    np.testing.assert_almost_equal(out, data["convolution"]["out"], decimal=8)
+
+
+@pytest.mark.tensorflow
+@pytest.mark.unit
 def test_convolution() -> None:
     sigA = data["convolution"]["sigA"]
     sigB = data["convolution"]["sigB"]
     out = tf_convolve(sigA, sigB)
-    np.testing.assert_almost_equal(out, data["convolution"]["out"], decimal=8)
+    np.testing.assert_almost_equal(out, data["convolution"]["out_new"], decimal=8)
 
 
 @pytest.mark.tensorflow
