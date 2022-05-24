@@ -17,6 +17,9 @@ from c3.libraries.chip import TransmonExpanded, Transmon, Coupling
 from c3.model import Model
 import pytest
 
+ATOL_SIG = 1e-8  # for comparing signals 10 nV
+ATOL_FREQ = 1e3  # for comparing frequencies 1 KHz
+
 freq_q1 = 5e9
 freq_q2 = 6e9
 fluxpoint1 = 0
@@ -193,22 +196,22 @@ def test_signals():
     np.testing.assert_allclose(
         actual=test_data["signal_q1"]["ts"],
         desired=data["signal_q1"]["ts"],
-        atol=1e-8,
+        atol=ATOL_SIG,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q1"]["values"],
         desired=data["signal_q1"]["values"],
-        atol=1e-8,
+        atol=ATOL_SIG,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q2"]["ts"],
         desired=data["signal_q2"]["ts"],
-        atol=1e-8,
+        atol=ATOL_SIG,
     )
     np.testing.assert_allclose(
         actual=test_data["signal_q2"]["values"].numpy(),
         desired=data["signal_q2"]["values"].numpy(),
-        atol=1e-8,
+        atol=ATOL_SIG,
     )
 
 
@@ -235,13 +238,13 @@ def test_hamiltonians():
     np.testing.assert_allclose(
         actual=test_data["hamiltonians_q1"],
         desired=data["hamiltonians_q1"],
-        atol=1e-9 * np.max(data["hamiltonians_q1"]),
+        atol=ATOL_FREQ,
     )
 
     np.testing.assert_allclose(
         actual=test_data["hamiltonians_q2"],
         desired=data["hamiltonians_q2"],
-        atol=1e-11 * np.max(data["hamiltonians_q2"]),
+        atol=ATOL_FREQ,
     )
 
 
@@ -260,23 +263,23 @@ def test_propagation():
     np.testing.assert_allclose(
         actual=test_data["propagators_q1"],
         desired=data["propagators_q1"],
-        atol=1e-12,
+        atol=ATOL_FREQ,
     )
     np.testing.assert_allclose(
         actual=test_data["partial_propagators_q1"],
         desired=data["partial_propagators_q1"],
-        atol=1e-12,
+        atol=ATOL_FREQ,
     )
 
     np.testing.assert_allclose(
         actual=test_data["propagators_q2"],
         desired=data["propagators_q2"],
-        atol=1e-12,
+        atol=ATOL_FREQ,
     )
     np.testing.assert_allclose(
         actual=test_data["partial_propagators_q2"],
         desired=data["partial_propagators_q2"],
-        atol=1e-12,
+        atol=ATOL_FREQ,
     )
 
 
