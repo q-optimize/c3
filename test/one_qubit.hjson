@@ -161,7 +161,7 @@
       }
       resp:
       {
-        c3type: Response
+        c3type: ResponseFFT
         inputs: 1
         outputs: 1
         params:
