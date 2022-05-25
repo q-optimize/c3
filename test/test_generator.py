@@ -152,12 +152,14 @@ def test_DAC() -> None:
 @pytest.mark.unit
 def test_Response() -> None:
     resp_sig = resp.process(rx90p_q1, "d1", [data["dig_to_an_sig"]])
-    assert (
-        resp_sig["inphase"].numpy() - data["resp_sig"]["inphase"].numpy() < 1e-12
-    ).all()
-    assert (
-        resp_sig["quadrature"].numpy() - data["resp_sig"]["quadrature"].numpy() < 1e-12
-    ).all()
+    np.testing.assert_almost_equal(
+        resp_sig["inphase"].numpy(), data["resp_sig"]["inphase"].numpy(), decimal=6
+    )
+    np.testing.assert_almost_equal(
+        resp_sig["quadrature"].numpy(),
+        data["resp_sig"]["quadrature"].numpy(),
+        decimal=6,
+    )
 
 
 @pytest.mark.unit
@@ -182,11 +184,11 @@ def test_v2hz() -> None:
 @pytest.mark.integration
 def test_full_signal_chain() -> None:
     full_signal = generator.generate_signals(rx90p_q1)
-    assert (
-        full_signal["d1"]["values"].numpy()
-        - data["full_signal"][0]["d1"]["values"].numpy()
-        < 1
-    ).all()
+    np.testing.assert_almost_equal(
+        full_signal["d1"]["values"].numpy(),
+        data["full_signal"][0]["d1"]["values"].numpy(),
+        decimal=3,
+    )
 
 
 @pytest.mark.integration

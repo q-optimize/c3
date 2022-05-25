@@ -18,6 +18,7 @@ from qiskit.qobj.pulse_qobj import PulseQobj
 import tensorflow as tf
 
 from c3.experiment import Experiment
+from c3.c3objs import Quantity as Qty
 
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
@@ -689,6 +690,19 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         start = time.time()
 
         exp = self._setup_c3_experiment(experiment)
+        sanitized_instructions, instructions_list = self.sanitize_instructions(
+            experiment.instructions
+        )
+
+        # process gate that updates parameters, this should only be at the end of the circuit
+        if sanitized_instructions[-1]["name"] == "param_update":
+            gate = sanitized_instructions.pop(-1)
+            param_values = gate["params"][0]
+            param_qtys = [Qty(**param) for param in param_values]
+            opt_map = gate["params"][1]
+            exp.pmap.set_parameters(param_qtys, opt_map)
+
+        # runtime options for parameter update override gate-based updated
         if self.options.get("params"):
             params = self.options.get("params")
             opt_map = self.options.get("opt_map")
@@ -696,12 +710,12 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
                 raise KeyError(
                     "Missing opt_map in options to run(), required for updating parameters"
                 )
+            # Reset options to ensure this isn't reused in next call to backend.run()
+            self.options.params = None
+            self.options.opt_map = None
             exp.pmap.set_parameters(params, opt_map)
-        exp.compute_propagators()
 
-        sanitized_instructions, instructions_list = self.sanitize_instructions(
-            experiment.instructions
-        )
+        exp.compute_propagators()
 
         pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
         pop1s, _ = exp.process(pops)
