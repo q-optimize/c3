@@ -387,7 +387,7 @@ class CouplingTuning(Device):
         True if both coupled elements are frequency tuned
     """
 
-    def __init__(self, two_inputs=None, **props):
+    def __init__(self, two_inputs=False, **props):
         super().__init__(**props)
 
         # For two frequency tunable elements
