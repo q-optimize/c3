@@ -407,7 +407,6 @@ class CouplingTuning(Device):
                 )
 
     def get_factor(self):
-        # coupling = factor * sqrt(freq1 * freq2)
         factor = self.params["g0"].get_value() / tf.sqrt(
             self.params["w_1"].get_value() * self.params["w_2"].get_value()
         )
