@@ -373,18 +373,18 @@ class Filter(Device):
 @dev_reg_deco
 class CouplingTuning(Device):
     """
-    Flux tunable qubit frequency.
+    Coupling dependent on frequency of coupled elements.
 
     Parameters
     ----------
+    two_inputs: bool
+        True if both coupled elements are frequency tuned
     w_1 : Quantity
         Bias frequency of first coupled element
     w_2 : Quantity
         Bias frequency of second coupled element.
     g0 : Quantity
         Coupling at bias frequencies.
-    two_inputs: bool
-        True if both coupled elements are frequency tuned
     """
 
     def __init__(self, two_inputs=False, **props):
