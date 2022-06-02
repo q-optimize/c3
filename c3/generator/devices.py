@@ -408,7 +408,9 @@ class CouplingTuning(Device):
 
     def get_factor(self):
         # coupling = factor * sqrt(freq1 * freq2)
-        factor = self.params["g0"].get_value() / tf.sqrt(self.params["w_1"].get_value() * self.params["w_2"].get_value())        
+        factor = self.params["g0"].get_value() / tf.sqrt(
+            self.params["w_1"].get_value() * self.params["w_2"].get_value()
+        )
         return factor
 
     def get_coup(self, signal1, signal2):
@@ -452,7 +454,6 @@ class CouplingTuning(Device):
         return self.signal
 
 
-
 @dev_reg_deco
 class FluxTuning(Device):
     """
@@ -466,7 +467,6 @@ class FluxTuning(Device):
         Current flux.
     omega_0 : Quantity
         Maximum frequency.
-
     """
 
     def __init__(self, **props):
