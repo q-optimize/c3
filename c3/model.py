@@ -10,7 +10,7 @@ import c3.utils.qt_utils as qt_utils
 from c3.c3objs import hjson_encode, hjson_decode
 from c3.libraries.chip import device_lib, Drive, Coupling
 from c3.libraries.tasks import task_lib
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 
 class Model:
@@ -40,24 +40,33 @@ class Model:
 
     """
 
-    def __init__(self, subsystems=None, couplings=None, tasks=None, max_excitations=0):
+    def __init__(
+        self,
+        subsystems=None,
+        couplings=None,
+        drives=None,
+        tasks=None,
+        max_excitations=0,
+    ):
         self.dressed = True
         self.lindbladian = False
-        self.use_FR = True
+        self.use_FR = False
         self.dephasing_strength = 0.0
         self.params = {}
         self.subsystems: dict = dict()
-        self.couplings: Dict[str, Union[Drive, Coupling]] = {}
+        self.couplings: Dict[str, Coupling] = {}
+        self.drives: Dict[str, Drive] = {}
         self.tasks: dict = dict()
         self.drift_ham = None
         self.dressed_drift_ham = None
         self.__hamiltonians = None
         self.__dressed_hamiltonians = None
         if subsystems:
-            self.set_components(subsystems, couplings, max_excitations)
+            self.set_components(subsystems, couplings, drives, max_excitations)
         if tasks:
             self.set_tasks(tasks)
-        self.controllability = True
+        self.controllability = False
+        self.get_Hamiltonian = self._get_interaction_Hamiltonian
 
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
@@ -84,16 +93,21 @@ class Model:
                     f" to non-existent device {self.subsystems[connect].name}."
                 )
 
-    def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
+    def set_components(
+        self, subsystems, couplings=None, drives=None, max_excitations=0
+    ) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
         for comp in couplings:
             self.couplings[comp.name] = comp
-            # Check that the target of a drive exists and is store the info in the target.
-            if isinstance(comp, Drive):
-                self.__check_drive_connect(comp)
             if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
-                raise Exception("Tried to connect non-existent devices.")
+                raise Exception("Tried to couple non-existent devices.")
+        for comp in drives:
+            self.drives[comp.name] = comp
+            # Check that the target of a drive exists and is store the info in the target.
+            self.__check_drive_connect(comp)
+            if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
+                raise Exception("Tried to drive non-existent devices.")
 
         if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
             raise KeyError("Do not use same name for multiple devices")
@@ -161,6 +175,18 @@ class Model:
                     ) from ve
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
+        for drive in self.drives.values():
+            conn = drive.connected
+            opers_list = []
+            for sub in conn:
+                try:
+                    indx = self.names.index(sub)
+                except ValueError as ve:
+                    raise Exception(
+                        f"C3:ERROR: Trying to couple to unkown subcomponent: {sub}"
+                    ) from ve
+                opers_list.append(self.ann_opers[indx])
+            drive.init_Hs(opers_list)
         self.update_model()
 
     def set_max_excitations(self, max_excitations) -> None:
@@ -228,6 +254,13 @@ class Model:
             this_dev = device_lib[dev_type](**props)
             couplings.append(this_dev)
 
+        drives = []
+        for name, props in cfg["Drives"].items():
+            props.update({"name": name})
+            dev_type = props.pop("c3type")
+            this_dev = device_lib[dev_type](**props)
+            drives.append(this_dev)
+
         if "Tasks" in cfg:
             tasks = []
             for name, props in cfg["Tasks"].items():
@@ -239,7 +272,7 @@ class Model:
 
         if "use_dressed_basis" in cfg:
             self.dressed = cfg["use_dressed_basis"]
-        self.set_components(subsystems, couplings)
+        self.set_components(subsystems, couplings, drives)
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -338,7 +371,7 @@ class Model:
         sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
         return sparse_drift, sparse_controls
 
-    def get_Hamiltonian(self, signal=None):
+    def _get_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
@@ -378,6 +411,23 @@ class Model:
 
         return signal_hamiltonian
 
+    def _get_interaction_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
+        drift = tf.expand_dims(self.drift_ham, 0)  # create batch dimension
+        ts = tf.expand_dims(
+            tf.expand_dims(signal["d1"]["ts"], -1), -1
+        )  # ts as batch dimension
+        hamiltonians = []
+        transform = tf.linalg.expm(-1j * drift * tf_utils.tf_complexify(ts))
+        for key, sig in signal.items():
+            h_of_t = self.drives[key].get_Hamiltonian(sig)
+            hamiltonians.append(tf.linalg.adjoint(transform) @ h_of_t @ transform)
+        signal_hamiltonian = tf.reduce_sum(hamiltonians, axis=0)
+
+        if self.max_excitations:
+            signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
+
+        return signal_hamiltonian
+
     def get_sparse_Hamiltonian(self, signal=None):
         return self.blowup_excitations(self.get_Hamiltonian(signal))
 
@@ -401,10 +451,9 @@ class Model:
         for key, sub in self.subsystems.items():
             hamiltonians[key] = sub.get_Hamiltonian()
         for key, line in self.couplings.items():
-            if isinstance(line, Coupling):
-                hamiltonians[key] = line.get_Hamiltonian()
-            if isinstance(line, Drive):
-                control_hams[key] = line.get_Hamiltonian(signal=True)
+            hamiltonians[key] = line.get_Hamiltonian()
+        for key, line in self.drives.items():
+            control_hams[key] = line.get_Hamiltonian(signal=True)
 
         self.drift_ham = sum(hamiltonians.values())
         self.control_hams = control_hams
