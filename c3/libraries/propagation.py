@@ -243,30 +243,17 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
     signal = gen.generate_signals(instr)
     # Why do I get 0.0 if I print gen.resolution here?! FR
     ts = []
-    if model.controllability:
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
-        signals = tf.cast(signals, tf.complex128)
-        hks = tf.cast(hks, tf.complex128)
-    else:
-        h0 = model.get_Hamiltonian(signal)
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        hks = None
-        signals = None
-        if not np.all(
-            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-        ):
-            raise Exception("C3Error:Something with the times happend.")
-        if not np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
-        ):
-            raise Exception("C3Error:Something with the times happend.")
+    h0 = model.get_Hamiltonian(signal)
+    ts_list = [sig["ts"][1:] for sig in signal.values()]
+    ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+    hks = None
+    signals = None
+    if not np.all(tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])):
+        raise Exception("C3Error:Something with the times happend.")
+    if not np.all(
+        tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
+    ):
+        raise Exception("C3Error:Something with the times happend.")
 
     dt = ts[1] - ts[0]
 
