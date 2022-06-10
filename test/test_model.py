@@ -94,15 +94,18 @@ init_ground = InitialiseGround(
 )
 
 model = Model(
-    [q1, q2],  # Individual, self-contained components
-    [drive, drive2, q1q2],  # Interactions between components
-    [conf_matrix, init_ground],  # SPAM processing
+    subsystems=[q1, q2],  # Individual, self-contained components
+    couplings=[q1q2],
+    drives=[drive, drive2],  # Interactions between components
+    tasks=[conf_matrix, init_ground],  # SPAM processing
 )
 
 pmap = ParameterMap(model=model)
 model.set_dressed(False)
 
-hdrift, hks = model.get_Hamiltonians()
+hdrift = model.drift_ham
+hks = model.get_control_ops()
+
 
 with open("test/model.pickle", "rb") as filename:
     test_data = pickle.load(filename)
@@ -158,10 +161,10 @@ def test_get_indeces() -> None:
 @pytest.mark.unit
 def test_model_update_by_parametermap() -> None:
     pmap.set_parameters([freq_q1 * 0.9995], [[("Q1", "freq")]])
-    hdrift_a, _ = model.get_Hamiltonians()
+    hdrift_a = model.get_Hamiltonian()
 
     pmap.set_parameters([freq_q1 * 1.0005], [[("Q1", "freq")]])
-    hdrift_b, _ = model.get_Hamiltonians()
+    hdrift_b = model.get_Hamiltonian()
 
     assert hdrift_a[3, 3] - hdrift_a[0, 0] == freq_q1 * 0.9995 * 2 * np.pi
     assert hdrift_b[3, 3] - hdrift_b[0, 0] == freq_q1 * 1.0005 * 2 * np.pi

@@ -149,10 +149,13 @@ flux = chip.Drive(
     connected=["TCQubit"],
     hamiltonian_func=hamiltonians.z_drive,
 )
-phys_components = [tc_at, q1, q2]
-line_components = [q1tc, q2tc, q1q2, drive_q1, drive_q2, flux]
 
-model = Mdl(phys_components, line_components, [])
+model = Mdl(
+    subsystems=[tc_at, q1, q2],
+    couplings=[q1tc, q2tc, q1q2],
+    drives=[drive_q1, drive_q2, flux],
+    tasks=[],
+)
 model.set_lindbladian(lindblad)
 model.set_dressed(dressed)
 

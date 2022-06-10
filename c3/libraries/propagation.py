@@ -73,66 +73,6 @@ def rk4_step(h, psi, dt):
 def get_hs_of_t_ts(
     model: Model, gen: Generator, instr: Instruction, prop_res=1
 ) -> Dict:
-    if model.controllability:
-        hs_of_ts = _get_hs_of_t_ts_controlled(model, gen, instr, prop_res)
-    else:
-        hs_of_ts = _get_hs_of_t_ts(model, gen, instr, prop_res)
-    return hs_of_ts
-
-
-def _get_hs_of_t_ts_controlled(
-    model: Model, gen: Generator, instr: Instruction, prop_res=1
-) -> Dict:
-    """
-    Return a Dict containing:
-
-    - a list of
-
-      H(t) = H_0 + sum_k c_k H_k.
-
-    - time slices ts
-
-    - timestep dt
-
-    Parameters
-    ----------
-    prop_res : tf.float
-        resolution required by the propagation method
-    h0 : tf.tensor
-        Drift Hamiltonian.
-    hks : list of tf.tensor
-        List of control Hamiltonians.
-    cflds_t : array of tf.float
-        Vector of control field values at time t.
-    ts : float
-        Length of one time slice.
-    """
-    Hs = []
-    ts = []
-    gen.resolution = prop_res * gen.resolution
-    signal = gen.generate_signals(instr)
-    h0, hctrls = model.get_Hamiltonians()
-    signals = []
-    hks = []
-    for key in signal:
-        signals.append(signal[key]["values"])
-        ts = signal[key]["ts"]
-        hks.append(hctrls[key])
-    cflds = tf.cast(signals, tf.complex128)
-    hks = tf.cast(hks, tf.complex128)
-    for ii in range(cflds[0].shape[0]):
-        cf_t = []
-        for fields in cflds:
-            cf_t.append(tf.cast(fields[ii], tf.complex128))
-        Hs.append(sum_h0_hks(h0, hks, cf_t))
-
-    dt = tf.constant(ts[1 * prop_res].numpy() - ts[0].numpy(), dtype=tf.complex128)
-    return {"Hs": Hs, "ts": ts[::prop_res], "dt": dt}
-
-
-def _get_hs_of_t_ts(
-    model: Model, gen: Generator, instr: Instruction, prop_res=1
-) -> Dict:
     """
     Return a Dict containing:
 
@@ -243,38 +183,16 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
     signal = gen.generate_signals(instr)
     # Why do I get 0.0 if I print gen.resolution here?! FR
     ts = []
-    if model.controllability:
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
-        signals = tf.cast(signals, tf.complex128)
-        hks = tf.cast(hks, tf.complex128)
-    else:
-        h0 = model.get_Hamiltonian(signal)
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        hks = None
-        signals = None
-        if not np.all(
-            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-        ):
-            raise Exception("C3Error:Something with the times happend.")
-        if not np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
-        ):
-            raise Exception("C3Error:Something with the times happend.")
+    h0 = model.get_Hamiltonian(signal)
+    ts_list = [sig["ts"][1:] for sig in signal.values()]
+    ts = ts_list[-1]
 
     dt = ts[1] - ts[0]
 
     batch_size = tf.constant(len(h0), tf.int32)
 
-    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+    dUs = tf_batch_propagate(h0, dt, batch_size=batch_size)
 
-    # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
 
     if model.max_excitations:
@@ -366,20 +284,9 @@ def tf_dU_of_t_lind(h0, hks, col_ops, cflds_t, dt):
     return dU
 
 
-def tf_propagation_vectorized(h0, hks, cflds_t, dt):
+def tf_propagation_vectorized(h_of_t, dt):
     dt = tf.cast(dt, dtype=tf.complex128)
-    if hks is not None and cflds_t is not None:
-        cflds_t = tf.cast(cflds_t, dtype=tf.complex128)
-        hks = tf.cast(hks, dtype=tf.complex128)
-        cflds = tf.expand_dims(tf.expand_dims(cflds_t, 2), 3)
-        hks = tf.expand_dims(hks, 1)
-        if len(h0.shape) < 3:
-            h0 = tf.expand_dims(h0, 0)
-        prod = cflds * hks
-        h = h0 + tf.reduce_sum(prod, axis=0)
-    else:
-        h = tf.cast(h0, tf.complex128)
-    dh = -1.0j * h * dt
+    dh = -1.0j * h_of_t * dt
     return tf.linalg.expm(dh)
 
 
@@ -400,7 +307,7 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     return dUs
 
 
-def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(hamiltonian, dt, batch_size):
     """
     Propagate signal in batches
     Parameters
@@ -420,32 +327,19 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     -------
 
     """
-    if signals is not None:
-        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            signals.dtype, size=batches, dynamic_size=False, infer_shape=False
+    batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
+    batch_array = tf.TensorArray(
+        hamiltonian.dtype, size=batches, dynamic_size=False, infer_shape=False
+    )
+    for i in range(batches):
+        batch_array = batch_array.write(
+            i, hamiltonian[i * batch_size : i * batch_size + batch_size]
         )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, signals[i * batch_size : i * batch_size + batch_size]
-            )
-    else:
-        batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            hamiltonian.dtype, size=batches, dynamic_size=False, infer_shape=False
-        )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, hamiltonian[i * batch_size : i * batch_size + batch_size]
-            )
 
     dUs_array = tf.TensorArray(tf.complex128, size=batches, infer_shape=False)
     for i in range(batches):
         x = batch_array.read(i)
-        if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
-        else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+        result = tf_propagation_vectorized(x, dt)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 

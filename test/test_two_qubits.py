@@ -34,7 +34,8 @@ def test_signals(get_two_qubit_chip) -> None:
 def test_hamiltonians(get_two_qubit_chip) -> None:
     """Compare Hamilonians"""
     model = get_two_qubit_chip.pmap.model
-    hdrift, hks = model.get_Hamiltonians()
+    hdrift = model.drift_ham
+    hks = model.get_control_ops()
     assert (hdrift.numpy() - test_data["hdrift"].numpy() < 1).any()
     for key in hks:
         almost_equal(hks[key], test_data["hks"][key])

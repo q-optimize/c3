@@ -3,14 +3,13 @@ import warnings
 import numpy as np
 import hjson
 import itertools
-import copy
 import tensorflow as tf
 import c3.utils.tf_utils as tf_utils
 import c3.utils.qt_utils as qt_utils
 from c3.c3objs import hjson_encode, hjson_decode
-from c3.libraries.chip import device_lib, Drive, Coupling
+from c3.libraries.chip import device_lib, Drive, Coupling, PhysicalComponent
 from c3.libraries.tasks import task_lib
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 
 class Model:
@@ -40,24 +39,27 @@ class Model:
 
     """
 
-    def __init__(self, subsystems=None, couplings=None, tasks=None, max_excitations=0):
-        self.dressed = True
-        self.lindbladian = False
-        self.use_FR = True
+    def __init__(
+        self,
+        subsystems: List[PhysicalComponent] = [],
+        couplings: List[Coupling] = [],
+        drives: List[Drive] = [],
+        tasks: List = [],
+        max_excitations=0,
+    ):
+        self.frame = set(["dressed", "rotating"])
         self.dephasing_strength = 0.0
-        self.params = {}
-        self.subsystems: dict = dict()
-        self.couplings: Dict[str, Union[Drive, Coupling]] = {}
-        self.tasks: dict = dict()
-        self.drift_ham = None
-        self.dressed_drift_ham = None
-        self.__hamiltonians = None
-        self.__dressed_hamiltonians = None
+        self.params: Dict = {}
+        self.subsystems: Dict = {}
+        self.couplings: Dict[str, Coupling] = {}
+        self.drives: Dict[str, Drive] = {}
+        self.tasks: Dict = {}
+        self.drift_ham = tf.zeros([2, 2])
         if subsystems:
-            self.set_components(subsystems, couplings, max_excitations)
+            self.set_components(subsystems, couplings, drives, max_excitations)
         if tasks:
             self.set_tasks(tasks)
-        self.controllability = True
+        self.get_Hamiltonian = self._get_Hamiltonian
 
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
@@ -68,7 +70,7 @@ class Model:
         """Get an initial state. If a task to compute a thermal state is set, return that."""
         if "init_ground" in self.tasks:
             psi_init = self.tasks["init_ground"].initialise(
-                self.drift_ham, self.lindbladian
+                self.drift_ham, "lindbladian" in self.frame
             )
         else:
             psi_init = self.get_ground_state()
@@ -84,18 +86,31 @@ class Model:
                     f" to non-existent device {self.subsystems[connect].name}."
                 )
 
-    def set_components(self, subsystems, couplings=None, max_excitations=0) -> None:
+    def set_components(
+        self,
+        subsystems: List[PhysicalComponent],
+        couplings: List[Coupling] = [],
+        drives: List[Drive] = [],
+        max_excitations=0,
+    ) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
-        for comp in couplings:
-            self.couplings[comp.name] = comp
+        for coup in couplings:
+            self.couplings[coup.name] = coup
+            if len(set(coup.connected) - set(self.subsystems.keys())) > 0:
+                raise Exception("Tried to couple non-existent devices.")
+        for drive in drives:
+            self.drives[drive.name] = drive
             # Check that the target of a drive exists and is store the info in the target.
-            if isinstance(comp, Drive):
-                self.__check_drive_connect(comp)
-            if len(set(comp.connected) - set(self.subsystems.keys())) > 0:
-                raise Exception("Tried to connect non-existent devices.")
+            self.__check_drive_connect(drive)
+            if len(set(drive.connected) - set(self.subsystems.keys())) > 0:
+                raise Exception("Tried to drive non-existent devices.")
 
         if len(set(self.couplings.keys()).intersection(self.subsystems.keys())) > 0:
+            raise KeyError("Do not use same name for multiple devices")
+        if len(set(self.drives.keys()).intersection(self.subsystems.keys())) > 0:
+            raise KeyError("Do not use same name for multiple devices")
+        if len(set(self.couplings.keys()).intersection(self.drives.keys())) > 0:
             raise KeyError("Do not use same name for multiple devices")
         self.__create_labels()
         self.__create_annihilators()
@@ -161,6 +176,18 @@ class Model:
                     ) from ve
                 opers_list.append(self.ann_opers[indx])
             line.init_Hs(opers_list)
+        for drive in self.drives.values():
+            conn = drive.connected
+            opers_list = []
+            for sub in conn:
+                try:
+                    indx = self.names.index(sub)
+                except ValueError as ve:
+                    raise Exception(
+                        f"C3:ERROR: Trying to couple to unkown subcomponent: {sub}"
+                    ) from ve
+                opers_list.append(self.ann_opers[indx])
+            drive.init_Hs(opers_list)
         self.update_model()
 
     def set_max_excitations(self, max_excitations) -> None:
@@ -228,6 +255,13 @@ class Model:
             this_dev = device_lib[dev_type](**props)
             couplings.append(this_dev)
 
+        drives = []
+        for name, props in cfg["Drives"].items():
+            props.update({"name": name})
+            dev_type = props.pop("c3type")
+            this_dev = device_lib[dev_type](**props)
+            drives.append(this_dev)
+
         if "Tasks" in cfg:
             tasks = []
             for name, props in cfg["Tasks"].items():
@@ -238,8 +272,8 @@ class Model:
             self.set_tasks(tasks)
 
         if "use_dressed_basis" in cfg:
-            self.dressed = cfg["use_dressed_basis"]
-        self.set_components(subsystems, couplings)
+            self.set_dressed(cfg["use_dressed_basis"])
+        self.set_components(subsystems, couplings, drives)
         self.__create_labels()
         self.__create_annihilators()
         self.__create_matrix_representations()
@@ -285,7 +319,10 @@ class Model:
         dressed : boolean
 
         """
-        self.dressed = dressed
+        if dressed:
+            self.frame.add("dressed")
+        else:
+            self.frame.discard("dressed")
         self.update_model()
 
     def set_lindbladian(self, lindbladian: bool) -> None:
@@ -298,15 +335,21 @@ class Model:
 
 
         """
-        self.lindbladian = lindbladian
+        if lindbladian:
+            self.frame.add("lindbladian")
+        else:
+            self.frame.discard("lindbladian")
         self.update_model()
 
-    def set_FR(self, use_FR):
+    def set_FR(self, use_FR: bool) -> None:
         """
         Setter for the frame rotation option for adjusting the individual rotating
         frames of qubits when using gate sequences
         """
-        self.use_FR = use_FR
+        if use_FR:
+            self.frame.add("rotating")
+        else:
+            self.frame.discard("rotating")
 
     def set_dephasing_strength(self, dephasing_strength):
         self.dephasing_strength = dephasing_strength
@@ -317,61 +360,36 @@ class Model:
             ids.append(("Model", key))
         return ids
 
-    def get_Hamiltonians(self):
-        drift = []
-        controls = []
+    def get_control_ops(self) -> Dict[str, tf.Tensor]:
+        """Returns a dictionary of control operators"""
+        hks = {}
+        for key, drive in self.drives.items():
+            hks[key] = drive.h
+        return hks
 
-        if self.dressed:
-            drift = self.dressed_drift_ham
-            controls = self.dressed_control_hams
-        else:
-            drift = self.drift_ham
-            controls = self.control_hams
-        if self.max_excitations:
-            drift = self.cut_excitations(drift)
-            controls = self.cut_excitations(controls)
-        return drift, controls
-
-    def get_sparse_Hamiltonians(self):
-        drift, controls = self.get_Hamiltonians
-        sparse_drift = self.blowup_excitations(drift)
-        sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
-        return sparse_drift, sparse_controls
-
-    def get_Hamiltonian(self, signal=None):
+    def _get_Hamiltonian(self, signal={}):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
-        if signal is None:
-            if self.dressed:
-                signal_hamiltonian = self.dressed_drift_ham
-            else:
-                signal_hamiltonian = self.drift_ham
-        else:
-            if self.dressed:
-                hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
-                transform = self.transform
-            else:
-                hamiltonians = copy.deepcopy(self.__hamiltonians)
-                transform = None
-            for key, sig in signal.items():
-                if key in self.subsystems:
-                    hamiltonians[key] = self.subsystems[key].get_Hamiltonian(
-                        sig, transform
-                    )
-                elif key in self.couplings:
-                    hamiltonians[key] = self.couplings[key].get_Hamiltonian(
-                        sig, transform
-                    )
-                else:
-                    raise Exception(f"Signal channel {key} not in model systems")
+        signal_hamiltonian = self.drift_ham
+        for key, sig in signal.items():
+            signal_hamiltonian += self.drives[key].get_Hamiltonian(sig)
 
-            signal_hamiltonian = sum(
-                [
-                    tf.expand_dims(h, 0) if len(h.shape) == 2 else h
-                    for h in hamiltonians.values()
-                ]
-            )
+        if self.max_excitations:
+            signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
+
+        return signal_hamiltonian
+
+    def _get_interaction_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
+        drift = tf.expand_dims(self.drift_ham, 0)  # create batch dimension
+        ts = tf.expand_dims(
+            tf.expand_dims(signal["d1"]["ts"], -1), -1
+        )  # ts as batch dimension
+        signal_hamiltonian = tf.expand_dims(tf.zeros_like(self.drift_ham), 0)
+        transform = tf.linalg.expm(-1j * drift * tf_utils.tf_complexify(ts))
+        for key, sig in signal.items():
+            h_of_t = self.drives[key].get_Hamiltonian(sig)
+            signal_hamiltonian += tf.linalg.adjoint(transform) @ h_of_t @ transform
 
         if self.max_excitations:
             signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
@@ -382,33 +400,36 @@ class Model:
         return self.blowup_excitations(self.get_Hamiltonian(signal))
 
     def get_Lindbladians(self):
-        if self.dressed:
-            return self.dressed_col_ops
-        else:
-            return self.col_ops
+        return self.col_ops
 
     def update_model(self, ordered=True):
         self.update_Hamiltonians()
-        if self.lindbladian:
+        if "lindbladian" in self.frame:
             self.update_Lindbladians()
-        if self.dressed:
+        if "dressed" in self.frame:
             self.update_dressed(ordered=ordered)
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
-        control_hams = dict()
-        hamiltonians = dict()
+        hamiltonians = []
         for key, sub in self.subsystems.items():
-            hamiltonians[key] = sub.get_Hamiltonian()
+            hamiltonians.append(sub.get_Hamiltonian())
         for key, line in self.couplings.items():
-            if isinstance(line, Coupling):
-                hamiltonians[key] = line.get_Hamiltonian()
-            if isinstance(line, Drive):
-                control_hams[key] = line.get_Hamiltonian(signal=True)
+            hamiltonians.append(line.get_Hamiltonian())
 
-        self.drift_ham = sum(hamiltonians.values())
-        self.control_hams = control_hams
-        self.__hamiltonians = hamiltonians
+        self.drift_ham = tf.reduce_sum(hamiltonians, axis=0)
+        for drive in self.drives.values():
+            conn = drive.connected
+            opers_list = []
+            for sub in conn:
+                try:
+                    indx = self.names.index(sub)
+                except ValueError as ve:
+                    raise Exception(
+                        f"C3:ERROR: Trying to couple to unkown subcomponent: {sub}"
+                    ) from ve
+                opers_list.append(self.ann_opers[indx])
+            drive.init_Hs(opers_list)
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -463,33 +484,17 @@ class Model:
         """Compute the Hamiltonians in the dressed basis by diagonalizing the drift and applying the resulting
         transformation to the control Hamiltonians."""
         self.update_drift_eigen(ordered=ordered)
-        dressed_control_hams = {}
-        dressed_col_ops = []
-        dressed_hamiltonians = dict()
-        for k, h in self.__hamiltonians.items():
-            dressed_hamiltonians[k] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
+        self.drift_ham = tf.linalg.diag(tf_utils.tf_complexify(self.eigenframe))
+        for drive in self.drives.values():
+            drive.h = tf.matmul(
+                tf.matmul(tf.linalg.adjoint(self.transform), drive.h), self.transform
             )
-        dressed_drift_ham = tf.matmul(
-            tf.matmul(tf.linalg.adjoint(self.transform), self.drift_ham), self.transform
-        )
-        for key in self.control_hams:
-            dressed_control_hams[key] = tf.matmul(
-                tf.matmul(tf.linalg.adjoint(self.transform), self.control_hams[key]),
-                self.transform,
-            )
-        self.dressed_drift_ham = dressed_drift_ham
-        self.dressed_control_hams = dressed_control_hams
-        self.__dressed_hamiltonians = dressed_hamiltonians
-        if self.lindbladian:
+        if "lindbladian" in self.frame:
             for col_op in self.col_ops:
-                dressed_col_ops.append(
-                    tf.matmul(
-                        tf.matmul(tf.linalg.adjoint(self.transform), col_op),
-                        self.transform,
-                    )
+                col_op = tf.matmul(
+                    tf.matmul(tf.linalg.adjoint(self.transform), col_op),
+                    self.transform,
                 )
-            self.dressed_col_ops = dressed_col_ops
 
     def get_Frame_Rotation(self, t_final: np.float64, freqs: dict, framechanges: dict):
         """
@@ -515,8 +520,8 @@ class Model:
         for line in freqs.keys():
             freq = freqs[line]
             framechange = framechanges[line]
-            if line in self.couplings:
-                qubit = self.couplings[line].connected[0]
+            if line in self.drives:
+                qubit = self.drives[line].connected[0]
             elif line in self.subsystems:
                 qubit = line
             else:
@@ -536,7 +541,7 @@ class Model:
         return FR
 
     def get_qubit_freqs(self) -> List[float]:
-        es = tf.math.real(tf.linalg.diag_part(self.dressed_drift_ham))
+        es = self.eigenframe
         frequencies = []
         for i in range(len(self.dims)):
             state = [0] * len(self.dims)

@@ -60,14 +60,15 @@ init_ground = InitialiseGround(
 )
 
 model = Model(
-    [S],  # Individual, self-contained components
-    [drive],  # Interactions between components
-    [conf_matrix, init_ground],  # SPAM processing
+    subsystems=[S],  # Individual, self-contained components
+    drives=[drive],  # Interactions between components
+    tasks=[conf_matrix, init_ground],  # SPAM processing
 )
 
 model.set_dressed(False)
 
-hdrift, hks = model.get_Hamiltonians()
+hdrift = model.drift_ham
+hks = model.get_control_ops()
 
 
 @pytest.mark.unit

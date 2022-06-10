@@ -64,7 +64,6 @@ class Experiment:
         self.created_by = None
         self.logdir: str = ""
         self.propagate_batch_size = None
-        self.use_control_fields = True
         self.overwrite_propagators = True  # Keep only currently computed propagators
         self.compute_propagators_timestamp = 0
         self.stop_partial_propagator_gradient = True
@@ -259,7 +258,6 @@ class Experiment:
         exp_dict["generator"] = self.pmap.generator.asdict()
         exp_dict["options"] = {
             "propagate_batch_size": self.propagate_batch_size,
-            "use_control_fields": self.use_control_fields,
             "overwrite_propagators": self.overwrite_propagators,
             "stop_partial_propagator_gradient": self.stop_partial_propagator_gradient,
         }
@@ -296,7 +294,7 @@ class Experiment:
             for gate in sequence:
                 psi_t = tf.matmul(self.propagators[gate], psi_t)
 
-            pops = self.populations(psi_t, model.lindbladian)
+            pops = self.populations(psi_t, "lindbladian" in model.frame)
             populations.append(pops)
         return populations
 
@@ -329,7 +327,7 @@ class Experiment:
             for gate in sequence:
                 psi_t = tf.matmul(self.lookup_gate(**gate), psi_t)
 
-            pops = self.populations(psi_t, model.lindbladian)
+            pops = self.populations(psi_t, "lindbladian" in model.frame)
             populations.append(pops)
         return populations
 
@@ -496,7 +494,6 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
 
-            model.controllability = self.use_control_fields
             steps = int((instr.t_end - instr.t_start) * self.sim_res)
             result = self.propagation(
                 model, generator, instr, self.folding_stack[steps]
@@ -504,7 +501,7 @@ class Experiment:
             U = result["U"]
             dUs = result["dUs"]
             self.ts = result["ts"]
-            if model.use_FR:
+            if "rotating" in model.frame:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
                 framechanges = {}
@@ -525,7 +522,7 @@ class Experiment:
                     )
                 t_final = tf.constant(instr.t_end - instr.t_start, dtype=tf.complex128)
                 FR = model.get_Frame_Rotation(t_final, freqs, framechanges)
-                if model.lindbladian:
+                if "lindbladian" in model.frame:
                     SFR = tf_super(FR)
                     U = tf.matmul(SFR, U)
                     self.FR = SFR
@@ -533,7 +530,7 @@ class Experiment:
                     U = tf.matmul(FR, U)
                     self.FR = FR
             if model.dephasing_strength != 0.0:
-                if not model.lindbladian:
+                if "lindbladian" not in model.frame:
                     raise ValueError("Dephasing can only be added when lindblad is on.")
                 else:
                     amps = {}
