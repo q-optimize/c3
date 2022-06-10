@@ -35,7 +35,12 @@ def test_subsystems() -> None:
 
 @pytest.mark.unit
 def test_couplings() -> None:
-    assert list(model.couplings.keys()) == ["Q1-Q2", "d1", "d2"]
+    assert list(model.couplings.keys()) == ["Q1-Q2"]
+
+
+@pytest.mark.unit
+def test_drives() -> None:
+    assert list(model.drives.keys()) == ["d1", "d2"]
 
 
 @pytest.mark.unit

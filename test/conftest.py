@@ -305,8 +305,9 @@ def get_two_qubit_chip() -> Experiment:
     )
 
     model = Model(
-        [q1, q2],  # Individual, self-contained components
-        [drive, drive2, q1q2],  # Interactions between components
+        subsystems=[q1, q2],  # Individual, self-contained components
+        couplings=[q1q2],
+        drives=[drive, drive2],  # Interactions between components
     )
 
     model.set_lindbladian(False)

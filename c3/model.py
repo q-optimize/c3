@@ -54,7 +54,7 @@ class Model:
         self.couplings: Dict[str, Coupling] = {}
         self.drives: Dict[str, Drive] = {}
         self.tasks: Dict = {}
-        self.drift_ham = None
+        self.drift_ham = tf.zeros([2, 2])
         if subsystems:
             self.set_components(subsystems, couplings, drives, max_excitations)
         if tasks:
