@@ -1,51 +1,66 @@
 {
   instructions:
   {
-    "rx90p":{
-      name: "rx90p",
-      targets: [0],
-      gate_length: 8e-9,
-      drive_channels:{
-        d1:{
-          cosine:{
+    rx90p:
+    {
+      name: rx90p
+      targets:
+      [
+        0
+      ]
+      gate_length: 8e-09
+      drive_channels:
+      {
+        d1:
+        {
+          cosine:
+          {
             c3type: Envelope
             shape: cosine
-            params: {
-              amp: {
-                value:0.05,
-                min_val:0.01,
-                max_val:0.6,
-                unit:V
-                },
-              delta: {
-                  value:0,
-                  min_val:-0.1,
-                  max_val:0.6,
-                  unit:""
-                  },
-              freq_offset:{
-                value : 0e6,
-                unit : "Hz 2pi",
-                min_val : -50e6,
-                max_val : 50e6
+            params:
+            {
+              amp:
+              {
+                value: 0.05
+                min_val: 0.01
+                max_val: 0.6
+                unit: V
               }
-              t_final:{
-                value : 8e-9,
-                unit : s,
-                min_val : 1e-9,
-                max_val : 10e-9
+              delta:
+              {
+                value: 0
+                min_val: -0.1
+                max_val: 0.6
+                unit: ""
+              }
+              freq_offset:
+              {
+                value: 0
+                unit: Hz 2pi
+                min_val: -50000000
+                max_val: 50000000
+              }
+              t_final:
+              {
+                value: 8e-09
+                unit: s,
+                min_val: 1e-09
+                max_val: 1e-08
               }
             }
-          },
-          carrier: {
+          }
+          carrier:
+          {
             c3type: Carrier
-            params: {
-              freq: {
-                value : 3.81966664926965e9,
-                unit : "Hz 2pi",
-                min_val : 2.5e9,
-                max_val : 5.5e9
-              },
+            params:
+            {
+              freq:
+              {
+                value: 3819666649.26965
+                unit: Hz 2pi
+                min_val: 2500000000
+                max_val: 5500000000
+              }
               framechange:
               {
                 value: 0
@@ -71,23 +86,23 @@
         {
           freq:
           {
-            value: 3.82e9
-            min_val: 3e9
-            max_val: 8e9
-            unit: "Hz 2pi"
+            value: 3820000000
+            min_val: 3000000000
+            max_val: 8000000000
+            unit: Hz 2pi
             symbol: \omega_1
           }
           anhar:
           {
-            value: -229e6
-            min_val: -380000000.0
+            value: -229000000
+            min_val: -380000000
             max_val: -120000000.00000003
-            unit: "Hz 2pi"
+            unit: Hz 2pi
             symbol: \alpha_1
           }
           t1:
           {
-            value: 77e-6
+            value: 7.7e-05
             min_val: 5e-06
             max_val: 9e-05
             unit: s
@@ -95,7 +110,7 @@
           }
           t2star:
           {
-            value: 49e-6
+            value: 4.9e-05
             min_val: 1e-05
             max_val: 9e-05
             unit: s
@@ -104,7 +119,7 @@
           temp:
           {
             value: 0.06
-            min_val: 0.0
+            min_val: 0
             max_val: 0.12
             unit: K
             symbol: \alpha
@@ -113,7 +128,8 @@
         hilbert_dim: 3
       }
     }
-    Couplings:
+    Couplings: {}
+    Drives:
     {
       d1:
       {
@@ -143,7 +159,7 @@
         c3type: AWG
         inputs: 0
         outputs: 1
-        resolution: 2400000000.0
+        resolution: 2400000000
       }
       mixer:
       {
@@ -186,10 +202,10 @@
         {
           V_to_Hz:
           {
-            value: 1000000000.0
-            min_val: 900000000.0
-            max_val: 1100000000.0
-            unit: "Hz 2pi/V"
+            value: 1000000000
+            min_val: 900000000
+            max_val: 1100000000
+            unit: Hz 2pi/V
             symbol: \alpha
           }
         }
@@ -200,12 +216,25 @@
     {
       d1:
       {
-        "lo": [],
-        "awg": [],
-        "dac": ["awg"],
-        "resp": ["dac"],
-        "mixer": ["lo", "resp"],
-        v2hz: ["mixer"]
+        lo: []
+        awg: []
+        dac:
+        [
+          awg
+        ]
+        resp:
+        [
+          dac
+        ]
+        mixer:
+        [
+          lo
+          resp
+        ]
+        v2hz:
+        [
+          mixer
+        ]
       }
     }
   }

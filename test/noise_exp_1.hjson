@@ -62,17 +62,17 @@
               }
               delta:
               {
-                value: -1.0
-                min_val: -5.0
-                max_val: 3.0
+                value: -1
+                min_val: -5
+                max_val: 3
                 unit: ""
                 symbol: \alpha
               }
               freq_offset:
               {
-                value: -53000000.0
-                min_val: -56000000.0
-                max_val: -52000000.0
+                value: -53000000
+                min_val: -56000000
+                max_val: -52000000
                 unit: Hz 2pi
                 symbol: \alpha
               }
@@ -109,15 +109,15 @@
             {
               freq:
               {
-                value: 5050000000.0
-                min_val: 4500000000.0
-                max_val: 6000000000.0
+                value: 5050000000
+                min_val: 4500000000
+                max_val: 6000000000
                 unit: Hz 2pi
                 symbol: \alpha
               }
               framechange:
               {
-                value: 0.0
+                value: 0
                 min_val: -3.141592653589793
                 max_val: 9.42477796076938
                 unit: rad
@@ -141,16 +141,16 @@
         {
           freq:
           {
-            value: 5000000000.0
-            min_val: 4995000000.0
-            max_val: 5005000000.0
+            value: 5000000000
+            min_val: 4995000000
+            max_val: 5005000000
             unit: Hz 2pi
             symbol: \alpha
           }
           anhar:
           {
-            value: -210000000.0
-            min_val: -380000000.0
+            value: -210000000
+            min_val: -380000000
             max_val: -120000000.00000003
             unit: Hz 2pi
             symbol: \alpha
@@ -174,7 +174,7 @@
           temp:
           {
             value: 0.05
-            min_val: 0.0
+            min_val: 0
             max_val: 0.12
             unit: K
             symbol: \alpha
@@ -183,7 +183,10 @@
         hilbert_dim: 3
       }
     }
-    Couplings:
+    Couplings: {}
+    Tasks: {}
+    max_excitations: 0
+    Drives:
     {
       d1:
       {
@@ -196,8 +199,6 @@
         ]
       }
     }
-    Tasks: {}
-    max_excitations: 0
   }
   generator:
   {
@@ -219,7 +220,7 @@
         inputs: 0
         outputs: 1
         params: {}
-        resolution: 2000000000.0
+        resolution: 2000000000
       }
       DigitalToAnalog:
       {
@@ -268,7 +269,7 @@
         {
           offset_amp:
           {
-            value: 0.0
+            value: 0
             min_val: -0.2
             max_val: 0.2
             unit: V
@@ -287,9 +288,9 @@
         {
           V_to_Hz:
           {
-            value: 1000000000.0
-            min_val: 900000000.0
-            max_val: 1100000000.0
+            value: 1000000000
+            min_val: 900000000
+            max_val: 1100000000
             unit: Hz/V
             symbol: \alpha
           }
