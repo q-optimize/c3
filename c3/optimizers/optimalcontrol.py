@@ -85,7 +85,7 @@ class OptimalControl(Optimizer):
 
     def set_fid_func(self, fid_func) -> None:
         if type(fid_func) is str:
-            if self.pmap.model.lindbladian:
+            if "lindbladian" in self.pmap.model.frame:
                 fid = "lindbladian_" + fid_func
             else:
                 fid = fid_func
@@ -98,7 +98,7 @@ class OptimalControl(Optimizer):
             self.fid_func = fid_func
 
     def set_callback_fids(self, callback_fids) -> None:
-        if self.pmap.model.lindbladian:
+        if "lindbladian" in self.pmap.model.frame:
             cb_fids = ["lindbladian_" + f for f in callback_fids]
         else:
             cb_fids = callback_fids

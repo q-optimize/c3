@@ -1220,19 +1220,8 @@ class Drive(LineComponent):
             hs.append(tf.constant(self.hamiltonian_func(a), dtype=tf.complex128))
         self.h: tf.Tensor = tf.cast(sum(hs), tf.complex128)
 
-    def get_Hamiltonian(
-        self, signal: Union[Dict, bool] = None, transform: tf.Tensor = None
-    ) -> tf.Tensor:
-        if signal is None:
-            return tf.zeros_like(self.h)
+    def get_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
         h = self.h
-        if transform is not None:
-            transform = tf.cast(transform, tf.complex128)
-            h = tf.matmul(tf.matmul(transform, h, adjoint_a=True), transform)
-
-        if signal is True:
-            return h
-        elif isinstance(signal, dict):
-            sig = tf.cast(signal["values"], tf.complex128)
-            sig = tf.reshape(sig, [sig.shape[0], 1, 1])
-            return tf.expand_dims(h, 0) * sig
+        sig = tf.cast(signal["values"], tf.complex128)
+        sig = tf.reshape(sig, [sig.shape[0], 1, 1])
+        return tf.expand_dims(h, 0) * sig
