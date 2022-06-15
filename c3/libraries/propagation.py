@@ -380,20 +380,18 @@ def tf_batch_propagate(dyn_gens, batch_size):
     Propagate signal in batches
     Parameters
     ----------
-    hamiltonian: tf.tensor
-        Drift Hamiltonian
-    hks: Union[tf.tensor, List[tf.tensor]]
-        List of control hamiltonians
-    signals: Union[tf.tensor, List[tf.tensor]]
-        List of control signals, one per control hamiltonian
-    dt: float
-        Length of one time slice
+    dyn_gens: tf.tensor
+        i) -1j * Hamiltonian(t) * dt
+        or
+        ii) -1j * Liouville superoperator * dt
     batch_size: int
         Number of elements in one batch
 
     Returns
     -------
-
+    List of partial propagators
+    i) as operators
+    ii) as superoperators
     """
 
     batches = int(tf.math.ceil(dyn_gens.shape[0] / batch_size))
@@ -408,7 +406,7 @@ def tf_batch_propagate(dyn_gens, batch_size):
     dUs_array = tf.TensorArray(tf.complex128, size=batches, infer_shape=False)
     for i in range(batches):
         x = batch_array.read(i)
-        result = tf.linalg.expm(x)
+        result = tf.linalg.expm(tf.cast(x, dtype=tf.complex128))
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 

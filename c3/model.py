@@ -414,7 +414,14 @@ class Model:
         ts = []
         ts_list = [sig["ts"][1:] for sig in signal.values()]
         ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-
+        if not np.all(
+            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        if not np.all(
+            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
+        ):
+            raise Exception("C3Error:Something with the times happend.")
         dt = tf.cast(ts[1] - ts[0], dtype=tf.complex128)
 
         return dyn_gens * dt
