@@ -378,6 +378,47 @@ class Model:
 
         return signal_hamiltonian
 
+    def get_Liouvillian(self, signal):
+        h = self.get_Hamiltonian()
+        col_ops = self.get_Lindbladians()
+        if self.max_excitations:
+            col_ops = self.cut_excitations(col_ops)
+
+        coher_superop = -1j * (tf_utils.tf_spre(h) - tf_utils.tf_spost(h))
+        for col_op in col_ops:
+            super_clp = tf.matmul(
+                tf_utils.tf_spre(col_op),
+                tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
+            )
+            anticomm_L_clp = 0.5 * tf.matmul(
+                tf_utils.tf_spre(tf.linalg.adjoint(col_op)),
+                tf_utils.tf_spre(col_op),
+            )
+            anticomm_R_clp = 0.5 * tf.matmul(
+                tf_utils.tf_spost(col_op),
+                tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
+            )
+            liouvillian = coher_superop + super_clp - anticomm_L_clp - anticomm_R_clp
+        return liouvillian
+
+    def get_dynamics_generators(self, signal):
+        """Returns Tensor of Hamiltonians if model.lindbladian is False,
+        otherwise it returns as a Tensor of superoperators
+        the Liouvillians solving the Lindblad Master Equation
+        """
+        if self.lindbladian:
+            dyn_gens = self.get_Liouvillian(signal)
+        else:
+            dyn_gens = -1j * self.get_Hamiltonian(signal)
+
+        ts = []
+        ts_list = [sig["ts"][1:] for sig in signal.values()]
+        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
+
+        dt = tf.cast(ts[1] - ts[0], dtype=tf.complex128)
+
+        return dyn_gens * dt
+
     def get_sparse_Hamiltonian(self, signal=None):
         return self.blowup_excitations(self.get_Hamiltonian(signal))
 

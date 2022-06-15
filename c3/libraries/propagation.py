@@ -242,37 +242,12 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
     """
     signal = gen.generate_signals(instr)
     # Why do I get 0.0 if I print gen.resolution here?! FR
-    ts = []
-    if model.controllability:
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
-        signals = tf.cast(signals, tf.complex128)
-        hks = tf.cast(hks, tf.complex128)
-    else:
-        h0 = model.get_Hamiltonian(signal)
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        hks = None
-        signals = None
-        if not np.all(
-            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-        ):
-            raise Exception("C3Error:Something with the times happend.")
-        if not np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
-        ):
-            raise Exception("C3Error:Something with the times happend.")
 
-    dt = ts[1] - ts[0]
+    dynamics_generators = model.get_dynamics_generators(signal)
 
-    batch_size = tf.constant(len(h0), tf.int32)
+    batch_size = tf.constant(len(dynamics_generators[0]), tf.int32)
 
-    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+    dUs = tf_batch_propagate(dynamics_generators, batch_size=batch_size)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
@@ -281,7 +256,7 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
-    return {"U": U, "dUs": dUs, "ts": ts}
+    return {"U": U, "dUs": dUs}
 
 
 ####################
@@ -400,7 +375,7 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     return dUs
 
 
-def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(dyn_gens, batch_size):
     """
     Propagate signal in batches
     Parameters
@@ -420,32 +395,20 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     -------
 
     """
-    if signals is not None:
-        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            signals.dtype, size=batches, dynamic_size=False, infer_shape=False
+
+    batches = int(tf.math.ceil(dyn_gens.shape[0] / batch_size))
+    batch_array = tf.TensorArray(
+        dyn_gens.dtype, size=batches, dynamic_size=False, infer_shape=False
+    )
+    for i in range(batches):
+        batch_array = batch_array.write(
+            i, dyn_gens[i * batch_size : i * batch_size + batch_size]
         )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, signals[i * batch_size : i * batch_size + batch_size]
-            )
-    else:
-        batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            hamiltonian.dtype, size=batches, dynamic_size=False, infer_shape=False
-        )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, hamiltonian[i * batch_size : i * batch_size + batch_size]
-            )
 
     dUs_array = tf.TensorArray(tf.complex128, size=batches, infer_shape=False)
     for i in range(batches):
         x = batch_array.read(i)
-        if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
-        else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+        result = tf.linalg.expm(x)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 
