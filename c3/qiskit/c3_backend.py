@@ -76,7 +76,7 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
-    def _setup_c3_experiment(self, experiment: QasmQobjExperiment) -> Experiment:
+    def _setup_c3_experiment(self) -> Experiment:
         """Setup C3 Experiment object for simulation
 
         Parameters
@@ -98,11 +98,6 @@ class C3QasmSimulator(Backend, ABC):
         exp.enable_qasm()
         pmap = exp.pmap
 
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
-
         # TODO (Check) Assume all qubits have same Hilbert dims
         self._number_of_levels = pmap.model.dims[0]
 
@@ -112,8 +107,6 @@ class C3QasmSimulator(Backend, ABC):
         # TODO set simulator seed, check qiskit python qasm simulator
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         self.seed_simulator = 2441129
-
-        return exp
 
     def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
@@ -325,6 +318,22 @@ class C3QasmSimulator(Backend, ABC):
                 "Experiment Object has not been correctly initialised. \nUse set_device_config() or set_c3_experiment()"
             )
         start = time.time()
+        self._setup_c3_experiment()
+        # runtime options for parameter update override gate-based updated
+        if self.options.get("params"):
+            params = self.options.get("params")
+            opt_map = self.options.get("opt_map")
+            if not opt_map:
+                raise KeyError(
+                    "Missing opt_map in options to run(), required for updating parameters"
+                )
+            # Reset options to ensure this isn't reused in next call to backend.run()
+            self.options.params = None
+            self.options.opt_map = None
+            self.c3_exp.pmap.set_parameters(params, opt_map)
+        
+        self.c3_exp.compute_propagators()
+
         for experiment in qobj.experiments:
             result_list.append(self.run_experiment(experiment))
         end = time.time()
@@ -529,7 +538,12 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        exp = self._setup_c3_experiment(experiment)
+        exp = self.c3_exp
+
+        # check qubit count is adequate
+        self._number_of_qubits = len(exp.pmap.model.subsystems)
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
         sanitized_instructions, instructions_list = self.sanitize_instructions(
             experiment.instructions
         )
@@ -541,21 +555,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             param_qtys = [Qty(**param) for param in param_values]
             opt_map = gate["params"][1]
             exp.pmap.set_parameters(param_qtys, opt_map)
-
-        # runtime options for parameter update override gate-based updated
-        if self.options.get("params"):
-            params = self.options.get("params")
-            opt_map = self.options.get("opt_map")
-            if not opt_map:
-                raise KeyError(
-                    "Missing opt_map in options to run(), required for updating parameters"
-                )
-            # Reset options to ensure this isn't reused in next call to backend.run()
-            self.options.params = None
-            self.options.opt_map = None
-            exp.pmap.set_parameters(params, opt_map)
-
-        exp.compute_propagators()
+            exp.compute_propagators()
 
         pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
         pop1s, _ = exp.process(pops)
