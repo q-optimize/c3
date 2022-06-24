@@ -44,7 +44,7 @@ def test_backends():
 @pytest.mark.unit
 @pytest.mark.qiskit
 @pytest.mark.parametrize(
-    "backend", ["c3_qasm_perfect_simulator", "c3_qasm_physics_simulator"]
+    "backend", ["c3_qasm_physics_simulator"]
 )
 def test_get_backend(backend):
     """Test get_backend() which returns the backend with matching name
@@ -61,6 +61,7 @@ def test_get_backend(backend):
 
 @pytest.mark.unit
 @pytest.mark.qiskit
+@pytest.mark.skip("Not Implemented")
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_transpile(get_test_circuit, backend):  # noqa
     """Test the transpiling using our backends.
@@ -84,6 +85,7 @@ def test_transpile(get_test_circuit, backend):  # noqa
 @pytest.mark.integration
 @pytest.mark.qiskit
 @pytest.mark.slow
+@pytest.mark.skip("Not Implemented")
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_result(get_3_qubit_circuit, backend, get_result_qiskit):  # noqa
     """Test the counts from running a 3 qubit Circuit
@@ -126,6 +128,7 @@ def test_get_result(get_3_qubit_circuit, backend, get_result_qiskit):  # noqa
 
 @pytest.mark.unit
 @pytest.mark.qiskit
+@pytest.mark.skip("Not Implemented")
 @pytest.mark.parametrize("backend", ["c3_qasm_perfect_simulator"])
 def test_get_exception(get_bad_circuit, backend):  # noqa
     """Test to check exceptions
@@ -208,9 +211,6 @@ def test_qiskit_parameter_update(get_physics_circuit):
 @pytest.mark.parametrize(
     ["backend", "config_file"],
     [
-        pytest.param(
-            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
-        ),
         pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
     ],
 )
@@ -296,9 +296,6 @@ def test_custom_c3_qiskit_gates(c3_gate, c3_qubits, qiskit_gate, qiskit_qubits):
 @pytest.mark.parametrize(
     ["backend", "config_file"],
     [
-        pytest.param(
-            "c3_qasm_perfect_simulator", "test/quickstart.hjson", id="perfect_sim"
-        ),
         pytest.param("c3_qasm_physics_simulator", "test/qiskit.cfg", id="physics_sim"),
     ],
 )
@@ -316,9 +313,7 @@ def test_user_provided_c3_exp(backend, config_file):
 @pytest.mark.qiskit
 @pytest.mark.parametrize(
     ["backend"],
-    [
-        pytest.param("c3_qasm_perfect_simulator", id="perfect_sim"),
-        pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
+    [pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
     ],
 )
 def test_experiment_not_initialised(backend, get_test_circuit):
