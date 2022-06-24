@@ -43,9 +43,7 @@ def test_backends():
 
 @pytest.mark.unit
 @pytest.mark.qiskit
-@pytest.mark.parametrize(
-    "backend", ["c3_qasm_physics_simulator"]
-)
+@pytest.mark.parametrize("backend", ["c3_qasm_physics_simulator"])
 def test_get_backend(backend):
     """Test get_backend() which returns the backend with matching name
 
@@ -313,7 +311,8 @@ def test_user_provided_c3_exp(backend, config_file):
 @pytest.mark.qiskit
 @pytest.mark.parametrize(
     ["backend"],
-    [pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
+    [
+        pytest.param("c3_qasm_physics_simulator", id="physics_sim"),
     ],
 )
 def test_experiment_not_initialised(backend, get_test_circuit):

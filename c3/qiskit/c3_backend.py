@@ -9,7 +9,6 @@ from qiskit import QuantumCircuit
 from qiskit.circuit import Instruction
 from qiskit.exceptions import QiskitError
 from qiskit.providers import BackendV1 as Backend
-from qiskit.providers import Options
 from qiskit.providers.models import QasmBackendConfiguration
 from qiskit.result import Result
 from qiskit.compiler import assemble
@@ -22,7 +21,7 @@ from c3.c3objs import Quantity as Qty
 
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
-from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
+from .c3_backend_utils import get_init_ground_state
 from .c3_options import C3Options
 
 from typing import Any, Dict, List, Tuple
@@ -76,23 +75,13 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
-    def _setup_c3_experiment(self) -> Experiment:
+    def _setup_c3_experiment(self):
         """Setup C3 Experiment object for simulation
 
         Parameters
         ----------
         experiment : QasmQobjExperiment
             Qasm Experiment object from qiskit
-
-        Returns
-        -------
-        Experiment
-            C3 Experiment object
-
-        Raises
-        ------
-        C3QiskitError
-            When number of qubits are not enough
         """
         exp = self.c3_exp
         exp.enable_qasm()
@@ -331,7 +320,7 @@ class C3QasmSimulator(Backend, ABC):
             self.options.params = None
             self.options.opt_map = None
             self.c3_exp.pmap.set_parameters(params, opt_map)
-        
+
         self.c3_exp.compute_propagators()
 
         for experiment in qobj.experiments:
