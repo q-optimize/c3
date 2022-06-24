@@ -9,7 +9,6 @@ from qiskit import QuantumCircuit
 from qiskit.circuit import Instruction
 from qiskit.exceptions import QiskitError
 from qiskit.providers import BackendV1 as Backend
-from qiskit.providers import Options
 from qiskit.providers.models import QasmBackendConfiguration
 from qiskit.result import Result
 from qiskit.compiler import assemble
@@ -22,7 +21,7 @@ from c3.c3objs import Quantity as Qty
 
 from .c3_exceptions import C3QiskitError
 from .c3_job import C3Job
-from .c3_backend_utils import get_init_ground_state, get_sequence, flip_labels
+from .c3_backend_utils import get_init_ground_state
 from .c3_options import C3Options
 
 from typing import Any, Dict, List, Tuple
@@ -76,32 +75,17 @@ class C3QasmSimulator(Backend, ABC):
         """
         self.c3_exp = exp
 
-    def _setup_c3_experiment(self, experiment: QasmQobjExperiment) -> Experiment:
+    def _setup_c3_experiment(self):
         """Setup C3 Experiment object for simulation
 
         Parameters
         ----------
         experiment : QasmQobjExperiment
             Qasm Experiment object from qiskit
-
-        Returns
-        -------
-        Experiment
-            C3 Experiment object
-
-        Raises
-        ------
-        C3QiskitError
-            When number of qubits are not enough
         """
         exp = self.c3_exp
         exp.enable_qasm()
         pmap = exp.pmap
-
-        # initialise parameters
-        self._number_of_qubits = len(pmap.model.subsystems)
-        if self._number_of_qubits < experiment.config.n_qubits:
-            raise C3QiskitError("Not enough qubits on device to run circuit")
 
         # TODO (Check) Assume all qubits have same Hilbert dims
         self._number_of_levels = pmap.model.dims[0]
@@ -112,8 +96,6 @@ class C3QasmSimulator(Backend, ABC):
         # TODO set simulator seed, check qiskit python qasm simulator
         # qiskit-terra/qiskit/providers/basicaer/qasm_simulator.py
         self.seed_simulator = 2441129
-
-        return exp
 
     def get_labels(self, format: str = "qiskit") -> List[str]:
         """Return state labels for the system
@@ -325,6 +307,22 @@ class C3QasmSimulator(Backend, ABC):
                 "Experiment Object has not been correctly initialised. \nUse set_device_config() or set_c3_experiment()"
             )
         start = time.time()
+        self._setup_c3_experiment()
+        # runtime options for parameter update override gate-based updated
+        if self.options.get("params"):
+            params = self.options.get("params")
+            opt_map = self.options.get("opt_map")
+            if not opt_map:
+                raise KeyError(
+                    "Missing opt_map in options to run(), required for updating parameters"
+                )
+            # Reset options to ensure this isn't reused in next call to backend.run()
+            self.options.params = None
+            self.options.opt_map = None
+            self.c3_exp.pmap.set_parameters(params, opt_map)
+
+        self.c3_exp.compute_propagators()
+
         for experiment in qobj.experiments:
             result_list.append(self.run_experiment(experiment))
         end = time.time()
@@ -426,169 +424,9 @@ class C3QasmPerfectSimulator(C3QasmSimulator):
         Inherits the C3QasmSimulator and implements a perfect gate simulator
     """
 
-    # TODO List correct set of basis gates
-
-    MAX_QUBITS_MEMORY = 20
-    _configuration = {
-        "backend_name": "c3_qasm_perfect_simulator",
-        "backend_version": "0.1",
-        "n_qubits": MAX_QUBITS_MEMORY,
-        "url": "https://github.com/q-optimize/c3",
-        "simulator": True,
-        "local": True,
-        "conditional": False,
-        "open_pulse": False,
-        "memory": False,
-        "max_shots": 65536,
-        "coupling_map": None,
-        "description": "A c3 simulator for qasm experiments with perfect gates",
-        "basis_gates": [
-            "cx",
-            "cz",
-            "iSwap",
-            "id",
-            "x",
-            "y",
-            "z",
-            "rx",
-            "ry",
-            "rz",
-            "rzx",
-        ],
-        "gates": [],
-    }
-
-    DEFAULT_OPTIONS = {"initial_statevector": None, "shots": 1024, "memory": False}
-
+    # TODO Implement gate level simulator
     def __init__(self, configuration=None, provider=None, **fields):
-        super().__init__(
-            configuration=(
-                configuration or QasmBackendConfiguration.from_dict(self._configuration)
-            ),
-            provider=provider,
-            **fields,
-        )
-        # Define attributes in __init__.
-        self._local_random = np.random.RandomState()
-        self._classical_memory = 0
-        self._classical_register = 0
-        self._statevector = 0
-        self._number_of_cmembits = 0
-        self._number_of_qubits = 0
-        self._shots = 0
-        self._memory = False
-        self._initial_statevector = self.options.get("initial_statevector")
-        self._qobj_config = None
-        # TEMP
-        self._sample_measure = False
-        self._flip_labels = True
-        self.c3_exp = Experiment()
-
-    @classmethod
-    def _default_options(cls) -> Options:
-        return Options(shots=1024, memory=False, initial_statevector=None)
-
-    def run_experiment(self, experiment: QasmQobjExperiment) -> Dict[str, Any]:
-        """Run an experiment (circuit) and return a single experiment result
-
-        Parameters
-        ----------
-        experiment : QasmQobjExperiment
-            experiment from qobj experiments list
-
-        Returns
-        -------
-        Dict[str, Any]
-            A result dictionary which looks something like::
-
-            {
-            "name": name of this experiment (obtained from qobj.experiment header)
-            "seed": random seed used for simulation
-            "shots": number of shots used in the simulation
-            "data":
-                {
-                "counts": {'0x9': 5, ...},
-                "memory": ['0x9', '0xF', '0x1D', ..., '0x9']
-                },
-            "status": status string for the simulation
-            "success": boolean
-            "time_taken": simulation time of this single experiment
-            }
-
-        Raises
-        ------
-        C3QiskitError
-            If an error occured
-        """
-        start = time.time()
-
-        exp = self._setup_c3_experiment(experiment)
-        instructions = exp.pmap.instructions
-        # convert qasm instruction set to c3 sequence
-        sequence = get_sequence(experiment.instructions)
-
-        # unique operations
-        gate_keys = list(set(sequence))
-
-        # validate gates
-        for gate in gate_keys:
-            if gate not in instructions.keys():
-                raise C3QiskitError(
-                    "Gate {gate} not found in Device Instruction Set: {instructions}".format(
-                        gate=gate, instructions=list(instructions.keys())
-                    )
-                )
-
-        perfect_gates = exp.get_perfect_gates(gate_keys)
-
-        # initialise state
-        if self._initial_statevector is None:
-            psi_init = get_init_ground_state(
-                self._number_of_qubits, self._number_of_levels
-            )
-        else:
-            psi_init = self._initial_statevector
-        psi_t = psi_init.numpy()
-        pop_t = exp.populations(psi_t, False)
-
-        # compute final state
-        for gate in sequence:
-            psi_t = np.matmul(perfect_gates[gate], psi_t)
-            pops = exp.populations(psi_t, False)
-            pop_t = np.append(pop_t, pops, axis=1)
-
-        # generate shots style readout
-        self.pops_array = pop_t.T[-1]
-        shots_data = self.generate_shot_readout()
-
-        # generate state labels
-        output_labels = self.get_labels()
-
-        # create results dict
-        counts = dict(zip(output_labels, shots_data))
-
-        # keep only non-zero states
-        counts = dict(filter(lambda elem: elem[1] != 0, counts.items()))
-
-        # flipping state labels to match qiskit style qubit indexing convention
-        # default is to flip labels to qiskit style, use disable_flip_labels()
-        if self._flip_labels:
-            counts = flip_labels(counts)
-
-        end = time.time()
-
-        exp_result = {
-            "name": experiment.header.name,
-            "header": experiment.header.to_dict(),
-            "shots": self._shots,
-            "seed": self.seed_simulator,
-            "status": "DONE",
-            "success": True,
-            "data": {"counts": counts},
-            "time_taken": (end - start),
-        }
-
-        return exp_result
+        raise NotImplementedError
 
 
 class C3QasmPhysicsSimulator(C3QasmSimulator):
@@ -689,7 +527,12 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
         """
         start = time.time()
 
-        exp = self._setup_c3_experiment(experiment)
+        exp = self.c3_exp
+
+        # check qubit count is adequate
+        self._number_of_qubits = len(exp.pmap.model.subsystems)
+        if self._number_of_qubits < experiment.config.n_qubits:
+            raise C3QiskitError("Not enough qubits on device to run circuit")
         sanitized_instructions, instructions_list = self.sanitize_instructions(
             experiment.instructions
         )
@@ -701,21 +544,7 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             param_qtys = [Qty(**param) for param in param_values]
             opt_map = gate["params"][1]
             exp.pmap.set_parameters(param_qtys, opt_map)
-
-        # runtime options for parameter update override gate-based updated
-        if self.options.get("params"):
-            params = self.options.get("params")
-            opt_map = self.options.get("opt_map")
-            if not opt_map:
-                raise KeyError(
-                    "Missing opt_map in options to run(), required for updating parameters"
-                )
-            # Reset options to ensure this isn't reused in next call to backend.run()
-            self.options.params = None
-            self.options.opt_map = None
-            exp.pmap.set_parameters(params, opt_map)
-
-        exp.compute_propagators()
+            exp.compute_propagators()
 
         pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
         pop1s, _ = exp.process(pops)

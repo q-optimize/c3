@@ -70,7 +70,6 @@ def get_test_circuit() -> QuantumCircuit:
         A circuit with a Hadamard, a C-X
     """
     qc = QuantumCircuit(2, 2)
-    qc.h(0)
     qc.cx(0, 1)
     return qc
 
