@@ -546,8 +546,14 @@ class C3QasmPhysicsSimulator(C3QasmSimulator):
             exp.pmap.set_parameters(param_qtys, opt_map)
             exp.compute_propagators()
 
-        pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
-        pop1s, _ = exp.process(pops)
+        try:
+            pops = exp.evaluate([sanitized_instructions], self._initial_statevector)
+            pop1s, _ = exp.process(pops)
+        except KeyError as err:
+            print(f"KeyError: {err}")
+            raise C3QiskitError(
+                "Possibly an unsupported gate or a SetParamsGate not at the end."
+            )
 
         # C3 stores labels in exp.pmap.model.state_labels
         meas_index = self.locate_measurements(instructions_list)

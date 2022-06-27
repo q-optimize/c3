@@ -1,10 +1,9 @@
 """Convenience Module for creating different c3_backend
 """
-from typing import Dict, List
+from typing import Dict
 import numpy as np
 import tensorflow as tf
 import math
-from .c3_exceptions import C3QiskitError
 
 GATE_MAP = {
     "x": "rxp",
@@ -19,88 +18,6 @@ GATE_MAP = {
 }
 
 PARAMETER_MAP = {np.pi / 2: "90p", np.pi: "p", -np.pi / 2: "90m", -np.pi: "m"}
-
-
-def get_sequence(instructions: List) -> List[str]:
-    """Return a sequence of c3 gates from Qasm instructions
-
-    Parameters
-    ----------
-    instructions : List[dict]
-        Instructions from the qasm experiment, for example::
-
-        instructions: [
-                {"name": "u1", "qubits": [0], "params": [0.4]},
-                {"name": "u2", "qubits": [0], "params": [0.4,0.2]},
-                {"name": "u3", "qubits": [0], "params": [0.4,0.2,-0.3]},
-                {"name": "snapshot", "label": "snapstate1", "snapshot_type": "statevector"},
-                {"name": "cx", "qubits": [0,1]},
-                {"name": "barrier", "qubits": [0]},
-                {"name": "measure", "qubits": [0], "register": [1], "memory": [0]},
-                {"name": "u2", "qubits": [0], "params": [0.4,0.2], "conditional": 2}
-            ]
-
-    Returns
-    -------
-    List[str]
-        List of gates, for example::
-
-        sequence = ["rx90p[1]", "cr90[0,1]", "rx90p[0]"]
-
-    """
-
-    sequence = []
-
-    for instruction in instructions:
-
-        # TODO parametric gates
-
-        iname = instruction.name
-        # Conditional operations are not supported
-        conditional = getattr(instructions, "conditional", None)  # noqa
-        if conditional is not None:
-            raise C3QiskitError("C3 Simulator does not support conditional operations")
-
-        # reset, binary functions is not supported
-        elif iname in ["reset", "bfunc"]:
-            raise C3QiskitError("C3 Simulator does not support {}".format(iname))
-
-        # barrier/measure implemented separately
-        elif iname in ["barrier", "measure"]:
-            pass
-
-        elif iname in ["rx", "ry", "rz"]:
-            param = instruction.params[0]
-            suffix = [
-                PARAMETER_MAP[i]
-                for i in PARAMETER_MAP.keys()
-                if np.isclose(param, i, rtol=1e-2)
-            ]
-            if len(suffix) == 0:
-                raise C3QiskitError("Only pi and pi/2 rotation gates are available")
-            gate_name = iname + suffix[0]
-            sequence.append(make_gate_str(instruction, gate_name))
-
-        elif iname == "rzx":
-            param = instruction.params[0]
-            if np.isclose(param, (np.pi / 2), rtol=1e-2):
-                gate_name = "cr90"
-                sequence.append(make_gate_str(instruction, gate_name))
-            elif np.isclose(param, (np.pi), rtol=1e-2):
-                gate_name = "cr"
-                sequence.append(make_gate_str(instruction, gate_name))
-            else:
-                raise C3QiskitError("Only pi and pi/2 ZX gates are available")
-
-        elif iname in GATE_MAP.keys():
-            gate_name = GATE_MAP[iname]
-            sequence.append(make_gate_str(instruction, gate_name))
-
-        # raise C3QiskitError if unknown instruction
-        else:
-            raise C3QiskitError("Encountered unknown operation {}".format(iname))
-
-    return sequence
 
 
 def make_gate_str(instruction: dict, gate_name: str) -> str:

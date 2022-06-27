@@ -138,7 +138,7 @@ def test_qiskit_parameter_update(get_physics_circuit):
 
     # Test that SetParamsGate not at the end raises an error
     qc.append(RX90pGate(), [0])
-    with pytest.raises(KeyError):
+    with pytest.raises(C3QiskitError):
         _ = physics_backend.run(qc)
 
 
