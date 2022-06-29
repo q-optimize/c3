@@ -371,6 +371,89 @@ class Filter(Device):
 
 
 @dev_reg_deco
+class CouplingTuning(Device):
+    """
+    Coupling dependent on frequency of coupled elements.
+
+    Parameters
+    ----------
+    two_inputs: bool
+        True if both coupled elements are frequency tuned
+    w_1 : Quantity
+        Bias frequency of first coupled element
+    w_2 : Quantity
+        Bias frequency of second coupled element.
+    g0 : Quantity
+        Coupling at bias frequencies.
+    """
+
+    def __init__(self, two_inputs=False, **props):
+        super().__init__(**props)
+
+        # For two frequency tunable elements
+        self.two_inputs = two_inputs
+        if self.two_inputs:
+            self.inputs = props.pop("inputs", 2)
+        # Only one element tunable
+        else:
+            self.inputs = props.pop("inputs", 1)
+
+        self.outputs = props.pop("outputs", 1)
+
+        for par in ["w_1", "w_2", "g0"]:
+            if par not in self.params:
+                raise Exception(
+                    f"C3:ERROR: {self.__class__}  needs a '{par}' parameter."
+                )
+
+    def get_factor(self):
+        factor = self.params["g0"].get_value() / tf.sqrt(
+            self.params["w_1"].get_value() * self.params["w_2"].get_value()
+        )
+        return factor
+
+    def get_coup(self, signal1, signal2):
+        w_1 = self.params["w_1"].get_value()
+        w_2 = self.params["w_2"].get_value()
+
+        delta_coup = self.get_factor() * tf.sqrt((w_2 - signal2) * (w_1 - signal1))
+
+        return delta_coup
+
+    def process(
+        self, instr: Instruction, chan: str, signal_in: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Compute the qubit frequency resulting from an applied flux.
+
+        Parameters
+        ----------
+        signal : tf.float64
+
+
+        Returns
+        -------
+        tf.float64
+            Qubit frequency.
+        """
+        zero = tf.constant(0, dtype=tf.double)
+
+        signal1 = signal_in[0]["values"]
+
+        if self.two_inputs:
+            signal2 = signal_in[1]["values"]
+        else:
+            signal2 = zero
+
+        self.signal["ts"] = signal_in[0]["ts"]
+
+        delta_coup = self.get_coup(signal1, signal2) - self.get_coup(zero, zero)
+        self.signal["values"] = delta_coup
+
+        return self.signal
+
+
+@dev_reg_deco
 class FluxTuning(Device):
     """
     Flux tunable qubit frequency.
@@ -383,7 +466,6 @@ class FluxTuning(Device):
         Current flux.
     omega_0 : Quantity
         Maximum frequency.
-
     """
 
     def __init__(self, **props):

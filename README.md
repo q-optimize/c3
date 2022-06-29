@@ -48,6 +48,7 @@ The following notebooks are available in the `examples/` directory and can also 
 - [Minimum example for using the Qiskit interface](examples/c3_qiskit.ipynb)
 - [Minimum example for optimizing piece-wise constant pulses](examples/Piecewise_constant_controls.ipynb)
 - [Understanding the ParameterMap](examples/Parametermap.ipynb)
+- [Frequency Dependent Coupling](examples/frequency_dependent_coupling.ipynb)
 
 ## Contributing
 

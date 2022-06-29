@@ -1236,3 +1236,19 @@ class Drive(LineComponent):
             sig = tf.cast(signal["values"], tf.complex128)
             sig = tf.reshape(sig, [sig.shape[0], 1, 1])
             return tf.expand_dims(h, 0) * sig
+
+
+@dev_reg_deco
+class Coupling_Drive(Drive):
+    """
+    Represents a drive line that couples multiple qubits.
+
+    Parameters
+    ----------
+    connected: list
+        all physical components receiving driving signals via this line
+
+    """
+
+    def init_Hs(self, ann_opers: list):
+        self.h = tf.constant(self.hamiltonian_func(ann_opers), dtype=tf.complex128)
