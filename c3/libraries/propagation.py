@@ -224,9 +224,9 @@ def gen_u_rk4(h, dt, dim):
 
 @unitary_deco
 def pwc(
-    model: Model, 
-    gen: Generator, 
-    instr: Instruction, 
+    model: Model,
+    gen: Generator,
+    instr: Instruction,
     folding_stack: list,
     batch_size=None,
 ) -> Dict:
@@ -428,7 +428,7 @@ def tf_batch_propagate(
     hamiltonian, hks, signals, dt, batch_size, col_ops=None, lindbladian=False
 ):
     """
-    Propagate signal in batches
+    Propagate signal in batches (of time slices)
     Parameters
     ----------
     hamiltonian: tf.tensor
@@ -441,6 +441,10 @@ def tf_batch_propagate(
         Length of one time slice
     batch_size: int
         Number of elements in one batch
+    col_ops: List[tf.tensor]
+        List of collapse operators for Lindblad simulation
+    lindbladian: bool
+        Flag for Lindblad simulation.
 
     Returns
     -------
