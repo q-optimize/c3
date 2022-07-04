@@ -277,7 +277,7 @@ def pwc(
     dt = ts[1] - ts[0]
 
     if batch_size is None:
-        batch_size = tf.constant(len(h0), tf.int32)
+        batch_size = tf.constant(tf.shape(ts)[0], tf.int32)
     else:
         batch_size = tf.constant(batch_size, tf.int32)
 
