@@ -223,7 +223,13 @@ def gen_u_rk4(h, dt, dim):
 
 
 @unitary_deco
-def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -> Dict:
+def pwc(
+    model: Model, 
+    gen: Generator, 
+    instr: Instruction, 
+    folding_stack: list,
+    batch_size=None,
+) -> Dict:
     """
     Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
     signal and Hamiltonians.
@@ -270,9 +276,27 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
 
     dt = ts[1] - ts[0]
 
-    batch_size = tf.constant(len(h0), tf.int32)
+    if batch_size is None:
+        batch_size = tf.constant(len(h0), tf.int32)
+    else:
+        batch_size = tf.constant(batch_size, tf.int32)
 
-    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+    if model.lindbladian:
+        col_ops = model.get_Lindbladians()
+        if model.max_excitations:
+            cutter = model.ex_cutter
+            col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
+        dUs = tf_batch_propagate(
+            h0,
+            hks,
+            signals,
+            dt,
+            batch_size=batch_size,
+            col_ops=col_ops,
+            lindbladian=True,
+        )
+    else:
+        dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
@@ -400,7 +424,9 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     return dUs
 
 
-def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(
+    hamiltonian, hks, signals, dt, batch_size, col_ops=None, lindbladian=False
+):
     """
     Propagate signal in batches
     Parameters
@@ -421,13 +447,13 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
 
     """
     if signals is not None:
-        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
+        batches = int(tf.math.ceil(signals.shape[1] / batch_size))
         batch_array = tf.TensorArray(
             signals.dtype, size=batches, dynamic_size=False, infer_shape=False
         )
         for i in range(batches):
             batch_array = batch_array.write(
-                i, signals[i * batch_size : i * batch_size + batch_size]
+                i, signals[:, i * batch_size : i * batch_size + batch_size]
             )
     else:
         batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
@@ -443,9 +469,15 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     for i in range(batches):
         x = batch_array.read(i)
         if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
+            if lindbladian:
+                result = tf_propagation_lind(hamiltonian, hks, col_ops, x, dt)
+            else:
+                result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
         else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+            if lindbladian:
+                result = tf_propagation_lind(x, None, None, None, dt)
+            else:
+                result = tf_propagation_vectorized(x, None, None, dt)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 
