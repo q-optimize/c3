@@ -37,7 +37,7 @@ def test_hamiltonians(get_two_qubit_chip) -> None:
     hks = model.get_control_ops()
     assert (hdrift.numpy() - test_data["hdrift"].numpy() < 1).any()
     for key in hks:
-        almost_equal(hks[key], test_data["hks"][key])
+        almost_equal(hks[key][0], test_data["hks"][key])
 
 
 @pytest.mark.tensorflow

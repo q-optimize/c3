@@ -125,8 +125,8 @@ def test_model_eigenfrequencies_2() -> None:
 
 @pytest.mark.unit
 def test_model_couplings() -> None:
-    assert hks["d1"][3, 0] == 1
-    assert hks["d2"][1, 0] == 1
+    assert hks["d1"][0, 3, 0] == 1
+    assert hks["d2"][0, 1, 0] == 1
 
 
 @pytest.mark.unit
