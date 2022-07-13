@@ -41,7 +41,7 @@ class PhysicalComponent(C3obj):
         super().__init__(**props)
         self.Hs = {}
         self.collapse_ops = {}
-        self.drive_line = None
+        self.has_drive = False
         self.index = None
 
     def set_subspace_index(self, index):
@@ -327,6 +327,7 @@ class Transmon(PhysicalComponent):
             hilbert_dim=hilbert_dim,
             params=params,
         )
+        self.has_drive = True
         if freq:
             self.params["freq"] = freq
         if phi:
@@ -1138,6 +1139,7 @@ class LineComponent(C3obj):
             self.hamiltonian_func = hamiltonians[h_func]
         super().__init__(**props)
         self.Hs = {}
+        self.has_drive = False
 
     def asdict(self) -> dict:
         params = {}
@@ -1214,14 +1216,32 @@ class Drive(LineComponent):
 
     """
 
+    def __init__(
+        self,
+        name,
+        desc=None,
+        comment=None,
+        connected: List[str] = None,
+        params=None,
+        hamiltonian_func=None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            params=params,
+            connected=connected,
+            hamiltonian_func=hamiltonian_func,
+        )
+        self.has_drive = True
+
     def init_Hs(self, ann_opers: list):
         hs = []
         for a in ann_opers:
             hs.append(tf.constant(self.hamiltonian_func(a), dtype=tf.complex128))
-        self.h: tf.Tensor = tf.cast(sum(hs), tf.complex128)
+        self.h = tf.expand_dims(tf.reduce_sum(hs, axis=0), 0)
 
     def get_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
-        h = self.h
         sig = tf.cast(signal["values"], tf.complex128)
         sig = tf.reshape(sig, [sig.shape[0], 1, 1])
-        return tf.expand_dims(h, 0) * sig
+        return self.h * sig

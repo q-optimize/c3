@@ -53,13 +53,14 @@ class Model:
         self.subsystems: Dict = {}
         self.couplings: Dict[str, Coupling] = {}
         self.drives: Dict[str, Drive] = {}
+        self.controllable: Dict = {}
+        self.drift: Dict = {}
         self.tasks: Dict = {}
         self.drift_ham = tf.zeros([2, 2])
         if subsystems:
             self.set_components(subsystems, couplings, drives, max_excitations)
         if tasks:
             self.set_tasks(tasks)
-        self.get_Hamiltonian = self._get_Hamiltonian
 
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
@@ -95,12 +96,19 @@ class Model:
     ) -> None:
         for comp in subsystems:
             self.subsystems[comp.name] = comp
+            if comp.has_drive:
+                self.controllable[comp.name] = comp
+            self.drift[comp.name] = comp
         for coup in couplings:
             self.couplings[coup.name] = coup
             if len(set(coup.connected) - set(self.subsystems.keys())) > 0:
                 raise Exception("Tried to couple non-existent devices.")
+            if coup.has_drive:
+                self.controllable[coup.name] = coup
+            self.drift[coup.name] = coup
         for drive in drives:
             self.drives[drive.name] = drive
+            self.controllable[drive.name] = drive
             # Check that the target of a drive exists and is store the info in the target.
             self.__check_drive_connect(drive)
             if len(set(drive.connected) - set(self.subsystems.keys())) > 0:
@@ -341,6 +349,22 @@ class Model:
             self.frame.discard("lindbladian")
         self.update_model()
 
+    def set_interaction_picture(
+        self, ham_S: tf.Tensor, ts: tf.Tensor = tf.constant(0)
+    ) -> None:
+        """
+        Transform to the interaction picture given a time-independent Hamiltonian
+        ..math:: H(t) = H_S + H_I(t)
+        such that the resulting Hamiltonian will be
+        ..math:: \\hat H(t) = \\exp(-i H_S t) H_I(t) \\exp(i H_S t)
+        """
+        ham_sys = tf.expand_dims(ham_S, 0)  # create batch dimension
+        ts = tf.expand_dims(tf.expand_dims(ts, -1), -1)  # ts as batch dimension
+        transform = tf.linalg.expm(-1j * ham_sys * tf_utils.tf_complexify(ts))
+        self.drift_ham -= ham_S
+        for drives in self.drives.values():
+            drives.h = transform @ drives.h @ tf.linalg.adjoint(transform)
+
     def set_FR(self, use_FR: bool) -> None:
         """
         Setter for the frame rotation option for adjusting the individual rotating
@@ -367,29 +391,15 @@ class Model:
             hks[key] = drive.h
         return hks
 
-    def _get_Hamiltonian(self, signal={}):
+    def get_Hamiltonian(self, signal={}):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
         signal_hamiltonian = self.drift_ham
-        for key, sig in signal.items():
-            signal_hamiltonian += self.drives[key].get_Hamiltonian(sig)
-
-        if self.max_excitations:
-            signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
-
-        return signal_hamiltonian
-
-    def _get_interaction_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
-        drift = tf.expand_dims(self.drift_ham, 0)  # create batch dimension
-        ts = tf.expand_dims(
-            tf.expand_dims(signal["d1"]["ts"], -1), -1
-        )  # ts as batch dimension
-        signal_hamiltonian = tf.expand_dims(tf.zeros_like(self.drift_ham), 0)
-        transform = tf.linalg.expm(-1j * drift * tf_utils.tf_complexify(ts))
-        for key, sig in signal.items():
-            h_of_t = self.drives[key].get_Hamiltonian(sig)
-            signal_hamiltonian += tf.linalg.adjoint(transform) @ h_of_t @ transform
+        for key in self.controllable.keys():
+            signal_hamiltonian += self.controllable[key].get_Hamiltonian(
+                signal.get(key)
+            )
 
         if self.max_excitations:
             signal_hamiltonian = self.cut_excitations(signal_hamiltonian)
@@ -412,10 +422,8 @@ class Model:
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
         hamiltonians = []
-        for key, sub in self.subsystems.items():
+        for sub in self.drift.values():
             hamiltonians.append(sub.get_Hamiltonian())
-        for key, line in self.couplings.items():
-            hamiltonians.append(line.get_Hamiltonian())
 
         self.drift_ham = tf.reduce_sum(hamiltonians, axis=0)
         for drive in self.drives.values():
