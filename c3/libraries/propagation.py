@@ -242,12 +242,12 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
     """
     signal = gen.generate_signals(instr)
     # Why do I get 0.0 if I print gen.resolution here?! FR
+    #print(signal)
 
     dynamics_generators = model.get_dynamics_generators(signal)
+    #print("dynamics_generators",dynamics_generators) # these are the hamiltonians
 
-    batch_size = tf.constant(len(dynamics_generators[0]), tf.int32)
-
-    dUs = tf_batch_propagate(dynamics_generators, batch_size=batch_size)
+    dUs = tf.linalg.expm(dynamics_generators)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
