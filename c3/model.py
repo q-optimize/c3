@@ -595,3 +595,70 @@ class Model:
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch
+
+
+class Model_basis_change(Model):
+    """
+    Model with an additional unitary basis change.
+
+    Parameters
+    ----------
+    U_transform : tf.constant(dtype=tf.complex128)
+        Unitary matrix describing the basis change of the system
+    """
+
+    def __init__(
+        self,
+        subsystems=None,
+        couplings=None,
+        tasks=None,
+        max_excitations=0,
+        U_transform=None,
+    ):
+        self.dressed = True
+        self.U_transform = U_transform
+        super().__init__(subsystems, couplings, tasks, max_excitations)
+
+    def update_drift_eigen(self, ordered=True):
+        """Set the basis transform to U_transform"""
+        self.transform = self.U_transform
+
+        if self.U_transform is None:
+            v = tf.eye(self.tot_dim, dtype=tf.complex128)
+        else:
+            v = self.U_transform
+
+        if ordered:
+            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
+
+            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
+            if tf.math.reduce_min(max_probabilities) > 0.5:
+                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
+            else:
+                failed_states = np.sum(max_probabilities < 0.5)
+                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
+                warnings.warn(
+                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
+                )
+                vc = v_sq.numpy()
+                reorder_matrix = np.zeros_like(vc)
+                for i in range(vc.shape[1]):
+                    idx = np.unravel_index(np.argmax(vc), vc.shape)
+                    vc[idx[0], :] = 0
+                    vc[:, idx[1]] = 0
+                    reorder_matrix[idx] = 1
+                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
+            signed_rm = tf.cast(
+                # TODO determine if the changing of sign is needed
+                # (by looking at TC_eneregies_bases I see no difference)
+                # reorder_matrix, dtype=tf.complex128
+                tf.sign(tf.math.real(v)) * reorder_matrix,
+                dtype=tf.complex128,
+            )
+            transform = tf.matmul(v, tf.transpose(signed_rm))
+        else:
+            reorder_matrix = tf.eye(self.tot_dim)
+            transform = v
+
+        self.transform = tf.cast(transform, dtype=tf.complex128)
+        self.reorder_matrix = reorder_matrix
