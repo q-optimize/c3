@@ -51,8 +51,8 @@ class Model:
         self.tasks: dict = dict()
         self.drift_ham = None
         self.dressed_drift_ham = None
-        self.__hamiltonians = None
-        self.__dressed_hamiltonians = None
+        self._hamiltonians = None
+        self._dressed_hamiltonians = None
         if subsystems:
             self.set_components(subsystems, couplings, max_excitations)
         if tasks:
@@ -338,7 +338,7 @@ class Model:
         sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
         return sparse_drift, sparse_controls
 
-    def get_Hamiltonian(self, signal=None):
+    def get_system_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
@@ -349,10 +349,10 @@ class Model:
                 signal_hamiltonian = self.drift_ham
         else:
             if self.dressed:
-                hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
+                hamiltonians = copy.deepcopy(self._dressed_hamiltonians)
                 transform = self.transform
             else:
-                hamiltonians = copy.deepcopy(self.__hamiltonians)
+                hamiltonians = copy.deepcopy(self._hamiltonians)
                 transform = None
             for key, sig in signal.items():
                 if key in self.subsystems:
@@ -379,7 +379,7 @@ class Model:
         return signal_hamiltonian
 
     def get_Liouvillian(self, signal):
-        h = self.get_Hamiltonian()
+        h = self.get_system_Hamiltonian(signal)
         col_ops = self.get_Lindbladians()
         if self.max_excitations:
             col_ops = self.cut_excitations(col_ops)
@@ -409,10 +409,10 @@ class Model:
         if self.lindbladian:
             dyn_gens = self.get_Liouvillian(signal)
         else:
-            dyn_gens = -1j * self.get_Hamiltonian(signal)
+            dyn_gens = -1j * self.get_system_Hamiltonian(signal)
 
         ts = []
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
+        ts_list = [sig["ts"][:] for sig in signal.values()]
         ts = tf.math.reduce_mean(ts_list, axis=0)
         #Only do the safety check outside of graph mode for performance reasons.
         #When using graph mode, the safety check will still be executed ONCE during tracing
@@ -429,7 +429,7 @@ class Model:
         return dyn_gens * dt
 
     def get_sparse_Hamiltonian(self, signal=None):
-        return self.blowup_excitations(self.get_Hamiltonian(signal))
+        return self.blowup_excitations(self.get_system_Hamiltonian(signal))
 
     def get_Lindbladians(self):
         if self.dressed:
@@ -458,7 +458,7 @@ class Model:
 
         self.drift_ham = sum(hamiltonians.values())
         self.control_hams = control_hams
-        self.__hamiltonians = hamiltonians
+        self._hamiltonians = hamiltonians
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -516,7 +516,7 @@ class Model:
         dressed_control_hams = {}
         dressed_col_ops = []
         dressed_hamiltonians = dict()
-        for k, h in self.__hamiltonians.items():
+        for k, h in self._hamiltonians.items():
             dressed_hamiltonians[k] = tf.matmul(
                 tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
             )
@@ -530,7 +530,7 @@ class Model:
             )
         self.dressed_drift_ham = dressed_drift_ham
         self.dressed_control_hams = dressed_control_hams
-        self.__dressed_hamiltonians = dressed_hamiltonians
+        self._dressed_hamiltonians = dressed_hamiltonians
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(

@@ -498,11 +498,15 @@ class Experiment:
 
             model.controllability = self.use_control_fields
             steps = int((instr.t_end - instr.t_start) * self.sim_res)
-            result = self.propagation(
-                model, generator, instr, self.folding_stack[steps]
-            )
+            if self.propagation is unitary_provider["pwc"]:
+                result = self.propagation(
+                    model, generator, instr, self.folding_stack[steps]
+                )
+            else:
+                result = self.propagation(
+                    model, generator, instr,
+                )
             U = result["U"]
-            dUs = result["dUs"]
             signal = generator.generate_signals(instr)
             ts_list = [sig["ts"][1:] for sig in signal.values()]
             ts = tf.math.reduce_mean(ts_list, axis=0)
@@ -559,7 +563,9 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             propagators[gate] = U
-            partial_propagators[gate] = dUs
+            if self.propagation is unitary_provider["pwc"] or \
+                self.propagation is unitary_provider["pwc_sequential_parallel"]:
+                partial_propagators[gate] = result["dUs"]
 
         # TODO we might want to move storing of the propagators to the instruction object
         if self.overwrite_propagators:

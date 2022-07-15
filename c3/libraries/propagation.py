@@ -11,6 +11,7 @@ from c3.utils.tf_utils import (
     tf_matmul_n,
     tf_spre,
     tf_spost,
+    Id_like,
 )
 
 unitary_provider = dict()
@@ -241,11 +242,9 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         Matrix representation of the gate.
     """
     signal = gen.generate_signals(instr)
-    # Why do I get 0.0 if I print gen.resolution here?! FR
-    #print(signal)
+    # Why do I get 0.0 if I rint gen.resolution here?! FR
 
     dynamics_generators = model.get_dynamics_generators(signal)
-    #print("dynamics_generators",dynamics_generators) # these are the hamiltonians
 
     dUs = tf.linalg.expm(dynamics_generators)
 
@@ -257,6 +256,208 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
     return {"U": U, "dUs": dUs}
+
+
+@unitary_deco
+@tf.function
+def pwc_sequential(model: Model, gen: Generator, instr: Instruction) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    signal = gen.generate_signals(instr)
+    #get number of time steps in the signal
+    n = tf.constant(len(list(list(signal.values())[0].values())[0]),dtype=tf.int32)
+
+    if model.lindbladian:
+        U = Id_like(model.get_Liouvillian(None))
+    else:
+        U = Id_like(model.get_system_Hamiltonian())
+
+    for i in range(n):
+        mini_signal = {}
+        for key in signal.keys():
+            mini_signal[key] = {}
+            mini_signal[key]['values'] = tf.expand_dims(signal[key]['values'][i],0)
+            #the ts are only used to compute dt and therefore this works
+            mini_signal[key]['ts'] = signal[key]['ts'][0:2]
+        dynamics_generators = model.get_dynamics_generators(mini_signal)
+
+        dU = tf.linalg.expm(dynamics_generators)
+        #i made shure that this order produces the same result as the original pwc function
+        U = dU[0] @ U
+
+    if model.max_excitations:
+        U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
+        dUs = tf.vectorized_map(model.blowup_excitations, dUs)
+
+    return {"U": U}
+
+
+@unitary_deco
+@tf.function
+def pwc_sequential_parallel(
+        model: Model,
+        gen: Generator,
+        instr: Instruction,
+        parallel: tf.int32 = tf.constant(16,tf.int32),
+        ) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+    parallel: tf.int32:
+        number of prarallelly executing matrix multiplications
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    signal = gen.generate_signals(instr)
+    #get number of time steps in the signal. Since this should always be the same,
+    #it does not interfere with tf.function tracing
+    n = tf.constant(len(list(list(signal.values())[0].values())[0]),dtype=tf.int32)
+
+    batch_size = tf.cast(tf.math.ceil(tf.math.divide(n,parallel)),tf.int32)
+
+    #i tried to set the Us to None at the beginning and have an if else condition
+    #that handles the first call, but tensorflow complained
+    if model.lindbladian:
+        Us = tf.eye(model.get_Liouvillian().shape[1],batch_shape=[parallel],dtype=tf.complex128)
+    else:
+        Us = tf.eye(model.get_system_Hamiltonian().shape[1],batch_shape=[parallel],dtype=tf.complex128)
+
+    #batch_size is the number of operations happening sequentially, parallel is the number
+    #of operations happening in parallel. their product is the total number of operations.
+    for i in range(batch_size):
+        mini_signal = {}
+        for key in signal.keys():
+            mini_signal[key] = {}
+            #the signals pulled here are not in sequence, but that should not matter
+            #the multiplication of the relevant propagators is still ordered correctly
+            mini_signal[key]['values'] = signal[key]['values'][i::batch_size]
+            #the ts are only used to compute dt and therefore this works
+            mini_signal[key]['ts'] = signal[key]['ts'][0:2]
+        dynamics_generators = model.get_dynamics_generators(mini_signal)
+
+        dUs = tf.linalg.expm(dynamics_generators)
+        #the last slice of dUs might be differently sized. In that case fill the missing space with eye
+        #While loops are inefficient, but this only needs to be called once at the end.
+        while tf.shape(Us)[0] > tf.shape(dUs)[0]:
+            dUs = tf.concat([
+                    dUs,
+                    tf.eye(
+                        Us.shape[1],
+                        #batch_shape=[Us.shape[0] - dUs.shape[0]], #if this worked, the while could be an if
+                        batch_shape=[1],
+                        dtype=tf.complex128),],
+                axis=0,
+                )
+        #i made shure that this order produces the same result as the original pwc function
+        Us = dUs @ Us
+
+    #The Us are partially accumulated propagators, multiplying them together
+    #yields the final propagator. They serve a similar function as the dUs
+    #but there are typically fewer of them
+    U = tf_matmul_left(tf.cast(Us, tf.complex128))
+
+    if model.max_excitations:
+        U = model.blowup_excitations(tf_matmul_left(tf.cast(dU, tf.complex128)))
+        Us = tf.vectorized_map(model.blowup_excitations, dU)
+
+    return {"U": U, "dUs": Us}
+
+
+@unitary_deco
+@tf.function
+def pwc_sequential_parallel2(
+        model: Model,
+        gen: Generator,
+        instr: Instruction,
+        parallel: tf.int32 = tf.constant(16,tf.int32),
+        ) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+    parallel: tf.int32:
+        number of prarallelly executing matrix multiplications
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    signal = gen.generate_signals(instr)
+    #get number of time steps in the signal
+    n = tf.constant(len(list(list(signal.values())[0].values())[0]),dtype=tf.int32)
+
+    batch_size = tf.cast(tf.math.ceil(tf.math.divide(n,parallel)),tf.int32)
+    tf.print("batch_size", batch_size )
+    tf.print("n", n )
+
+    ns = tf.TensorArray(tf.int32,parallel + 1,infer_shape = True)
+    for i in range(parallel + 1):
+        ns = ns.write(i,tf.minimum(i*batch_size,n))
+    Us = tf.TensorArray(tf.complex128,parallel,infer_shape = True)
+    if model.lindbladian:
+        for i in range(parallel):
+            Us = Us.write(i,Id_like(model.get_Liouvillian(None)))
+    else:
+        for i in range(parallel):
+            Us = Us.write(i,Id_like(model.get_system_Hamiltonian(None)))
+
+    #tf function should parallelize this first loop
+    with tf.device("/cpu:0"):
+        for j in range(parallel):
+            tf.print(j)
+            for i in range(ns.read(j),ns.read(j+1)):
+                mini_signal = {}
+                for key in signal.keys():
+                    mini_signal[key] = {}
+                    mini_signal[key]['values'] = tf.expand_dims(signal[key]['values'][i],0)
+                    #the ts are only used to compute dt and therefore this works
+                    mini_signal[key]['ts'] = signal[key]['ts'][0:2]
+                dynamics_generators = model.get_dynamics_generators(mini_signal)
+
+                dU = tf.linalg.expm(dynamics_generators)
+                #accumulate propagator
+                Us = Us.write(j,Us.read(j) @ dU[0])
+
+    U = Us.read(0)
+    for j in range(1,parallel):
+        U = U @ Us.read(j)
+
+    if model.max_excitations:
+        U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
+        dUs = tf.vectorized_map(model.blowup_excitations, dUs)
+
+    return {"U": U}
 
 
 ####################
