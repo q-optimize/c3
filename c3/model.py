@@ -384,8 +384,8 @@ class Model:
         if self.max_excitations:
             col_ops = self.cut_excitations(col_ops)
 
-        #h = tf.expand_dims(h,0)
-        #print("h",h)
+        # h = tf.expand_dims(h,0)
+        # print("h",h)
         coher_superop = -1j * (tf_utils.tf_spre(h) - tf_utils.tf_spost(h))
         for col_op in col_ops:
             super_clp = tf.matmul(
@@ -401,7 +401,7 @@ class Model:
                 tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
             )
             liouvillian = coher_superop + super_clp - anticomm_L_clp - anticomm_R_clp
-            #print("liouvillian",liouvillian)
+            # print("liouvillian",liouvillian)
         return liouvillian
 
     def get_dynamics_generators(self, signal):
@@ -417,8 +417,8 @@ class Model:
         ts = []
         ts_list = [sig["ts"][:] for sig in signal.values()]
         ts = tf.math.reduce_mean(ts_list, axis=0)
-        #Only do the safety check outside of graph mode for performance reasons.
-        #When using graph mode, the safety check will still be executed ONCE during tracing
+        # Only do the safety check outside of graph mode for performance reasons.
+        # When using graph mode, the safety check will still be executed ONCE during tracing
         if tf.executing_eagerly() and not tf.reduce_all(
             tf.math.reduce_variance(ts_list, axis=0) < (1e-5 * (ts[1] - ts[0]))
         ):

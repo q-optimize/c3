@@ -19,6 +19,8 @@ from c3.libraries.estimators import (
     neg_loglkh_multinom_norm,
 )
 
+from typing import Any, Optional
+
 
 class ModelLearning(Optimizer):
     """
@@ -86,7 +88,7 @@ class ModelLearning(Optimizer):
 
         super().__init__(pmap=pmap, algorithm=algorithm, logger=logger)
 
-        self.state_labels = {"all": None}
+        self.state_labels: Dict[str, Optional[list]] = {"all": None}
         for target, labels in state_labels.items():
             self.state_labels[target] = [tuple(lab) for lab in labels]
 
@@ -106,7 +108,7 @@ class ModelLearning(Optimizer):
         self.inverse = False
         self.options = options
 
-        self.learn_data = {}
+        self.learn_data: Dict[Any, Any] = {}
         self.read_data(datafiles)
         self.sampling = sampling
         self.batch_sizes = batch_sizes

@@ -502,20 +502,23 @@ class Experiment:
                 result = self.propagation(
                     model, generator, instr, self.folding_stack[steps]
                 )
-            elif self.propagation is unitary_provider["pwc_sequential_parallel"] and \
-                    hasattr(self,"parallel"):
-                        result = self.propagation(model, generator, instr, self.parallel)
+            elif self.propagation is unitary_provider[
+                "pwc_sequential_parallel"
+            ] and hasattr(self, "parallel"):
+                result = self.propagation(model, generator, instr, self.parallel)
 
             else:
                 result = self.propagation(
-                    model, generator, instr,
+                    model,
+                    generator,
+                    instr,
                 )
             U = result["U"]
             signal = generator.generate_signals(instr)
             ts_list = [sig["ts"][1:] for sig in signal.values()]
             ts = tf.math.reduce_mean(ts_list, axis=0)
-            #Only do the safety check outside of graph mode for performance reasons.
-            #When using graph mode, the safety check will still be executed ONCE during tracing
+            # Only do the safety check outside of graph mode for performance reasons.
+            # When using graph mode, the safety check will still be executed ONCE during tracing
             if tf.executing_eagerly() and not tf.reduce_all(
                 tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
             ):
@@ -567,8 +570,10 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             propagators[gate] = U
-            if self.propagation is unitary_provider["pwc"] or \
-                self.propagation is unitary_provider["pwc_sequential_parallel"]:
+            if (
+                self.propagation is unitary_provider["pwc"]
+                or self.propagation is unitary_provider["pwc_sequential_parallel"]
+            ):
                 partial_propagators[gate] = result["dUs"]
 
         # TODO we might want to move storing of the propagators to the instruction object

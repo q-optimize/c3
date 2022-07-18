@@ -1234,6 +1234,6 @@ class Drive(LineComponent):
             return h
         elif isinstance(signal, dict):
             sig = tf.cast(signal["values"], tf.complex128)
-            #sig = tf.reshape(sig, [sig.shape[0], 1, 1])
+            # sig = tf.reshape(sig, [sig.shape[0], 1, 1])
             sig = tf.reshape(sig, [tf.shape(sig)[0], 1, 1])
             return tf.expand_dims(h, 0) * sig
