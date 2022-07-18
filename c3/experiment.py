@@ -502,6 +502,10 @@ class Experiment:
                 result = self.propagation(
                     model, generator, instr, self.folding_stack[steps]
                 )
+            elif self.propagation is unitary_provider["pwc_sequential_parallel"] and \
+                    hasattr(self,"parallel"):
+                        result = self.propagation(model, generator, instr, self.parallel)
+
             else:
                 result = self.propagation(
                     model, generator, instr,

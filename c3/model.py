@@ -338,7 +338,7 @@ class Model:
         sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
         return sparse_drift, sparse_controls
 
-    def get_system_Hamiltonian(self, signal=None):
+    def get_Hamiltonian(self, signal=None):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
@@ -378,12 +378,14 @@ class Model:
 
         return signal_hamiltonian
 
-    def get_Liouvillian(self, signal):
-        h = self.get_system_Hamiltonian(signal)
+    def get_Liouvillian(self, signal=None):
+        h = self.get_Hamiltonian(signal)
         col_ops = self.get_Lindbladians()
         if self.max_excitations:
             col_ops = self.cut_excitations(col_ops)
 
+        #h = tf.expand_dims(h,0)
+        #print("h",h)
         coher_superop = -1j * (tf_utils.tf_spre(h) - tf_utils.tf_spost(h))
         for col_op in col_ops:
             super_clp = tf.matmul(
@@ -399,6 +401,7 @@ class Model:
                 tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
             )
             liouvillian = coher_superop + super_clp - anticomm_L_clp - anticomm_R_clp
+            #print("liouvillian",liouvillian)
         return liouvillian
 
     def get_dynamics_generators(self, signal):
@@ -409,7 +412,7 @@ class Model:
         if self.lindbladian:
             dyn_gens = self.get_Liouvillian(signal)
         else:
-            dyn_gens = -1j * self.get_system_Hamiltonian(signal)
+            dyn_gens = -1j * self.get_Hamiltonian(signal)
 
         ts = []
         ts_list = [sig["ts"][:] for sig in signal.values()]
@@ -429,7 +432,7 @@ class Model:
         return dyn_gens * dt
 
     def get_sparse_Hamiltonian(self, signal=None):
-        return self.blowup_excitations(self.get_system_Hamiltonian(signal))
+        return self.blowup_excitations(self.get_Hamiltonian(signal))
 
     def get_Lindbladians(self):
         if self.dressed:
