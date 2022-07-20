@@ -5,10 +5,11 @@ import pickle
 
 import pytest
 import numpy as np
+import tensorflow as tf
 from c3.c3objs import Quantity
 from c3.libraries.chip import Qubit, Coupling, Drive
 from c3.libraries.tasks import InitialiseGround, ConfusionMatrix
-from c3.model import Model
+from c3.model import Model, Model_basis_change
 import c3.libraries.hamiltonians as hamiltonians
 from c3.parametermap import ParameterMap
 
@@ -186,3 +187,44 @@ def test_model_thermal_state() -> None:
 def test_model_init_state() -> None:
     """Test computation of initial state"""
     np.testing.assert_almost_equal(model.get_ground_state()[0], 1, decimal=4)
+
+
+# Test model with arbitrary basis
+
+U_transform = tf.cast(
+    tf.random.uniform([qubit_lvls**2] * 2, minval=0, maxval=1, seed=0),
+    dtype=tf.complex128,
+)
+model_arb_basis = Model_basis_change(
+    [q1, q2],  # Individual, self-contained components
+    [drive, drive2, q1q2],  # Interactions between components
+    U_transform=U_transform,  # Arbitarry basis change
+)
+
+
+@pytest.mark.unit
+def test_transform_applied() -> None:
+    """Test wether U_transform is applied correctly"""
+    drift_ham = model_arb_basis.drift_ham
+    control_hams = model_arb_basis.control_hams
+    dressed_drift_ham, dressed_control_hams = model_arb_basis.get_Hamiltonians()
+
+    # Reorder matrix
+    signed_rm = tf.cast(
+        tf.sign(tf.math.real(U_transform)) * model_arb_basis.reorder_matrix,
+        dtype=tf.complex128,
+    )
+
+    # Reordered basis transform
+    U_ordered = tf.matmul(U_transform, tf.transpose(signed_rm))
+
+    H_test = tf.matmul(tf.matmul(tf.linalg.adjoint(U_ordered), drift_ham), U_ordered)
+    np.testing.assert_almost_equal(H_test.numpy(), dressed_drift_ham.numpy())
+
+    for key in control_hams.keys():
+        H_test = tf.matmul(
+            tf.matmul(tf.linalg.adjoint(U_ordered), control_hams[key]), U_ordered
+        )
+        np.testing.assert_almost_equal(
+            H_test.numpy(), dressed_control_hams[key].numpy()
+        )
