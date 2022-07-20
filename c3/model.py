@@ -619,7 +619,7 @@ class Model_basis_change(Model):
         self.U_transform = U_transform
         super().__init__(subsystems, couplings, tasks, max_excitations)
 
-    def update_drift_eigen(self, ordered=True):
+    def update_drift_eigen(self, ordered: bool = True):
         """Set the basis transform to U_transform"""
         self.transform = self.U_transform
 
