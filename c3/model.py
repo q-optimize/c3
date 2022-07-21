@@ -417,10 +417,10 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
-    def update_drift_eigen(self, ordered=True):
-        """Compute the eigendecomposition of the drift Hamiltonian and store both the
-        Eigenenergies and the transformation matrix."""
-        e, v = tf.linalg.eigh(self.drift_ham)
+    def reorder_frame(
+        self, e: tf.constant, v: tf.constant, ordered: bool
+    ) -> Tuple[tf.constant, tf.constant, tf.constant]:
+        """Reorders the new basis states according to their overlap with bare qubit states."""
         if ordered:
             v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
 
@@ -454,6 +454,15 @@ class Model:
             reorder_matrix = tf.eye(self.tot_dim)
             eigenframe = tf.math.real(e)
             transform = v
+
+        return reorder_matrix, eigenframe, transform
+
+    def update_drift_eigen(self, ordered=True):
+        """Compute the eigendecomposition of the drift Hamiltonian and store both the
+        Eigenenergies and the transformation matrix."""
+        e, v = tf.linalg.eigh(self.drift_ham)
+
+        reorder_matrix, eigenframe, transform = self.reorder_frame(e, v, ordered)
 
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
@@ -621,44 +630,16 @@ class Model_basis_change(Model):
 
     def update_drift_eigen(self, ordered: bool = True):
         """Set the basis transform to U_transform"""
-        self.transform = self.U_transform
 
         if self.U_transform is None:
             v = tf.eye(self.tot_dim, dtype=tf.complex128)
         else:
             v = self.U_transform
 
-        if ordered:
-            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
+        # Placeholder since no eigenframe is needed in arbitrary basis
+        e = tf.zeros(self.tot_dim, dtype=tf.double)
 
-            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
-            if tf.math.reduce_min(max_probabilities) > 0.5:
-                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
-            else:
-                failed_states = np.sum(max_probabilities < 0.5)
-                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
-                warnings.warn(
-                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
-                )
-                vc = v_sq.numpy()
-                reorder_matrix = np.zeros_like(vc)
-                for i in range(vc.shape[1]):
-                    idx = np.unravel_index(np.argmax(vc), vc.shape)
-                    vc[idx[0], :] = 0
-                    vc[:, idx[1]] = 0
-                    reorder_matrix[idx] = 1
-                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
-            signed_rm = tf.cast(
-                # TODO determine if the changing of sign is needed
-                # (by looking at TC_eneregies_bases I see no difference)
-                # reorder_matrix, dtype=tf.complex128
-                tf.sign(tf.math.real(v)) * reorder_matrix,
-                dtype=tf.complex128,
-            )
-            transform = tf.matmul(v, tf.transpose(signed_rm))
-        else:
-            reorder_matrix = tf.eye(self.tot_dim)
-            transform = v
+        reorder_matrix, _, transform = self.reorder_frame(e, v, ordered)
 
         self.transform = tf.cast(transform, dtype=tf.complex128)
         self.reorder_matrix = reorder_matrix
