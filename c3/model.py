@@ -417,10 +417,10 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
-    def reorder_frame(
-        self, e: tf.constant, v: tf.constant, ordered: bool
-    ) -> Tuple[tf.constant, tf.constant, tf.constant]:
-        """Reorders the new basis states according to their overlap with bare qubit states."""
+    def update_drift_eigen(self, ordered=True):
+        """Compute the eigendecomposition of the drift Hamiltonian and store both the
+        Eigenenergies and the transformation matrix."""
+        e, v = tf.linalg.eigh(self.drift_ham)
         if ordered:
             v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
 
@@ -454,15 +454,6 @@ class Model:
             reorder_matrix = tf.eye(self.tot_dim)
             eigenframe = tf.math.real(e)
             transform = v
-
-        return reorder_matrix, eigenframe, transform
-
-    def update_drift_eigen(self, ordered=True):
-        """Compute the eigendecomposition of the drift Hamiltonian and store both the
-        Eigenenergies and the transformation matrix."""
-        e, v = tf.linalg.eigh(self.drift_ham)
-
-        reorder_matrix, eigenframe, transform = self.reorder_frame(e, v, ordered)
 
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
@@ -604,42 +595,3 @@ class Model:
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch
-
-
-class Model_basis_change(Model):
-    """
-    Model with an additional unitary basis change.
-
-    Parameters
-    ----------
-    U_transform : tf.constant(dtype=tf.complex128)
-        Unitary matrix describing the basis change of the system
-    """
-
-    def __init__(
-        self,
-        subsystems=None,
-        couplings=None,
-        tasks=None,
-        max_excitations=0,
-        U_transform=None,
-    ):
-        self.dressed = True
-        self.U_transform = U_transform
-        super().__init__(subsystems, couplings, tasks, max_excitations)
-
-    def update_drift_eigen(self, ordered: bool = True):
-        """Set the basis transform to U_transform"""
-
-        if self.U_transform is None:
-            v = tf.eye(self.tot_dim, dtype=tf.complex128)
-        else:
-            v = self.U_transform
-
-        # Placeholder since no eigenframe is needed in arbitrary basis
-        e = tf.zeros(self.tot_dim, dtype=tf.double)
-
-        reorder_matrix, _, transform = self.reorder_frame(e, v, ordered)
-
-        self.transform = tf.cast(transform, dtype=tf.complex128)
-        self.reorder_matrix = reorder_matrix

@@ -20,7 +20,6 @@ This Changelog tracks all past changes to this project as well as details about 
 - `added` support for c3 custom gates in qiskit circuits #168
 - `added` proper physics simulation of circuits using qiskit interface #165
 - `added` coupling element which depends on frequency of connected qubits #211
-- `added` model subclass with an arbitrary specified basis change for simulations #220
 
 ## Version `1.4` - 23 Dec 2021
 
