@@ -4,6 +4,7 @@ testing module for Model class
 import pickle
 
 import pytest
+import copy
 import numpy as np
 import tensorflow as tf
 from c3.c3objs import Quantity
@@ -187,6 +188,17 @@ def test_model_thermal_state() -> None:
 def test_model_init_state() -> None:
     """Test computation of initial state"""
     np.testing.assert_almost_equal(model.get_ground_state()[0], 1, decimal=4)
+
+
+@pytest.mark.unit
+def test_model_dressed_basis() -> None:
+    """Test dressed basis"""
+    mod = copy.deepcopy(model)
+    # Set qubits close to resonance to test ordering
+    mod.subsystems["Q2"].params["freq"] = Quantity(
+        value=freq_q1 + coupling_strength / 10, unit="Hz 2pi"
+    )
+    mod.set_dressed(True)
 
 
 # Test model with arbitrary basis
