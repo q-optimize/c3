@@ -1046,7 +1046,7 @@ class CooperPairBox(PhysicalComponent):
         desc: str = None,
         comment: str = None,
         hilbert_dim: int = None,
-        calc_dim: int = None,
+        calc_dim: Quantity = None,
         EC: Quantity = None,
         EJ: Quantity = None,
         NG: Quantity = None,
