@@ -78,14 +78,22 @@ class Model:
         """Get an initial state. If a task to compute a thermal state is set, return that."""
         if self.init_state is None:
             if "init_ground" in self.tasks:
-                print("Initial state not specified. Using thermal state as the initial state.")
-                print("You can use model.set_init_state() method to set the initial state.")
+                print(
+                    "Initial state not specified. Using thermal state as the initial state."
+                )
+                print(
+                    "You can use model.set_init_state() method to set the initial state."
+                )
                 psi_init = self.tasks["init_ground"].initialise(
                     self.drift_ham, self.lindbladian
                 )
             else:
-                print("Initial state not specified. Using ground state as the initial state.")
-                print("You can use model.set_init_state() method to set the initial state.")
+                print(
+                    "Initial state not specified. Using ground state as the initial state."
+                )
+                print(
+                    "You can use model.set_init_state() method to set the initial state."
+                )
                 psi_init = self.get_ground_state()
                 if self.lindbladian:
                     psi_init = tf_utils.tf_state_to_dm(psi_init)
@@ -437,6 +445,46 @@ class Model:
             col_ops.append(subs.get_Lindbladian(self.dims))
         self.col_ops = col_ops
 
+    def reorder_frame(
+        self, e: tf.constant, v: tf.constant, ordered: bool
+    ) -> Tuple[tf.constant, tf.constant, tf.constant]:
+        """Reorders the new basis states according to their overlap with bare qubit states."""
+        if ordered:
+            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
+
+            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
+            if tf.math.reduce_min(max_probabilities) > 0.5:
+                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
+            else:
+                failed_states = np.sum(max_probabilities < 0.5)
+                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
+                warnings.warn(
+                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
+                )
+                vc = v_sq.numpy()
+                reorder_matrix = np.zeros_like(vc)
+                for i in range(vc.shape[1]):
+                    idx = np.unravel_index(np.argmax(vc), vc.shape)
+                    vc[idx[0], :] = 0
+                    vc[:, idx[1]] = 0
+                    reorder_matrix[idx] = 1
+                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
+            signed_rm = tf.cast(
+                # TODO determine if the changing of sign is needed
+                # (by looking at TC_eneregies_bases I see no difference)
+                # reorder_matrix, dtype=tf.complex128
+                tf.sign(tf.math.real(v)) * reorder_matrix,
+                dtype=tf.complex128,
+            )
+            eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
+            transform = tf.matmul(v, tf.transpose(signed_rm))
+        else:
+            reorder_matrix = tf.eye(self.tot_dim)
+            eigenframe = tf.math.real(e)
+            transform = v
+
+        return reorder_matrix, eigenframe, transform
+
     def update_drift_eigen(self, ordered=True):
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
@@ -619,11 +667,11 @@ class Model:
     def Hs_of_t(self, signal, interpolate_res=2):
         """
         Generate a list of Hamiltonians for each time step of interpolated signal for Runge-Kutta Methods.
-        
+
         Args:
             signal (_type_): Input signal
             interpolate_res (int, optional): Interpolation resolution according to RK method. Defaults to 2.
-            L_dag_L (tf.tensor, optional): List of {L^\dagger L} where L represents the collapse operators.
+            L_dag_L (tf.tensor, optional): List of {L^dagger L} where L represents the collapse operators.
                                            Defaults to None. This is only used for stochastic case.
 
         Returns:
@@ -652,7 +700,6 @@ class Model:
             raise Exception("C3Error:Something with the times happend.")
         dt = ts[1] - ts[0]
         dt = tf.cast(dt, dtype=tf.complex128)
-        
 
         signals_interp = []
         for sig in signals:
@@ -669,12 +716,12 @@ class Model:
 
     def calculate_sum_Hs(self, h0, hks, cflds):
         control_field = tf.reshape(
-            tf.transpose(cflds), 
-            (tf.shape(cflds)[1], tf.shape(cflds)[0], 1, 1)
+            tf.transpose(cflds), (tf.shape(cflds)[1], tf.shape(cflds)[0], 1, 1)
         )
         hk = tf.multiply(control_field, hks)
         Hs = tf.reduce_sum(hk, axis=1)
         return Hs + h0
+
 
 class Model_basis_change(Model):
     """
