@@ -675,3 +675,40 @@ class Model:
         hk = tf.multiply(control_field, hks)
         Hs = tf.reduce_sum(hk, axis=1)
         return Hs + h0
+
+class Model_basis_change(Model):
+    """
+    Model with an additional unitary basis change.
+    Parameters
+    ----------
+    U_transform : tf.constant(dtype=tf.complex128)
+        Unitary matrix describing the basis change of the system
+    """
+
+    def __init__(
+        self,
+        subsystems=None,
+        couplings=None,
+        tasks=None,
+        max_excitations=0,
+        U_transform=None,
+    ):
+        self.dressed = True
+        self.U_transform = U_transform
+        super().__init__(subsystems, couplings, tasks, max_excitations)
+
+    def update_drift_eigen(self, ordered: bool = True):
+        """Set the basis transform to U_transform"""
+
+        if self.U_transform is None:
+            v = tf.eye(self.tot_dim, dtype=tf.complex128)
+        else:
+            v = self.U_transform
+
+        # Placeholder since no eigenframe is needed in arbitrary basis
+        e = tf.zeros(self.tot_dim, dtype=tf.double)
+
+        reorder_matrix, _, transform = self.reorder_frame(e, v, ordered)
+
+        self.transform = tf.cast(transform, dtype=tf.complex128)
+        self.reorder_matrix = reorder_matrix
