@@ -8,7 +8,6 @@ Given this information an experiment run is simulated, returning either processe
 states or populations.
 """
 
-from ast import Num
 import os
 import copy
 import pickle
@@ -16,7 +15,7 @@ import itertools
 import hjson
 import numpy as np
 import tensorflow as tf
-from typing import Dict, List
+from typing import Dict
 import time
 
 from c3.c3objs import hjson_encode, hjson_decode
@@ -36,7 +35,6 @@ from c3.libraries.propagation import unitary_provider, state_provider
 
 from c3.utils.qt_utils import perfect_single_q_parametric_gate
 
-from c3.libraries.constants import kb, hbar
 
 class Experiment:
     """
@@ -438,38 +436,6 @@ class Experiment:
 
         return gates
 
-    def compute_states(self) -> Dict[Instruction, List[tf.Tensor]]:
-        """Employ a state solver to compute the trajectory of the system.
-
-        Returns
-        -------
-        List[tf.tensor]
-            List of states of the system from simulation.
-
-        """
-        model = self.pmap.model
-        generator = self.pmap.generator
-        instructions = self.pmap.instructions
-        states = {}
-
-        gate_ids = self.opt_gates
-        if gate_ids is None:
-            gate_ids = instructions.keys()
-
-        for gate in gate_ids:
-            try:
-                instr = instructions[gate]
-            except KeyError:
-                raise Exception(
-                    f"C3:Error: Gate '{gate}' is not defined."
-                    f" Available gates are:\n {list(instructions.keys())}."
-                )
-            signal = generator.generate_signals(instr)
-            result = self.propagation(model, signal, self.folding_stack)
-            states[instr] = result["states"]
-        self.states = states
-        return result
-
     def compute_propagators(self):
         """
         Compute the unitary representation of operations. If no operations are
@@ -662,16 +628,15 @@ class Experiment:
         trace = np.trace(np.matmul(rho, oper))
         return [[np.real(trace)]]  # ,[np.imag(trace)]]
 
-    @tf.function
     def compute_states(self, solver="rk4", step_function="schroedinger"):
         """
-        Solve the Lindblad master equation by integrating the differential
-        equation of the density matrix
+        Employ a state solver to compute the trajectory of the system.
 
         Returns
         -------
-        List
-            A List of states for the time evolution.
+        List[tf.tensor]
+            List of states of the system from simulation.
+
         """
 
         model = self.pmap.model
@@ -699,12 +664,12 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             result = self.propagation(
-                model, 
-                generator, 
-                instr, 
-                init_state, 
-                solver=solver, 
-                step_function=step_function
+                model,
+                generator,
+                instr,
+                init_state,
+                solver=solver,
+                step_function=step_function,
             )
             state_list = tf.concat([state_list, result["states"]], 0)
             ts_list = tf.concat([ts_list, tf.add(result["ts"], ts_init)], 0)
@@ -744,12 +709,12 @@ class Experiment:
                     f" Available gates are:\n {list(instructions.keys())}."
                 )
             result = self.propagation(
-                model, 
-                generator, 
-                instr, 
-                init_state, 
-                solver=solver, 
-                step_function=step_function
+                model,
+                generator,
+                instr,
+                init_state,
+                solver=solver,
+                step_function=step_function,
             )
             init_state = result["states"]
             ts = result["ts"]

@@ -1,13 +1,10 @@
 "A library for propagators and closely related functions"
-from posixpath import split
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 from typing import Dict
 from c3.model import Model
 from c3.generator.generator import Generator
 from c3.signal.gates import Instruction
-from scipy import interpolate
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
@@ -15,24 +12,23 @@ from c3.utils.tf_utils import (
     tf_spre,
     tf_spost,
     commutator,
-    anticommutator
+    anticommutator,
 )
-from c3.libraries.constants import kb, hbar
 
 unitary_provider = dict()
 state_provider = dict()
 solver_dict = dict()
 step_dict = dict()
 
-#Dictionary specifying the slice length for a dt for every solver
-#the first element is the interpolation resolution
-#the second element is the number of arguments per time step
-#the third element is written in tf_utils.interpolateSignal according to corresponding Tableau
+# Dictionary specifying the slice length for a dt for every solver
+# the first element is the interpolation resolution
+# the second element is the number of arguments per time step
+# the third element is written in tf_utils.interpolateSignal according to corresponding Tableau
 solver_slicing = {
-    "rk4":[2, 3, 2],
-    "rk38":[3, 4, 3],
-    "rk5":[6, 6, -1],
-    "Tsit5":[6, 6, -2],
+    "rk4": [2, 3, 2],
+    "rk38": [3, 4, 3],
+    "rk5": [6, 6, -1],
+    "Tsit5": [6, 6, -2],
 }
 
 
@@ -63,13 +59,13 @@ def solver_deco(func):
     solver_dict[str(func.__name__)] = func
     return func
 
+
 def step_deco(func):
     """
     Decorator for making registry of solvers
     """
     step_dict[str(func.__name__)] = func
     return func
-
 
 
 @unitary_deco
@@ -223,7 +219,9 @@ def sum_h0_hks(h0, hks, cf_t):
 
 
 @unitary_deco
-def rk4(model: Model, gen: Generator, instr: Instruction, init_state=None) -> Dict:
+def rk4_unitary(
+    model: Model, gen: Generator, instr: Instruction, init_state=None
+) -> Dict:
     prop_res = 2
     dim = model.tot_dim
     Hs = []
@@ -341,6 +339,7 @@ def pwc(
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
     return {"U": U, "dUs": dUs, "ts": ts}
+
 
 ####################
 # HELPER FUNCTIONS #
@@ -685,14 +684,10 @@ def tf_expm_dynamic(A, acc=1e-5):
     return r
 
 
+@tf.function
 @state_deco
 def ode_solver(
-    model: Model,
-    gen: Generator,
-    instr: Instruction,
-    init_state,
-    solver,
-    step_function
+    model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function
 ) -> Dict:
 
     init_state = model.get_init_state()
@@ -700,7 +695,7 @@ def ode_solver(
 
     if model.lindbladian:
         col = model.get_Lindbladians()
-        step_function="lindblad"
+        step_function = "lindblad"
     else:
         col = None
 
@@ -712,10 +707,7 @@ def ode_solver(
     dt = Hs_dict["dt"]
 
     state_list = tf.TensorArray(
-                    tf.complex128, 
-                    size=ts.shape[0], 
-                    dynamic_size=False, 
-                    infer_shape=False
+        tf.complex128, size=ts.shape[0], dynamic_size=False, infer_shape=False
     )
     state_t = init_state
     start = solver_slicing[solver][0]
@@ -723,7 +715,7 @@ def ode_solver(
     ode_step = step_dict[step_function]
     solver_function = solver_dict[solver]
     for index in tf.range(ts.shape[0]):
-        h = tf.slice(Hs, [start*index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
+        h = tf.slice(Hs, [start * index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
         state_t = solver_function(ode_step, state_t, h, dt, col=col)
         state_list = state_list.write(index, state_t)
 
@@ -732,14 +724,10 @@ def ode_solver(
     return {"states": states, "ts": ts}
 
 
+@tf.function
 @state_deco
 def ode_solver_final_state(
-    model: Model,
-    gen: Generator,
-    instr: Instruction,
-    init_state,
-    solver,
-    step_function
+    model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function
 ) -> Dict:
 
     init_state = model.get_init_state()
@@ -747,7 +735,7 @@ def ode_solver_final_state(
 
     if model.lindbladian:
         col = model.get_Lindbladians()
-        step_function="lindblad"
+        step_function = "lindblad"
     else:
         col = None
 
@@ -764,12 +752,10 @@ def ode_solver_final_state(
     ode_step = step_dict[step_function]
     solver_function = solver_dict[solver]
     for index in tf.range(ts.shape[0]):
-        h = tf.slice(Hs, [start*index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
+        h = tf.slice(Hs, [start * index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
         state_t = solver_function(ode_step, state_t, h, dt, col=col)
 
     return {"states": state_t, "ts": ts}
-
-
 
 
 @solver_deco
@@ -781,39 +767,127 @@ def rk4(func, rho, h, dt, col=None):
     rho_new = rho + (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
     return rho_new
 
+
 @solver_deco
 def rk38(func, rho, h, dt, col=None):
     k1 = func(rho, h[0], dt, col)
     k2 = func(rho + k1 / 3.0, h[1], dt, col)
     k3 = func(rho + (-k1 / 3.0) + k2, h[2], dt, col)
-    k4 = func(rho + k1 -k2 + k3, h[3], dt, col)
+    k4 = func(rho + k1 - k2 + k3, h[3], dt, col)
     rho_new = rho + (k1 + 3 * k2 + 3 * k3 + k4) / 8.0
     return rho_new
+
 
 @solver_deco
 def rk5(func, rho, h, dt, col=None):
     k1 = func(rho, h[0], dt, col)
-    k2 = func(rho + 1./5 *k1, h[1], dt, col)
-    k3 = func(rho + 3./40*k1 + 9./40*k2, h[2], dt, col)
-    k4 = func(rho + 44./45*k1 - 56./15*k2 + 32./9*k3, h[3], dt, col)
-    k5 = func(rho + 19372./6561*k1 - 25360./2187*k2 + 64448./6561*k3 - 212./729*k4, h[4], dt, col)
-    k6 = func(rho + 9017./3168*k1 - 355./33*k2 + 46732./5247*k3 + 49./176*k4 - 5103./18656*k5, h[5], dt, col)
-    k7 = func(rho + 35./384*k1 + 500./1113*k3 + 125./192*k4 - 2187./6784*k5 + 11./84*k6, h[5], dt, col)
-        
-    rho_new = rho + 5179./57600*k1 + 7571./16695*k3 + 393./640*k4 - 92097./339200*k5 + 187./2100*k6 + 1./40*k7
+    k2 = func(rho + 1.0 / 5 * k1, h[1], dt, col)
+    k3 = func(rho + 3.0 / 40 * k1 + 9.0 / 40 * k2, h[2], dt, col)
+    k4 = func(rho + 44.0 / 45 * k1 - 56.0 / 15 * k2 + 32.0 / 9 * k3, h[3], dt, col)
+    k5 = func(
+        rho
+        + 19372.0 / 6561 * k1
+        - 25360.0 / 2187 * k2
+        + 64448.0 / 6561 * k3
+        - 212.0 / 729 * k4,
+        h[4],
+        dt,
+        col,
+    )
+    k6 = func(
+        rho
+        + 9017.0 / 3168 * k1
+        - 355.0 / 33 * k2
+        + 46732.0 / 5247 * k3
+        + 49.0 / 176 * k4
+        - 5103.0 / 18656 * k5,
+        h[5],
+        dt,
+        col,
+    )
+    k7 = func(
+        rho
+        + 35.0 / 384 * k1
+        + 500.0 / 1113 * k3
+        + 125.0 / 192 * k4
+        - 2187.0 / 6784 * k5
+        + 11.0 / 84 * k6,
+        h[5],
+        dt,
+        col,
+    )
+
+    rho_new = (
+        rho
+        + 5179.0 / 57600 * k1
+        + 7571.0 / 16695 * k3
+        + 393.0 / 640 * k4
+        - 92097.0 / 339200 * k5
+        + 187.0 / 2100 * k6
+        + 1.0 / 40 * k7
+    )
     return rho_new
+
 
 @solver_deco
 def Tsit5(func, rho, h, dt, col=None):
     k1 = func(rho, h[0], dt, col)
-    k2 = func(rho + 0.161 *k1, h[1], dt, col)
-    k3 = func(rho + -0.008480655492356989*k1 + 0.335480655492357*k2, h[2], dt, col)
-    k4 = func(rho + 2.8971530571054935*k1 -6.359448489975075*k2 + 4.3622954328695815*k3, h[3], dt, col)
-    k5 = func(rho + 5.325864828439257*k1 -11.748883564062828*k2 + 7.4955393428898365*k3 -0.09249506636175525*k4, h[4], dt, col)
-    k6 = func(rho + 5.86145544294642*k1 -12.92096931784711*k2 + 8.159367898576159*k3 + -0.071584973281401*k4 -0.028269050394068383*k5, h[5], dt, col)
-    k7 = func(rho + 0.09646076681806523*k1 + 0.01*k2 + 0.4798896504144996*k3 + 1.379008574103742*k4 -3.290069515436081*k5 + 2.324710524099774*k6, h[5], dt, col)     
-    rho_new = rho + 0.09468075576583945*k1 + 0.009183565540343254*k2 + 0.4877705284247616*k3 + 1.234297566930479*k4 -2.7077123499835256*k5 + 1.866628418170587*k6 + 1./66*k7
+    k2 = func(rho + 0.161 * k1, h[1], dt, col)
+    k3 = func(rho + -0.008480655492356989 * k1 + 0.335480655492357 * k2, h[2], dt, col)
+    k4 = func(
+        rho
+        + 2.8971530571054935 * k1
+        - 6.359448489975075 * k2
+        + 4.3622954328695815 * k3,
+        h[3],
+        dt,
+        col,
+    )
+    k5 = func(
+        rho
+        + 5.325864828439257 * k1
+        - 11.748883564062828 * k2
+        + 7.4955393428898365 * k3
+        - 0.09249506636175525 * k4,
+        h[4],
+        dt,
+        col,
+    )
+    k6 = func(
+        rho
+        + 5.86145544294642 * k1
+        - 12.92096931784711 * k2
+        + 8.159367898576159 * k3
+        + -0.071584973281401 * k4
+        - 0.028269050394068383 * k5,
+        h[5],
+        dt,
+        col,
+    )
+    k7 = func(
+        rho
+        + 0.09646076681806523 * k1
+        + 0.01 * k2
+        + 0.4798896504144996 * k3
+        + 1.379008574103742 * k4
+        - 3.290069515436081 * k5
+        + 2.324710524099774 * k6,
+        h[5],
+        dt,
+        col,
+    )
+    rho_new = (
+        rho
+        + 0.09468075576583945 * k1
+        + 0.009183565540343254 * k2
+        + 0.4877705284247616 * k3
+        + 1.234297566930479 * k4
+        - 2.7077123499835256 * k5
+        + 1.866628418170587 * k6
+        + 1.0 / 66 * k7
+    )
     return rho_new
+
 
 @step_deco
 def lindblad(rho, h, dt, col):
@@ -825,10 +899,12 @@ def lindblad(rho, h, dt, col):
         )
     return del_rho * dt
 
+
 @step_deco
 def schroedinger(psi, h, dt, col=None):
-    return -1j*tf.matmul(h, psi)*dt
+    return -1j * tf.matmul(h, psi) * dt
+
 
 @step_deco
 def vonNeumann(rho, h, dt, col=None):
-    return -1j * commutator(h, rho)*dt
+    return -1j * commutator(h, rho) * dt
