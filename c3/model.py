@@ -89,6 +89,7 @@ class Model:
                 psi_init = self.get_ground_state()
                 if self.lindbladian:
                     psi_init = tf_utils.tf_state_to_dm(psi_init)
+                self.init_state = psi_init
         else:
             psi_init = self.init_state
         return psi_init
