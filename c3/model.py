@@ -338,11 +338,16 @@ class Model:
         sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
         return sparse_drift, sparse_controls
 
-    def get_Hamiltonian(self, signal=None):
+    def get_Hamiltonian(self, signal: Dict):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
-        if signal is None:
+        sgnl = None
+        for sgn in signal.values():
+            if "values" in sgn:
+                sgnl = sgn["values"]
+
+        if sgnl is None:
             if self.dressed:
                 signal_hamiltonian = self.dressed_drift_ham
             else:
@@ -378,7 +383,7 @@ class Model:
 
         return signal_hamiltonian
 
-    def get_Liouvillian(self, signal=None):
+    def get_Liouvillian(self, signal):
         h = self.get_Hamiltonian(signal)
         col_ops = self.get_Lindbladians()
         if self.max_excitations:
@@ -404,7 +409,7 @@ class Model:
             # print("liouvillian",liouvillian)
         return liouvillian
 
-    def get_dynamics_generators(self, signal):
+    def get_dynamics_generators(self, signal: Dict):
         """Returns Tensor of Hamiltonians if model.lindbladian is False,
         otherwise it returns as a Tensor of superoperators
         the Liouvillians solving the Lindblad Master Equation
@@ -431,7 +436,7 @@ class Model:
 
         return dyn_gens * dt
 
-    def get_sparse_Hamiltonian(self, signal=None):
+    def get_sparse_Hamiltonian(self, signal):
         return self.blowup_excitations(self.get_Hamiltonian(signal))
 
     def get_Lindbladians(self):

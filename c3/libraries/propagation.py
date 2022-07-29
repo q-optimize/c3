@@ -242,7 +242,6 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         Matrix representation of the gate.
     """
     signal = gen.generate_signals(instr)
-    # Why do I get 0.0 if I rint gen.resolution here?! FR
 
     dynamics_generators = model.get_dynamics_generators(signal)
 
@@ -281,9 +280,9 @@ def pwc_sequential(model: Model, gen: Generator, instr: Instruction) -> Dict:
     n = tf.constant(len(list(list(signal.values())[0].values())[0]), dtype=tf.int32)
 
     if model.lindbladian:
-        U = Id_like(model.get_Liouvillian(None))
+        U = Id_like(model.get_Liouvillian(signal))
     else:
-        U = Id_like(model.get_Hamiltonian())
+        U = Id_like(model.get_Hamiltonian(signal))
 
     for i in range(n):
         mini_signal: Dict[str, Dict] = {}
