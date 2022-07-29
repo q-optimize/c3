@@ -1,4 +1,5 @@
 #%%
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -53,7 +54,7 @@ model.set_lindbladian(True)
 model.set_dressed(False)
 
 
-sim_res = 500e9
+sim_res = 100e9
 awg_res = 2e9
 v2hz = 1e9
 
@@ -91,101 +92,107 @@ generator = Gnr(
 )
 
 
-t_pulse = 10e-9
+# ### MAKE GATESET
+t_final = 7e-9
 sideband = 50e6
+lo_freq = 5e9 + sideband
 
-nodrive_pulse = pulse.Envelope(
+
+gauss_params_single = {
+    "amp": Qty(value=0.45, min_val=0.35, max_val=0.6, unit="V"),
+    "t_final": Qty(
+        value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"
+    ),
+    "sigma": Qty(
+        value=t_final / 4, min_val=t_final / 8, max_val=t_final / 2, unit="s"
+    ),
+    "xy_angle": Qty(
+        value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"
+    ),
+    "freq_offset": Qty(
+        value=-sideband - 0.5e6,
+        min_val=-60 * 1e6,
+        max_val=-40 * 1e6,
+        unit="Hz 2pi",
+    ),
+    "delta": Qty(value=-1, min_val=-5, max_val=3, unit=""),
+}
+
+gauss_env_single = pulse.EnvelopeDrag(
+    name="gauss",
+    desc="Gaussian comp for single-qubit gates",
+    params=gauss_params_single,
+    shape=envelopes.gaussian_nonorm,
+)
+nodrive_env = pulse.Envelope(
     name="no_drive",
     params={
         "t_final": Qty(
-            value=t_pulse, min_val=0.5 * t_pulse, max_val=1.5 * t_pulse, unit="s"
+            value=t_final, min_val=0.5 * t_final, max_val=1.5 * t_final, unit="s"
         )
     },
     shape=envelopes.no_drive,
 )
-
-carrier_freq = qubit_frequency
 carrier_parameters = {
-    "freq": Qty(value=carrier_freq, min_val=0.0, max_val=10e9, unit="Hz 2pi"),
+    "freq": Qty(
+        value=lo_freq,
+        min_val=4.5e9,
+        max_val=6e9,
+        unit="Hz 2pi",
+    ),
     "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
 }
-
-carrier = pulse.Carrier(
-    name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
+carr = pulse.Carrier(
+    name="carrier",
+    desc="Frequency of the local oscillator",
+    params=carrier_parameters,
 )
 
-No_drive_gate = gates.Instruction(
-    name="nodrive", targets=[0], t_start=0.0, t_end=t_pulse, channels=["dQ"]
+rx90p = gates.Instruction(
+    name="rx90p", t_start=0.0, t_end=t_final, channels=["dQ"], targets=[0]
 )
-No_drive_gate.add_component(nodrive_pulse, "dQ")
-No_drive_gate.add_component(carrier, "dQ")
-
-
-t_pulse = 10e-9
-sideband = 50e6
-
-
-X_params = {
-    "amp": Qty(value=1.0, min_val=0.0, max_val=10.0, unit="V"),
-    "t_up": Qty(value=2.0e-9, min_val=0.0, max_val=t_pulse, unit="s"),
-    "t_down": Qty(value=t_pulse - 2.0e-9, min_val=0.0, max_val=t_pulse, unit="s"),
-    "risefall": Qty(value=1.0e-9, min_val=0.1e-9, max_val=t_pulse / 2, unit="s"),
-    "xy_angle": Qty(value=0.0, min_val=-0.5 * np.pi, max_val=2.5 * np.pi, unit="rad"),
-    "freq_offset": Qty(
-        value=-sideband - 3e6, min_val=-56 * 1e6, max_val=-52 * 1e6, unit="Hz 2pi"
-    ),
-    "delta": Qty(value=-1, min_val=-5, max_val=3, unit=""),
-    "t_final": Qty(
-        value=t_pulse, min_val=0.1 * t_pulse, max_val=1.5 * t_pulse, unit="s"
-    ),
-}
-
-
-X_pulse = pulse.Envelope(
-    name="swap_pulse",
-    desc="Flattop pluse for SWAP gate",
-    params=X_params,
-    shape=envelopes.flattop,
+QId = gates.Instruction(
+    name="id", t_start=0.0, t_end=100e-9, channels=["dQ"], targets=[0]
 )
 
-
-carrier_freq = qubit_frequency - sideband
-carrier_parameters = {
-    "freq": Qty(value=carrier_freq, min_val=0.0, max_val=10e9, unit="Hz 2pi"),
-    "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
-}
-
-carrier = pulse.Carrier(
-    name="carrier", desc="Frequency of the local oscillator", params=carrier_parameters
+rx90p.add_component(gauss_env_single, "dQ")
+rx90p.add_component(carr, "dQ")
+QId.add_component(nodrive_env, "dQ")
+QId.add_component(copy.deepcopy(carr), "dQ")
+QId.comps["dQ"]["carrier"].params["framechange"].set_value(
+    (-sideband * t_final) % (2 * np.pi)
 )
-
-X_gate = gates.Instruction(
-    name="x", targets=[0], t_start=0.0, t_end=t_pulse, channels=["dQ"]
-)
-X_gate.add_component(X_pulse, "dQ")
-X_gate.add_component(carrier, "dQ")
-
+ry90p = copy.deepcopy(rx90p)
+ry90p.name = "ry90p"
+rx90m = copy.deepcopy(rx90p)
+rx90m.name = "rx90m"
+ry90m = copy.deepcopy(rx90p)
+ry90m.name = "ry90m"
+ry90p.comps["dQ"]["gauss"].params["xy_angle"].set_value(0.5 * np.pi)
+rx90m.comps["dQ"]["gauss"].params["xy_angle"].set_value(np.pi)
+ry90m.comps["dQ"]["gauss"].params["xy_angle"].set_value(1.5 * np.pi)
 
 parameter_map = PMap(
-    instructions=[No_drive_gate, X_gate], model=model, generator=generator
+    instructions=[QId, rx90p, ry90p, rx90m, ry90m], model=model, generator=generator
 )
+
+# ### MAKE EXPERIMENT
 exp = Exp(pmap=parameter_map)
 
 model.set_FR(False)
-model.set_lindbladian(True)
-exp.set_opt_gates(["nodrive[0]", "x[0]"])
-
 
 model.set_lindbladian(True)
 psi_init = [[0] * model.tot_dim]
 init_state_index = model.get_state_indeces([(1,)])[0]
 psi_init[0][init_state_index] = 1
 init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
-sequence = ["x[0]"]
+sequence = ["rx90p[0]"]
 
 exp.set_opt_gates(sequence)
+model.set_init_state(init_state)
 
-result = exp.compute_states()
+compute_states_tf = tf.function(exp.compute_states)
+result = compute_states_tf(solver="rk4")
 psis = result["states"]
 ts = result["ts"]
 
@@ -194,11 +201,50 @@ pops = []
 for rho in psis:
     pops.append(tf.math.real(tf.linalg.diag_part(rho)))
 
-plt.figure(dpi=100)
-plt.plot(ts, pops)
+fig, axs = plt.subplots(1, 1)
+fig.set_dpi(100)
+axs.plot(ts / 1e-9, pops)
+axs.grid(linestyle="--")
+axs.tick_params(
+    direction="in", left=True, right=True, top=True, bottom=True
+)
+axs.set_xlabel('Time [ns]')
+axs.set_ylabel('Population')
 plt.legend(model.state_labels)
-plt.xlabel("Time (in ns)")
-plt.ylabel("State population")
 plt.show()
+
+
+model.set_lindbladian(True)
+psi_init = [[0] * model.tot_dim]
+init_state_index = model.get_state_indeces([(1,)])[0]
+psi_init[0][init_state_index] = 1
+init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
+sequence = ["id[0]"]
+
+exp.set_opt_gates(sequence)
+model.set_init_state(init_state)
+
+compute_states_tf = tf.function(exp.compute_states)
+result = compute_states_tf(solver="rk4")
+psis = result["states"]
+ts = result["ts"]
+
+
+pops = []
+for rho in psis:
+    pops.append(tf.math.real(tf.linalg.diag_part(rho)))
+
+fig, axs = plt.subplots(1, 1)
+fig.set_dpi(100)
+axs.plot(ts / 1e-9, pops)
+axs.grid(linestyle="--")
+axs.tick_params(
+    direction="in", left=True, right=True, top=True, bottom=True
+)
+axs.set_xlabel('Time [ns]')
+axs.set_ylabel('Population')
+plt.legend(model.state_labels)
+plt.show()
+
 
 # %%

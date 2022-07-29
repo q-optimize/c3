@@ -628,7 +628,6 @@ class Experiment:
         trace = np.trace(np.matmul(rho, oper))
         return [[np.real(trace)]]  # ,[np.imag(trace)]]
 
-    @tf.function
     def compute_states(self, solver="rk4", step_function="schroedinger"):
         """
         Employ a state solver to compute the trajectory of the system.
