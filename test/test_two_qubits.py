@@ -9,7 +9,7 @@ from numpy.testing import assert_array_almost_equal as almost_equal
 import c3.libraries.algorithms as algorithms
 
 # Libs and helpers
-from c3.libraries.propagation import rk4
+from c3.libraries.propagation import rk4_unitary
 
 with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
@@ -84,9 +84,9 @@ def test_optim(get_OC_optimizer) -> None:
 
 @pytest.mark.tensorflow
 @pytest.mark.integration
-def test_rk4(get_two_qubit_chip) -> None:
+def test_rk4_unitary(get_two_qubit_chip) -> None:
     """Testing that RK4 exists and runs."""
     exp = get_two_qubit_chip
     pmap = exp.pmap
-    exp.set_prop_method(rk4)
+    exp.set_prop_method(rk4_unitary)
     exp.propagation(pmap.model, pmap.generator, pmap.instructions["rx90p[0]"])
