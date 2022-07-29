@@ -1,24 +1,43 @@
 "A library for propagators and closely related functions"
+from posixpath import split
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
 from typing import Dict
 from c3.model import Model
 from c3.generator.generator import Generator
 from c3.signal.gates import Instruction
+from scipy import interpolate
 from c3.utils.tf_utils import (
     tf_kron,
     tf_matmul_left,
     tf_matmul_n,
     tf_spre,
     tf_spost,
+    commutator,
+    anticommutator
 )
+from c3.libraries.constants import kb, hbar
 
 unitary_provider = dict()
 state_provider = dict()
+solver_dict = dict()
+step_dict = dict()
+
+#Dictionary specifying the slice length for a dt for every solver
+#the first element is the interpolation resolution
+#the second element is the number of arguments per time step
+#the third element is written in tf_utils.interpolateSignal according to corresponding Tableau
+solver_slicing = {
+    "rk4":[2, 3, 2],
+    "rk38":[3, 4, 3],
+    "rk5":[6, 6, -1],
+    "Tsit5":[6, 6, -2],
+}
 
 
 def step_vonNeumann_psi(psi, h, dt):
-    return -1j * dt * tf.linalg.matvec(h, psi)
+    return -1j * dt * tf.linalg.matmul(h, psi)
 
 
 def unitary_deco(func):
@@ -35,6 +54,22 @@ def state_deco(func):
     """
     state_provider[str(func.__name__)] = func
     return func
+
+
+def solver_deco(func):
+    """
+    Decorator for making registry of solvers
+    """
+    solver_dict[str(func.__name__)] = func
+    return func
+
+def step_deco(func):
+    """
+    Decorator for making registry of solvers
+    """
+    step_dict[str(func.__name__)] = func
+    return func
+
 
 
 @unitary_deco
@@ -223,7 +258,13 @@ def gen_u_rk4(h, dt, dim):
 
 
 @unitary_deco
-def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -> Dict:
+def pwc(
+    model: Model,
+    gen: Generator,
+    instr: Instruction,
+    folding_stack: list,
+    batch_size=None,
+) -> Dict:
     """
     Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
     signal and Hamiltonians.
@@ -270,9 +311,27 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
 
     dt = ts[1] - ts[0]
 
-    batch_size = tf.constant(len(h0), tf.int32)
+    if batch_size is None:
+        batch_size = tf.constant(len(h0), tf.int32)
+    else:
+        batch_size = tf.constant(batch_size, tf.int32)
 
-    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+    if model.lindbladian:
+        col_ops = model.get_Lindbladians()
+        if model.max_excitations:
+            cutter = model.ex_cutter
+            col_ops = [cutter @ col_op @ cutter.T for col_op in col_ops]
+        dUs = tf_batch_propagate(
+            h0,
+            hks,
+            signals,
+            dt,
+            batch_size=batch_size,
+            col_ops=col_ops,
+            lindbladian=True,
+        )
+    else:
+        dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
@@ -282,7 +341,6 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
     return {"U": U, "dUs": dUs, "ts": ts}
-
 
 ####################
 # HELPER FUNCTIONS #
@@ -400,7 +458,9 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     return dUs
 
 
-def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(
+    hamiltonian, hks, signals, dt, batch_size, col_ops=None, lindbladian=False
+):
     """
     Propagate signal in batches
     Parameters
@@ -421,13 +481,13 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
 
     """
     if signals is not None:
-        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
+        batches = int(tf.math.ceil(signals.shape[1] / batch_size))
         batch_array = tf.TensorArray(
             signals.dtype, size=batches, dynamic_size=False, infer_shape=False
         )
         for i in range(batches):
             batch_array = batch_array.write(
-                i, signals[i * batch_size : i * batch_size + batch_size]
+                i, signals[:, i * batch_size : i * batch_size + batch_size]
             )
     else:
         batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
@@ -443,9 +503,15 @@ def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
     for i in range(batches):
         x = batch_array.read(i)
         if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
+            if lindbladian:
+                result = tf_propagation_lind(hamiltonian, hks, col_ops, x, dt)
+            else:
+                result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
         else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+            if lindbladian:
+                result = tf_propagation_lind(x, None, None, None, dt)
+            else:
+                result = tf_propagation_vectorized(x, None, None, dt)
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 
@@ -497,7 +563,7 @@ def tf_propagation_lind(h0, hks, col_ops, cflds_t, dt, history=False):
     else:
         h = h0
 
-    h_id = tf.eye(h.shape[-1], batch_shape=[h.shape[0]], dtype=tf.complex128)
+    h_id = tf.eye(tf.shape(h)[-1], batch_shape=[tf.shape(h)[0]], dtype=tf.complex128)
     l_s = tf_kron(h, h_id)
     r_s = tf_kron(h_id, tf.linalg.matrix_transpose(h))
     lind_op = -1j * (l_s - r_s)
@@ -617,3 +683,152 @@ def tf_expm_dynamic(A, acc=1e-5):
         ii += 1
         r += A_powers
     return r
+
+
+@state_deco
+def ode_solver(
+    model: Model,
+    gen: Generator,
+    instr: Instruction,
+    init_state,
+    solver,
+    step_function
+) -> Dict:
+
+    init_state = model.get_init_state()
+    signal = gen.generate_signals(instr)
+
+    if model.lindbladian:
+        col = model.get_Lindbladians()
+        step_function="lindblad"
+    else:
+        col = None
+
+    interpolate_res = solver_slicing[solver][2]
+
+    Hs_dict = model.Hs_of_t(signal, interpolate_res=interpolate_res)
+    Hs = Hs_dict["Hs"]
+    ts = Hs_dict["ts"]
+    dt = Hs_dict["dt"]
+
+    state_list = tf.TensorArray(
+                    tf.complex128, 
+                    size=ts.shape[0], 
+                    dynamic_size=False, 
+                    infer_shape=False
+    )
+    state_t = init_state
+    start = solver_slicing[solver][0]
+    stop = solver_slicing[solver][1]
+    ode_step = step_dict[step_function]
+    solver_function = solver_dict[solver]
+    for index in tf.range(ts.shape[0]):
+        h = tf.slice(Hs, [start*index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
+        state_t = solver_function(ode_step, state_t, h, dt, col=col)
+        state_list = state_list.write(index, state_t)
+
+    states = state_list.stack()
+
+    return {"states": states, "ts": ts}
+
+
+@state_deco
+def ode_solver_final_state(
+    model: Model,
+    gen: Generator,
+    instr: Instruction,
+    init_state,
+    solver,
+    step_function
+) -> Dict:
+
+    init_state = model.get_init_state()
+    signal = gen.generate_signals(instr)
+
+    if model.lindbladian:
+        col = model.get_Lindbladians()
+        step_function="lindblad"
+    else:
+        col = None
+
+    interpolate_res = solver_slicing[solver][2]
+
+    Hs_dict = model.Hs_of_t(signal, interpolate_res=interpolate_res)
+    Hs = Hs_dict["Hs"]
+    ts = Hs_dict["ts"]
+    dt = Hs_dict["dt"]
+
+    state_t = init_state
+    start = solver_slicing[solver][0]
+    stop = solver_slicing[solver][1]
+    ode_step = step_dict[step_function]
+    solver_function = solver_dict[solver]
+    for index in tf.range(ts.shape[0]):
+        h = tf.slice(Hs, [start*index, 0, 0], [stop, Hs.shape[1], Hs.shape[2]])
+        state_t = solver_function(ode_step, state_t, h, dt, col=col)
+
+    return {"states": state_t, "ts": ts}
+
+
+
+
+@solver_deco
+def rk4(func, rho, h, dt, col=None):
+    k1 = func(rho, h[0], dt, col)
+    k2 = func(rho + k1 / 2.0, h[1], dt, col)
+    k3 = func(rho + k2 / 2.0, h[1], dt, col)
+    k4 = func(rho + k3, h[2], dt, col)
+    rho_new = rho + (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
+    return rho_new
+
+@solver_deco
+def rk38(func, rho, h, dt, col=None):
+    k1 = func(rho, h[0], dt, col)
+    k2 = func(rho + k1 / 3.0, h[1], dt, col)
+    k3 = func(rho + (-k1 / 3.0) + k2, h[2], dt, col)
+    k4 = func(rho + k1 -k2 + k3, h[3], dt, col)
+    rho_new = rho + (k1 + 3 * k2 + 3 * k3 + k4) / 8.0
+    return rho_new
+
+@solver_deco
+def rk5(func, rho, h, dt, col=None):
+    k1 = func(rho, h[0], dt, col)
+    k2 = func(rho + 1./5 *k1, h[1], dt, col)
+    k3 = func(rho + 3./40*k1 + 9./40*k2, h[2], dt, col)
+    k4 = func(rho + 44./45*k1 - 56./15*k2 + 32./9*k3, h[3], dt, col)
+    k5 = func(rho + 19372./6561*k1 - 25360./2187*k2 + 64448./6561*k3 - 212./729*k4, h[4], dt, col)
+    k6 = func(rho + 9017./3168*k1 - 355./33*k2 + 46732./5247*k3 + 49./176*k4 - 5103./18656*k5, h[5], dt, col)
+    k7 = func(rho + 35./384*k1 + 500./1113*k3 + 125./192*k4 - 2187./6784*k5 + 11./84*k6, h[5], dt, col)
+        
+    rho_new = rho + 5179./57600*k1 + 7571./16695*k3 + 393./640*k4 - 92097./339200*k5 + 187./2100*k6 + 1./40*k7
+    return rho_new
+
+@solver_deco
+def Tsit5(func, rho, h, dt, col=None):
+    k1 = func(rho, h[0], dt, col)
+    k2 = func(rho + 0.161 *k1, h[1], dt, col)
+    k3 = func(rho + -0.008480655492356989*k1 + 0.335480655492357*k2, h[2], dt, col)
+    k4 = func(rho + 2.8971530571054935*k1 -6.359448489975075*k2 + 4.3622954328695815*k3, h[3], dt, col)
+    k5 = func(rho + 5.325864828439257*k1 -11.748883564062828*k2 + 7.4955393428898365*k3 -0.09249506636175525*k4, h[4], dt, col)
+    k6 = func(rho + 5.86145544294642*k1 -12.92096931784711*k2 + 8.159367898576159*k3 + -0.071584973281401*k4 -0.028269050394068383*k5, h[5], dt, col)
+    k7 = func(rho + 0.09646076681806523*k1 + 0.01*k2 + 0.4798896504144996*k3 + 1.379008574103742*k4 -3.290069515436081*k5 + 2.324710524099774*k6, h[5], dt, col)     
+    rho_new = rho + 0.09468075576583945*k1 + 0.009183565540343254*k2 + 0.4877705284247616*k3 + 1.234297566930479*k4 -2.7077123499835256*k5 + 1.866628418170587*k6 + 1./66*k7
+    return rho_new
+
+@step_deco
+def lindblad(rho, h, dt, col):
+    del_rho = -1j * commutator(h, rho)
+    for col in col:
+        del_rho += tf.matmul(tf.matmul(col, rho), tf.transpose(col, conjugate=True))
+        del_rho -= 0.5 * anticommutator(
+            tf.matmul(tf.transpose(col, conjugate=True), col), rho
+        )
+    return del_rho * dt
+
+@step_deco
+def schroedinger(psi, h, dt, col=None):
+    return -1j*tf.matmul(h, psi)*dt
+
+@step_deco
+def vonNeumann(rho, h, dt, col=None):
+    return -1j * commutator(h, rho)*dt
