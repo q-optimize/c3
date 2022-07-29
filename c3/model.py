@@ -419,6 +419,16 @@ class Model:
         else:
             dyn_gens = -1j * self.get_Hamiltonian(signal)
 
+        times = self.get_ts_dt(signal)
+
+        dt = times["dt"]
+
+        return dyn_gens * dt
+
+    def get_ts_dt(self, signal):
+        """
+        Given a signal it returns a Dict of time slices ts and time increment dt
+        """
         ts = []
         ts_list = [sig["ts"][:] for sig in signal.values()]
         ts = tf.math.reduce_mean(ts_list, axis=0)
@@ -434,7 +444,7 @@ class Model:
             raise Exception("C3Error:Something with the times happend.")
         dt = tf.cast(ts[1] - ts[0], dtype=tf.complex128)
 
-        return dyn_gens * dt
+        return {"ts": ts, "dt": dt}
 
     def get_sparse_Hamiltonian(self, signal):
         return self.blowup_excitations(self.get_Hamiltonian(signal))

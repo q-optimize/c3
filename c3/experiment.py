@@ -515,19 +515,8 @@ class Experiment:
                 )
             U = result["U"]
             signal = generator.generate_signals(instr)
-            ts_list = [sig["ts"][1:] for sig in signal.values()]
-            ts = tf.math.reduce_mean(ts_list, axis=0)
-            # Only do the safety check outside of graph mode for performance reasons.
-            # When using graph mode, the safety check will still be executed ONCE during tracing
-            if tf.executing_eagerly() and not tf.reduce_all(
-                tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-            ):
-                raise Exception("C3Error:Something with the times happend.")
-            if tf.executing_eagerly() and not tf.reduce_all(
-                tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
-            ):
-                raise Exception("C3Error:Something with the times happend.")
-            self.ts = ts
+            times = model.get_ts_dt(signal)
+            self.ts = times["ts"]
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}

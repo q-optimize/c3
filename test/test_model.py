@@ -150,6 +150,16 @@ def test_model_get_dynamics_generators() -> None:
 
 
 @pytest.mark.unit
+def test_model_get_ts_dt() -> None:
+    ts = np.linspace(0, 5e-9, 10)
+    sig = {"d1": {"ts": ts}}
+    dt = 5e-9 / 9
+    times = model.get_ts_dt(sig)
+    np.testing.assert_allclose(times["dt"], dt)
+    np.testing.assert_allclose(times["ts"], ts)
+
+
+@pytest.mark.unit
 def test_get_qubit_frequency() -> None:
     np.testing.assert_allclose(
         model.get_qubit_freqs(), [4999294802.027272, 5600626454.433859]
