@@ -684,7 +684,6 @@ def tf_expm_dynamic(A, acc=1e-5):
     return r
 
 
-@tf.function
 @state_deco
 def ode_solver(
     model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function
@@ -724,7 +723,6 @@ def ode_solver(
     return {"states": states, "ts": ts}
 
 
-@tf.function
 @state_deco
 def ode_solver_final_state(
     model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function

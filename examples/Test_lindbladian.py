@@ -148,7 +148,7 @@ X_pulse = pulse.Envelope(
 )
 
 
-carrier_freq = qubit_frequency
+carrier_freq = qubit_frequency - sideband
 carrier_parameters = {
     "freq": Qty(value=carrier_freq, min_val=0.0, max_val=10e9, unit="Hz 2pi"),
     "framechange": Qty(value=0.0, min_val=-np.pi, max_val=3 * np.pi, unit="rad"),
@@ -199,3 +199,5 @@ plt.legend(model.state_labels)
 plt.xlabel("Time (in ns)")
 plt.ylabel("State population")
 plt.show()
+
+# %%
