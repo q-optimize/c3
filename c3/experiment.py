@@ -630,7 +630,7 @@ class Experiment:
 
     def compute_states(self, solver="rk4", step_function="schroedinger"):
         """
-        Employ a state solver to compute the trajectory of the system.
+        Use a state solver to compute the trajectory of the system.
 
         Returns
         -------
