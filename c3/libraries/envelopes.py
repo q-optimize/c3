@@ -62,7 +62,7 @@ def pwc_shape(t, params):
             fill_value_below=0,
             fill_value_above=0,
         ),
-        [len(t)],
+        [len(t), 1],
     )
 
     return tf_complexify(shape)
