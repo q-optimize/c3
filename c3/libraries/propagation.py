@@ -33,7 +33,7 @@ solver_slicing = {
 
 
 def step_vonNeumann_psi(psi, h, dt):
-    return -1j * dt * tf.linalg.matmul(h, psi)
+    return -1j * dt * tf.linalg.matvec(h, psi)
 
 
 def unitary_deco(func):
