@@ -450,7 +450,9 @@ class ParameterMap:
         return opt_map
 
     def str_parameters(
-        self, opt_map: Union[List[List[Tuple[str]]], List[List[str]]] = None
+        self,
+        opt_map: Union[List[List[Tuple[str]]], List[List[str]]] = None,
+        human=False,
     ) -> str:
         """
         Return a multi-line human-readable string of the optmization parameter names and
@@ -472,7 +474,10 @@ class ParameterMap:
             par_id = equiv_ids[0]
             key = par_id
             par = self._pars[key]
-            ret.append(f"{key:38}: {par}\n")
+            if human and par.length > 4:  # Don't print large num of values
+                ret.append(f"{key:38}: <{par.length} values>\n")
+            else:
+                ret.append(f"{key:38}: {par}\n")
             if len(equiv_ids) > 1:
                 for eid in equiv_ids[1:]:
                     ret.append(eid)
@@ -485,4 +490,4 @@ class ParameterMap:
         Print current parameters to stdout.
         """
         opt_map = self.get_opt_map(opt_map)
-        print(self.str_parameters(opt_map))
+        print(self.str_parameters(opt_map, human=True))
