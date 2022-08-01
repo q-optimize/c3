@@ -156,15 +156,7 @@ QId.add_component(copy.deepcopy(carr), "d1")
 QId.comps["d1"]["carrier"].params["framechange"].set_value((t_final) % (2 * np.pi))
 
 
-QId1 = gates.Instruction(
-    name="id1", t_start=0.0, t_end=qubit_t1, channels=["d1"], targets=[0]
-)
-
-QId1.add_component(nodrive_env, "d1")
-QId1.add_component(copy.deepcopy(carr), "d1")
-QId1.comps["d1"]["carrier"].params["framechange"].set_value((qubit_t1) % (2 * np.pi))
-
-parameter_map = PMap(instructions=[QId, QId1], model=model, generator=generator)
+parameter_map = PMap(instructions=[QId], model=model, generator=generator)
 
 exp = Exp(pmap=parameter_map)
 
