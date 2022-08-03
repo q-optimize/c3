@@ -192,9 +192,7 @@ def test_t1() -> None:
     assert final_pops[1] < (1 / np.exp(1))
 
 
-init_dm = np.zeros([parameter_map.model.tot_dim, parameter_map.model.tot_dim])
-init_dm[0][1] = 1
-init_dm[1][0] = 1
+init_dm = 0.5 * np.ones([parameter_map.model.tot_dim, parameter_map.model.tot_dim])
 init_vec = tf_utils.tf_dm_to_vec(init_dm)
 
 
@@ -209,4 +207,4 @@ def test_t2() -> None:
     U = np.array(unitaries["id[0]"])
     final_vec = np.dot(U**n, init_vec)
     final_dm = tf_utils.tf_vec_to_dm(final_vec)
-    assert np.abs(final_dm[0][1]) < (1 / np.exp(1))
+    assert np.abs(final_dm[0][1]) < (1 / (2 * np.exp(1)))
