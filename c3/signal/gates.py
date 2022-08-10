@@ -75,9 +75,17 @@ class Instruction:
 
         self._timings: Dict[str, tuple] = dict()
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> str:
+        self.set_name(name)
+
     def as_openqasm(self) -> dict:
         asdict: Dict[str, Any] = {
-            "name": self.name,
+            "name": self._name,
             "qubits": self.targets,
             "params": self.params,
         }
@@ -86,7 +94,7 @@ class Instruction:
         return asdict
 
     def set_name(self, name, ideal=None):
-        self.name = name
+        self._name = name
         self.set_ideal(ideal)
 
     def set_ideal(self, ideal):
@@ -95,7 +103,7 @@ class Instruction:
         else:
             gate_list = []
             # legacy use
-            for key in self.name.split(":"):
+            for key in self._name.split(":"):
                 if key in GATES:
                     gate_list.append(GATES[key])
                 else:
@@ -130,8 +138,8 @@ class Instruction:
 
     def get_key(self) -> str:
         if self.targets is None:
-            return self.name
-        return self.name + str(self.targets)
+            return self._name
+        return self._name + str(self.targets)
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -310,7 +318,6 @@ class Instruction:
             t_start, t_end = self.get_timings(chan, comp_name)
             ts_off = ts - t_start
             if isinstance(comp, Envelope):
-
                 amp_re = comp.params["amp"].get_value()
                 amp = tf.complex(amp_re, tf.zeros_like(amp_re))
 
