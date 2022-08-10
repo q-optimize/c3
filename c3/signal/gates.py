@@ -19,12 +19,14 @@ class Instruction:
 
     Parameters
     ----------
+    ideal: np.ndarray
+        Ideal gate that the instruction should emulate.
+    channels : list
+        List of channel names (strings).
     t_start : np.float64
         Start of the signal.
     t_end : np.float64
         End of the signal.
-    channels : list
-        List of channel names (strings)
 
 
     Attributes
@@ -52,7 +54,6 @@ class Instruction:
         channels: List[str] = [],
         t_start: float = 0.0,
         t_end: float = 0.0,
-        # fixed_t_end: bool = True,
     ):
         self.set_name(name)
         self.set_ideal(ideal)
