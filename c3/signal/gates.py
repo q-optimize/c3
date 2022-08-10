@@ -315,7 +315,7 @@ class Instruction:
                 amp_re = comp.params["amp"].get_value()
                 amp = tf.complex(amp_re, tf.zeros_like(amp_re))
 
-                amp_tot_sq += amp ** 2
+                amp_tot_sq += amp**2
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
@@ -324,7 +324,7 @@ class Instruction:
                 env = tf.cast(env, tf.complex128)
 
                 signal += (
-                        amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
+                    amp * env * tf.math.exp(tf.complex(tf.zeros_like(phase), phase))
                 )
 
         norm = tf.sqrt(tf.cast(amp_tot_sq, tf.float64))
