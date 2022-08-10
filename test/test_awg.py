@@ -61,7 +61,7 @@ def test_AWG_phase_shift() -> None:
     rect.params["xy_angle"] = Qty(phase, "pi")
 
     sigs = generator.generate_signals(rectangle)
-    correct_signal = np.cos(2 * np.pi * lo_freq_q1 * sigs["d1"]["ts"] + phase * np.pi)
+    correct_signal = np.cos(2 * np.pi * lo_freq_q1 * sigs["d1"]["ts"] - phase * np.pi)
     print(sigs["d1"]["values"])
     np.testing.assert_allclose(
         sigs["d1"]["values"].numpy(),
