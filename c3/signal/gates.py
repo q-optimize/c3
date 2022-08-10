@@ -148,6 +148,10 @@ class Instruction:
             for key, comp in item.items():
                 components[chan][key] = comp.asdict()
         out_dict = copy.deepcopy(self.__dict__)
+
+        out_dict["name"] = out_dict["_name"]
+        out_dict.pop("_name")
+
         out_dict["ideal"] = out_dict["ideal"]
         out_dict.pop("_timings")
         out_dict.pop("t_start")
