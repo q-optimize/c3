@@ -3,6 +3,7 @@ import pickle
 
 import hjson
 
+from c3.libraries.fidelities import unitary_infid
 from c3.signal.gates import Instruction
 
 from c3.c3objs import Quantity, hjson_decode, hjson_encode
@@ -15,12 +16,12 @@ from c3.model import Model
 import numpy as np
 import pytest
 from c3.libraries.constants import GATES
-
+from examples.single_qubit_experiment import create_experiment
 
 model = Model()
-model.read_config("test/test_model.cfg")
+model.read_config("test_model.cfg")
 generator = Generator()
-generator.read_config("test/generator2.cfg")
+generator.read_config("generator2.cfg")
 
 t_final = 7e-9  # Time for single qubit gates
 sideband = 50e6
@@ -101,7 +102,7 @@ pmap = ParameterMap(model=model, generator=generator, instructions=[instr])
 
 exp = Experiment(pmap)
 
-with open("test/instruction.pickle", "rb") as filename:
+with open("instruction.pickle", "rb") as filename:
     test_data = pickle.load(filename)
 
 
@@ -187,3 +188,18 @@ def test_set_name_ideal():
     assert (instr.ideal == GATES["ry90p"]).all()
     instr.set_name("crzp")
     assert (instr.ideal == GATES["crzp"]).all()
+
+
+@pytest.mark.unit
+def test_correct_bloch_rotation_direction():
+    # makes sure that the rotations on the bloch sphere are in the right direction
+    GATE_NAME = 'ry90p[0]'
+    exp = create_experiment()
+    exp.compute_propagators()
+    # TODO - remove this line after the ideal updating bug gets fixed...
+    exp.pmap.instructions[GATE_NAME].set_ideal(None)
+
+    ideal_gate = exp.pmap.instructions[GATE_NAME].get_ideal_gate(dims=[3])
+    propagator = exp.propagators[GATE_NAME].numpy()
+    # not equal to one because of imperfections in the propagation
+    assert unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0] < 0.05
