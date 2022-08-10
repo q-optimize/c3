@@ -182,8 +182,10 @@ def test_str_conversion():
 
 @pytest.mark.unit
 def test_set_name_ideal():
-    """Check that asigning a name of a specific gate from the constants updates the ideal unitary."""
+    """Check that assigning a name of a specific gate from the constants updates the ideal unitary."""
     instr.set_name("ry90p")
     assert (instr.ideal == GATES["ry90p"]).all()
     instr.set_name("crzp")
     assert (instr.ideal == GATES["crzp"]).all()
+    instr.name = 'ry90p'
+    assert (instr.ideal == GATES["ry90p"]).all()
