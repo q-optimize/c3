@@ -13,6 +13,29 @@ from c3.utils.tf_utils import tf_project_to_comp
 from c3.signal.pulse import components as comp_lib
 
 
+def _from_dict_get_name_back_compat(cfg: dict, def_name: str) -> str:
+    """
+    Method to use in from_dict to get the name of the Instruction in a backwards compatible manner.
+
+    Parameters
+    ----------
+    cfg: dict
+        Configuration dictionary, including 'name' or '_name' key.
+    def_name: str
+        Name to give if no name is found in the configuration.
+
+    Returns
+    -------
+    Name of the instruction
+    """
+    if "name" in cfg:
+        return cfg["name"]
+    if "_name" in cfg:
+        return cfg["_name"]
+
+    return def_name
+
+
 class Instruction:
     """
     Collection of components making up the control signal for a line.
@@ -162,7 +185,7 @@ class Instruction:
 
     def from_dict(self, cfg, name=None):
         self.__init__(
-            name=cfg["name"] if "name" in cfg else name,
+            name=_from_dict_get_name_back_compat(cfg, name),
             targets=cfg["targets"] if "targets" in cfg else None,
             params=cfg["params"] if "params" in cfg else None,
             ideal=np.array(cfg["ideal"]) if "ideal" in cfg else None,
