@@ -11,7 +11,6 @@ from c3.libraries.fidelities import (
 )
 from c3.libraries.constants import GATES
 
-
 X = GATES["rxp"]
 Y = GATES["ryp"]
 Id = GATES["id"]
@@ -160,6 +159,26 @@ def test_set_states() -> None:
         instructions=instructions,
         index=[0],
         dims=[2],
+        psi_0=psi_0,
+        n_eval=136,
+    )
+    almost_equal(goal, 0)
+
+
+@pytest.mark.unit
+def test_correct_ideal_assignment() -> None:
+    custom_gate = np.array([[1, 0, 0, 0],
+                            [0, 1, 0, 0],
+                            [0, 0, 0, 1],
+                            [0, 0, 1, 0]], dtype=np.complex)
+    propagators = {"custom": custom_gate}
+    instructions = {"custom": Instruction("custom", ideal=custom_gate)}
+    psi_0 = np.array([[1], [0], [0], [0]])
+    goal = state_transfer_infid_set(
+        propagators=propagators,
+        instructions=instructions,
+        index=[0, 1],
+        dims=[2, 2],
         psi_0=psi_0,
         n_eval=136,
     )
