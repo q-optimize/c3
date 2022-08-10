@@ -55,6 +55,7 @@ class Instruction:
         # fixed_t_end: bool = True,
     ):
         self.set_name(name)
+        self.set_ideal(ideal)
         self.targets = targets
         self.params: dict = {}
         if isinstance(params, dict):
@@ -85,9 +86,8 @@ class Instruction:
             asdict["ideal"] = self.ideal
         return asdict
 
-    def set_name(self, name, ideal=None):
+    def set_name(self, name):
         self.name = name
-        self.set_ideal(ideal)
 
     def set_ideal(self, ideal):
         if ideal is not None:
