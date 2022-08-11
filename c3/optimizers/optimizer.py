@@ -208,7 +208,7 @@ class Optimizer:
     def goal_run_with_grad(self, current_params):
         with tf.GradientTape(watch_accessed_variables=False) as t:
             t.watch(current_params)
-            goal = self.goal_run(current_params)
+            goal = self.goal_function(self, current_params)
         grad = t.gradient(goal, current_params)
         return goal, grad
 
