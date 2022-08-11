@@ -202,4 +202,4 @@ def test_correct_bloch_rotation_direction():
     ideal_gate = exp.pmap.instructions[GATE_NAME].get_ideal_gate(dims=[3])
     propagator = exp.propagators[GATE_NAME].numpy()
     # not equal to one because of imperfections in the propagation
-    assert unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0] < 0.05
+    np.testing.assert_array_less(unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0], 0.05)
