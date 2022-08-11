@@ -216,7 +216,7 @@ class Qubit(PhysicalComponent):
         Ls = []
         if "t1" in self.params:
             t1 = self.params["t1"].get_value()
-            gamma = (0.5 / t1) ** 0.5
+            gamma = (1 / t1) ** 0.5
             L = gamma * self.collapse_ops["t1"]
             Ls.append(L)
             if "temp" in self.params:
