@@ -70,6 +70,7 @@ class Experiment:
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
         self.sim_res = sim_res
+        self.prop_method = prop_method
         self.set_prop_method(prop_method)
 
     def set_prop_method(self, prop_method=None) -> None:
@@ -454,6 +455,8 @@ class Experiment:
         gate_ids = self.opt_gates
         if gate_ids is None:
             gate_ids = instructions.keys()
+
+        self.set_prop_method(self.prop_method)
 
         for gate in gate_ids:
             try:
