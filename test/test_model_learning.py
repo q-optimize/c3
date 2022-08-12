@@ -46,6 +46,15 @@ def test_model_learning() -> None:
     exp.pmap.set_opt_map(
         [[tuple(par) for par in pset] for pset in cfg.pop("exp_opt_map")]
     )
+
+    # -phase because of legacy xy_angle sign convention
+    for instruction in exp.pmap.instructions.values():
+        for comp in instruction.comps.values():
+            for pulse in comp.values():
+                if "xy_angle" in pulse.params:
+                    pulse.params["xy_angle"] *= -1
+
+
     opt = ModelLearning(**cfg, pmap=exp.pmap)
     opt.set_exp(exp)
     opt.set_created_by(OPT_CONFIG_FILE_NAME)

@@ -283,6 +283,13 @@ crzp.comps["Q2"]["carrier"].params["framechange"].set_value(framechange_q2)
 parameter_map = PMap(instructions=[crzp], model=model, generator=generator)
 exp = Exp(pmap=parameter_map)
 
+# -phase because of legacy xy_angle sign convention
+for instruction in exp.pmap.instructions.values():
+    for comp in instruction.comps.values():
+        for pulse in comp.values():
+            if "xy_angle" in pulse.params:
+                pulse.params["xy_angle"] *= -1
+
 ##### TESTING ######
 
 with open("test/tunable_coupler_data.pickle", "rb") as filename:
