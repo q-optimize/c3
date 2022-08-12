@@ -15,7 +15,7 @@ def test_raises_OOB_for_bad_optimizer() -> None:
     np.random.seed(0)
 
     exp = create_experiment()
-    exp.set_opt_gates(['rx90p[0]'])
+    exp.set_opt_gates(["rx90p[0]"])
 
     opt_gates = ["rx90p[0]"]
     gateset_opt_map = [
@@ -33,7 +33,7 @@ def test_raises_OOB_for_bad_optimizer() -> None:
     exp.pmap.set_opt_map(gateset_opt_map)
 
     log_dir = os.path.join(tempfile.TemporaryDirectory().name, "c3logs")
-    cmaes_options = {'spread': 1, 'maxiter': 5}
+    cmaes_options = {"spread": 1, "maxiter": 5}
 
     opt = OptimalControl(
         dir_path=log_dir,
@@ -42,7 +42,7 @@ def test_raises_OOB_for_bad_optimizer() -> None:
         pmap=exp.pmap,
         algorithm=algorithms.cmaes,
         options=cmaes_options,
-        run_name="OOB_CMAES_opt"
+        run_name="OOB_CMAES_opt",
     )
 
     exp.set_opt_gates(opt_gates)
@@ -50,6 +50,6 @@ def test_raises_OOB_for_bad_optimizer() -> None:
 
     try:
         opt.optimize_controls()
-        assert False, 'Should have raised OptResultOOBError.'
+        assert False, "Should have raised OptResultOOBError."
     except OptResultOOBError:
         pass
