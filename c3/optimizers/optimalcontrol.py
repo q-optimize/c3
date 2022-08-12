@@ -2,14 +2,20 @@
 
 import os
 import shutil
+
 import tensorflow as tf
 from typing import Callable, List
 
 from c3.optimizers.optimizer import Optimizer
+from c3.parametermap import ParameterMapOOBUpdateException
 from c3.utils.utils import log_setup
 
 from c3.libraries.algorithms import algorithms
 from c3.libraries.fidelities import fidelities
+
+
+class OptResultOOBError(Exception):
+    pass
 
 
 class OptimalControl(Optimizer):
@@ -153,7 +159,16 @@ class OptimalControl(Optimizer):
             )
         except KeyboardInterrupt:
             pass
-        self.load_best(self.logdir + "best_point_" + self.logname)
+
+        try:
+            self.load_best(
+                self.logdir + "best_point_" + self.logname, extend_bounds=False
+            )
+        except ParameterMapOOBUpdateException as e:
+            raise OptResultOOBError(
+                "The optimization resulted in some of the parameters being out of bounds."
+            ) from e
+
         self.end_log()
 
     @tf.function
