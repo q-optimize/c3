@@ -4,7 +4,7 @@ import pickle
 import hjson
 from numpy.testing import assert_array_almost_equal as almost_equal
 
-from c3.libraries.fidelities import state_transfer_infid_set
+from c3.libraries.fidelities import state_transfer_infid_set, unitary_infid
 from c3.signal.gates import Instruction
 
 from c3.c3objs import Quantity, hjson_decode, hjson_encode
@@ -17,7 +17,7 @@ from c3.model import Model
 import numpy as np
 import pytest
 from c3.libraries.constants import GATES
-
+from examples.single_qubit_experiment import create_experiment
 
 model = Model()
 model.read_config("test/test_model.cfg")
@@ -209,3 +209,18 @@ def test_correct_ideal_assignment() -> None:
         n_eval=136,
     )
     almost_equal(goal, 0)
+
+
+@pytest.mark.unit
+def test_correct_bloch_rotation_direction():
+    # makes sure that the rotations on the bloch sphere are in the right direction
+    GATE_NAME = 'ry90p[0]'
+    exp = create_experiment()
+    exp.compute_propagators()
+    # TODO - remove this line after the ideal updating bug gets fixed...
+    exp.pmap.instructions[GATE_NAME].set_ideal(None)
+
+    ideal_gate = exp.pmap.instructions[GATE_NAME].get_ideal_gate(dims=[3])
+    propagator = exp.propagators[GATE_NAME].numpy()
+    # not equal to one because of imperfections in the propagation
+    np.testing.assert_array_less(unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0], 0.05)
