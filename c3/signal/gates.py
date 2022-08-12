@@ -318,7 +318,7 @@ class Instruction:
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle - freq_offset * ts_off
+                phase = xy_angle - freq_offset * ts_off
                 env = comp.get_shape_values(ts_off, t_end - t_start)
                 env = tf.cast(env, tf.complex128)
 
