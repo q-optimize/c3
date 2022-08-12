@@ -19,12 +19,14 @@ class Instruction:
 
     Parameters
     ----------
+    ideal: np.ndarray
+        Ideal gate that the instruction should emulate.
+    channels : list
+        List of channel names (strings).
     t_start : np.float64
         Start of the signal.
     t_end : np.float64
         End of the signal.
-    channels : list
-        List of channel names (strings)
 
 
     Attributes
@@ -52,9 +54,9 @@ class Instruction:
         channels: List[str] = [],
         t_start: float = 0.0,
         t_end: float = 0.0,
-        # fixed_t_end: bool = True,
     ):
         self.set_name(name)
+        self.set_ideal(ideal)
         self.targets = targets
         self.params: dict = {}
         if isinstance(params, dict):
@@ -85,9 +87,9 @@ class Instruction:
             asdict["ideal"] = self.ideal
         return asdict
 
-    def set_name(self, name, ideal=None):
+    def set_name(self, name):
         self.name = name
-        self.set_ideal(ideal)
+        self.set_ideal(None)  # sets from name
 
     def set_ideal(self, ideal):
         if ideal is not None:
@@ -310,7 +312,6 @@ class Instruction:
             t_start, t_end = self.get_timings(chan, comp_name)
             ts_off = ts - t_start
             if isinstance(comp, Envelope):
-
                 amp_re = comp.params["amp"].get_value()
                 amp = tf.complex(amp_re, tf.zeros_like(amp_re))
 

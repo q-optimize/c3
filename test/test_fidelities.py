@@ -11,7 +11,6 @@ from c3.libraries.fidelities import (
 )
 from c3.libraries.constants import GATES
 
-
 X = GATES["rxp"]
 Y = GATES["ryp"]
 Id = GATES["id"]
