@@ -10,8 +10,10 @@ from c3.signal.gates import Instruction
 from typing import Union
 from tensorflow.errors import InvalidArgumentError
 
+
 class ParameterMapOOBUpdateException(Exception):
     pass
+
 
 class ParameterMap:
     """
