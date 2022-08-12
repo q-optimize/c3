@@ -2,8 +2,9 @@ import copy
 import pickle
 
 import hjson
+from numpy.testing import assert_array_almost_equal as almost_equal
 
-from c3.libraries.fidelities import unitary_infid
+from c3.libraries.fidelities import state_transfer_infid_set, unitary_infid
 from c3.signal.gates import Instruction
 
 from c3.c3objs import Quantity, hjson_decode, hjson_encode
@@ -190,6 +191,26 @@ def test_set_name_ideal():
     assert (instr.ideal == GATES["crzp"]).all()
     instr.name = 'ry90p'
     assert (instr.ideal == GATES["ry90p"]).all()
+
+
+@pytest.mark.unit
+def test_correct_ideal_assignment() -> None:
+    custom_gate = np.array([[1, 0, 0, 0],
+                            [0, 1, 0, 0],
+                            [0, 0, 0, 1],
+                            [0, 0, 1, 0]], dtype=np.complex)
+    propagators = {"custom": custom_gate}
+    instructions = {"custom": Instruction("custom", ideal=custom_gate)}
+    psi_0 = np.array([[1], [0], [0], [0]])
+    goal = state_transfer_infid_set(
+        propagators=propagators,
+        instructions=instructions,
+        index=[0, 1],
+        dims=[2, 2],
+        psi_0=psi_0,
+        n_eval=136,
+    )
+    almost_equal(goal, 0)
 
 
 @pytest.mark.unit
