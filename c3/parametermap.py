@@ -70,7 +70,7 @@ class ParameterMap:
     def update_parameters(self):
         self.__initialize_parameters()
 
-    def load_values(self, init_point, extend_bounds=True):
+    def load_values(self, init_point, extend_bounds=False):
         """
         Load a previous parameter point to start the optimization from.
 
