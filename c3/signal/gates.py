@@ -13,6 +13,29 @@ from c3.utils.tf_utils import tf_project_to_comp
 from c3.signal.pulse import components as comp_lib
 
 
+def _from_dict_get_name_back_compat(cfg: dict, def_name: str) -> str:
+    """
+    Method to use in from_dict to get the name of the Instruction in a backwards compatible manner.
+
+    Parameters
+    ----------
+    cfg: dict
+        Configuration dictionary, including 'name' or '_name' key.
+    def_name: str
+        Name to give if no name is found in the configuration.
+
+    Returns
+    -------
+    Name of the instruction
+    """
+    if "name" in cfg:
+        return cfg["name"]
+    if "_name" in cfg:
+        return cfg["_name"]
+
+    return def_name
+
+
 class Instruction:
     """
     Collection of components making up the control signal for a line.
@@ -77,9 +100,17 @@ class Instruction:
 
         self._timings: Dict[str, tuple] = dict()
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> str:
+        self.set_name(name)
+
     def as_openqasm(self) -> dict:
         asdict: Dict[str, Any] = {
-            "name": self.name,
+            "name": self._name,
             "qubits": self.targets,
             "params": self.params,
         }
@@ -87,8 +118,8 @@ class Instruction:
             asdict["ideal"] = self.ideal
         return asdict
 
-    def set_name(self, name):
-        self.name = name
+    def set_name(self, name, ideal=None):
+        self._name = name
         self.set_ideal(None)  # sets from name
 
     def set_ideal(self, ideal):
@@ -97,7 +128,7 @@ class Instruction:
         else:
             gate_list = []
             # legacy use
-            for key in self.name.split(":"):
+            for key in self._name.split(":"):
                 if key in GATES:
                     gate_list.append(GATES[key])
                 else:
@@ -132,8 +163,8 @@ class Instruction:
 
     def get_key(self) -> str:
         if self.targets is None:
-            return self.name
-        return self.name + str(self.targets)
+            return self._name
+        return self._name + str(self.targets)
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -142,6 +173,10 @@ class Instruction:
             for key, comp in item.items():
                 components[chan][key] = comp.asdict()
         out_dict = copy.deepcopy(self.__dict__)
+
+        out_dict["name"] = out_dict["_name"]
+        out_dict.pop("_name")
+
         out_dict["ideal"] = out_dict["ideal"]
         out_dict.pop("_timings")
         out_dict.pop("t_start")
@@ -152,7 +187,7 @@ class Instruction:
 
     def from_dict(self, cfg, name=None):
         self.__init__(
-            name=cfg["name"] if "name" in cfg else name,
+            name=_from_dict_get_name_back_compat(cfg, name),
             targets=cfg["targets"] if "targets" in cfg else None,
             params=cfg["params"] if "params" in cfg else None,
             ideal=np.array(cfg["ideal"]) if "ideal" in cfg else None,
