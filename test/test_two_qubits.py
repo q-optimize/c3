@@ -90,3 +90,14 @@ def test_rk4_unitary(get_two_qubit_chip) -> None:
     pmap = exp.pmap
     exp.set_prop_method(rk4_unitary)
     exp.propagation(pmap.model, pmap.generator, pmap.instructions["rx90p[0]"])
+
+
+@pytest.mark.tensorflow
+@pytest.mark.integration
+def test_ode_solver(get_two_qubit_chip) -> None:
+    """Testing that ODE solver exists and runs for solvers rk4, rk5, Tsit5."""
+    exp = get_two_qubit_chip
+    exp.set_opt_gates(["rx90p[0]"])
+    exp.compute_states(solver="rk4")
+    exp.compute_states(solver="rk5")
+    exp.compute_states(solver="Tsit5")
