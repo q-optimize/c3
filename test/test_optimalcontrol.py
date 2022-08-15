@@ -41,8 +41,5 @@ def test_raises_OOB_for_bad_optimizer() -> None:
     exp.set_opt_gates(opt_gates)
     opt.set_exp(exp)
 
-    try:
+    with pytest.raises(OptResultOOBError):
         opt.optimize_controls()
-        assert False, "Should have raised OptResultOOBError."
-    except OptResultOOBError:
-        pass
