@@ -55,6 +55,7 @@ class Optimizer:
         self.logger = []
         if logger is not None:
             self.logger = logger
+        self.goal_function = self.goal_run
 
     def set_algorithm(self, algorithm: Optional[Callable]) -> None:
         if algorithm:
