@@ -79,7 +79,16 @@ GATES = {
     )
     / np.sqrt(2),
     "iswap": np.array(
-        [[1, 0, 0, 0], [0, 0, 1j, 0], [0, 1j, 0, 0], [0, 0, 0, 1]], dtype=np.complex128
+        [[1, 0, 0, 0], [0, 0, -1j, 0], [0, -1j, 0, 0], [0, 0, 0, 1]],
+        dtype=np.complex128,
+    ),
+    "iswap90": np.array(
+        [[0, 0, 0, 0], [0, 1, -1j, 0], [0, -1j, 1, 0], [0, 0, 0, 0]],
+        dtype=np.complex128,
+    )
+    / np.sqrt(2)
+    + np.array(
+        [[1, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1]], dtype=np.complex128
     ),
     "cz": np.diag(np.array([1, 1, 1, -1], dtype=np.complex128)),
     "ccz": np.diag(np.array([1, 1, 1, 1, 1, 1, 1, -1], dtype=np.complex128)),
