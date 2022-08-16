@@ -12,17 +12,6 @@ from c3.libraries.algorithms import algorithms
 from c3.libraries.fidelities import fidelities
 
 
-goal_functions_dict = dict()
-
-
-def goal_functions_deco(func):
-    """
-    Decorator for making registry of functions
-    """
-    goal_functions_dict[str(func.__name__)] = func
-    return func
-
-
 class OptimalControl(Optimizer):
     """
     Object that deals with the open loop optimal control.
@@ -69,7 +58,7 @@ class OptimalControl(Optimizer):
         logger=None,
         fid_func_kwargs={},
         ode_solver=None,
-        ode_step_function="schroedinger",
+        ode_step_function="schrodinger",
         only_final_state=False,
     ) -> None:
         if type(algorithm) is str:
@@ -96,17 +85,29 @@ class OptimalControl(Optimizer):
             self.optimize_controls
         )  # Alias the legacy name for the method running the
         # optimization
+        self.set_goal_function(
+            ode_solver=ode_solver,
+            ode_step_function=ode_step_function,
+            only_final_state=only_final_state,
+        )
+
+    def set_goal_function(
+        self,
+        ode_solver=None,
+        ode_step_function="schrodinger",
+        only_final_state=False,
+    ):
         self.ode_solver = ode_solver
         self.ode_step_function = ode_step_function
         self.only_final_state = only_final_state
 
-        self.goal_function = goal_functions_dict["goal_run"]
-
         if self.ode_solver is not None:
             if self.only_final_state:
-                self.goal_function = goal_functions_dict["goal_run_ode_only_final"]
+                self.goal_function = self.goal_run_ode_only_final
             else:
-                self.goal_function = goal_functions_dict["goal_run_ode"]
+                self.goal_function = self.goal_run_ode
+        else:
+            self.goal_function = self.goal_run
 
     def set_fid_func(self, fid_func) -> None:
         if type(fid_func) is str:
@@ -182,7 +183,6 @@ class OptimalControl(Optimizer):
         self.end_log()
 
     @tf.function
-    @goal_functions_deco
     def goal_run(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function for current parameters.
@@ -213,7 +213,6 @@ class OptimalControl(Optimizer):
         return goal
 
     @tf.function
-    @goal_functions_deco
     def goal_run_ode(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function using ode solver for current parameters.
@@ -246,7 +245,6 @@ class OptimalControl(Optimizer):
         return goal
 
     @tf.function
-    @goal_functions_deco
     def goal_run_ode_only_final(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function using ode solver for current parameters.

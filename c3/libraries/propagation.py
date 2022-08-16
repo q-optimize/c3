@@ -689,7 +689,6 @@ def ode_solver(
     model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function
 ) -> Dict:
 
-    init_state = model.get_init_state()
     signal = gen.generate_signals(instr)
 
     if model.lindbladian:
@@ -728,7 +727,6 @@ def ode_solver_final_state(
     model: Model, gen: Generator, instr: Instruction, init_state, solver, step_function
 ) -> Dict:
 
-    init_state = model.get_init_state()
     signal = gen.generate_signals(instr)
 
     if model.lindbladian:
@@ -899,7 +897,7 @@ def lindblad(rho, h, dt, col):
 
 
 @step_deco
-def schroedinger(psi, h, dt, col=None):
+def schrodinger(psi, h, dt, col=None):
     return -1j * tf.matmul(h, psi) * dt
 
 

@@ -208,7 +208,7 @@ class Optimizer:
     def goal_run_with_grad(self, current_params):
         with tf.GradientTape(watch_accessed_variables=False) as t:
             t.watch(current_params)
-            goal = self.goal_function(self, current_params)
+            goal = self.goal_function(current_params)
         grad = t.gradient(goal, current_params)
         return goal, grad
 
@@ -262,12 +262,12 @@ class Optimizer:
         self.optim_status["params"] = pars
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
-            goal = self.goal_run(current_params)
+            goal = self.goal_function(current_params)
             self.optim_status["goal"] = float(goal)
             goal = float(goal)
         else:
             current_params = input_parameters
-            goal = self.goal_run(current_params)
+            goal = self.goal_function(current_params)
             self.optim_status["goal"] = float(goal)
         self.log_parameters(input_parameters)
         return goal

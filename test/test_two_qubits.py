@@ -7,9 +7,11 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal as almost_equal
 import c3.libraries.algorithms as algorithms
+from c3.libraries.fidelities import state_transfer_from_states
 
 # Libs and helpers
 from c3.libraries.propagation import rk4_unitary
+import tensorflow as tf
 
 with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
@@ -82,6 +84,64 @@ def test_optim(get_OC_optimizer) -> None:
     assert opt.evaluation == opt.options[maxiterKey] - 1
 
 
+@pytest.mark.slow
+@pytest.mark.tensorflow
+@pytest.mark.optimizers
+@pytest.mark.integration
+def test_optim_ode_solver(get_OC_optimizer) -> None:
+    """
+    check if optimization result is below 1e-1
+    """
+    opt = get_OC_optimizer
+    opt.fid_func = state_transfer_from_states
+    opt.set_goal_function(ode_solver="rk4", ode_step_function="schrodinger")
+
+    model = opt.exp.pmap.model
+    psi_init = [[0] * model.tot_dim]
+    psi_init[0][0] = 1 / np.sqrt(2)
+    index = model.get_state_indeces([(1, 0)])[0]
+    psi_init[0][index] = 1 / np.sqrt(2)
+    target_state = tf.transpose(tf.constant(psi_init, tf.complex128))
+    params = {"target": target_state}
+    opt.fid_func_kwargs = {"params": params}
+
+    assert opt.evaluation == 0
+    opt.optimize_controls()
+    assert opt.current_best_goal < 0.5  # TODO - Make it 0.1
+    maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
+    assert opt.evaluation == opt.options[maxiterKey] - 1
+
+
+@pytest.mark.slow
+@pytest.mark.tensorflow
+@pytest.mark.optimizers
+@pytest.mark.integration
+def test_optim_ode_solver_final(get_OC_optimizer) -> None:
+    """
+    check if optimization result is below 1e-1
+    """
+    opt = get_OC_optimizer
+    opt.fid_func = state_transfer_from_states
+    opt.set_goal_function(
+        ode_solver="rk4", ode_step_function="schrodinger", only_final_state=True
+    )
+
+    model = opt.exp.pmap.model
+    psi_init = [[0] * model.tot_dim]
+    psi_init[0][0] = 1 / np.sqrt(2)
+    index = model.get_state_indeces([(1, 0)])[0]
+    psi_init[0][index] = 1 / np.sqrt(2)
+    target_state = tf.transpose(tf.constant(psi_init, tf.complex128))
+    params = {"target": target_state}
+    opt.fid_func_kwargs = {"params": params}
+
+    assert opt.evaluation == 0
+    opt.optimize_controls()
+    assert opt.current_best_goal < 0.5  # TODO - Make it 0.1
+    maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
+    assert opt.evaluation == opt.options[maxiterKey] - 1
+
+
 @pytest.mark.tensorflow
 @pytest.mark.integration
 def test_rk4_unitary(get_two_qubit_chip) -> None:
@@ -101,3 +161,6 @@ def test_ode_solver(get_two_qubit_chip) -> None:
     exp.compute_states(solver="rk4")
     exp.compute_states(solver="rk5")
     exp.compute_states(solver="Tsit5")
+    exp.compute_states(solver="rk4", step_function="vonNeumann")
+    exp.compute_states(solver="rk5", step_function="vonNeumann")
+    exp.compute_states(solver="Tsit5", step_function="vonNeumann")

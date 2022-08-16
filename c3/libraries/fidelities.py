@@ -791,10 +791,15 @@ def orbit_infid(
 
 
 @fid_reg_deco
-def state_transfer_from_states(states: List[tf.Tensor], index, dims, params, n_eval=-1):
+def state_transfer_from_states(states: tf.Tensor, index, dims, params, n_eval=-1):
     infids = []
     psi_0 = params["target"]
-    overlap = calculateStateOverlap(states[-1], psi_0)
+
+    if len(states.shape) > 2:
+        overlap = calculateStateOverlap(states[-1], psi_0)
+    else:
+        overlap = calculateStateOverlap(states, psi_0)
+
     infid = 1 - overlap
     infids.append(infid)
     return tf.reduce_max(tf.math.real(infids))
