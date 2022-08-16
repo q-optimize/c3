@@ -358,12 +358,14 @@ class Model:
         such that the resulting Hamiltonian will be
         ..math:: \\hat H(t) = \\exp(-i H_S t) H_I(t) \\exp(i H_S t)
         """
+        self.ts = ts
         ham_sys = tf.expand_dims(ham_S, 0)  # create batch dimension
         ts = tf.expand_dims(tf.expand_dims(ts, -1), -1)  # ts as batch dimension
         transform = tf.linalg.expm(-1j * ham_sys * tf_utils.tf_complexify(ts))
         self.drift_ham -= ham_S
         for drives in self.drives.values():
             drives.h = transform @ drives.h @ tf.linalg.adjoint(transform)
+        self.frame.add("interaction")
 
     def set_FR(self, use_FR: bool) -> None:
         """
@@ -418,6 +420,8 @@ class Model:
             self.update_Lindbladians()
         if "dressed" in self.frame:
             self.update_dressed(ordered=ordered)
+        if "interaction" in self.frame:
+            self.set_interaction_picture(self.drift_ham, self.ts)
 
     def update_Hamiltonians(self):
         """Recompute the matrix representations of the Hamiltonians."""
