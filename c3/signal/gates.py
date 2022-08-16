@@ -13,18 +13,43 @@ from c3.utils.tf_utils import tf_project_to_comp
 from c3.signal.pulse import components as comp_lib
 
 
+def _from_dict_get_name_back_compat(cfg: dict, def_name: str) -> str:
+    """
+    Method to use in from_dict to get the name of the Instruction in a backwards compatible manner.
+
+    Parameters
+    ----------
+    cfg: dict
+        Configuration dictionary, including 'name' or '_name' key.
+    def_name: str
+        Name to give if no name is found in the configuration.
+
+    Returns
+    -------
+    Name of the instruction
+    """
+    if "name" in cfg:
+        return cfg["name"]
+    if "_name" in cfg:
+        return cfg["_name"]
+
+    return def_name
+
+
 class Instruction:
     """
     Collection of components making up the control signal for a line.
 
     Parameters
     ----------
+    ideal: np.ndarray
+        Ideal gate that the instruction should emulate.
+    channels : list
+        List of channel names (strings).
     t_start : np.float64
         Start of the signal.
     t_end : np.float64
         End of the signal.
-    channels : list
-        List of channel names (strings)
 
 
     Attributes
@@ -52,9 +77,9 @@ class Instruction:
         channels: List[str] = [],
         t_start: float = 0.0,
         t_end: float = 0.0,
-        # fixed_t_end: bool = True,
     ):
         self.set_name(name)
+        self.set_ideal(ideal)
         self.targets = targets
         self.params: dict = {}
         if isinstance(params, dict):
@@ -75,9 +100,17 @@ class Instruction:
 
         self._timings: Dict[str, tuple] = dict()
 
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, name: str) -> str:
+        self.set_name(name)
+
     def as_openqasm(self) -> dict:
         asdict: Dict[str, Any] = {
-            "name": self.name,
+            "name": self._name,
             "qubits": self.targets,
             "params": self.params,
         }
@@ -86,8 +119,8 @@ class Instruction:
         return asdict
 
     def set_name(self, name, ideal=None):
-        self.name = name
-        self.set_ideal(ideal)
+        self._name = name
+        self.set_ideal(None)  # sets from name
 
     def set_ideal(self, ideal):
         if ideal is not None:
@@ -95,7 +128,7 @@ class Instruction:
         else:
             gate_list = []
             # legacy use
-            for key in self.name.split(":"):
+            for key in self._name.split(":"):
                 if key in GATES:
                     gate_list.append(GATES[key])
                 else:
@@ -130,8 +163,8 @@ class Instruction:
 
     def get_key(self) -> str:
         if self.targets is None:
-            return self.name
-        return self.name + str(self.targets)
+            return self._name
+        return self._name + str(self.targets)
 
     def asdict(self) -> dict:
         components = {}  # type:ignore
@@ -140,6 +173,10 @@ class Instruction:
             for key, comp in item.items():
                 components[chan][key] = comp.asdict()
         out_dict = copy.deepcopy(self.__dict__)
+
+        out_dict["name"] = out_dict["_name"]
+        out_dict.pop("_name")
+
         out_dict["ideal"] = out_dict["ideal"]
         out_dict.pop("_timings")
         out_dict.pop("t_start")
@@ -150,7 +187,7 @@ class Instruction:
 
     def from_dict(self, cfg, name=None):
         self.__init__(
-            name=cfg["name"] if "name" in cfg else name,
+            name=_from_dict_get_name_back_compat(cfg, name),
             targets=cfg["targets"] if "targets" in cfg else None,
             params=cfg["params"] if "params" in cfg else None,
             ideal=np.array(cfg["ideal"]) if "ideal" in cfg else None,
@@ -310,7 +347,6 @@ class Instruction:
             t_start, t_end = self.get_timings(chan, comp_name)
             ts_off = ts - t_start
             if isinstance(comp, Envelope):
-
                 amp_re = comp.params["amp"].get_value()
                 amp = tf.complex(amp_re, tf.zeros_like(amp_re))
 
@@ -318,7 +354,7 @@ class Instruction:
 
                 xy_angle = comp.params["xy_angle"].get_value()
                 freq_offset = comp.params["freq_offset"].get_value()
-                phase = -xy_angle - freq_offset * ts_off
+                phase = xy_angle - freq_offset * ts_off
                 env = comp.get_shape_values(ts_off, t_end - t_start)
                 env = tf.cast(env, tf.complex128)
 
