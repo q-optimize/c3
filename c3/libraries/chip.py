@@ -1244,4 +1244,4 @@ class Drive(LineComponent):
     def get_Hamiltonian(self, signal: Dict = {}) -> tf.Tensor:
         sig = tf.cast(signal["values"], tf.complex128)
         sig = tf.reshape(sig, [sig.shape[0], 1, 1])
-        return self.h * sig
+        return self.h[: sig.shape[0]] * sig
