@@ -107,7 +107,12 @@ def test_optim_ode_solver(get_OC_optimizer) -> None:
 
     assert opt.evaluation == 0
     opt.optimize_controls()
-    assert opt.current_best_goal < 0.5  # TODO - Make it 0.1
+
+    if opt.algorithm == algorithms.single_eval:
+        assert opt.current_best_goal < 0.5
+    else:
+        assert opt.current_best_goal < 0.1
+
     maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
     assert opt.evaluation == opt.options[maxiterKey] - 1
 
@@ -137,7 +142,11 @@ def test_optim_ode_solver_final(get_OC_optimizer) -> None:
 
     assert opt.evaluation == 0
     opt.optimize_controls()
-    assert opt.current_best_goal < 0.5  # TODO - Make it 0.1
+    if opt.algorithm == algorithms.single_eval:
+        assert opt.current_best_goal < 0.5
+    else:
+        assert opt.current_best_goal < 0.1
+
     maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
     assert opt.evaluation == opt.options[maxiterKey] - 1
 
@@ -164,3 +173,17 @@ def test_ode_solver(get_two_qubit_chip) -> None:
     exp.compute_states(solver="rk4", step_function="von_neumann")
     exp.compute_states(solver="rk5", step_function="von_neumann")
     exp.compute_states(solver="tsit5", step_function="von_neumann")
+
+
+@pytest.mark.tensorflow
+@pytest.mark.integration
+def test_compute_final_state(get_two_qubit_chip) -> None:
+    """Testing that compute_final_state exists and runs for solvers rk4, rk5, tsit5."""
+    exp = get_two_qubit_chip
+    exp.set_opt_gates(["rx90p[0]"])
+    exp.compute_final_state(solver="rk4")
+    exp.compute_final_state(solver="rk5")
+    exp.compute_final_state(solver="tsit5")
+    exp.compute_final_state(solver="rk4", step_function="von_neumann")
+    exp.compute_final_state(solver="rk5", step_function="von_neumann")
+    exp.compute_final_state(solver="tsit5", step_function="von_neumann")

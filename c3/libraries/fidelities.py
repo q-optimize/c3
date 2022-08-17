@@ -807,6 +807,10 @@ def state_transfer_from_states(states: tf.Tensor, index, dims, params, n_eval=-1
 
 def calculate_state_overlap(psi1, psi2):
     if psi1.shape[0] == psi1.shape[1]:
-        return tf.linalg.trace(tf.matmul(tf.transpose(psi1, conjugate=True), psi2))
+        return (
+            tf.linalg.trace(
+                tf.sqrt(tf.matmul(tf.matmul(tf.sqrt(psi1), psi2), tf.sqrt(psi1)))
+            )
+        ) ** 2
     else:
         return tf_ketket_fid(psi1, psi2)
