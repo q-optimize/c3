@@ -130,12 +130,35 @@ def test_model_couplings() -> None:
 
 @pytest.mark.unit
 def test_model_get_hamiltonian() -> None:
-    ham = model.get_Hamiltonian()
+    sig = {"d1": {"ts": np.linspace(0, 5e-9, 10)}}
+    ham = model.get_Hamiltonian(sig)
     np.testing.assert_allclose(ham, hdrift)
 
     sig = {"d1": {"ts": np.linspace(0, 5e-9, 10), "values": np.linspace(0e9, 20e9, 10)}}
     hams = model.get_Hamiltonian(sig)
     np.testing.assert_allclose(hams, test_data["sliced_hamiltonians"])
+
+
+@pytest.mark.unit
+def test_model_get_dynamics_generators() -> None:
+    sig = {"d1": {"ts": np.linspace(0, 5e-9, 10)}}
+    dt = 5e-9 / 9
+    ham = model.get_dynamics_generators(sig)
+    np.testing.assert_allclose(ham, (-1j * dt) * hdrift)
+
+    sig = {"d1": {"ts": np.linspace(0, 5e-9, 10), "values": np.linspace(0e9, 20e9, 10)}}
+    hams = model.get_dynamics_generators(sig)
+    np.testing.assert_allclose(hams, (-1j * dt) * test_data["sliced_hamiltonians"])
+
+
+@pytest.mark.unit
+def test_model_get_ts_dt() -> None:
+    ts = np.linspace(0, 5e-9, 10)
+    sig = {"d1": {"ts": ts}}
+    dt = 5e-9 / 9
+    times = model.get_ts_dt(sig)
+    np.testing.assert_allclose(times["dt"], dt)
+    np.testing.assert_allclose(times["ts"], ts)
 
 
 @pytest.mark.unit

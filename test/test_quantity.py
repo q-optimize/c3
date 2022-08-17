@@ -4,6 +4,7 @@ import hjson
 import numpy as np
 import pytest
 from c3.c3objs import Quantity, hjson_encode
+import tensorflow as tf
 
 amp = Quantity(value=0.0, min_val=-1.0, max_val=+1.0, unit="V")
 amp_dict = {
@@ -157,10 +158,11 @@ def test_qty_math() -> None:
     assert a * b == 1.0
     assert b * a == 1.0
     np.testing.assert_allclose(a**b, 0.25)
-    assert b**a == 2**0.5
+    np.testing.assert_allclose(b**a, 2**0.5)
     np.testing.assert_allclose(a / b, 0.25)
     assert b / a == 4.0
-    assert b % a == 0
+    with tf.device("/cpu:0"):
+        assert b % a == 0
 
     qty = Quantity(3, min_val=0, max_val=5)
     qty.subtract(1.3)

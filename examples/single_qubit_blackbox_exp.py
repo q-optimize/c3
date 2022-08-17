@@ -15,7 +15,7 @@ import c3.libraries.tasks as tasks
 
 
 def create_experiment():
-    lindblad = False
+    lindblad = True
     dressed = True
     qubit_lvls = 3
     freq = 5e9
@@ -27,6 +27,8 @@ def create_experiment():
     awg_res = 2e9
     sideband = 50e6
     lo_freq = 5e9 + sideband
+    qubit_t1 = 0.20e-6
+    qubit_t2star = 0.39e-6
 
     # ### MAKE MODEL
     q1 = chip.Qubit(
@@ -46,6 +48,8 @@ def create_experiment():
         ),
         hilbert_dim=qubit_lvls,
         temp=Qty(value=qubit_temp, min_val=0.0, max_val=0.12, unit="K"),
+        t1=Qty(value=qubit_t1, min_val=0.001e-6, max_val=90e-6, unit="s"),
+        t2star=Qty(value=qubit_t2star, min_val=0.0010e-6, max_val=90e-6, unit="s"),
     )
 
     drive = chip.Drive(

@@ -11,6 +11,7 @@ from c3.utils.tf_utils import (
     tf_matmul_n,
     tf_spre,
     tf_spost,
+    Id_like,
 )
 
 unitary_provider = dict()
@@ -241,38 +242,10 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         Matrix representation of the gate.
     """
     signal = gen.generate_signals(instr)
-    # Why do I get 0.0 if I print gen.resolution here?! FR
-    ts = []
-    if model.controllability:
-        h0, hctrls = model.get_Hamiltonians()
-        signals = []
-        hks = []
-        for key in signal:
-            signals.append(signal[key]["values"])
-            ts = signal[key]["ts"]
-            hks.append(hctrls[key])
-        signals = tf.cast(signals, tf.complex128)
-        hks = tf.cast(hks, tf.complex128)
-    else:
-        h0 = model.get_Hamiltonian(signal)
-        ts_list = [sig["ts"][1:] for sig in signal.values()]
-        ts = tf.constant(tf.math.reduce_mean(ts_list, axis=0))
-        hks = None
-        signals = None
-        if not np.all(
-            tf.math.reduce_variance(ts_list, axis=0) < 1e-5 * (ts[1] - ts[0])
-        ):
-            raise Exception("C3Error:Something with the times happend.")
-        if not np.all(
-            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
-        ):
-            raise Exception("C3Error:Something with the times happend.")
 
-    dt = ts[1] - ts[0]
+    dynamics_generators = model.get_dynamics_generators(signal)
 
-    batch_size = tf.constant(len(h0), tf.int32)
-
-    dUs = tf_batch_propagate(h0, hks, signals, dt, batch_size=batch_size)
+    dUs = tf.linalg.expm(dynamics_generators)
 
     # U = tf_matmul_left(tf.cast(dUs, tf.complex128))
     U = tf_matmul_n(dUs, folding_stack)
@@ -281,7 +254,172 @@ def pwc(model: Model, gen: Generator, instr: Instruction, folding_stack: list) -
         U = model.blowup_excitations(tf_matmul_left(tf.cast(dUs, tf.complex128)))
         dUs = tf.vectorized_map(model.blowup_excitations, dUs)
 
-    return {"U": U, "dUs": dUs, "ts": ts}
+    return {"U": U, "dUs": dUs}
+
+
+@unitary_deco
+def pwc_sequential(model: Model, gen: Generator, instr: Instruction) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
+    signal and Hamiltonians.
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    signal = gen.generate_signals(instr)
+    # get number of time steps in the signal
+    n = tf.constant(len(list(list(signal.values())[0].values())[0]), dtype=tf.int32)
+
+    if model.lindbladian:
+        U = Id_like(model.get_Liouvillian(signal))
+    else:
+        U = Id_like(model.get_Hamiltonian(signal))
+
+    for i in range(n):
+        mini_signal: Dict[str, Dict] = {}
+        for key in signal.keys():
+            mini_signal[key] = {}
+            mini_signal[key]["values"] = tf.expand_dims(signal[key]["values"][i], 0)
+            # the ts are only used to compute dt and therefore this works
+            mini_signal[key]["ts"] = signal[key]["ts"][0:2]
+        dynamics_generators = model.get_dynamics_generators(mini_signal)
+
+        dU = tf.linalg.expm(dynamics_generators)
+        # i made shure that this order produces the same result as the original pwc function
+        U = dU[0] @ U
+
+    if model.max_excitations:
+        U = model.blowup_excitations(U)
+
+    return {"U": U}
+
+
+@unitary_deco
+def pwc_sequential_parallel(
+    model: Model,
+    gen: Generator,
+    instr: Instruction,
+    parallel: int = 16,
+) -> Dict:
+    """
+    Solve the equation of motion (Lindblad or Schrรถdinger) for a given control
+    signal and Hamiltonians.
+    This function will be retraced if different values of parallel are input
+    since parallel is input as a non tensorflow datatype
+
+    Parameters
+    ----------
+    signal: dict
+        Waveform of the control signal per drive line.
+    gate: str
+        Identifier for one of the gates.
+    parallel: int
+        number of prarallelly executing matrix multiplications
+
+    Returns
+    -------
+    unitary
+        Matrix representation of the gate.
+    """
+    # In this function, there is a deliberate and clear distinction between tensorflow
+    # and non tensorflow datatypes to guide which parts are hardwired during tracing
+    # and which are not. This was necessary to allow for the tf.function decorator.
+    signal = gen.generate_signals(instr)
+    # get number of time steps in the signal. Since this should always be the same,
+    # it does not interfere with tf.function tracing despite its numpy data type
+    n_np = len(list(list(signal.values())[0].values())[0])  # non tensorflow datatype
+
+    # batch_size is the number of operations happening sequentially, parallel is the number
+    # of operations happening in parallel.
+    # Their product is n or slightly bigger than n. n is the total number of operations.
+    batch_size_np = np.ceil(n_np / parallel)  # non tensorflow datatype
+    batch_size = tf.constant(batch_size_np, dtype=tf.int32)  # tensorflow datatype
+
+    # i tried to set the Us to None at the beginning and have an if else condition
+    # that handles the first call, but tensorflow complained
+
+    # edge case at the end must be handled outside the loop so that tensorflow can propperly
+    # trace the loop. I use this to simultaniously initialize the Us
+    mismatch = int(
+        n_np - np.floor(n_np / parallel) * parallel
+    )  # a modulo might also work
+    mini_init_signal: Dict[str, Dict] = {}
+    for key in signal.keys():
+        mini_init_signal[key] = {}
+        # the signals pulled here are not in sequence, but that should not matter
+        # the multiplication of the relevant propagators is still ordered correctly
+        mini_init_signal[key]["values"] = signal[key]["values"][
+            batch_size - 1 :: batch_size
+        ]
+        # this does nothing but reashure tensorflow of the shape of the tensor
+        mini_init_signal[key]["values"] = tf.reshape(
+            mini_init_signal[key]["values"], [mismatch]
+        )
+        # the ts are only used to compute dt and therefore this works
+        mini_init_signal[key]["ts"] = signal[key]["ts"][0:2]
+    dynamics_generators = model.get_dynamics_generators(mini_init_signal)
+    Us = tf.linalg.expm(dynamics_generators)
+    # possibly correct shape
+    if Us.shape[1] is not parallel:
+        Us = tf.concat(
+            [
+                Us,
+                tf.eye(
+                    Us.shape[1],
+                    batch_shape=[parallel - Us.shape[0]],
+                    dtype=tf.complex128,
+                ),
+            ],
+            axis=0,
+        )
+
+    # since we had to start from the back to handle the final batch with possibly different length
+    # we need to continue backwards and reverse the order (see batch_size - i - 2)
+    # this is necessary because "reversed" cant be traced
+    for i in range(batch_size - 1):
+        mini_signal: Dict[str, Dict] = {}
+        for key in signal.keys():
+            mini_signal[key] = {}
+            # the signals pulled here are not in sequence, but that should not matter
+            # the multiplication of the relevant propagators is still ordered correctly
+            mini_signal[key]["values"] = signal[key]["values"][
+                (batch_size - i - 2) :: batch_size
+            ]
+            # this does nothing but reashure tensorflow of the shape of the tensor
+            mini_signal[key]["values"] = tf.reshape(
+                mini_signal[key]["values"], [parallel]
+            )
+            # the ts are only used to compute dt and therefore this works
+            mini_signal[key]["ts"] = signal[key]["ts"][0:2]
+        dynamics_generators = model.get_dynamics_generators(mini_signal)
+
+        dUs = tf.linalg.expm(dynamics_generators)
+        # i made shure that this order produces the same result as the original pwc function
+        # though it is reversed just like the for loop is reversed
+        Us = Us @ dUs
+
+    # The Us are partially accumulated propagators, multiplying them together
+    # yields the final propagator. They serve a similar function as the dUs
+    # but there are typically fewer of them
+    # here the multiplication order is flipped compared to the Us above.
+    # while each individual propagator in Us was accumulatd in reverse,
+    # the thereby resulting Us are still orderd advancing in time
+    U = tf_matmul_left(tf.cast(Us, tf.complex128))
+
+    if model.max_excitations:
+        U = model.blowup_excitations(tf_matmul_left(tf.cast(Us, tf.complex128)))
+        Us = tf.vectorized_map(model.blowup_excitations, Us)
+
+    return {"U": U, "dUs": Us}
 
 
 ####################
@@ -400,52 +538,38 @@ def pwc_trott_drift(h0, hks, cflds_t, dt):
     return dUs
 
 
-def tf_batch_propagate(hamiltonian, hks, signals, dt, batch_size):
+def tf_batch_propagate(dyn_gens, batch_size):
     """
     Propagate signal in batches
     Parameters
     ----------
-    hamiltonian: tf.tensor
-        Drift Hamiltonian
-    hks: Union[tf.tensor, List[tf.tensor]]
-        List of control hamiltonians
-    signals: Union[tf.tensor, List[tf.tensor]]
-        List of control signals, one per control hamiltonian
-    dt: float
-        Length of one time slice
+    dyn_gens: tf.tensor
+        i) -1j * Hamiltonian(t) * dt
+        or
+        ii) -1j * Liouville superoperator * dt
     batch_size: int
         Number of elements in one batch
 
     Returns
     -------
-
+    List of partial propagators
+    i) as operators
+    ii) as superoperators
     """
-    if signals is not None:
-        batches = int(tf.math.ceil(signals.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            signals.dtype, size=batches, dynamic_size=False, infer_shape=False
+
+    batches = int(tf.math.ceil(dyn_gens.shape[0] / batch_size))
+    batch_array = tf.TensorArray(
+        dyn_gens.dtype, size=batches, dynamic_size=False, infer_shape=False
+    )
+    for i in range(batches):
+        batch_array = batch_array.write(
+            i, dyn_gens[i * batch_size : i * batch_size + batch_size]
         )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, signals[i * batch_size : i * batch_size + batch_size]
-            )
-    else:
-        batches = int(tf.math.ceil(hamiltonian.shape[0] / batch_size))
-        batch_array = tf.TensorArray(
-            hamiltonian.dtype, size=batches, dynamic_size=False, infer_shape=False
-        )
-        for i in range(batches):
-            batch_array = batch_array.write(
-                i, hamiltonian[i * batch_size : i * batch_size + batch_size]
-            )
 
     dUs_array = tf.TensorArray(tf.complex128, size=batches, infer_shape=False)
     for i in range(batches):
         x = batch_array.read(i)
-        if signals is not None:
-            result = tf_propagation_vectorized(hamiltonian, hks, x, dt)
-        else:
-            result = tf_propagation_vectorized(x, None, None, dt)
+        result = tf.linalg.expm(tf.cast(x, dtype=tf.complex128))
         dUs_array = dUs_array.write(i, result)
     return dUs_array.concat()
 

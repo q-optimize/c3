@@ -156,7 +156,7 @@ class OptimalControl(Optimizer):
         self.load_best(self.logdir + "best_point_" + self.logname)
         self.end_log()
 
-    @tf.function
+    @tf.function(autograph=True)
     def goal_run(self, current_params: tf.Tensor) -> tf.float64:
         """
         Evaluate the goal function for current parameters.

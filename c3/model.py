@@ -51,8 +51,8 @@ class Model:
         self.tasks: dict = dict()
         self.drift_ham = None
         self.dressed_drift_ham = None
-        self.__hamiltonians = None
-        self.__dressed_hamiltonians = None
+        self._hamiltonians = None
+        self._dressed_hamiltonians = None
         if subsystems:
             self.set_components(subsystems, couplings, max_excitations)
         if tasks:
@@ -338,21 +338,26 @@ class Model:
         sparse_controls = tf.vectorized_map(self.blowup_excitations, controls)
         return sparse_drift, sparse_controls
 
-    def get_Hamiltonian(self, signal=None):
+    def get_Hamiltonian(self, signal: Dict):
         """Get a hamiltonian with an optional signal. This will return an hamiltonian over time.
         Can be used e.g. for tuning the frequency of a transmon, where the control hamiltonian is not easily accessible.
         If max.excitation is non-zero the resulting Hamiltonian is cut accordingly"""
-        if signal is None:
+        sgnl = None
+        for sgn in signal.values():
+            if "values" in sgn:
+                sgnl = sgn["values"]
+
+        if sgnl is None:
             if self.dressed:
                 signal_hamiltonian = self.dressed_drift_ham
             else:
                 signal_hamiltonian = self.drift_ham
         else:
             if self.dressed:
-                hamiltonians = copy.deepcopy(self.__dressed_hamiltonians)
+                hamiltonians = copy.deepcopy(self._dressed_hamiltonians)
                 transform = self.transform
             else:
-                hamiltonians = copy.deepcopy(self.__hamiltonians)
+                hamiltonians = copy.deepcopy(self._hamiltonians)
                 transform = None
             for key, sig in signal.items():
                 if key in self.subsystems:
@@ -378,7 +383,70 @@ class Model:
 
         return signal_hamiltonian
 
-    def get_sparse_Hamiltonian(self, signal=None):
+    def get_Liouvillian(self, signal):
+        h = self.get_Hamiltonian(signal)
+        col_ops = self.get_Lindbladians()
+        if self.max_excitations:
+            col_ops = self.cut_excitations(col_ops)
+
+        # h = tf.expand_dims(h,0)
+        # print("h",h)
+        coher_superop = -1j * (tf_utils.tf_spre(h) - tf_utils.tf_spost(h))
+        for col_op in col_ops:
+            super_clp = tf.matmul(
+                tf_utils.tf_spre(col_op),
+                tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
+            )
+            anticomm_L_clp = 0.5 * tf.matmul(
+                tf_utils.tf_spre(tf.linalg.adjoint(col_op)),
+                tf_utils.tf_spre(col_op),
+            )
+            anticomm_R_clp = 0.5 * tf.matmul(
+                tf_utils.tf_spost(col_op),
+                tf_utils.tf_spost(tf.linalg.adjoint(col_op)),
+            )
+            liouvillian = coher_superop + super_clp - anticomm_L_clp - anticomm_R_clp
+            # print("liouvillian",liouvillian)
+        return liouvillian
+
+    def get_dynamics_generators(self, signal: Dict):
+        """Returns Tensor of Hamiltonians if model.lindbladian is False,
+        otherwise it returns as a Tensor of superoperators
+        the Liouvillians solving the Lindblad Master Equation
+        """
+        if self.lindbladian:
+            dyn_gens = self.get_Liouvillian(signal)
+        else:
+            dyn_gens = -1j * self.get_Hamiltonian(signal)
+
+        times = self.get_ts_dt(signal)
+
+        dt = times["dt"]
+
+        return dyn_gens * dt
+
+    def get_ts_dt(self, signal):
+        """
+        Given a signal it returns a Dict of time slices ts and time increment dt
+        """
+        ts = []
+        ts_list = [sig["ts"][:] for sig in signal.values()]
+        ts = tf.math.reduce_mean(ts_list, axis=0)
+        # Only do the safety check outside of graph mode for performance reasons.
+        # When using graph mode, the safety check will still be executed ONCE during tracing
+        if tf.executing_eagerly() and not tf.reduce_all(
+            tf.math.reduce_variance(ts_list, axis=0) < (1e-5 * (ts[1] - ts[0]))
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        if tf.executing_eagerly() and not tf.reduce_all(
+            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        dt = tf.cast(ts[1] - ts[0], dtype=tf.complex128)
+
+        return {"ts": ts, "dt": dt}
+
+    def get_sparse_Hamiltonian(self, signal):
         return self.blowup_excitations(self.get_Hamiltonian(signal))
 
     def get_Lindbladians(self):
@@ -408,7 +476,7 @@ class Model:
 
         self.drift_ham = sum(hamiltonians.values())
         self.control_hams = control_hams
-        self.__hamiltonians = hamiltonians
+        self._hamiltonians = hamiltonians
 
     def update_Lindbladians(self):
         """Return Lindbladian operators and their prefactors."""
@@ -475,7 +543,7 @@ class Model:
         dressed_control_hams = {}
         dressed_col_ops = []
         dressed_hamiltonians = dict()
-        for k, h in self.__hamiltonians.items():
+        for k, h in self._hamiltonians.items():
             dressed_hamiltonians[k] = tf.matmul(
                 tf.matmul(tf.linalg.adjoint(self.transform), h), self.transform
             )
@@ -489,7 +557,7 @@ class Model:
             )
         self.dressed_drift_ham = dressed_drift_ham
         self.dressed_control_hams = dressed_control_hams
-        self.__dressed_hamiltonians = dressed_hamiltonians
+        self._dressed_hamiltonians = dressed_hamiltonians
         if self.lindbladian:
             for col_op in self.col_ops:
                 dressed_col_ops.append(

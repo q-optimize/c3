@@ -116,7 +116,7 @@ def test_noise_devices():
         assert np.std(pink_noiseA) >= 0.05 * params[0]
         assert np.std(pink_noiseA) < 10 * params[0] + 1e-15
         if params[0] > 1e-15:
-            assert np.median(np.abs(pink_noiseA - pink_noiseB) > 1e-10)
+            assert np.median(np.abs(pink_noiseA - pink_noiseB)) > 1e-10
 
         if params[1] > 1e-15:
             assert np.abs(np.mean(dc_noiseA - dc_noiseB)) > 1e-6
@@ -128,7 +128,7 @@ def test_noise_devices():
         assert np.std(awg_noiseA) >= 0.05 * params[2]
         assert np.std(awg_noiseA) < 10 * params[2] + 1e-15
         if params[2] > 1e-15:
-            assert np.mean(np.abs(awg_noiseA - awg_noiseB) > 1e-10)
+            assert np.mean(np.abs(awg_noiseA - awg_noiseB)) > 1e-10
 
         if np.max(params) > 0:
             assert fidelityA != fidelityB

@@ -498,12 +498,25 @@ class Experiment:
 
             model.controllability = self.use_control_fields
             steps = int((instr.t_end - instr.t_start) * self.sim_res)
-            result = self.propagation(
-                model, generator, instr, self.folding_stack[steps]
-            )
+            if self.propagation is unitary_provider["pwc"]:
+                result = self.propagation(
+                    model, generator, instr, self.folding_stack[steps]
+                )
+            elif self.propagation is unitary_provider[
+                "pwc_sequential_parallel"
+            ] and hasattr(self, "parallel"):
+                result = self.propagation(model, generator, instr, self.parallel)
+
+            else:
+                result = self.propagation(
+                    model,
+                    generator,
+                    instr,
+                )
             U = result["U"]
-            dUs = result["dUs"]
-            self.ts = result["ts"]
+            signal = generator.generate_signals(instr)
+            times = model.get_ts_dt(signal)
+            self.ts = times["ts"]
             if model.use_FR:
                 # TODO change LO freq to at the level of a line
                 freqs = {}
@@ -546,7 +559,11 @@ class Experiment:
                     dephasing_channel = model.get_dephasing_channel(t_final, amps)
                     U = tf.matmul(dephasing_channel, U)
             propagators[gate] = U
-            partial_propagators[gate] = dUs
+            if (
+                self.propagation is unitary_provider["pwc"]
+                or self.propagation is unitary_provider["pwc_sequential_parallel"]
+            ):
+                partial_propagators[gate] = result["dUs"]
 
         # TODO we might want to move storing of the propagators to the instruction object
         if self.overwrite_propagators:
