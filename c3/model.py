@@ -489,39 +489,8 @@ class Model:
         """Compute the eigendecomposition of the drift Hamiltonian and store both the
         Eigenenergies and the transformation matrix."""
         e, v = tf.linalg.eigh(self.drift_ham)
-        if ordered:
-            v_sq = tf.identity(tf.math.real(v * tf.math.conj(v)))
 
-            max_probabilities = tf.expand_dims(tf.reduce_max(v_sq, axis=0), 0)
-            if tf.math.reduce_min(max_probabilities) > 0.5:
-                reorder_matrix = tf.cast(v_sq > 0.5, tf.float64)
-            else:
-                failed_states = np.sum(max_probabilities < 0.5)
-                min_failed_state = np.argmax(max_probabilities[0] < 0.5)
-                warnings.warn(
-                    f"""C3 Warning: Some states are overly dressed, trying to recover...{failed_states} states, {min_failed_state} is lowest failed state"""
-                )
-                vc = v_sq.numpy()
-                reorder_matrix = np.zeros_like(vc)
-                for i in range(vc.shape[1]):
-                    idx = np.unravel_index(np.argmax(vc), vc.shape)
-                    vc[idx[0], :] = 0
-                    vc[:, idx[1]] = 0
-                    reorder_matrix[idx] = 1
-                reorder_matrix = tf.constant(reorder_matrix, tf.float64)
-            signed_rm = tf.cast(
-                # TODO determine if the changing of sign is needed
-                # (by looking at TC_eneregies_bases I see no difference)
-                # reorder_matrix, dtype=tf.complex128
-                tf.sign(tf.math.real(v)) * reorder_matrix,
-                dtype=tf.complex128,
-            )
-            eigenframe = tf.linalg.matvec(reorder_matrix, tf.math.real(e))
-            transform = tf.matmul(v, tf.transpose(signed_rm))
-        else:
-            reorder_matrix = tf.eye(self.tot_dim)
-            eigenframe = tf.math.real(e)
-            transform = v
+        reorder_matrix, eigenframe, transform = self.reorder_frame(e, v, ordered)
 
         self.eigenframe = eigenframe
         self.transform = tf.cast(transform, dtype=tf.complex128)
@@ -726,6 +695,7 @@ class Model:
 class Model_basis_change(Model):
     """
     Model with an additional unitary basis change.
+
     Parameters
     ----------
     U_transform : tf.constant(dtype=tf.complex128)
