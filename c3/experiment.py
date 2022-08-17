@@ -647,7 +647,7 @@ class Experiment:
         instructions = self.pmap.instructions
 
         init_state = self.pmap.model.get_init_state()
-        if step_function == "vonNeumann":
+        if step_function == "von_neumann":
             init_state = tf_state_to_dm(init_state)
         ts_init = tf.constant(0.0, dtype=tf.complex128)
 
@@ -697,7 +697,7 @@ class Experiment:
         instructions = self.pmap.instructions
 
         init_state = self.pmap.model.get_init_state()
-        if step_function == "vonNeumann":
+        if step_function == "von_neumann":
             init_state = tf_state_to_dm(init_state)
 
         sequence = self.opt_gates

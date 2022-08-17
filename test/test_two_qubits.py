@@ -155,12 +155,12 @@ def test_rk4_unitary(get_two_qubit_chip) -> None:
 @pytest.mark.tensorflow
 @pytest.mark.integration
 def test_ode_solver(get_two_qubit_chip) -> None:
-    """Testing that ODE solver exists and runs for solvers rk4, rk5, Tsit5."""
+    """Testing that ODE solver exists and runs for solvers rk4, rk5, tsit5."""
     exp = get_two_qubit_chip
     exp.set_opt_gates(["rx90p[0]"])
     exp.compute_states(solver="rk4")
     exp.compute_states(solver="rk5")
-    exp.compute_states(solver="Tsit5")
-    exp.compute_states(solver="rk4", step_function="vonNeumann")
-    exp.compute_states(solver="rk5", step_function="vonNeumann")
-    exp.compute_states(solver="Tsit5", step_function="vonNeumann")
+    exp.compute_states(solver="tsit5")
+    exp.compute_states(solver="rk4", step_function="von_neumann")
+    exp.compute_states(solver="rk5", step_function="von_neumann")
+    exp.compute_states(solver="tsit5", step_function="von_neumann")

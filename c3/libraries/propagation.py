@@ -23,12 +23,12 @@ step_dict = dict()
 # Dictionary specifying the slice length for a dt for every solver
 # the first element is the interpolation resolution
 # the second element is the number of arguments per time step
-# the third element is written in tf_utils.interpolateSignal according to corresponding Tableau
+# the third element is written in tf_utils.interpolate_signal according to corresponding Tableau
 solver_slicing = {
     "rk4": [2, 3, 2],
     "rk38": [3, 4, 3],
     "rk5": [6, 6, -1],
-    "Tsit5": [6, 6, -2],
+    "tsit5": [6, 6, -2],
 }
 
 
@@ -826,7 +826,7 @@ def rk5(func, rho, h, dt, col=None):
 
 
 @solver_deco
-def Tsit5(func, rho, h, dt, col=None):
+def tsit5(func, rho, h, dt, col=None):
     k1 = func(rho, h[0], dt, col)
     k2 = func(rho + 0.161 * k1, h[1], dt, col)
     k3 = func(rho + -0.008480655492356989 * k1 + 0.335480655492357 * k2, h[2], dt, col)
@@ -902,5 +902,5 @@ def schrodinger(psi, h, dt, col=None):
 
 
 @step_deco
-def vonNeumann(rho, h, dt, col=None):
+def von_neumann(rho, h, dt, col=None):
     return -1j * commutator(h, rho) * dt
