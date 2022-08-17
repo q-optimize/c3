@@ -69,6 +69,10 @@ class Model:
         else:
             self.init_state = state
 
+    def update_init_state(self):
+        if self.init_state is not None:
+            self.set_init_state(self.init_state)
+
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
         gs[0][0] = 1
@@ -328,6 +332,7 @@ class Model:
         """
         self.lindbladian = lindbladian
         self.update_model()
+        self.update_init_state()
 
     def set_FR(self, use_FR):
         """

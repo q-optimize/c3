@@ -223,3 +223,29 @@ def test_ode_solver_lindblad(get_two_qubit_chip) -> None:
     exp.set_opt_gates(["rx90p[0]"])
     exp.compute_states(solver="rk4")
     exp.compute_final_state(solver="rk4")
+
+
+@pytest.mark.tensorflow
+@pytest.mark.integration
+def test_state_norm(get_two_qubit_chip) -> None:
+    """Testing that ODE solver for lindbladian exists and runs for solvers."""
+    exp = get_two_qubit_chip
+    model = exp.pmap.model
+    exp.set_opt_gates(["rx90p[0]"])
+
+    model.set_lindbladian(False)
+    output = exp.compute_states(solver="rk4")
+    state = output["states"]
+    almost_equal(
+        tf.linalg.norm(state[-1]), 1, decimal=2
+    )  # TODO - Change this to 6 decimal places
+
+    model.set_lindbladian(False)
+    output = exp.compute_states(solver="rk4", step_function="von_neumann")
+    state = output["states"]
+    almost_equal(tf.linalg.trace(state[-1]), 1, decimal=6)
+
+    model.set_lindbladian(True)
+    output = exp.compute_states(solver="rk4")
+    state = output["states"]
+    almost_equal(tf.linalg.trace(state[-1]), 1, decimal=6)
