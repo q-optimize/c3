@@ -5,13 +5,14 @@ integration testing module for C1 optimization through two-qubits example
 import pickle
 import numpy as np
 import pytest
+import tensorflow as tf
+
 from numpy.testing import assert_array_almost_equal as almost_equal
 import c3.libraries.algorithms as algorithms
 from c3.libraries.fidelities import state_transfer_from_states
 
 # Libs and helpers
 from c3.libraries.propagation import rk4_unitary
-import tensorflow as tf
 
 with open("test/two_qubit_data.pickle", "rb") as filename:
     test_data = pickle.load(filename)
@@ -111,7 +112,7 @@ def test_optim_ode_solver(get_OC_optimizer) -> None:
     if opt.algorithm == algorithms.single_eval:
         assert opt.current_best_goal < 0.5
     else:
-        assert opt.current_best_goal < 0.1
+        assert opt.current_best_goal < 0.2
 
     maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
     assert opt.evaluation == opt.options[maxiterKey] - 1
@@ -145,7 +146,7 @@ def test_optim_ode_solver_final(get_OC_optimizer) -> None:
     if opt.algorithm == algorithms.single_eval:
         assert opt.current_best_goal < 0.5
     else:
-        assert opt.current_best_goal < 0.1
+        assert opt.current_best_goal < 0.2
 
     maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
     assert opt.evaluation == opt.options[maxiterKey] - 1
@@ -187,3 +188,38 @@ def test_compute_final_state(get_two_qubit_chip) -> None:
     exp.compute_final_state(solver="rk4", step_function="von_neumann")
     exp.compute_final_state(solver="rk5", step_function="von_neumann")
     exp.compute_final_state(solver="tsit5", step_function="von_neumann")
+
+
+@pytest.mark.slow
+@pytest.mark.tensorflow
+@pytest.mark.integration
+def test_lindblad_propagation(get_two_qubit_chip) -> None:
+    """Test that result of the propagation code does not change."""
+    GATE_STR = "rx90p[0]"
+    exp = get_two_qubit_chip
+    exp.propagate_batch_size = 360
+    pmap = exp.pmap
+    model = pmap.model
+    model.set_lindbladian(True)
+    instr = pmap.instructions[GATE_STR]
+    steps = int((instr.t_end - instr.t_start) * exp.sim_res)
+    result = exp.propagation(
+        model,
+        pmap.generator,
+        pmap.instructions["rx90p[0]"],
+        exp.folding_stack[steps],
+    )
+    propagator = result["U"]
+    almost_equal(propagator, test_data["lindblad_propagator"])
+
+
+@pytest.mark.tensorflow
+@pytest.mark.integration
+def test_ode_solver_lindblad(get_two_qubit_chip) -> None:
+    """Testing that ODE solver for lindbladian exists and runs for solvers."""
+    exp = get_two_qubit_chip
+    model = exp.pmap.model
+    model.set_lindbladian(True)
+    exp.set_opt_gates(["rx90p[0]"])
+    exp.compute_states(solver="rk4")
+    exp.compute_final_state(solver="rk4")
