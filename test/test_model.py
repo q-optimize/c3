@@ -13,6 +13,7 @@ from c3.libraries.tasks import InitialiseGround, ConfusionMatrix
 from c3.model import Model, Model_basis_change
 import c3.libraries.hamiltonians as hamiltonians
 from c3.parametermap import ParameterMap
+from c3.utils import tf_utils
 
 qubit_lvls = 3
 freq_q1 = 5e9
@@ -188,6 +189,22 @@ def test_model_thermal_state() -> None:
 def test_model_init_state() -> None:
     """Test computation of initial state"""
     np.testing.assert_almost_equal(model.get_ground_state()[0], 1, decimal=4)
+
+
+@pytest.mark.unit
+def test_model_set_init_state() -> None:
+    """Test computation of initial state"""
+    model.set_lindbladian(False)
+    psi_init = [[0] * model.tot_dim]
+    init_state_index = model.get_state_indeces([(1, 0)])[0]
+    psi_init[0][init_state_index] = 1
+    init_state = tf.transpose(tf.constant(psi_init, tf.complex128))
+    model.set_init_state(init_state)
+    np.testing.assert_allclose(model.init_state, init_state)
+
+    model.set_lindbladian(True)
+    model.set_init_state(init_state)
+    np.testing.assert_allclose(model.init_state, tf_utils.tf_state_to_dm(init_state))
 
 
 @pytest.mark.unit

@@ -112,7 +112,7 @@ def test_optim_ode_solver(get_OC_optimizer) -> None:
     if opt.algorithm == algorithms.single_eval:
         assert opt.current_best_goal < 0.5
     else:
-        assert opt.current_best_goal < 0.2
+        assert opt.current_best_goal < 0.3
 
     maxiterKey = "maxiters" if opt.algorithm == algorithms.tf_sgd else "maxiter"
     assert opt.evaluation == opt.options[maxiterKey] - 1
