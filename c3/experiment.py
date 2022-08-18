@@ -15,7 +15,7 @@ import itertools
 import hjson
 import numpy as np
 import tensorflow as tf
-from typing import Dict, List
+from typing import Dict
 import time
 
 from c3.c3objs import hjson_encode, hjson_decode
@@ -70,6 +70,7 @@ class Experiment:
         self.stop_partial_propagator_gradient = True
         self.evaluate = self.evaluate_legacy
         self.sim_res = sim_res
+        self.prop_method = prop_method
         self.set_prop_method(prop_method)
 
     def set_prop_method(self, prop_method=None) -> None:
@@ -436,38 +437,6 @@ class Experiment:
 
         return gates
 
-    def compute_states(self) -> Dict[Instruction, List[tf.Tensor]]:
-        """Employ a state solver to compute the trajectory of the system.
-
-        Returns
-        -------
-        List[tf.tensor]
-            List of states of the system from simulation.
-
-        """
-        model = self.pmap.model
-        generator = self.pmap.generator
-        instructions = self.pmap.instructions
-        states = {}
-
-        gate_ids = self.opt_gates
-        if gate_ids is None:
-            gate_ids = instructions.keys()
-
-        for gate in gate_ids:
-            try:
-                instr = instructions[gate]
-            except KeyError:
-                raise Exception(
-                    f"C3:Error: Gate '{gate}' is not defined."
-                    f" Available gates are:\n {list(instructions.keys())}."
-                )
-            signal = generator.generate_signals(instr)
-            result = self.propagation(model, signal, self.folding_stack)
-            states[instr] = result["states"]
-        self.states = states
-        return result
-
     def compute_propagators(self):
         """
         Compute the unitary representation of operations. If no operations are
@@ -487,6 +456,8 @@ class Experiment:
         if gate_ids is None:
             gate_ids = instructions.keys()
 
+        self.set_prop_method(self.prop_method)
+
         for gate in gate_ids:
             try:
                 instr = instructions[gate]
@@ -499,7 +470,11 @@ class Experiment:
             model.controllability = self.use_control_fields
             steps = int((instr.t_end - instr.t_start) * self.sim_res)
             result = self.propagation(
-                model, generator, instr, self.folding_stack[steps]
+                model,
+                generator,
+                instr,
+                self.folding_stack[steps],
+                self.propagate_batch_size,
             )
             U = result["U"]
             dUs = result["dUs"]
@@ -655,3 +630,96 @@ class Experiment:
             rho = tf_state_to_dm(state)
         trace = np.trace(np.matmul(rho, oper))
         return [[np.real(trace)]]  # ,[np.imag(trace)]]
+
+    def compute_states(self, solver="rk4", step_function="schrodinger"):
+        """
+        Use a state solver to compute the trajectory of the system.
+
+        Returns
+        -------
+        List[tf.tensor]
+            List of states of the system from simulation.
+
+        """
+
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
+
+        init_state = self.pmap.model.get_init_state()
+        if step_function == "von_neumann":
+            init_state = tf_state_to_dm(init_state)
+        ts_init = tf.constant(0.0, dtype=tf.complex128)
+
+        state_list = tf.expand_dims(init_state, 0)
+        ts_list = [ts_init]
+
+        sequence = self.opt_gates
+
+        self.set_prop_method("ode_solver")
+
+        for gate in sequence:
+            try:
+                instr = instructions[gate]
+            except KeyError:
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            result = self.propagation(
+                model,
+                generator,
+                instr,
+                init_state,
+                solver=solver,
+                step_function=step_function,
+            )
+            state_list = tf.concat([state_list, result["states"]], 0)
+            ts_list = tf.concat([ts_list, tf.add(result["ts"], ts_init)], 0)
+            init_state = result["states"][-1]
+            ts_init = result["ts"][-1]
+
+        return {"states": state_list, "ts": ts_list}
+
+    def compute_final_state(self, solver="rk4", step_function="schrodinger"):
+        """
+        Solve the Lindblad master equation by integrating the differential
+        equation of the density matrix
+
+        Returns
+        -------
+        List
+           Final state after time evolution.
+        """
+
+        model = self.pmap.model
+        generator = self.pmap.generator
+        instructions = self.pmap.instructions
+
+        init_state = self.pmap.model.get_init_state()
+        if step_function == "von_neumann":
+            init_state = tf_state_to_dm(init_state)
+
+        sequence = self.opt_gates
+        self.set_prop_method("ode_solver_final_state")
+
+        for gate in sequence:
+            try:
+                instr = instructions[gate]
+            except KeyError:
+                raise Exception(
+                    f"C3:Error: Gate '{gate}' is not defined."
+                    f" Available gates are:\n {list(instructions.keys())}."
+                )
+            result = self.propagation(
+                model,
+                generator,
+                instr,
+                init_state,
+                solver=solver,
+                step_function=step_function,
+            )
+            init_state = result["states"]
+            ts = result["ts"]
+
+        return {"states": result["states"], "ts": ts[-1]}

@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import tensorflow as tf
 
 from numpy.testing import assert_array_almost_equal as almost_equal
 from c3.signal.gates import Instruction
@@ -8,8 +9,10 @@ from c3.libraries.fidelities import (
     average_infid,
     unitary_infid_set,
     state_transfer_infid_set,
+    state_transfer_from_states,
 )
 from c3.libraries.constants import GATES
+from c3.utils import tf_utils
 
 X = GATES["rxp"]
 Y = GATES["ryp"]
@@ -162,4 +165,27 @@ def test_set_states() -> None:
         psi_0=psi_0,
         n_eval=136,
     )
+    almost_equal(goal, 0)
+
+
+@pytest.mark.unit
+def test_state_transfer() -> None:
+    psi_init = [[0] * 2]
+    psi_init[0][0] = 1
+    ground_state = tf.transpose(tf.constant(psi_init, tf.complex128))
+
+    state1 = tf.matmul(X, ground_state)
+
+    target_state = tf.matmul(Instruction("rxp").get_ideal_gate((2,)), ground_state)
+    params = {"target": target_state}
+
+    goal = state_transfer_from_states(states=state1, index=0, dims=2, params=params)
+    almost_equal(goal, 0)
+
+    target_state = tf_utils.tf_state_to_dm(target_state)
+    state1 = tf_utils.tf_state_to_dm(state1)
+    params = {"target": target_state}
+    states = tf.convert_to_tensor([state1, state1], dtype=tf.complex128)
+
+    goal = state_transfer_from_states(states=states, index=0, dims=2, params=params)
     almost_equal(goal, 0)

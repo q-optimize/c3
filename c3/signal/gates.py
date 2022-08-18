@@ -105,7 +105,7 @@ class Instruction:
         return self._name
 
     @name.setter
-    def name(self, name: str) -> str:
+    def name(self, name: str):
         self.set_name(name)
 
     def as_openqasm(self) -> dict:

@@ -788,3 +788,29 @@ def orbit_infid(
 
         infids.append(infid)
     return tf_ave(infids)
+
+
+@fid_reg_deco
+def state_transfer_from_states(states: tf.Tensor, index, dims, params, n_eval=-1):
+    infids = []
+    psi_0 = params["target"]
+
+    if len(states.shape) > 2:
+        overlap = calculate_state_overlap(states[-1], psi_0)
+    else:
+        overlap = calculate_state_overlap(states, psi_0)
+
+    infid = 1 - overlap
+    infids.append(infid)
+    return tf.reduce_max(tf.math.real(infids))
+
+
+def calculate_state_overlap(psi1, psi2):
+    if psi1.shape[0] == psi1.shape[1]:
+        return (
+            tf.linalg.trace(
+                tf.sqrt(tf.matmul(tf.matmul(tf.sqrt(psi1), psi2), tf.sqrt(psi1)))
+            )
+        ) ** 2
+    else:
+        return tf_ketket_fid(psi1, psi2)

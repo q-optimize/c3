@@ -261,18 +261,26 @@ def get_two_qubit_chip() -> Experiment:
     """Setup a two qubit example with pre-optimized gates."""
     qubit_lvls = 2
     freq_q1 = 5e9
+    t1_q1 = 20e-6
+    t2star_q1 = 40e-6
     q1 = Qubit(
         name="Q1",
         desc="Qubit 1",
         freq=Quantity(value=freq_q1, min_val=4.995e9, max_val=5.005e9, unit="Hz 2pi"),
+        t1=Quantity(value=t1_q1, min_val=1e-10, max_val=90e-3, unit="s"),
+        t2star=Quantity(value=t2star_q1, min_val=10e-6, max_val=90e-3, unit="s"),
         hilbert_dim=qubit_lvls,
     )
 
     freq_q2 = 5.6e9
+    t1_q2 = 20e-6
+    t2star_q2 = 40e-6
     q2 = Qubit(
         name="Q2",
         desc="Qubit 2",
         freq=Quantity(value=freq_q2, min_val=5.595e9, max_val=5.605e9, unit="Hz 2pi"),
+        t1=Quantity(value=t1_q2, min_val=1e-10, max_val=90e-3, unit="s"),
+        t2star=Quantity(value=t2star_q2, min_val=10e-6, max_val=90e-3, unit="s"),
         hilbert_dim=qubit_lvls,
     )
 

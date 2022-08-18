@@ -53,11 +53,25 @@ class Model:
         self.dressed_drift_ham = None
         self.__hamiltonians = None
         self.__dressed_hamiltonians = None
+        self.init_state = None
         if subsystems:
             self.set_components(subsystems, couplings, max_excitations)
         if tasks:
             self.set_tasks(tasks)
         self.controllability = True
+
+    def set_init_state(self, state):
+        if self.lindbladian and state.shape[0] != state.shape[1]:
+            if state.shape[0] == self.tot_dim:
+                self.init_state = tf_utils.tf_state_to_dm(state)
+            elif state.shape[0] == self.tot_dim**2:
+                self.init_state = tf_utils.tf_vec_to_dm(state)
+        else:
+            self.init_state = state
+
+    def update_init_state(self):
+        if self.init_state is not None:
+            self.set_init_state(self.init_state)
 
     def get_ground_state(self) -> tf.constant:
         gs = [[0] * self.tot_dim]
@@ -66,12 +80,30 @@ class Model:
 
     def get_init_state(self) -> tf.Tensor:
         """Get an initial state. If a task to compute a thermal state is set, return that."""
-        if "init_ground" in self.tasks:
-            psi_init = self.tasks["init_ground"].initialise(
-                self.drift_ham, self.lindbladian
-            )
+        if self.init_state is None:
+            if "init_ground" in self.tasks:
+                print(
+                    "Initial state not specified. Using thermal state as the initial state."
+                )
+                print(
+                    "You can use model.set_init_state() method to set the initial state."
+                )
+                psi_init = self.tasks["init_ground"].initialise(
+                    self.drift_ham, self.lindbladian
+                )
+            else:
+                print(
+                    "Initial state not specified. Using ground state as the initial state."
+                )
+                print(
+                    "You can use model.set_init_state() method to set the initial state."
+                )
+                psi_init = self.get_ground_state()
+                if self.lindbladian:
+                    psi_init = tf_utils.tf_state_to_dm(psi_init)
+                self.init_state = psi_init
         else:
-            psi_init = self.get_ground_state()
+            psi_init = self.init_state
         return psi_init
 
     def __check_drive_connect(self, comp):
@@ -300,6 +332,7 @@ class Model:
         """
         self.lindbladian = lindbladian
         self.update_model()
+        self.update_init_state()
 
     def set_FR(self, use_FR):
         """
@@ -604,6 +637,64 @@ class Model:
             # TODO: check that this is right (or do you put the Zs together?)
             deph_ch = deph_ch * ((1 - p) * Id + p * Z)
         return deph_ch
+
+    def Hs_of_t(self, signal, interpolate_res=2):
+        """
+        Generate a list of Hamiltonians for each time step of interpolated signal for Runge-Kutta Methods.
+
+        Args:
+            signal (_type_): Input signal
+            interpolate_res (int, optional): Interpolation resolution according to RK method. Defaults to 2.
+            L_dag_L (tf.tensor, optional): List of {L^dagger L} where L represents the collapse operators.
+                                           Defaults to None. This is only used for stochastic case.
+
+        Returns:
+            dict: List of Hamiltonians (or effective Hamiltonians for stochastic case) for each time step.
+        """
+        h0, hctrls = self.get_Hamiltonians()
+
+        ts_list = []
+        signals = []
+        hks = []
+        for key in signal:
+            ts_list.append(signal[key]["ts"])
+            signals.append(signal[key]["values"])
+            hks.append(hctrls[key])
+
+        ts = tf.math.reduce_mean(ts_list, axis=0)
+        # Only do the safety check outside of graph mode for performance reasons.
+        # When using graph mode, the safety check will still be executed ONCE during tracing
+        if tf.executing_eagerly() and not tf.reduce_all(
+            tf.math.reduce_variance(ts_list, axis=0) < (1e-5 * (ts[1] - ts[0]))
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        if tf.executing_eagerly() and not tf.reduce_all(
+            tf.math.reduce_variance(ts[1:] - ts[:-1]) < 1e-5 * (ts[1] - ts[0])  # type: ignore
+        ):
+            raise Exception("C3Error:Something with the times happend.")
+        dt = ts[1] - ts[0]
+        dt = tf.cast(dt, dtype=tf.complex128)
+
+        signals_interp = []
+        for sig in signals:
+            sig_new = tf_utils.interpolate_signal(ts, sig, interpolate_res)
+            signals_interp.append(sig_new)
+
+        cflds = tf.cast(signals_interp, tf.complex128)
+        hks = tf.cast(hks, tf.complex128)
+
+        Hs = self.calculate_sum_Hs(h0, hks, cflds)
+        ts = tf.cast(ts, dtype=tf.complex128)
+
+        return {"Hs": Hs, "ts": ts, "dt": dt}
+
+    def calculate_sum_Hs(self, h0, hks, cflds):
+        control_field = tf.reshape(
+            tf.transpose(cflds), (tf.shape(cflds)[1], tf.shape(cflds)[0], 1, 1)
+        )
+        hk = tf.multiply(control_field, hks)
+        Hs = tf.reduce_sum(hk, axis=1)
+        return Hs + h0
 
 
 class Model_basis_change(Model):
