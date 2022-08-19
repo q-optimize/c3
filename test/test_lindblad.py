@@ -187,7 +187,7 @@ def test_t1() -> None:
     exp.set_prop_method("pwc")
     unitaries = exp.compute_propagators()
     U = np.array(unitaries["id[0]"])
-    final_vec = np.dot(U**n, init_vec)
+    final_vec = np.dot(np.linalg.matrix_power(U, n), init_vec)
     final_pops = exp.populations(final_vec, model.lindbladian)
     assert final_pops[1] < (1 / np.exp(1))
 
@@ -205,6 +205,6 @@ def test_t2() -> None:
     exp.set_prop_method("pwc")
     unitaries = exp.compute_propagators()
     U = np.array(unitaries["id[0]"])
-    final_vec = np.dot(U**n, init_vec)
+    final_vec = np.dot(np.linalg.matrix_power(U, n), init_vec)
     final_dm = tf_utils.tf_vec_to_dm(final_vec)
     assert np.abs(final_dm[0][1]) < (1 / (2 * np.exp(1)))
