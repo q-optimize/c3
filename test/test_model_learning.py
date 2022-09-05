@@ -54,7 +54,6 @@ def test_model_learning() -> None:
                 if "xy_angle" in pulse.params:
                     pulse.params["xy_angle"] *= -1
 
-
     opt = ModelLearning(**cfg, pmap=exp.pmap)
     opt.set_exp(exp)
     opt.set_created_by(OPT_CONFIG_FILE_NAME)

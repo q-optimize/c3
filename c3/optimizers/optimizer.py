@@ -102,7 +102,7 @@ class Optimizer:
         """
         self.created_by = config
 
-    def load_best(self, init_point) -> None:
+    def load_best(self, init_point, extend_bounds=False) -> None:
         """
         Load a previous parameter point to start the optimization from. Legacy wrapper.
         Method moved to Parametermap.
@@ -111,9 +111,10 @@ class Optimizer:
         ----------
         init_point : str
             File location of the initial point
-
+        extend_bounds: bool
+            Whether or not to allow the loaded optimal parameters' bounds to be extended if they exceed those specified.
         """
-        self.pmap.load_values(init_point)
+        self.pmap.load_values(init_point, extend_bounds=extend_bounds)
 
     def start_log(self) -> None:
         """

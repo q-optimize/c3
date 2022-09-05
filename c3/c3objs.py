@@ -9,6 +9,10 @@ from tensorflow.python.framework import ops
 import copy
 
 
+class QuantityOOBException(ValueError):
+    pass
+
+
 class C3obj:
     """
     Represents an abstract object with parameters. To be inherited from.
@@ -281,8 +285,16 @@ class Quantity:
             2 * (tf.reshape(val, self.shape) * self.pref - self.offset) / self.scale - 1
         )
 
-        if np.any(tf.math.abs(tmp) > tf.constant(1.0, tf.float64)):
-            raise ValueError(
+        const_1 = tf.constant(1.0, tf.float64)
+        if np.any(
+            tf.math.logical_and(
+                tf.math.abs(tmp) > const_1,
+                tf.math.logical_not(
+                    tf.experimental.numpy.isclose(tf.math.abs(tmp), const_1)
+                ),
+            )
+        ):
+            raise QuantityOOBException(
                 f"Value {num3str(val.numpy())}{self.unit} out of bounds for quantity with "
                 f"min_val: {num3str(self.get_limits()[0])}{self.unit} and "
                 f"max_val: {num3str(self.get_limits()[1])}{self.unit}",

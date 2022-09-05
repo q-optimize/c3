@@ -24,6 +24,7 @@ This Changelog tracks all past changes to this project as well as details about 
 - `fixed` bug where changing a gate's name didn't change its ideal gate #233
 - `fixed` bug in Instruction where ideal gate's weren't properly set #229
 - `fixed` wrong direction of rotations on bloch sphere #231
+- `fixed` error is raised if optimizer gives OOB results #235
 
 ## Version `1.4` - 23 Dec 2021
 

@@ -5,10 +5,14 @@ import hjson
 import copy
 import numpy as np
 import tensorflow as tf
-from c3.c3objs import Quantity, hjson_decode, hjson_encode
+from c3.c3objs import Quantity, hjson_decode, hjson_encode, QuantityOOBException
 from c3.signal.gates import Instruction
 from typing import Union
 from tensorflow.errors import InvalidArgumentError
+
+
+class ParameterMapOOBUpdateException(Exception):
+    pass
 
 
 class ParameterMap:
@@ -66,7 +70,7 @@ class ParameterMap:
     def update_parameters(self):
         self.__initialize_parameters()
 
-    def load_values(self, init_point):
+    def load_values(self, init_point, extend_bounds=False):
         """
         Load a previous parameter point to start the optimization from.
 
@@ -74,14 +78,16 @@ class ParameterMap:
         ----------
         init_point : str
             File location of the initial point
-
+        extend_bounds: bool
+            Whether or not to allow the loaded parameters' bounds to be extended if they exceed those specified.
         """
         with open(init_point) as init_file:
             best = hjson.load(init_file, object_pairs_hook=hjson_decode)
 
         best_opt_map = best["opt_map"]
         init_p = best["optim_status"]["params"]
-        self.set_parameters(init_p, best_opt_map, extend_bounds=True)
+
+        self.set_parameters(init_p, best_opt_map, extend_bounds=extend_bounds)
 
     def store_values(self, path: str, optim_status=None) -> None:
         """
@@ -308,9 +314,9 @@ class ParameterMap:
                     raise Exception(f"C3:ERROR:{key} not defined.") from ve
                 try:
                     par.set_value(values[val_indx], extend_bounds=extend_bounds)
-                except (ValueError, InvalidArgumentError) as ve:
+                except (QuantityOOBException, InvalidArgumentError) as ve:
                     try:
-                        raise Exception(
+                        raise ParameterMapOOBUpdateException(
                             f"C3:ERROR:Trying to set {key} "
                             f"to value {values[val_indx]} "
                             f"but has to be within {par.offset} .."
