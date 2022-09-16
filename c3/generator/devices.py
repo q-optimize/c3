@@ -1043,19 +1043,18 @@ class DC_Offset(Device):
         super().__init__(**props)
         self.inputs = props.pop("inputs", 1)
         self.outputs = props.pop("outputs", 1)
-        self.signal = None
-        if (
-            self.params["offset_amp"] is None
-        ):  # i.e. it was not set in the general params already
-            self.params["offset_amp"] = props.pop("offset_amp")
 
-    def process(self, instr, chan, signal: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Distort signal by adding noise."""
-        offset_amp = self.params["offset_amp"].get_value()
-        out_signal = {}
-        for k, sig in signal[0].items():
-            out_signal[k] = sig + offset_amp
-        self.signal = out_signal
+    def process(
+        self, instr: Instruction, chan: str, signal: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Distort signal by adding constant  noise."""
+        components = instr.comps
+        for comp in components[chan].values():
+            if isinstance(comp, Envelope):
+                offset_amp = comp.params["offset_amp"].get_value()
+                self.signal["values"] = signal[0]["values"] + offset_amp
+                self.signal["ts"] = signal[0]["ts"]
+                self.signal["name"] = instr.name
         return self.signal
 
 
