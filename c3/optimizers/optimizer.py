@@ -256,12 +256,12 @@ class Optimizer:
         [np.ndarray, tf.constant]
             Value of the goal function. Float if input is np.array else tf.constant
         """
-        pars = []
         # We use zip to create pairs of Quantity objects and their new bare numeric parameter values.
         # Then we compute the new physical value and store it in the status.
-        for par, y in zip(self.pmap.get_parameters(), np.array(input_parameters)):
-            pars.append(par.get_other_value(y).tolist())
-        self.optim_status["params"] = pars
+        self.pmap.set_parameters_scaled(input_parameters)
+        self.optim_status["params"] = [
+            par.numpy().tolist() for par in self.pmap.get_parameters()
+        ]
         if isinstance(input_parameters, np.ndarray):
             current_params = tf.constant(input_parameters)
             goal = self.goal_function(current_params)
