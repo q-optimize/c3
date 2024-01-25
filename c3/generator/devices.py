@@ -1020,7 +1020,7 @@ class Pink_Noise(Additive_Noise):
 
     def get_noise(self, sig):
         noise_amp = self.params["noise_amp"].get_value().numpy()
-        bfl_num = np.int(self.params["bfl_num"].get_value().numpy())
+        bfl_num = int(self.params["bfl_num"].get_value().numpy())
         noise = []
         bfls = 2 * np.random.randint(2, size=bfl_num) - 1
         num_steps = len(sig)
