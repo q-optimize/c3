@@ -37,10 +37,10 @@ class C3obj:
         if params:
             for pname, par in params.items():
                 # TODO params here should be the dict representation only
-                if isinstance(par, Quantity):
-                    self.params[pname] = par
-                else:
+                if isinstance(par, dict):
                     self.params[pname] = Quantity(**par)
+                else:
+                    self.params[pname] = par
 
     def __str__(self) -> str:
         return hjson.dumps(self.asdict(), default=hjson_encode)
@@ -276,10 +276,7 @@ class Quantity:
         """Set the value of this quantity as tensorflow. Value needs to be
         within specified min and max."""
         # setting can be numpyish
-        if isinstance(val, ops.EagerTensor) or isinstance(val, ops.Tensor):
-            val = tf.cast(val, tf.float64)
-        else:
-            val = tf.constant(val, tf.float64)
+        val = tf.constant(val, tf.float64)
 
         tmp = (
             2 * (tf.reshape(val, self.shape) * self.pref - self.offset) / self.scale - 1
