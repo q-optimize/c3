@@ -524,7 +524,6 @@ def cmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     es = cma.CMAEvolutionStrategy(x_init, spread, settings)
     iter = 0
     while not es.stop():
-
         if shrunk_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:
@@ -627,7 +626,6 @@ def gcmaes(x_init, fun=None, fun_grad=None, grad_lookup=None, options={}):
     es = cma.CMAEvolutionStrategy(x_init, spread, settings)
     iter = 0
     while not es.stop():
-
         if shrinked_check:
             sigmas.append(es.sigma)
             if iter > sigma_conv:

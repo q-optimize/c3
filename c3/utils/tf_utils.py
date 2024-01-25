@@ -235,6 +235,7 @@ def tf_diff(l):  # noqa
 
 # MATRIX FUNCTIONS
 
+
 # TODO - change A.shape[: length-2] to tf.shape
 def Id_like(A):
     """Identity of the same size as A."""

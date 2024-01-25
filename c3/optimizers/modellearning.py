@@ -86,7 +86,7 @@ class ModelLearning(Optimizer):
 
         super().__init__(pmap=pmap, algorithm=algorithm, logger=logger)
 
-        self.state_labels = {"all": None}
+        self.state_labels: Dict[str, List] = {"all": []}
         for target, labels in state_labels.items():
             self.state_labels[target] = [tuple(lab) for lab in labels]
 
@@ -106,7 +106,7 @@ class ModelLearning(Optimizer):
         self.inverse = False
         self.options = options
 
-        self.learn_data = {}
+        self.learn_data: Dict[str, np.ndarray] = {}
         self.read_data(datafiles)
         self.sampling = sampling
         self.batch_sizes = batch_sizes
@@ -298,13 +298,11 @@ class ModelLearning(Optimizer):
         # TODO: seq per point is not constant. Remove.
 
         for target, data in self.learn_data.items():
-
             self.learn_from = data["seqs_grouped_by_param_set"]
             self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
 
             for ipar in indeces:
-
                 count += 1
                 data_set = self.learn_from[ipar]
                 m_vals = data_set["results"][:seqs_pp]
@@ -376,12 +374,10 @@ class ModelLearning(Optimizer):
         count = 0
 
         for target, data in self.learn_data.items():
-
             self.learn_from = data["seqs_grouped_by_param_set"]
             self.gateset_opt_map = data["opt_map"]
             indeces = self.select_from_data(self.batch_sizes[target])
             for ipar in indeces:
-
                 count += 1
                 data_set = self.learn_from[ipar]
 
