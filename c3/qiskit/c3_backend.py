@@ -215,7 +215,7 @@ class C3QasmSimulator(Backend, ABC):
         # TODO a sophisticated readout/measurement routine (w/ SPAM)
         return (np.round(self.pops_array * self._shots)).astype("int32").tolist()
 
-    def run(self, qobj: qobj.Qobj, **backend_options) -> C3Job:
+    def run(self, qobj: qobj.QasmQobj, **backend_options) -> C3Job:
         """Parse and run a Qobj
 
         Parameters
