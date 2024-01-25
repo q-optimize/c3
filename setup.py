@@ -39,7 +39,7 @@ setup(
         "gast>=0.3.3",
         "hjson>=3.0.2",
         "rich>=9.2.0",
-        "numpy>=1.19.5",
+        "numpy>=1.23.1",
         "scipy>=1.5.2",
         "tensorflow==2.11.0",
         "tensorflow-estimator>=2.4.0",
