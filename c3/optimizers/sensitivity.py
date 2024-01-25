@@ -64,7 +64,6 @@ class Sensitivity(ModelLearning):
         run_name: str = None,
         options={},
     ) -> None:
-
         super().__init__(
             sampling,
             batch_sizes,

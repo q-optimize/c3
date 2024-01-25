@@ -38,7 +38,7 @@ def test_basis(get_test_dimensions) -> None:
     """Testing orthonormality of basis vectors."""
     for dim in get_test_dimensions:
         pairs = [(i, j) for i in range(dim) for j in range(dim)]
-        for (i, j) in pairs:
+        for i, j in pairs:
             vi = basis(dim, i)
             vj = basis(dim, j)
             almost_equal(vi.T @ vj, 1 if i == j else 0)
@@ -60,7 +60,7 @@ def test_xy_basis(get_test_dimensions) -> None:
 
         # overlap
         pairs = [(a, b) for a in names for b in names if b is not a]
-        for (a, b) in pairs:
+        for a, b in pairs:
             va_p = xy_basis(dim, a + "p")
             va_m = xy_basis(dim, a + "m")
             vb_p = xy_basis(dim, b + "p")
@@ -79,7 +79,7 @@ def test_basis_matrices(get_test_dimensions) -> None:
 
         # orthogonality
         pairs = [(a, b) for a in matrices for b in matrices if b is not a]
-        for (a, b) in pairs:
+        for a, b in pairs:
             almost_equal(np.linalg.norm(np.multiply(a, b)), 0)
 
         # normalisation

@@ -256,7 +256,7 @@ def test_parameter_extend() -> None:
     Test the setting in optimizer format. Parameter is out of bounds for the
     original pmap and should be extended.
     """
-    pmap.load_values("test/sample_optim_log.c3log",extend_bounds=True)
+    pmap.load_values("test/sample_optim_log.c3log", extend_bounds=True)
     np.testing.assert_almost_equal(
         pmap.get_parameter(("rx90p[0]", "d1", "gauss", "freq_offset")).numpy(),
         -82997604.24565414,

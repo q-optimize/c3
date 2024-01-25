@@ -189,16 +189,13 @@ def test_set_name_ideal():
     assert (instr.ideal == GATES["ry90p"]).all()
     instr.set_name("crzp")
     assert (instr.ideal == GATES["crzp"]).all()
-    instr.name = 'ry90p'
+    instr.name = "ry90p"
     assert (instr.ideal == GATES["ry90p"]).all()
 
 
 @pytest.mark.unit
 def test_correct_ideal_assignment() -> None:
-    custom_gate = np.array([[1, 0, 0, 0],
-                            [0, 1, 0, 0],
-                            [0, 0, 0, 1],
-                            [0, 0, 1, 0]], dtype=np.complex)
+    custom_gate = np.array([[1.0, 0j, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     propagators = {"custom": custom_gate}
     instructions = {"custom": Instruction("custom", ideal=custom_gate)}
     psi_0 = np.array([[1], [0], [0], [0]])
@@ -216,7 +213,7 @@ def test_correct_ideal_assignment() -> None:
 @pytest.mark.unit
 def test_correct_bloch_rotation_direction():
     # makes sure that the rotations on the bloch sphere are in the right direction
-    GATE_NAME = 'ry90p[0]'
+    GATE_NAME = "ry90p[0]"
     exp = create_experiment()
     exp.compute_propagators()
     # TODO - remove this line after the ideal updating bug gets fixed...
@@ -225,4 +222,6 @@ def test_correct_bloch_rotation_direction():
     ideal_gate = exp.pmap.instructions[GATE_NAME].get_ideal_gate(dims=[3])
     propagator = exp.propagators[GATE_NAME].numpy()
     # not equal to one because of imperfections in the propagation
-    np.testing.assert_array_less(unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0], 0.05)
+    np.testing.assert_array_less(
+        unitary_infid(ideal_gate, propagator, dims=[3]).numpy()[0], 0.05
+    )

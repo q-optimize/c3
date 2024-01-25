@@ -21,6 +21,7 @@ from c3.optimizers.sensitivity import Sensitivity
 
 logging.getLogger("tensorflow").disabled = True
 
+
 # flake8: noqa: C901
 def run_cfg(cfg, opt_config_filename, debug=False):
     """Execute an optimization problem described in the cfg file.
