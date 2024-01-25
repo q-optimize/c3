@@ -41,7 +41,7 @@ setup(
         "scipy>=1.5.2",
         "tensorflow>=2.4.1,<=2.14.1",
         "tensorflow-estimator>=2.4.0",
-        "tensorflow-probability>=0.12.1",
+        "tensorflow-probability>=0.12.1, <=0.22.0",
     ],
     python_requires="~=3.9",
 )
