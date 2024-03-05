@@ -1,7 +1,7 @@
 """Library for interoperability of c3 gates with qiskit
 """
 from typing import Iterable, List, Optional
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UnitaryGate
 from qiskit.circuit import Gate
 from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
 from c3.libraries.constants import GATES

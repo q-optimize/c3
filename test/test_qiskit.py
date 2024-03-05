@@ -22,12 +22,11 @@ from c3.qiskit.c3_gates import (
     CR90Gate,
     SetParamsGate,
 )
-from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import RXGate, RYGate, RZGate, CRXGate, UnitaryGate
 from qiskit.quantum_info import Statevector, Operator
 from qiskit import transpile
 from qiskit.providers import BackendV1 as Backend
-from qiskit import execute, QuantumCircuit
+from qiskit import QuantumCircuit
 import pytest
 import numpy as np
 
@@ -163,7 +162,7 @@ def test_too_many_qubits(backend, config_file):
     received_backend.set_device_config(config_file)
     qc = QuantumCircuit(4, 4)
     with pytest.raises(C3QiskitError):
-        execute(qc, received_backend, shots=1000)
+        received_backend.run(qc, shots=1000)
 
 
 @pytest.mark.parametrize(
