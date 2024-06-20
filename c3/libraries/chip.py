@@ -1018,6 +1018,162 @@ class Fluxonium(CShuntFluxQubit):
 
 
 @dev_reg_deco
+class CooperPairBox(PhysicalComponent):
+    """
+    The CooperPairBox is a basic model of a modifiable Charge qubit. Which is defined by the Hamiltonian:
+    H=4*EC*(N-NG)^2 + E_J*cos(Phi)
+    Parameters
+    ----------
+    EC: Quantity
+        Charge energy of the qubit
+    EJ: Quantity
+        Josephon energy of the qubit
+    NG: Quantity
+        Initial value of NG in the hamiltonian from above
+    Asym: Quantity
+        Parameter that can modify the effective Josephon energy
+    Reduced Flux: Quantity
+        Parameter that can modify the effective Josephon energy
+    hilbert_dim: Quantity
+        Dimension of the hilbert space we want to look at
+    calc_dim: Quantity
+        Number which defines how many charge levels are included in calculating the hamiltonian
+    """
+
+    def __init__(
+        self,
+        name: str,
+        desc: str = None,
+        comment: str = None,
+        hilbert_dim: int = None,
+        calc_dim: Quantity = None,
+        EC: Quantity = None,
+        EJ: Quantity = None,
+        NG: Quantity = None,
+        Asym: Quantity = None,
+        Reduced_Flux: Quantity = None,
+        use_FR: bool = True,
+        params=None,
+    ):
+        super().__init__(
+            name=name,
+            desc=desc,
+            comment=comment,
+            hilbert_dim=hilbert_dim,
+            params=params,
+        )
+        if not self.hilbert_dim % 2:
+            raise Exception("Hilbert dimension has to be odd.")
+        if EC:
+            self.params["EC"] = EC
+        if EJ:
+            self.params["EJ"] = EJ
+        if Asym:
+            self.params["Asym"] = Asym
+        if Reduced_Flux:
+            self.params["Reduced_Flux"] = Reduced_Flux
+        if NG:
+            self.params["NG"] = NG
+        if calc_dim:
+            self.params["calc_dim"] = calc_dim
+        self.init_Hamiltonian()
+
+    def init_Hs(self, ann_oper):
+        pass
+
+    def init_Ls(self, ann_oper):
+        pass
+
+    def init_Hamiltonian(self):
+        """
+        initialize Hamiltonian for initial NG
+        """
+        ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
+        ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
+        asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
+        reduced_flux = tf.cast(self.params["Reduced_Flux"].get_value(), tf.complex128)
+        self.calc_dim = tf.cast(self.params["calc_dim"].get_value(), tf.int32)
+        ng_mat = tf.linalg.diag(
+            tf.ones(self.calc_dim - 1, tf.complex128), k=1
+        ) + tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=-1)
+        ng = tf.cast(self.params["NG"].get_value(), tf.float64)
+        EJphi = ej * tf.sqrt(
+            asym**2 + (1 - asym**2) * tf.math.cos(np.pi * reduced_flux) ** 2
+        )
+        h = (
+            4
+            * ec
+            * tf.linalg.diag(
+                tf.cast(
+                    tf.range(
+                        -(self.calc_dim - 1) / 2 - ng,
+                        (self.calc_dim - 1) / 2 - ng + 1,
+                    )
+                    ** 2,
+                    tf.complex128,
+                )
+            )
+            - EJphi / 2 * ng_mat
+        )
+        e, v = tf.linalg.eigh(h)
+        self.transform = tf.expand_dims(v, axis=0)
+        self.static_h = tf.linalg.diag(e)[: self.hilbert_dim, : self.hilbert_dim]
+        self.transform_inv = tf.expand_dims(tf.linalg.inv(v), axis=0)
+
+    def get_Hamiltonian(
+        self,
+        signal=None,
+        transform=None,
+    ):
+        """
+        Calculate Hamiltonians for a given signal, i.e. at each time step.
+        Parameters
+        ----------
+        signal : dictionary
+            Dictionary containing times and values of NG
+        Returns
+        -------
+        tf.Tensor
+            Hamiltonians
+        """
+        ec = tf.cast(self.params["EC"].get_value(), tf.complex128)
+        ej = tf.cast(self.params["EJ"].get_value(), tf.complex128)
+        asym = tf.cast(self.params["Asym"].get_value(), tf.complex128)
+        ng = tf.cast(self.params["NG"].get_value(), tf.float64)
+        reduced_flux = tf.cast(self.params["Reduced_Flux"].get_value(), tf.complex128)
+        EJphi = ej * tf.sqrt(
+            asym**2 + (1 - asym**2) * tf.math.cos(np.pi * reduced_flux) ** 2
+        )
+        ng_mat = (
+            EJphi
+            / 2
+            * (
+                tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=1)
+                + tf.linalg.diag(tf.ones(self.calc_dim - 1, tf.complex128), k=-1)
+            )
+        )
+        diag_mat_list = tf.range(-(self.calc_dim - 1) / 2, (self.calc_dim - 1) / 2 + 1)
+        diag_mat = (
+            2
+            * tf.sqrt(ec)
+            * tf.cast(tf.linalg.diag(diag_mat_list), dtype=tf.complex128)
+        )
+        ec_identity = 2 * tf.sqrt(ec) * tf.eye(self.calc_dim, dtype=tf.complex128)
+        ec_identity = tf.expand_dims(ec_identity, axis=0)
+        diag_mat = tf.expand_dims(diag_mat, axis=0)
+        ng_mat = tf.expand_dims(ng_mat, axis=0)
+
+        if signal:
+            ng_of_t = tf.cast(signal["values"] + ng, dtype=tf.complex128)
+            ng_of_t = tf.expand_dims(tf.expand_dims(ng_of_t, axis=1), axis=2)
+            h = (diag_mat - ng_of_t * ec_identity) ** 2 - ng_mat
+            h = self.transform_inv @ h @ self.transform
+            return h
+        else:
+            return self.static_h
+
+
+@dev_reg_deco
 class SNAIL(Qubit):
     """
     Represents the element in a chip functioning as a three wave mixing element also knwon as a SNAIL.
